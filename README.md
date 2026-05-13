@@ -1,6 +1,8 @@
 # LinaPro Plugins
 
-`apps/lina-plugins/` is the official source-plugin workspace for LinaPro.
+`official-plugins` is the official source-plugin workspace for LinaPro.
+
+When mounted into the main `linapro` repository, this workspace appears at `apps/lina-plugins/`.
 
 At the current open-source stage, the host keeps only stable core capabilities such as user management, role management, menu management, dictionary management, parameter settings, file management, scheduled job management, plugin governance, and developer support. Non-core business modules are delivered as source plugins under `apps/lina-plugins/<plugin-id>/`.
 
@@ -11,6 +13,20 @@ LinaPro currently ships these plugin references in this directory:
 - `plugin-demo-source`: sample source plugin structure and coding reference
 - `plugin-demo-dynamic`: sample dynamic WASM plugin structure and lifecycle reference
 - official source plugins: first-party business plugins compiled into the host through explicit wiring
+
+## Using as a Submodule
+
+The main `linapro` repository mounts this repository at `apps/lina-plugins` using:
+
+```bash
+git submodule update --init --recursive
+```
+
+For local submodule management in a checked-out `linapro` workspace, the SSH remote is:
+
+```text
+git@github.com:linaproai/official-plugins.git
+```
 
 ## Official Source Plugins
 

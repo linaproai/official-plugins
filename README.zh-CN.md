@@ -1,6 +1,8 @@
 # LinaPro 插件目录
 
-`apps/lina-plugins/` 是 LinaPro 官方源码插件工作区。
+`official-plugins` 是 LinaPro 官方源码插件工作区。
+
+挂载到主仓库 `linapro` 后，该工作区位于 `apps/lina-plugins/`。
 
 在当前开源阶段，宿主只保留稳定的核心基础能力，例如用户管理、角色管理、菜单管理、字典管理、参数设置、文件管理、任务调度、插件治理和开发支持；非核心业务能力通过 `apps/lina-plugins/<plugin-id>/` 下的源码插件交付。
 
@@ -11,6 +13,20 @@
 - `plugin-demo-source`：源码插件目录结构与开发方式样例
 - `plugin-demo-dynamic`：动态 WASM 插件结构与生命周期样例
 - 官方源码插件：通过显式接线编译进宿主的一方业务插件
+
+## 作为 Submodule 使用
+
+主仓库 `linapro` 会通过如下命令把本仓库挂载到 `apps/lina-plugins`：
+
+```bash
+git submodule update --init --recursive
+```
+
+在已经检出的 `linapro` 工作区里做本地 submodule 管理时，SSH 远端地址为：
+
+```text
+git@github.com:linaproai/official-plugins.git
+```
 
 ## 官方源码插件列表
 
