@@ -1,3 +1,4 @@
+// This file defines shared operation-log response DTOs for the monitor-operlog API.
 package v1
 
 import (
@@ -6,8 +7,8 @@ import (
 	"lina-plugin-monitor-operlog/backend/internal/model/operlogtype"
 )
 
-// OperLogEntity represents one operation-log record returned by plugin APIs.
-type OperLogEntity struct {
+// OperLogListItem exposes operation-log summary fields for list responses.
+type OperLogListItem struct {
 	Id                 int                  `json:"id" dc:"Log ID" eg:"1"`
 	TenantId           int                  `json:"tenantId" dc:"Owning tenant ID, where 0 means platform" eg:"1001"`
 	ActingUserId       int                  `json:"actingUserId" dc:"Actual acting user ID for platform operations or impersonation" eg:"1"`
@@ -21,10 +22,15 @@ type OperLogEntity struct {
 	OperName           string               `json:"operName" dc:"Operator" eg:"admin"`
 	OperUrl            string               `json:"operUrl" dc:"Request URL" eg:"/api/v1/user/1"`
 	OperIp             string               `json:"operIp" dc:"Operation IP address" eg:"127.0.0.1"`
-	OperParam          string               `json:"operParam" dc:"Request parameters" eg:"{"id":1}"`
-	JsonResult         string               `json:"jsonResult" dc:"Return parameters" eg:"{"code":0}"`
 	Status             int                  `json:"status" dc:"Operation status: 0=success 1=failure" eg:"0"`
 	ErrorMsg           string               `json:"errorMsg" dc:"Error message" eg:""`
 	CostTime           int                  `json:"costTime" dc:"Time taken (milliseconds)" eg:"32"`
 	OperTime           *gtime.Time          `json:"operTime" dc:"Operating time" eg:"2025-01-01 12:00:00"`
+}
+
+// OperLogDetailItem exposes operation-log detail fields, including audited payloads.
+type OperLogDetailItem struct {
+	OperLogListItem
+	OperParam  string `json:"operParam" dc:"Request parameters" eg:"{\"id\":1}"`
+	JsonResult string `json:"jsonResult" dc:"Return parameters" eg:"{\"code\":0}"`
 }

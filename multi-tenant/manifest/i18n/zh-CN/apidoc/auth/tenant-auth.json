@@ -1,8 +1,8 @@
 {
-  "plugins.multi_tenant.api.auth.v1.LoginTenantEntity.fields.id.dc": "租户 ID",
-  "plugins.multi_tenant.api.auth.v1.LoginTenantEntity.fields.code.dc": "租户编码",
-  "plugins.multi_tenant.api.auth.v1.LoginTenantEntity.fields.name.dc": "租户名称",
-  "plugins.multi_tenant.api.auth.v1.LoginTenantEntity.fields.status.dc": "租户状态",
+  "plugins.multi_tenant.api.auth.v1.LoginTenantItem.fields.id.dc": "租户 ID",
+  "plugins.multi_tenant.api.auth.v1.LoginTenantItem.fields.code.dc": "租户编码",
+  "plugins.multi_tenant.api.auth.v1.LoginTenantItem.fields.name.dc": "租户名称",
+  "plugins.multi_tenant.api.auth.v1.LoginTenantItem.fields.status.dc": "租户状态",
   "plugins.multi_tenant.api.auth.v1.LoginTenantsReq.meta.tags": "租户认证",
   "plugins.multi_tenant.api.auth.v1.LoginTenantsReq.meta.summary": "获取登录租户候选列表",
   "plugins.multi_tenant.api.auth.v1.LoginTenantsReq.meta.dc": "在登录租户选择阶段返回用户可选择的租户候选列表。",

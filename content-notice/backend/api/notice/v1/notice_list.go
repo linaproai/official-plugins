@@ -27,6 +27,6 @@ type ListRes struct {
 
 // ListItem Notice list item
 type ListItem struct {
-	*NoticeEntity
+	NoticeItem
 	CreatedByName string `json:"createdByName" dc:"Creator username" eg:"admin"`
 }

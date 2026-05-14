@@ -1,3 +1,4 @@
+// This file declares login-log list request and response DTOs.
 package v1
 
 import (
@@ -22,6 +23,6 @@ type ListReq struct {
 
 // ListRes is the login-log list response.
 type ListRes struct {
-	Items []*LoginLogEntity `json:"items" dc:"Login log list" eg:"[]"`
-	Total int               `json:"total" dc:"Total number of items" eg:"100"`
+	Items []*LoginLogItem `json:"items" dc:"Login log list" eg:"[]"`
+	Total int             `json:"total" dc:"Total number of items" eg:"100"`
 }

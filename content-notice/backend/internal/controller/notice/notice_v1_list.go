@@ -25,7 +25,7 @@ func (c *ControllerV1) List(ctx context.Context, req *v1.ListReq) (res *v1.ListR
 	items := make([]*v1.ListItem, 0, len(out.List))
 	for _, item := range out.List {
 		items = append(items, &v1.ListItem{
-			NoticeEntity:  toAPINoticeEntity(item.NoticeEntity),
+			NoticeItem:    toAPINoticeItem(item.NoticeEntity),
 			CreatedByName: item.CreatedByName,
 		})
 	}

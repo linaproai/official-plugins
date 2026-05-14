@@ -1,3 +1,4 @@
+// This file implements the login-log list endpoint.
 package loginlog
 
 import (
@@ -24,9 +25,10 @@ func (c *ControllerV1) List(ctx context.Context, req *v1.ListReq) (res *v1.ListR
 		return nil, err
 	}
 
-	items := make([]*v1.LoginLogEntity, 0, len(out.List))
+	items := make([]*v1.LoginLogItem, 0, len(out.List))
 	for _, item := range out.List {
-		items = append(items, toAPILoginLogEntity(item))
+		dto := toAPILoginLogItem(item)
+		items = append(items, &dto)
 	}
 	return &v1.ListRes{Items: items, Total: out.Total}, nil
 }

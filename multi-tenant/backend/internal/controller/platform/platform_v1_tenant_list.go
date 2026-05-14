@@ -21,7 +21,7 @@ func (c *ControllerV1) TenantList(ctx context.Context, req *v1.TenantListReq) (r
 	if err != nil {
 		return nil, err
 	}
-	list := make([]*v1.TenantEntity, 0, len(out.List))
+	list := make([]*v1.TenantItem, 0, len(out.List))
 	for _, item := range out.List {
 		list = append(list, toAPITenant(item))
 	}

@@ -1,4 +1,4 @@
-// Package operlog implements the monitor-operlog plugin HTTP controllers.
+// This file wires the operation-log controller and shared response mappers.
 package operlog
 
 import (
@@ -18,12 +18,12 @@ func NewV1(operLogSvc operlogsvc.Service) operlogapi.IOperlogV1 {
 	return &ControllerV1{operLogSvc: operLogSvc}
 }
 
-// toAPIOperLogEntity converts one service-layer operation-log entity into the API DTO projection.
-func toAPIOperLogEntity(entity *operlogsvc.OperLogEntity) *v1.OperLogEntity {
+// toAPIOperLogListItem converts one service-layer operation-log entity into the list DTO projection.
+func toAPIOperLogListItem(entity *operlogsvc.OperLogEntity) v1.OperLogListItem {
 	if entity == nil {
-		return nil
+		return v1.OperLogListItem{}
 	}
-	return &v1.OperLogEntity{
+	return v1.OperLogListItem{
 		Id:                 entity.Id,
 		TenantId:           entity.TenantId,
 		ActingUserId:       entity.ActingUserId,
@@ -37,12 +37,22 @@ func toAPIOperLogEntity(entity *operlogsvc.OperLogEntity) *v1.OperLogEntity {
 		OperName:           entity.OperName,
 		OperUrl:            entity.OperUrl,
 		OperIp:             entity.OperIp,
-		OperParam:          entity.OperParam,
-		JsonResult:         entity.JsonResult,
 		Status:             entity.Status,
 		ErrorMsg:           entity.ErrorMsg,
 		CostTime:           entity.CostTime,
 		OperTime:           entity.OperTime,
+	}
+}
+
+// toAPIOperLogDetailItem converts one service-layer operation-log entity into the detail DTO projection.
+func toAPIOperLogDetailItem(entity *operlogsvc.OperLogEntity) v1.OperLogDetailItem {
+	if entity == nil {
+		return v1.OperLogDetailItem{}
+	}
+	return v1.OperLogDetailItem{
+		OperLogListItem: toAPIOperLogListItem(entity),
+		OperParam:       entity.OperParam,
+		JsonResult:      entity.JsonResult,
 	}
 }
 

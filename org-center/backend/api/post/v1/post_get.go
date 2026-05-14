@@ -1,3 +1,4 @@
+// This file declares post detail request and response DTOs.
 package v1
 
 import "github.com/gogf/gf/v2/frame/g"
@@ -10,5 +11,5 @@ type GetReq struct {
 
 // GetRes is the response for post detail.
 type GetRes struct {
-	*PostEntity `dc:"Position information" eg:""`
+	PostItem
 }

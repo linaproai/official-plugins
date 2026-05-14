@@ -1,3 +1,4 @@
+// This file declares operation-log list request and response DTOs.
 package v1
 
 import (
@@ -23,6 +24,6 @@ type ListReq struct {
 
 // ListRes is the operation-log list response.
 type ListRes struct {
-	Items []*OperLogEntity `json:"items" dc:"Operation log list" eg:"[]"`
-	Total int              `json:"total" dc:"Total number of items" eg:"500"`
+	Items []*OperLogListItem `json:"items" dc:"Operation log list" eg:"[]"`
+	Total int                `json:"total" dc:"Total number of items" eg:"500"`
 }

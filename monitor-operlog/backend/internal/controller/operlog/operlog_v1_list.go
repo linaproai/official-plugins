@@ -1,3 +1,4 @@
+// This file implements the operation-log list endpoint.
 package operlog
 
 import (
@@ -25,9 +26,10 @@ func (c *ControllerV1) List(ctx context.Context, req *v1.ListReq) (res *v1.ListR
 		return nil, err
 	}
 
-	items := make([]*v1.OperLogEntity, 0, len(out.List))
+	items := make([]*v1.OperLogListItem, 0, len(out.List))
 	for _, item := range out.List {
-		items = append(items, toAPIOperLogEntity(item))
+		dto := toAPIOperLogListItem(item)
+		items = append(items, &dto)
 	}
 	return &v1.ListRes{Items: items, Total: out.Total}, nil
 }

@@ -1,3 +1,4 @@
+// This file declares post list request and response DTOs.
 package v1
 
 import "github.com/gogf/gf/v2/frame/g"
@@ -15,6 +16,6 @@ type ListReq struct {
 
 // ListRes is the response for post list.
 type ListRes struct {
-	List  []*PostEntity `json:"list" dc:"Job list" eg:"[]"`
-	Total int           `json:"total" dc:"Total number of items" eg:"20"`
+	List  []*PostItem `json:"list" dc:"Job list" eg:"[]"`
+	Total int         `json:"total" dc:"Total number of items" eg:"20"`
 }

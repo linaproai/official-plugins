@@ -14,7 +14,7 @@ func (c *ControllerV1) LoginTenants(ctx context.Context, req *v1.LoginTenantsReq
 	if err != nil {
 		return nil, err
 	}
-	list := make([]*v1.LoginTenantEntity, 0, len(tenants))
+	list := make([]*v1.LoginTenantItem, 0, len(tenants))
 	for _, item := range tenants {
 		list = append(list, toAPILoginTenant(item))
 	}

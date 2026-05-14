@@ -1,3 +1,4 @@
+// This file declares department subtree-exclusion request and response DTOs.
 package v1
 
 import "github.com/gogf/gf/v2/frame/g"
@@ -10,5 +11,5 @@ type ExcludeReq struct {
 
 // ExcludeRes defines the response for querying departments with exclusions.
 type ExcludeRes struct {
-	List []*DeptEntity `json:"list" dc:"List of departments excluding the specified node and its sub-nodes" eg:"[]"`
+	List []*DeptItem `json:"list" dc:"List of departments excluding the specified node and its sub-nodes" eg:"[]"`
 }

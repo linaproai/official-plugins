@@ -14,7 +14,7 @@ func (c *ControllerV1) TenantPluginList(ctx context.Context, _ *v1.TenantPluginL
 	if err != nil {
 		return nil, err
 	}
-	list := make([]*v1.TenantPluginEntity, 0, len(out.List))
+	list := make([]*v1.TenantPluginItem, 0, len(out.List))
 	for _, item := range out.List {
 		list = append(list, toAPITenantPlugin(item))
 	}

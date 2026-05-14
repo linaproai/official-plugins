@@ -14,5 +14,5 @@ func (c *ControllerV1) TenantGet(ctx context.Context, req *v1.TenantGetReq) (res
 	if err != nil {
 		return nil, err
 	}
-	return &v1.TenantGetRes{TenantEntity: toAPITenant(item)}, nil
+	return &v1.TenantGetRes{TenantItem: toAPITenant(item)}, nil
 }

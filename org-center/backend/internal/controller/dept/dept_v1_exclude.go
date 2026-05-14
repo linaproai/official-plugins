@@ -15,9 +15,10 @@ func (c *ControllerV1) Exclude(ctx context.Context, req *v1.ExcludeReq) (res *v1
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*v1.DeptEntity, 0, len(list))
+	items := make([]*v1.DeptItem, 0, len(list))
 	for _, item := range list {
-		items = append(items, toAPIDeptEntity(item))
+		dto := toAPIDeptItem(item)
+		items = append(items, &dto)
 	}
 	return &v1.ExcludeRes{List: items}, nil
 }

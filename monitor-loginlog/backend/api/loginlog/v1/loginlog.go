@@ -1,9 +1,10 @@
+// This file defines shared login-log response DTOs for the monitor-loginlog API.
 package v1
 
 import "github.com/gogf/gf/v2/os/gtime"
 
-// LoginLogEntity represents one login-log record returned by plugin APIs.
-type LoginLogEntity struct {
+// LoginLogItem exposes login-log fields visible to monitoring callers.
+type LoginLogItem struct {
 	Id                 int         `json:"id" dc:"Log ID" eg:"1"`
 	TenantId           int         `json:"tenantId" dc:"Owning tenant ID, where 0 means platform" eg:"1001"`
 	ActingUserId       int         `json:"actingUserId" dc:"Actual acting user ID for platform operations or impersonation" eg:"1"`

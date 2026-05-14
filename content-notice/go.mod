@@ -2,7 +2,7 @@ module lina-plugin-content-notice
 
 go 1.25.0
 
-require github.com/gogf/gf/v2 v2.10.1-0.20260422124457-cb7cfa58abb7
+require github.com/gogf/gf/v2 v2.10.1
 
 require (
 	github.com/BurntSushi/toml v1.5.0 // indirect

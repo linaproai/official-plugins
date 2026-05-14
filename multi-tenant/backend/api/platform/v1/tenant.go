@@ -6,16 +6,6 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 )
 
-// TenantEntity is the platform tenant API projection.
-type TenantEntity struct {
-	Id        int64  `json:"id" dc:"Tenant ID" eg:"1"`
-	Code      string `json:"code" dc:"Stable tenant code" eg:"acme"`
-	Name      string `json:"name" dc:"Tenant display name" eg:"Acme BU"`
-	Status    string `json:"status" dc:"Tenant lifecycle status" eg:"active"`
-	Remark    string `json:"remark" dc:"Tenant remark" eg:"Internal business unit"`
-	CreatedAt string `json:"createdAt" dc:"Tenant creation time" eg:"2026-05-10 09:00:00"`
-}
-
 // TenantListReq defines the request for listing tenants.
 type TenantListReq struct {
 	g.Meta   `path:"/platform/tenants" method:"get" tags:"Platform Tenants" summary:"Get tenant list" dc:"Query tenants by page with optional code, name, and status filters." permission:"system:tenant:list"`
@@ -28,6 +18,6 @@ type TenantListReq struct {
 
 // TenantListRes defines the tenant list response.
 type TenantListRes struct {
-	List  []*TenantEntity `json:"list" dc:"Tenant list" eg:"[]"`
-	Total int             `json:"total" dc:"Total tenant count" eg:"12"`
+	List  []*TenantItem `json:"list" dc:"Tenant list" eg:"[]"`
+	Total int           `json:"total" dc:"Total tenant count" eg:"12"`
 }

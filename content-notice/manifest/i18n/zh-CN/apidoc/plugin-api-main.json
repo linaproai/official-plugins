@@ -100,9 +100,6 @@
                             "createdByName": {
                               "dc": "创建者用户名"
                             },
-                            "deletedAt": {
-                              "dc": "软删除时间，未删除时为空"
-                            },
                             "fileIds": {
                               "dc": "附件文件ID列表，逗号分隔"
                             },
@@ -149,9 +146,6 @@
                 "createdByName": {
                   "dc": "创建者用户名"
                 },
-                "deletedAt": {
-                  "dc": "软删除时间，未删除时为空"
-                },
                 "fileIds": {
                   "dc": "附件文件ID列表，逗号分隔"
                 },
@@ -188,9 +182,6 @@
                 },
                 "createdByName": {
                   "dc": "创建者用户名"
-                },
-                "deletedAt": {
-                  "dc": "软删除时间，未删除时为空"
                 },
                 "fileIds": {
                   "dc": "附件文件ID列表，逗号分隔"
@@ -263,16 +254,13 @@
                 }
               }
             },
-            "NoticeEntity": {
+            "NoticeItem": {
               "fields": {
                 "content": {
                   "dc": "公告内容，支持富文本 HTML"
                 },
                 "createdBy": {
                   "dc": "创建者用户ID"
-                },
-                "deletedAt": {
-                  "dc": "软删除时间，未删除时为空"
                 },
                 "fileIds": {
                   "dc": "附件文件ID列表，逗号分隔"

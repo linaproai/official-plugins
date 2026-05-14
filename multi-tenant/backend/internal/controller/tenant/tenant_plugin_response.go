@@ -8,11 +8,11 @@ import (
 )
 
 // toAPITenantPlugin converts a service plugin projection into an API DTO.
-func toAPITenantPlugin(item *tenantplugin.Entity) *v1.TenantPluginEntity {
+func toAPITenantPlugin(item *tenantplugin.Entity) *v1.TenantPluginItem {
 	if item == nil {
 		return nil
 	}
-	return &v1.TenantPluginEntity{
+	return &v1.TenantPluginItem{
 		Id:            item.Id,
 		Name:          item.Name,
 		Version:       item.Version,

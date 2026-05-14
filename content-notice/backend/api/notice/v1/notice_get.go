@@ -17,6 +17,6 @@ type GetReq struct {
 
 // GetRes Notice detail response
 type GetRes struct {
-	*NoticeEntity
+	NoticeItem
 	CreatedByName string `json:"createdByName" dc:"Creator username" eg:"admin"`
 }

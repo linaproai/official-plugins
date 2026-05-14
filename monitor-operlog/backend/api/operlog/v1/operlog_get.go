@@ -1,3 +1,4 @@
+// This file declares operation-log detail request and response DTOs.
 package v1
 
 import (
@@ -14,5 +15,5 @@ type GetReq struct {
 
 // GetRes is the operation-log detail response.
 type GetRes struct {
-	*OperLogEntity
+	OperLogDetailItem
 }

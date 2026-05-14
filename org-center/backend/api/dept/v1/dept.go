@@ -1,11 +1,10 @@
-// This file declares department DTO entities exposed by the org-center API.
-
+// This file defines shared department response DTOs for the org-center API.
 package v1
 
 import "github.com/gogf/gf/v2/os/gtime"
 
-// DeptEntity mirrors the plugin_org_center_dept table shape returned through plugin APIs.
-type DeptEntity struct {
+// DeptItem exposes department fields visible through org-center APIs.
+type DeptItem struct {
 	Id        int         `json:"id" dc:"Department ID" eg:"100"`
 	ParentId  int         `json:"parentId" dc:"Parent department ID, 0 indicates top-level department" eg:"0"`
 	Ancestors string      `json:"ancestors" dc:"Ancestor path, comma separated department ID links" eg:"0,100"`
@@ -19,5 +18,4 @@ type DeptEntity struct {
 	Remark    string      `json:"remark" dc:"Remark" eg:"Responsible for the company's technology research and development work"`
 	CreatedAt *gtime.Time `json:"createdAt" dc:"Creation time" eg:"2026-04-21 10:00:00"`
 	UpdatedAt *gtime.Time `json:"updatedAt" dc:"Update time" eg:"2026-04-21 10:30:00"`
-	DeletedAt *gtime.Time `json:"deletedAt" dc:"Soft deletion time, empty if not deleted" eg:"null"`
 }

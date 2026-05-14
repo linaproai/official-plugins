@@ -333,7 +333,7 @@
                 }
               }
             },
-            "OperLogEntity": {
+            "OperLogDetailItem": {
               "fields": {
                 "costTime": {
                   "dc": "耗时（毫秒）"

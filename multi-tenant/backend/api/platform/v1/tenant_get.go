@@ -12,5 +12,5 @@ type TenantGetReq struct {
 
 // TenantGetRes defines the tenant detail response.
 type TenantGetRes struct {
-	*TenantEntity
+	*TenantItem
 }

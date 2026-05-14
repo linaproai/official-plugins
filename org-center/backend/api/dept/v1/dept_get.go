@@ -1,3 +1,4 @@
+// This file declares department detail request and response DTOs.
 package v1
 
 import "github.com/gogf/gf/v2/frame/g"
@@ -10,5 +11,5 @@ type GetReq struct {
 
 // GetRes is the response for department detail.
 type GetRes struct {
-	*DeptEntity `dc:"Department details, including all field data of the department" eg:""`
+	DeptItem
 }

@@ -1,4 +1,4 @@
-// Package loginlog implements the monitor-loginlog plugin HTTP controllers.
+// This file wires the login-log controller and shared response mappers.
 package loginlog
 
 import (
@@ -17,12 +17,12 @@ func NewV1(loginLogSvc loginlogsvc.Service) loginlogapi.ILoginlogV1 {
 	return &ControllerV1{loginLogSvc: loginLogSvc}
 }
 
-// toAPILoginLogEntity converts one service-layer login-log entity into the API DTO projection.
-func toAPILoginLogEntity(entity *loginlogsvc.LoginLogEntity) *v1.LoginLogEntity {
+// toAPILoginLogItem converts one service-layer login-log entity into the API DTO projection.
+func toAPILoginLogItem(entity *loginlogsvc.LoginLogEntity) v1.LoginLogItem {
 	if entity == nil {
-		return nil
+		return v1.LoginLogItem{}
 	}
-	return &v1.LoginLogEntity{
+	return v1.LoginLogItem{
 		Id:                 entity.Id,
 		TenantId:           entity.TenantId,
 		ActingUserId:       entity.ActingUserId,

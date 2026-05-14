@@ -1,3 +1,4 @@
+// This file declares login-log detail request and response DTOs.
 package v1
 
 import (
@@ -14,5 +15,5 @@ type GetReq struct {
 
 // GetRes is the login-log detail response.
 type GetRes struct {
-	*LoginLogEntity
+	LoginLogItem
 }

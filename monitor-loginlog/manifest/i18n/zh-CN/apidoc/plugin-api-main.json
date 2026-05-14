@@ -285,7 +285,7 @@
                 }
               }
             },
-            "LoginLogEntity": {
+            "LoginLogItem": {
               "fields": {
                 "browser": {
                   "dc": "浏览器类型"

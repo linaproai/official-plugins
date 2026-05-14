@@ -16,7 +16,7 @@ func (c *ControllerV1) Get(ctx context.Context, req *v1.GetReq) (res *v1.GetRes,
 		return nil, err
 	}
 	return &v1.GetRes{
-		NoticeEntity:  toAPINoticeEntity(item.NoticeEntity),
+		NoticeItem:    toAPINoticeItem(item.NoticeEntity),
 		CreatedByName: item.CreatedByName,
 	}, nil
 }

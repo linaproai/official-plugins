@@ -15,9 +15,10 @@ func (c *ControllerV1) List(ctx context.Context, req *v1.ListReq) (res *v1.ListR
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*v1.DeptEntity, 0, len(out.List))
+	items := make([]*v1.DeptItem, 0, len(out.List))
 	for _, item := range out.List {
-		items = append(items, toAPIDeptEntity(item))
+		dto := toAPIDeptItem(item)
+		items = append(items, &dto)
 	}
 	return &v1.ListRes{List: items}, nil
 }

@@ -1,3 +1,4 @@
+// This file implements the operation-log detail endpoint.
 package operlog
 
 import (
@@ -12,5 +13,5 @@ func (c *ControllerV1) Get(ctx context.Context, req *v1.GetReq) (res *v1.GetRes,
 	if err != nil {
 		return nil, err
 	}
-	return &v1.GetRes{OperLogEntity: toAPIOperLogEntity(record)}, nil
+	return &v1.GetRes{OperLogDetailItem: toAPIOperLogDetailItem(record)}, nil
 }

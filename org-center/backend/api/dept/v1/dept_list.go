@@ -1,3 +1,4 @@
+// This file declares department list request and response DTOs.
 package v1
 
 import "github.com/gogf/gf/v2/frame/g"
@@ -11,5 +12,5 @@ type ListReq struct {
 
 // ListRes defines the response for querying the department list.
 type ListRes struct {
-	List []*DeptEntity `json:"list" dc:"Department list data, including all department records matching the conditions" eg:"[]"`
+	List []*DeptItem `json:"list" dc:"Department list data, including all department records matching the conditions" eg:"[]"`
 }
