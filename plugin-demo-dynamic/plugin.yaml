@@ -42,6 +42,30 @@ homepage: https://example.com/lina/plugins/plugin-demo-dynamic
 # 插件许可证标识。
 license: Apache-2.0
 
+# Plugin dependency declaration. `framework.version` constrains the compatible
+# LinaPro host version, and `plugins` lists plugin-to-plugin dependencies.
+# 插件依赖声明。`framework.version` 约束兼容的 LinaPro 宿主版本，`plugins` 声明插件间依赖。
+dependencies:
+  # LinaPro framework semantic-version range required by this plugin.
+  # 当前插件要求的 LinaPro 框架语义化版本范围。
+  framework:
+    version: ">=0.1.0 <1.0.0"
+  # Other plugins required or optionally used by this plugin.
+  # 当前插件依赖或可选使用的其他插件。
+  plugins:
+    # Dependency plugin ID.
+    # 依赖插件 ID。
+    - id: plugin-demo-source
+      # Dependency plugin semantic-version range.
+      # 依赖插件语义化版本范围。
+      version: ">=0.1.0"
+      # Hard dependencies block lifecycle when unsatisfied.
+      # 硬依赖不满足时会阻断生命周期。
+      required: true
+      # `auto` lets the host install this discovered dependency before the target plugin.
+      # `auto` 表示宿主可在安装目标插件前自动安装该已发现依赖。
+      install: auto
+
 # Host service declaration list for requested host services, methods, and resource boundaries.
 # 插件宿主服务声明列表，用于申请调用宿主 service、method 与资源边界。
 hostServices:

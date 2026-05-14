@@ -101,8 +101,8 @@ automatically.
 
 - The current effective version stays pinned in `sys_plugin.version` and `release_id`.
 - The higher discovered source version is stored as a prepared `sys_plugin_release`.
-- Before the host is allowed to start, use the `lina-upgrade` AI skill, for example `upgrade source plugin <plugin-id>` or `upgrade all source plugins`.
-- If you skip that step, host startup fails fast and prints the required skill invocation hint.
+- Before the host is allowed to start, update the source plugin through the supported plugin workspace update flow.
+- If you skip that step, host startup fails fast and prints the plugins that still need attention.
 
 ## Dynamic Plugin Notes
 
