@@ -7,7 +7,6 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 
 	"lina-core/pkg/pluginhost"
-	plugincontract "lina-core/pkg/pluginservice/contract"
 	pkgtenantcap "lina-core/pkg/tenantcap"
 	multitenant "lina-plugin-multi-tenant"
 	authcontroller "lina-plugin-multi-tenant/backend/internal/controller/auth"
@@ -85,16 +84,9 @@ func beforeTenantDelete(
 }
 
 // newLifecyclePrecondition creates the plugin-owned lifecycle precondition
-// checker from the same explicit dependencies used by route registration.
+// checker from the tenant-counting dependency it requires.
 func newLifecyclePrecondition() (*lifecycleprecondition.Checker, error) {
-	return lifecycleprecondition.New(newTenantService(nil)), nil
-}
-
-// newTenantService creates the plugin-owned tenant service used by lifecycle
-// preconditions and HTTP route controllers.
-func newTenantService(bizCtx plugincontract.BizCtxService) tenantsvc.Service {
-	tenantPluginSvc := tenantplugin.New(bizCtx)
-	return tenantsvc.New(bizCtx, resolverconfig.New(), tenantPluginSvc)
+	return lifecycleprecondition.New(tenantsvc.ExistingCounter{})
 }
 
 // registerRoutes binds multi-tenant routes through the published host middleware set.
@@ -108,9 +100,9 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 	}
 	var (
 		membershipSvc     = membership.New(hostServices.BizCtx())
-		tenantPluginSvc   = tenantplugin.New(hostServices.BizCtx())
-		tenantSvc         = tenantsvc.New(hostServices.BizCtx(), resolverconfig.New(), tenantPluginSvc)
 		resolverConfigSvc = resolverconfig.New()
+		tenantPluginSvc   = tenantplugin.New(hostServices.BizCtx(), hostServices.PluginLifecycle())
+		tenantSvc         = tenantsvc.New(hostServices.BizCtx(), resolverConfigSvc, tenantPluginSvc, hostServices.PluginLifecycle())
 		resolverSvc       = resolver.New(hostServices.BizCtx(), membershipSvc)
 		providerSvc       = provider.New(membershipSvc, resolverSvc, resolverConfigSvc)
 	)

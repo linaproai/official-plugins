@@ -82,6 +82,9 @@ func (s fakeHostServices) I18n() plugincontract.I18nService { return nil }
 // Notify returns no notify service.
 func (s fakeHostServices) Notify() plugincontract.NotifyService { return nil }
 
+// PluginLifecycle returns no plugin lifecycle service.
+func (s fakeHostServices) PluginLifecycle() plugincontract.PluginLifecycleService { return nil }
+
 // PluginState returns no plugin-state service.
 func (s fakeHostServices) PluginState() plugincontract.PluginStateService { return nil }
 

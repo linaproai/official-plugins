@@ -25,6 +25,11 @@ func (c *Controller) BeforeUpgrade(request *pluginbridge.BridgeRequestEnvelopeV1
 	return c.runLifecycleDebugHook(request)
 }
 
+// Upgrade logs the dynamic plugin upgrade execution callback.
+func (c *Controller) Upgrade(request *pluginbridge.BridgeRequestEnvelopeV1) (*pluginbridge.BridgeResponseEnvelopeV1, error) {
+	return c.runLifecycleDebugHook(request)
+}
+
 // AfterUpgrade logs the dynamic plugin post-upgrade notification.
 func (c *Controller) AfterUpgrade(request *pluginbridge.BridgeRequestEnvelopeV1) (*pluginbridge.BridgeResponseEnvelopeV1, error) {
 	return c.runLifecycleDebugHook(request)
@@ -42,6 +47,11 @@ func (c *Controller) AfterDisable(request *pluginbridge.BridgeRequestEnvelopeV1)
 
 // BeforeUninstall logs the dynamic plugin uninstall precondition.
 func (c *Controller) BeforeUninstall(request *pluginbridge.BridgeRequestEnvelopeV1) (*pluginbridge.BridgeResponseEnvelopeV1, error) {
+	return c.runLifecycleDebugHook(request)
+}
+
+// Uninstall logs the dynamic plugin uninstall cleanup callback.
+func (c *Controller) Uninstall(request *pluginbridge.BridgeRequestEnvelopeV1) (*pluginbridge.BridgeResponseEnvelopeV1, error) {
 	return c.runLifecycleDebugHook(request)
 }
 
@@ -118,5 +128,6 @@ func buildLifecycleDebugInput(request *pluginbridge.BridgeRequestEnvelopeV1) (*d
 	input.TenantID = body.TenantID
 	input.FromMode = strings.TrimSpace(body.FromMode)
 	input.ToMode = strings.TrimSpace(body.ToMode)
+	input.PurgeStorageData = body.PurgeStorageData
 	return input, nil
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/gogf/gf/v2/database/gdb"
 
 	"lina-core/pkg/bizerr"
-	"lina-core/pkg/pluginhost"
 	plugincontract "lina-core/pkg/pluginservice/contract"
 	"lina-plugin-multi-tenant/backend/internal/dao"
 	"lina-plugin-multi-tenant/backend/internal/service/resolverconfig"
@@ -42,8 +41,6 @@ type Service interface {
 	ChangeStatus(ctx context.Context, id int64, status shared.TenantStatus) error
 	// Delete soft-deletes a tenant.
 	Delete(ctx context.Context, id int64) error
-	// CountExisting returns the number of non-deleted tenants.
-	CountExisting(ctx context.Context) (int, error)
 }
 
 // Ensure serviceImpl implements Service.
@@ -51,9 +48,10 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	bizCtxSvc         plugincontract.BizCtxService
-	resolverConfigSvc resolverconfig.Service
-	tenantPluginSvc   tenantplugin.Service
+	bizCtxSvc          plugincontract.BizCtxService
+	resolverConfigSvc  resolverconfig.Service
+	tenantPluginSvc    tenantplugin.Service
+	pluginLifecycleSvc plugincontract.PluginLifecycleService
 }
 
 // New creates and returns a new tenant Service instance.
@@ -61,11 +59,13 @@ func New(
 	bizCtxSvc plugincontract.BizCtxService,
 	resolverConfigSvc resolverconfig.Service,
 	tenantPluginSvc tenantplugin.Service,
+	pluginLifecycleSvc plugincontract.PluginLifecycleService,
 ) Service {
 	return &serviceImpl{
-		bizCtxSvc:         bizCtxSvc,
-		resolverConfigSvc: resolverConfigSvc,
-		tenantPluginSvc:   tenantPluginSvc,
+		bizCtxSvc:          bizCtxSvc,
+		resolverConfigSvc:  resolverConfigSvc,
+		tenantPluginSvc:    tenantPluginSvc,
+		pluginLifecycleSvc: pluginLifecycleSvc,
 	}
 }
 
@@ -265,60 +265,29 @@ func (s *serviceImpl) Delete(ctx context.Context, id int64) error {
 	if _, err := s.Get(ctx, id); err != nil {
 		return err
 	}
-	if err := ensureTenantDeletePreconditionAllowed(ctx, id); err != nil {
+	if err := s.ensureTenantDeletePreconditionAllowed(ctx, id); err != nil {
 		return err
 	}
 	_, err := shared.Model(ctx, shared.TableTenant).Where("id", id).Delete()
-	return err
+	if err != nil {
+		return err
+	}
+	if s.pluginLifecycleSvc != nil {
+		s.pluginLifecycleSvc.NotifyTenantDeleted(ctx, int(id))
+	}
+	return nil
 }
 
-// ensureTenantDeletePreconditionAllowed asks source-plugin lifecycle
-// preconditions whether a tenant can be deleted.
-func ensureTenantDeletePreconditionAllowed(ctx context.Context, tenantID int64) error {
-	result := pluginhost.RunLifecycleCallbacks(ctx, pluginhost.LifecycleRequest{
-		Hook: pluginhost.LifecycleHookBeforeTenantDelete,
-		TenantInput: pluginhost.NewSourcePluginTenantLifecycleInput(
-			pluginhost.LifecycleHookBeforeTenantDelete.String(),
-			int(tenantID),
-		),
-		Participants: pluginhost.ListSourcePluginLifecycleParticipants(),
-	})
-	if result.OK {
+// ensureTenantDeletePreconditionAllowed asks the host lifecycle service whether
+// a tenant can be deleted.
+func (s *serviceImpl) ensureTenantDeletePreconditionAllowed(ctx context.Context, tenantID int64) error {
+	if s.pluginLifecycleSvc == nil {
 		return nil
 	}
-	return bizerr.NewCode(
-		CodeTenantDeletePreconditionVetoed,
-		bizerr.P("tenantId", tenantID),
-		bizerr.P("reasons", summarizeTenantDeletePreconditionVetoReasons(result.Decisions)),
-	)
-}
-
-// summarizeTenantDeletePreconditionVetoReasons converts callback decisions into
-// a compact reason string suitable for structured business error parameters.
-func summarizeTenantDeletePreconditionVetoReasons(decisions []pluginhost.LifecycleDecision) string {
-	reasons := make([]string, 0, len(decisions))
-	for _, decision := range decisions {
-		if decision.OK {
-			continue
-		}
-		reason := strings.TrimSpace(decision.Reason)
-		if reason == "" && decision.Err != nil {
-			reason = decision.Err.Error()
-		}
-		if reason == "" {
-			reason = "plugin." + strings.TrimSpace(decision.PluginID) + ".lifecycle.vetoed"
-		}
-		reasons = append(reasons, strings.TrimSpace(decision.PluginID)+":"+reason)
+	if err := s.pluginLifecycleSvc.EnsureTenantDeleteAllowed(ctx, int(tenantID)); err != nil {
+		return bizerr.WrapCode(err, CodeTenantDeletePreconditionVetoed, bizerr.P("tenantId", tenantID))
 	}
-	if len(reasons) == 0 {
-		return "unknown"
-	}
-	return strings.Join(reasons, ";")
-}
-
-// CountExisting returns the number of non-deleted tenants.
-func (s *serviceImpl) CountExisting(ctx context.Context) (int, error) {
-	return shared.Model(ctx, shared.TableTenant).Count()
+	return nil
 }
 
 // isValidStatus reports whether status is a supported tenant lifecycle status.

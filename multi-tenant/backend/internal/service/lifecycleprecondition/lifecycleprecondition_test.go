@@ -11,11 +11,8 @@ import (
 
 	_ "lina-core/pkg/dbdriver"
 	"lina-core/pkg/pluginhost"
-	pluginbizctx "lina-core/pkg/pluginservice/bizctx"
-	"lina-plugin-multi-tenant/backend/internal/service/resolverconfig"
 	"lina-plugin-multi-tenant/backend/internal/service/shared"
 	"lina-plugin-multi-tenant/backend/internal/service/tenant"
-	"lina-plugin-multi-tenant/backend/internal/service/tenantplugin"
 )
 
 // lifecyclePreconditionTestTenantData is a typed insert payload for precondition tests.
@@ -46,7 +43,10 @@ func TestPreconditionRejectsSuspendedTenantBeforePluginRemoval(t *testing.T) {
 		}
 	})
 
-	checker := New(tenant.New(pluginbizctx.New(nil), resolverconfig.New(), tenantplugin.New(pluginbizctx.New(nil))))
+	checker, err := New(tenant.ExistingCounter{})
+	if err != nil {
+		t.Fatalf("create lifecycle precondition checker failed: %v", err)
+	}
 	input := pluginhost.NewSourcePluginLifecycleInput("multi-tenant", pluginhost.LifecycleHookBeforeUninstall.String())
 	if ok, reason, err := checker.BeforeUninstall(ctx, input); err != nil || ok || reason != ReasonUninstallTenantsExist {
 		t.Fatalf("expected suspended tenant to block uninstall, ok=%v reason=%q err=%v", ok, reason, err)
@@ -62,6 +62,13 @@ func TestPreconditionRejectsSuspendedTenantBeforePluginRemoval(t *testing.T) {
 	input = pluginhost.NewSourcePluginLifecycleInput("multi-tenant", pluginhost.LifecycleHookBeforeUninstall.String())
 	if ok, reason, err := checker.BeforeUninstall(ctx, input); err != nil || !ok || reason != "" {
 		t.Fatalf("expected soft-deleted tenant not to block uninstall, ok=%v reason=%q err=%v", ok, reason, err)
+	}
+}
+
+// TestNewRequiresTenantCounter verifies dependency construction fails fast.
+func TestNewRequiresTenantCounter(t *testing.T) {
+	if _, err := New(nil); err == nil {
+		t.Fatal("expected missing tenant counter to fail")
 	}
 }
 

@@ -53,4 +53,5 @@ type LifecycleDebugInput struct {
 	TenantID    int
 	FromMode    string
 	ToMode      string
+	PurgeStorageData bool
 }

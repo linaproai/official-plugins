@@ -34,6 +34,9 @@ func (s *serviceImpl) RunLifecycleDebugHook(input *LifecycleDebugInput) error {
 	if strings.TrimSpace(input.ToMode) != "" {
 		fields["toMode"] = strings.TrimSpace(input.ToMode)
 	}
+	if input.PurgeStorageData {
+		fields["purgeStorageData"] = strconv.FormatBool(input.PurgeStorageData)
+	}
 	return s.runtimeSvc.Log(
 		int(pluginbridge.LogLevelInfo),
 		"plugin-demo-dynamic lifecycle callback invoked",

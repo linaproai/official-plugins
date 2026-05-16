@@ -4,6 +4,7 @@ package tenantplugin
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/gogf/gf/v2/database/gdb"
@@ -15,6 +16,40 @@ import (
 	"lina-plugin-multi-tenant/backend/internal/model/do"
 	"lina-plugin-multi-tenant/backend/internal/service/shared"
 )
+
+// fakePluginLifecycleService records host lifecycle calls made by tenant plugin tests.
+type fakePluginLifecycleService struct {
+	disableErr             error
+	ensureDisablePluginID  string
+	ensureDisableTenantID  int
+	notifyDisablePluginID  string
+	notifyDisableTenantID  int
+	ensureDisableCallCount int
+	notifyDisableCallCount int
+}
+
+// EnsureTenantPluginDisableAllowed records tenant plugin disable preconditions.
+func (s *fakePluginLifecycleService) EnsureTenantPluginDisableAllowed(ctx context.Context, pluginID string, tenantID int) error {
+	s.ensureDisableCallCount++
+	s.ensureDisablePluginID = pluginID
+	s.ensureDisableTenantID = tenantID
+	return s.disableErr
+}
+
+// NotifyTenantPluginDisabled records tenant plugin disable notifications.
+func (s *fakePluginLifecycleService) NotifyTenantPluginDisabled(ctx context.Context, pluginID string, tenantID int) {
+	s.notifyDisableCallCount++
+	s.notifyDisablePluginID = pluginID
+	s.notifyDisableTenantID = tenantID
+}
+
+// EnsureTenantDeleteAllowed is unused by tenant plugin tests.
+func (s *fakePluginLifecycleService) EnsureTenantDeleteAllowed(ctx context.Context, tenantID int) error {
+	return nil
+}
+
+// NotifyTenantDeleted is unused by tenant plugin tests.
+func (s *fakePluginLifecycleService) NotifyTenantDeleted(ctx context.Context, tenantID int) {}
 
 // testBizContextService returns a stable plugin-visible business context.
 type testBizContextService struct {
@@ -76,7 +111,7 @@ func TestTenantPluginSetEnabledRequiresTenantContext(t *testing.T) {
 	ctx := context.Background()
 	configureTenantPluginTestDB(t, ctx)
 
-	err := New(testBizContextService{}).SetEnabled(ctx, "missing", true)
+	err := New(testBizContextService{}, nil).SetEnabled(ctx, "missing", true)
 	if err == nil {
 		t.Fatal("expected tenant context error")
 	}
@@ -126,6 +161,82 @@ func TestTenantPluginSetEnabledBumpsPluginRuntimeRevision(t *testing.T) {
 	}
 }
 
+// TestTenantPluginSetEnabledRunsLifecycleAroundDisable verifies tenant plugin
+// disable asks the host lifecycle service before mutation and notifies after.
+func TestTenantPluginSetEnabledRunsLifecycleAroundDisable(t *testing.T) {
+	ctx := context.Background()
+	configureTenantPluginTestDB(t, ctx)
+
+	const (
+		tenantID       = 424265
+		tenantPluginID = "tc-tenant-plugin-disable-lifecycle"
+	)
+	insertTenantPluginRegistry(t, ctx, tenantPluginID, pluginScopeNatureTenantAware, pluginInstallModeTenantScoped)
+	t.Cleanup(func() {
+		cleanupTenantPluginRows(t, ctx, tenantPluginID)
+	})
+
+	lifecycleSvc := &fakePluginLifecycleService{}
+	service := &serviceImpl{
+		bizCtxSvc:          testBizContextService{current: plugincontract.CurrentContext{TenantID: tenantID}},
+		pluginLifecycleSvc: lifecycleSvc,
+	}
+	if err := service.SetEnabled(ctx, tenantPluginID, false); err != nil {
+		t.Fatalf("disable tenant plugin failed: %v", err)
+	}
+	if lifecycleSvc.ensureDisableCallCount != 1 ||
+		lifecycleSvc.ensureDisablePluginID != tenantPluginID ||
+		lifecycleSvc.ensureDisableTenantID != tenantID {
+		t.Fatalf("expected one lifecycle precondition call for tenant plugin disable, got %#v", lifecycleSvc)
+	}
+	if lifecycleSvc.notifyDisableCallCount != 1 ||
+		lifecycleSvc.notifyDisablePluginID != tenantPluginID ||
+		lifecycleSvc.notifyDisableTenantID != tenantID {
+		t.Fatalf("expected one lifecycle notification after tenant plugin disable, got %#v", lifecycleSvc)
+	}
+	if enabled := tenantPluginEnabledForTest(t, ctx, tenantPluginID, tenantID); enabled {
+		t.Fatalf("expected plugin %s disabled for tenant %d", tenantPluginID, tenantID)
+	}
+}
+
+// TestTenantPluginSetEnabledVetoPreservesEnablement verifies lifecycle vetoes
+// stop tenant plugin disable before state mutation or notification.
+func TestTenantPluginSetEnabledVetoPreservesEnablement(t *testing.T) {
+	ctx := context.Background()
+	configureTenantPluginTestDB(t, ctx)
+
+	const (
+		tenantID       = 424266
+		tenantPluginID = "tc-tenant-plugin-disable-veto"
+	)
+	insertTenantPluginRegistry(t, ctx, tenantPluginID, pluginScopeNatureTenantAware, pluginInstallModeTenantScoped)
+	t.Cleanup(func() {
+		cleanupTenantPluginRows(t, ctx, tenantPluginID)
+	})
+
+	service := newTenantPluginTestService(tenantID)
+	if err := service.SetEnabled(ctx, tenantPluginID, true); err != nil {
+		t.Fatalf("enable tenant plugin before veto failed: %v", err)
+	}
+
+	vetoErr := errors.New("tenant plugin disable vetoed")
+	lifecycleSvc := &fakePluginLifecycleService{disableErr: vetoErr}
+	vetoingService := &serviceImpl{
+		bizCtxSvc:          testBizContextService{current: plugincontract.CurrentContext{TenantID: tenantID}},
+		pluginLifecycleSvc: lifecycleSvc,
+	}
+	err := vetoingService.SetEnabled(ctx, tenantPluginID, false)
+	if !errors.Is(err, vetoErr) {
+		t.Fatalf("expected lifecycle veto error, got %v", err)
+	}
+	if lifecycleSvc.ensureDisableCallCount != 1 || lifecycleSvc.notifyDisableCallCount != 0 {
+		t.Fatalf("expected veto to run precondition only, got %#v", lifecycleSvc)
+	}
+	if enabled := tenantPluginEnabledForTest(t, ctx, tenantPluginID, tenantID); !enabled {
+		t.Fatalf("expected plugin %s to remain enabled for tenant %d after veto", tenantPluginID, tenantID)
+	}
+}
+
 // TestProvisionForTenantAutoEnablesPolicyEnabledTenantPlugins verifies new tenants
 // receive enablement rows for tenant-scoped plugins allowed by platform policy.
 func TestProvisionForTenantAutoEnablesPolicyEnabledTenantPlugins(t *testing.T) {
@@ -143,7 +254,7 @@ func TestProvisionForTenantAutoEnablesPolicyEnabledTenantPlugins(t *testing.T) {
 		cleanupTenantPluginRows(t, ctx, defaultPluginID, manualPluginID)
 	})
 
-	if err := New(testBizContextService{}).ProvisionForTenant(ctx, tenantID); err != nil {
+	if err := New(testBizContextService{}, nil).ProvisionForTenant(ctx, tenantID); err != nil {
 		t.Fatalf("provision default tenant plugins failed: %v", err)
 	}
 
@@ -176,7 +287,7 @@ func TestProvisionForTenantSkipsAutoEnablePolicyWhenPluginDisabled(t *testing.T)
 		cleanupTenantPluginRows(t, ctx, pluginID)
 	})
 
-	if err := New(testBizContextService{}).ProvisionForTenant(ctx, tenantID); err != nil {
+	if err := New(testBizContextService{}, nil).ProvisionForTenant(ctx, tenantID); err != nil {
 		t.Fatalf("provision default tenant plugins failed: %v", err)
 	}
 
@@ -214,7 +325,9 @@ func insertTenantPluginRegistry(t *testing.T, ctx context.Context, pluginID stri
 
 // newTenantPluginTestService creates a service with a fixed tenant context.
 func newTenantPluginTestService(tenantID int) Service {
-	return &serviceImpl{bizCtxSvc: testBizContextService{current: plugincontract.CurrentContext{TenantID: tenantID}}}
+	return &serviceImpl{
+		bizCtxSvc: testBizContextService{current: plugincontract.CurrentContext{TenantID: tenantID}},
+	}
 }
 
 // insertTenantPluginRegistryWithDefault creates one host plugin registry row for tests.

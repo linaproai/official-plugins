@@ -64,12 +64,19 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	bizCtxSvc plugincontract.BizCtxService
+	bizCtxSvc          plugincontract.BizCtxService
+	pluginLifecycleSvc plugincontract.PluginLifecycleService
 }
 
 // New creates and returns a tenant plugin governance service.
-func New(bizCtxSvc plugincontract.BizCtxService) Service {
-	return &serviceImpl{bizCtxSvc: bizCtxSvc}
+func New(
+	bizCtxSvc plugincontract.BizCtxService,
+	pluginLifecycleSvc plugincontract.PluginLifecycleService,
+) Service {
+	return &serviceImpl{
+		bizCtxSvc:          bizCtxSvc,
+		pluginLifecycleSvc: pluginLifecycleSvc,
+	}
 }
 
 // Entity is the tenant plugin-governance projection.
@@ -155,7 +162,18 @@ func (s *serviceImpl) SetEnabled(ctx context.Context, pluginID string, enabled b
 	if err = s.ensureTenantScopedPlugin(ctx, normalizedPluginID); err != nil {
 		return err
 	}
-	return s.setTenantPluginEnabled(ctx, tenantID, normalizedPluginID, enabled)
+	if !enabled && s.pluginLifecycleSvc != nil {
+		if err = s.pluginLifecycleSvc.EnsureTenantPluginDisableAllowed(ctx, normalizedPluginID, int(tenantID)); err != nil {
+			return err
+		}
+	}
+	if err = s.setTenantPluginEnabled(ctx, tenantID, normalizedPluginID, enabled); err != nil {
+		return err
+	}
+	if !enabled && s.pluginLifecycleSvc != nil {
+		s.pluginLifecycleSvc.NotifyTenantPluginDisabled(ctx, normalizedPluginID, int(tenantID))
+	}
+	return nil
 }
 
 // ProvisionForTenant provisions default tenant-scoped plugin enablement for a

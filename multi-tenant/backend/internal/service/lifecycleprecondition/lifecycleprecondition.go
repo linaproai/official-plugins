@@ -4,8 +4,9 @@ package lifecycleprecondition
 import (
 	"context"
 
+	"github.com/gogf/gf/v2/errors/gerror"
+
 	"lina-core/pkg/pluginhost"
-	"lina-plugin-multi-tenant/backend/internal/service/tenant"
 )
 
 const (
@@ -15,14 +16,23 @@ const (
 	ReasonDisableTenantsExist = "plugin.multi-tenant.disable_blocked.tenants_exist"
 )
 
+// TenantCounter counts tenants relevant to lifecycle precondition decisions.
+type TenantCounter interface {
+	// CountExisting returns the number of non-deleted tenants.
+	CountExisting(ctx context.Context) (int, error)
+}
+
 // Checker implements plugin-owned lifecycle precondition checks.
 type Checker struct {
-	tenantSvc tenant.Service
+	tenantCounter TenantCounter
 }
 
 // New creates and returns a lifecycle precondition checker.
-func New(tenantSvc tenant.Service) *Checker {
-	return &Checker{tenantSvc: tenantSvc}
+func New(tenantCounter TenantCounter) (*Checker, error) {
+	if tenantCounter == nil {
+		return nil, gerror.New("multi-tenant lifecycle precondition requires tenant counter")
+	}
+	return &Checker{tenantCounter: tenantCounter}, nil
 }
 
 // BeforeUninstall rejects uninstall while tenants exist.
@@ -30,7 +40,7 @@ func (c *Checker) BeforeUninstall(
 	ctx context.Context,
 	input pluginhost.SourcePluginLifecycleInput,
 ) (bool, string, error) {
-	count, err := c.tenantSvc.CountExisting(ctx)
+	count, err := c.tenantCounter.CountExisting(ctx)
 	if err != nil {
 		return false, ReasonUninstallTenantsExist, err
 	}
@@ -45,7 +55,7 @@ func (c *Checker) BeforeDisable(
 	ctx context.Context,
 	input pluginhost.SourcePluginLifecycleInput,
 ) (bool, string, error) {
-	count, err := c.tenantSvc.CountExisting(ctx)
+	count, err := c.tenantCounter.CountExisting(ctx)
 	if err != nil {
 		return false, ReasonDisableTenantsExist, err
 	}
