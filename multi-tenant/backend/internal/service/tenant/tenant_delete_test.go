@@ -1,4 +1,4 @@
-// This file verifies tenant deletion guard behavior.
+// This file verifies tenant deletion precondition behavior.
 
 package tenant
 
@@ -25,28 +25,33 @@ type tenantDeleteTestInsertData struct {
 	Status string `orm:"status"`
 }
 
-// tenantDeleteVetoGuard rejects tenant deletion in tests.
-type tenantDeleteVetoGuard struct{}
-
-// CanTenantDelete returns a deterministic guard veto.
-func (tenantDeleteVetoGuard) CanTenantDelete(_ context.Context, _ int) (bool, string, error) {
+// tenantDeleteVetoCallback rejects tenant deletion in tests.
+func tenantDeleteVetoCallback(
+	ctx context.Context,
+	input pluginhost.SourcePluginTenantLifecycleInput,
+) (bool, string, error) {
 	return false, "plugin.test.tenant.delete.vetoed", nil
 }
 
-// TestDeleteRunsLifecycleGuardBeforeSoftDelete verifies guard vetoes stop tenant deletion.
-func TestDeleteRunsLifecycleGuardBeforeSoftDelete(t *testing.T) {
+// TestDeleteRunsLifecyclePreconditionBeforeSoftDelete verifies precondition
+// vetoes stop tenant deletion.
+func TestDeleteRunsLifecyclePreconditionBeforeSoftDelete(t *testing.T) {
 	ctx := context.Background()
 	configureTenantDeleteTestDB(t, ctx)
 
-	const guardPluginID = "tenant-delete-test-guard"
-	pluginhost.RegisterLifecycleGuard(guardPluginID, tenantDeleteVetoGuard{})
-	t.Cleanup(func() {
-		pluginhost.UnregisterLifecycleGuard(guardPluginID)
-	})
+	plugin := pluginhost.NewSourcePlugin("tenant-delete-test-precondition")
+	if err := plugin.Lifecycle().RegisterBeforeTenantDeleteHandler(tenantDeleteVetoCallback); err != nil {
+		t.Fatalf("register tenant delete lifecycle handler failed: %v", err)
+	}
+	cleanup, err := pluginhost.RegisterSourcePluginForTest(plugin)
+	if err != nil {
+		t.Fatalf("register tenant delete lifecycle callback failed: %v", err)
+	}
+	t.Cleanup(cleanup)
 
 	tenantID, err := shared.Model(ctx, shared.TableTenant).Data(tenantDeleteTestInsertData{
-		Code:   "tenant-delete-guard-test",
-		Name:   "Tenant Delete Guard Test",
+		Code:   "tenant-delete-precondition-test",
+		Name:   "Tenant Delete Precondition Test",
 		Status: string(shared.TenantStatusActive),
 	}).InsertAndGetId()
 	if err != nil {
@@ -59,8 +64,8 @@ func TestDeleteRunsLifecycleGuardBeforeSoftDelete(t *testing.T) {
 	})
 
 	err = New(pluginbizctx.New(nil), resolverconfig.New(), tenantplugin.New(pluginbizctx.New(nil))).Delete(ctx, tenantID)
-	if !bizerr.Is(err, CodeTenantDeleteGuardVetoed) {
-		t.Fatalf("expected guard veto error, got %v", err)
+	if !bizerr.Is(err, CodeTenantDeletePreconditionVetoed) {
+		t.Fatalf("expected lifecycle precondition veto error, got %v", err)
 	}
 
 	count, err := shared.Model(ctx, shared.TableTenant).Where("id", tenantID).Count()
@@ -68,7 +73,7 @@ func TestDeleteRunsLifecycleGuardBeforeSoftDelete(t *testing.T) {
 		t.Fatalf("count tenant after veto failed: %v", err)
 	}
 	if count != 1 {
-		t.Fatalf("expected tenant to remain after guard veto, got count=%d", count)
+		t.Fatalf("expected tenant to remain after precondition veto, got count=%d", count)
 	}
 }
 

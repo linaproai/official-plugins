@@ -11,12 +11,12 @@ This plugin owns:
 - tenant CRUD and lifecycle status changes
 - user membership management
 - tenant resolution strategies with code-owned built-in policy
-- tenant lifecycle guard checks and explicit plugin-governance provisioning
-- platform impersonation and lifecycle guard checks
+- tenant lifecycle precondition checks and explicit plugin-governance provisioning
+- platform impersonation and lifecycle precondition checks
 
 ## Host Boundary
 
-The host keeps only stable seams such as `tenantcap`, tenancy middleware, `bizctx` tenant identity, tenant-aware cache scopes, and plugin governance fields. Tenant entities, memberships, resolver policy, lifecycle guards, and tenant administration workflows stay inside this plugin.
+The host keeps only stable seams such as `tenantcap`, tenancy middleware, `bizctx` tenant identity, tenant-aware cache scopes, and plugin governance fields. Tenant entities, memberships, resolver policy, lifecycle preconditions, and tenant administration workflows stay inside this plugin.
 
 When this plugin is not installed or enabled, the host falls back to `tenant_id = 0` and keeps the single-tenant experience.
 

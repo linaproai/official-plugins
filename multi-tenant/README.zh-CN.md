@@ -12,7 +12,7 @@
 - 用户成员关系管理
 - 代码内置的租户解析策略
 - 租户生命周期前置保护与显式插件治理初始化
-- 平台管理员 impersonation 与 LifecycleGuard 前置校验
+- 平台管理员 impersonation 与生命周期前置校验
 
 ## 宿主边界
 

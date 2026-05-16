@@ -8,6 +8,7 @@
 - one standalone static page that does not depend on the host UI framework
 - demo backend routes executed through the dynamic plugin bridge
 - governed access to `runtime`, `storage`, `network`, and `data` host services
+- source-compatible `Before*` precondition handlers and `After*` notification handlers are auto-discovered from backend controller methods, then write runtime debug logs for lifecycle flow inspection
 
 ## Directory Layout
 
@@ -51,6 +52,10 @@ The sample requests the following host services in `plugin.yaml`:
 - `data`
 
 These declarations are reviewed and authorized by the host during plugin lifecycle operations.
+
+## Lifecycle Logging
+
+The dynamic sample implements `BeforeInstall`, `AfterInstall`, `BeforeUpgrade`, `AfterUpgrade`, `BeforeDisable`, `AfterDisable`, `BeforeUninstall`, `AfterUninstall`, `BeforeTenantDisable`, `AfterTenantDisable`, `BeforeTenantDelete`, `AfterTenantDelete`, `BeforeInstallModeChange`, and `AfterInstallModeChange` controller methods. `build-wasm` auto-discovers those methods and embeds lifecycle contracts in the WASM artifact. Each handler returns `ok=true` and writes a runtime log entry with the operation and available transition fields.
 
 ## Review Checklist
 

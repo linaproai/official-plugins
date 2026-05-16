@@ -9,10 +9,10 @@ import {
 import { createTenant, deleteTenant } from '../../support/multi-tenant';
 import { PluginPage } from '@host-tests/pages/PluginPage';
 
-test.describe('TC-227 多租户插件卸载保护弹窗', () => {
+test.describe('TC-227 多租户插件卸载前置条件弹窗', () => {
   test.use({ multiTenantMode: 'multi-tenant-enabled' });
 
-  test('TC-227a: lifecycle guard veto opens localized force confirmation dialog and resubmits with force', async ({
+  test('TC-227a: lifecycle precondition veto opens localized force confirmation dialog and resubmits with force', async ({
     adminPage,
     multiTenantMode,
   }) => {
@@ -48,32 +48,32 @@ test.describe('TC-227 多租户插件卸载保护弹窗', () => {
       const vetoResponse = await vetoResponsePromise;
       expect(vetoResponse.url()).not.toContain('force=true');
       expect((await vetoResponse.json()).errorCode).toBe(
-        'PLUGIN_LIFECYCLE_GUARD_VETOED',
+        'PLUGIN_LIFECYCLE_PRECONDITION_VETOED',
       );
 
-      await expect(pluginPage.lifecycleGuardDialog()).toBeVisible();
+      await expect(pluginPage.lifecyclePreconditionDialog()).toBeVisible();
       await expect(pluginPage.uninstallDialog()).toHaveCount(0);
-      await expect(pluginPage.lifecycleGuardDialog()).toHaveCSS('gap', '10px');
-      await expect(pluginPage.lifecycleGuardReasonAlert()).not.toContainText(
+      await expect(pluginPage.lifecyclePreconditionDialog()).toHaveCSS('gap', '10px');
+      await expect(pluginPage.lifecyclePreconditionReasonAlert()).not.toContainText(
         '插件返回了阻止当前操作的原因。',
       );
-      await expect(pluginPage.lifecycleGuardReasonText()).toContainText(
+      await expect(pluginPage.lifecyclePreconditionReasonText()).toContainText(
         '当前插件阻止操作，原因：',
       );
-      await expect(pluginPage.lifecycleGuardReasonText()).toContainText(
+      await expect(pluginPage.lifecyclePreconditionReasonText()).toContainText(
         '仍存在租户，请先删除租户，再卸载插件。',
       );
-      await expect(pluginPage.lifecycleGuardForceAlert()).toContainText(
-        '强制卸载会绕过上述保护并清理插件数据，请确认你理解该风险。',
+      await expect(pluginPage.lifecyclePreconditionForceAlert()).toContainText(
+        '强制卸载会绕过上述前置条件并清理插件数据，请确认你理解该风险。',
       );
-      await expect(pluginPage.lifecycleGuardForceAlert()).toContainText(
+      await expect(pluginPage.lifecyclePreconditionForceAlert()).toContainText(
         '输入插件 ID "multi-tenant" 以启用强制卸载。',
       );
-      await expect(pluginPage.lifecycleGuardDialog()).toContainText(pluginId);
-      await expect(pluginPage.lifecycleGuardConfirmButton()).toBeDisabled();
+      await expect(pluginPage.lifecyclePreconditionDialog()).toContainText(pluginId);
+      await expect(pluginPage.lifecyclePreconditionConfirmButton()).toBeDisabled();
 
-      await pluginPage.lifecycleGuardForcePluginIdInput().fill(pluginId);
-      await expect(pluginPage.lifecycleGuardConfirmButton()).toBeEnabled();
+      await pluginPage.lifecyclePreconditionForcePluginIdInput().fill(pluginId);
+      await expect(pluginPage.lifecyclePreconditionConfirmButton()).toBeEnabled();
 
       const forceResponsePromise = adminPage.waitForResponse(
         (response) =>
@@ -81,11 +81,11 @@ test.describe('TC-227 多租户插件卸载保护弹窗', () => {
           response.url().includes('force=true') &&
           response.request().method() === 'DELETE',
       );
-      await pluginPage.lifecycleGuardConfirmButton().click();
+      await pluginPage.lifecyclePreconditionConfirmButton().click();
       const forceResponse = await forceResponsePromise;
       const forcePayload = await forceResponse.json();
       expect(forcePayload.code).toBe(0);
-      await expect(pluginPage.lifecycleGuardDialog()).toHaveCount(0);
+      await expect(pluginPage.lifecyclePreconditionDialog()).toHaveCount(0);
 
       const pluginAfterForce = await getPlugin(api, pluginId);
       expect(pluginAfterForce.installed).toBe(0);

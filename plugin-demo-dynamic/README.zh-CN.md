@@ -8,6 +8,7 @@
 - 一个不依赖宿主 UI 框架的独立静态页面
 - 通过动态插件桥执行的后端演示路由
 - 对 `runtime`、`storage`、`network`、`data` 宿主服务的受治理访问
+- 后端 controller 方法会被自动发现为与源码插件一致命名的 `Before*` 前置处理器和 `After*` 通知处理器，并通过运行时日志展示生命周期流程
 
 ## 目录结构
 
@@ -51,6 +52,10 @@ make wasm p=plugin-demo-dynamic
 - `data`
 
 这些声明会在插件生命周期流程中由宿主进行审查和授权。
+
+## 生命周期日志
+
+动态样例实现了 `BeforeInstall`、`AfterInstall`、`BeforeUpgrade`、`AfterUpgrade`、`BeforeDisable`、`AfterDisable`、`BeforeUninstall`、`AfterUninstall`、`BeforeTenantDisable`、`AfterTenantDisable`、`BeforeTenantDelete`、`AfterTenantDelete`、`BeforeInstallModeChange` 和 `AfterInstallModeChange` controller 方法。`build-wasm` 会自动发现这些方法，并将生命周期契约写入 WASM 产物。每个处理器都会返回 `ok=true`，并写入包含操作名称和可用迁移字段的运行时日志。
 
 ## 审查要点
 

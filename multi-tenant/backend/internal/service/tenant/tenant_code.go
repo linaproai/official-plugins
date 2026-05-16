@@ -45,10 +45,10 @@ var (
 		"Tenant status transition is invalid",
 		gcode.CodeInvalidOperation,
 	)
-	// CodeTenantDeleteGuardVetoed reports that a plugin lifecycle guard blocked tenant deletion.
-	CodeTenantDeleteGuardVetoed = bizerr.MustDefine(
-		"MULTI_TENANT_DELETE_GUARD_VETOED",
-		"Tenant deletion was blocked by a lifecycle guard",
+	// CodeTenantDeletePreconditionVetoed reports that a plugin lifecycle precondition blocked tenant deletion.
+	CodeTenantDeletePreconditionVetoed = bizerr.MustDefine(
+		"MULTI_TENANT_DELETE_PRECONDITION_VETOED",
+		"Tenant deletion was blocked by a lifecycle precondition",
 		gcode.CodeInvalidOperation,
 	)
 )

@@ -4,6 +4,8 @@ package backend
 import (
 	"context"
 
+	"github.com/gogf/gf/v2/errors/gerror"
+
 	"lina-core/pkg/pluginhost"
 	monitoroperlogplugin "lina-plugin-monitor-operlog"
 	operlogcontroller "lina-plugin-monitor-operlog/backend/internal/controller/operlog"
@@ -21,12 +23,16 @@ const (
 func init() {
 	plugin := pluginhost.NewSourcePlugin(pluginID)
 	plugin.Assets().UseEmbeddedFiles(monitoroperlogplugin.EmbeddedFiles)
-	plugin.HTTP().RegisterRoutes(
+	if err := plugin.HTTP().RegisterRoutes(
 		pluginhost.ExtensionPointHTTPRouteRegister,
 		pluginhost.CallbackExecutionModeBlocking,
 		registerRoutes,
-	)
-	pluginhost.RegisterSourcePlugin(plugin)
+	); err != nil {
+		panic(err)
+	}
+	if err := pluginhost.RegisterSourcePlugin(plugin); err != nil {
+		panic(err)
+	}
 }
 
 // registerRoutes binds operation-log governance routes and audit middleware through the published host HTTP registrars.
@@ -38,11 +44,13 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		hostServices.I18n() == nil ||
 		hostServices.Route() == nil ||
 		hostServices.TenantFilter() == nil {
-		panic("monitor-operlog routes require host apidoc, bizctx, i18n, route, and tenant-filter services")
+		return gerror.New("monitor-operlog routes require host apidoc, bizctx, i18n, route, and tenant-filter services")
 	}
 	operLogSvc := operlogsvc.New(hostServices.APIDoc(), hostServices.I18n(), hostServices.TenantFilter())
 	auditMiddlewareSvc := middlewaresvc.New(hostServices.Route(), hostServices.BizCtx(), operLogSvc)
-	registrar.GlobalMiddlewares().Bind("/*", auditMiddlewareSvc.Audit)
+	if err := registrar.GlobalMiddlewares().Bind("/*", auditMiddlewareSvc.Audit); err != nil {
+		return err
+	}
 
 	var (
 		routes      = registrar.Routes()

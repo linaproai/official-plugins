@@ -4,6 +4,8 @@ package backend
 import (
 	"context"
 
+	"github.com/gogf/gf/v2/errors/gerror"
+
 	hostorgcap "lina-core/pkg/orgcap"
 	"lina-core/pkg/pluginhost"
 	orgcenter "lina-plugin-org-center"
@@ -24,19 +26,23 @@ const (
 func init() {
 	plugin := pluginhost.NewSourcePlugin(pluginID)
 	plugin.Assets().UseEmbeddedFiles(orgcenter.EmbeddedFiles)
-	plugin.HTTP().RegisterRoutes(
+	if err := plugin.HTTP().RegisterRoutes(
 		pluginhost.ExtensionPointHTTPRouteRegister,
 		pluginhost.CallbackExecutionModeBlocking,
 		registerRoutes,
-	)
-	pluginhost.RegisterSourcePlugin(plugin)
+	); err != nil {
+		panic(err)
+	}
+	if err := pluginhost.RegisterSourcePlugin(plugin); err != nil {
+		panic(err)
+	}
 }
 
 // registerRoutes binds department and post management routes through the published host middleware set.
 func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) error {
 	hostServices := registrar.HostServices()
 	if hostServices == nil || hostServices.I18n() == nil || hostServices.TenantFilter() == nil {
-		panic("org-center routes require host i18n and tenant-filter services")
+		return gerror.New("org-center routes require host i18n and tenant-filter services")
 	}
 	hostorgcap.RegisterProvider(orgcapadapter.New(hostServices.TenantFilter()))
 	deptSvc := deptsvc.New(hostServices.TenantFilter())

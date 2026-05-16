@@ -1,6 +1,6 @@
-// This file verifies lifecycle guard tenant-existence checks.
+// This file verifies lifecycle precondition tenant-existence checks.
 
-package lifecycleguard
+package lifecycleprecondition
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 
 	_ "lina-core/pkg/dbdriver"
+	"lina-core/pkg/pluginhost"
 	pluginbizctx "lina-core/pkg/pluginservice/bizctx"
 	"lina-plugin-multi-tenant/backend/internal/service/resolverconfig"
 	"lina-plugin-multi-tenant/backend/internal/service/shared"
@@ -17,23 +18,23 @@ import (
 	"lina-plugin-multi-tenant/backend/internal/service/tenantplugin"
 )
 
-// lifecycleGuardTestTenantData is a typed insert payload for guard tests.
-type lifecycleGuardTestTenantData struct {
+// lifecyclePreconditionTestTenantData is a typed insert payload for precondition tests.
+type lifecyclePreconditionTestTenantData struct {
 	Code   string `orm:"code"`
 	Name   string `orm:"name"`
 	Status string `orm:"status"`
 }
 
-// TestGuardRejectsSuspendedTenantBeforePluginRemoval verifies non-deleted
+// TestPreconditionRejectsSuspendedTenantBeforePluginRemoval verifies non-deleted
 // suspended tenants still block disabling or uninstalling the multi-tenant
 // plugin after the archive lifecycle is removed.
-func TestGuardRejectsSuspendedTenantBeforePluginRemoval(t *testing.T) {
+func TestPreconditionRejectsSuspendedTenantBeforePluginRemoval(t *testing.T) {
 	ctx := context.Background()
-	configureLifecycleGuardTestDB(t, ctx)
+	configureLifecyclePreconditionTestDB(t, ctx)
 
-	tenantID, err := shared.Model(ctx, shared.TableTenant).Data(lifecycleGuardTestTenantData{
-		Code:   "lifecycle-guard-suspended-test",
-		Name:   "Lifecycle Guard Suspended Test",
+	tenantID, err := shared.Model(ctx, shared.TableTenant).Data(lifecyclePreconditionTestTenantData{
+		Code:   "lifecycle-precondition-suspended-test",
+		Name:   "Lifecycle Precondition Suspended Test",
 		Status: string(shared.TenantStatusSuspended),
 	}).InsertAndGetId()
 	if err != nil {
@@ -45,48 +46,51 @@ func TestGuardRejectsSuspendedTenantBeforePluginRemoval(t *testing.T) {
 		}
 	})
 
-	guard := New(tenant.New(pluginbizctx.New(nil), resolverconfig.New(), tenantplugin.New(pluginbizctx.New(nil))))
-	if ok, reason, err := guard.CanUninstall(ctx); err != nil || ok || reason != ReasonUninstallTenantsExist {
+	checker := New(tenant.New(pluginbizctx.New(nil), resolverconfig.New(), tenantplugin.New(pluginbizctx.New(nil))))
+	input := pluginhost.NewSourcePluginLifecycleInput("multi-tenant", pluginhost.LifecycleHookBeforeUninstall.String())
+	if ok, reason, err := checker.BeforeUninstall(ctx, input); err != nil || ok || reason != ReasonUninstallTenantsExist {
 		t.Fatalf("expected suspended tenant to block uninstall, ok=%v reason=%q err=%v", ok, reason, err)
 	}
-	if ok, reason, err := guard.CanDisable(ctx); err != nil || ok || reason != ReasonDisableTenantsExist {
+	input = pluginhost.NewSourcePluginLifecycleInput("multi-tenant", pluginhost.LifecycleHookBeforeDisable.String())
+	if ok, reason, err := checker.BeforeDisable(ctx, input); err != nil || ok || reason != ReasonDisableTenantsExist {
 		t.Fatalf("expected suspended tenant to block disable, ok=%v reason=%q err=%v", ok, reason, err)
 	}
 
 	if _, err := shared.Model(ctx, shared.TableTenant).Where("id", tenantID).Delete(); err != nil {
 		t.Fatalf("soft delete suspended tenant failed: %v", err)
 	}
-	if ok, reason, err := guard.CanUninstall(ctx); err != nil || !ok || reason != "" {
+	input = pluginhost.NewSourcePluginLifecycleInput("multi-tenant", pluginhost.LifecycleHookBeforeUninstall.String())
+	if ok, reason, err := checker.BeforeUninstall(ctx, input); err != nil || !ok || reason != "" {
 		t.Fatalf("expected soft-deleted tenant not to block uninstall, ok=%v reason=%q err=%v", ok, reason, err)
 	}
 }
 
-// configureLifecycleGuardTestDB points the package test at the local PostgreSQL
-// database initialized by the repository test workflow.
-func configureLifecycleGuardTestDB(t *testing.T, ctx context.Context) {
+// configureLifecyclePreconditionTestDB points the package test at the local
+// PostgreSQL database initialized by the repository test workflow.
+func configureLifecyclePreconditionTestDB(t *testing.T, ctx context.Context) {
 	t.Helper()
 
 	originalConfig := gdb.GetAllConfig()
 	if err := gdb.SetConfig(gdb.Config{
 		gdb.DefaultGroupName: gdb.ConfigGroup{{Link: "pgsql:postgres:postgres@tcp(127.0.0.1:5432)/linapro?sslmode=disable"}},
 	}); err != nil {
-		t.Fatalf("configure lifecycle guard test database failed: %v", err)
+		t.Fatalf("configure lifecycle precondition test database failed: %v", err)
 	}
 	db := g.DB()
-	ensureLifecycleGuardTestTables(t, ctx)
+	ensureLifecyclePreconditionTestTables(t, ctx)
 	t.Cleanup(func() {
 		if err := db.Close(ctx); err != nil {
-			t.Errorf("close lifecycle guard test database failed: %v", err)
+			t.Errorf("close lifecycle precondition test database failed: %v", err)
 		}
 		if err := gdb.SetConfig(originalConfig); err != nil {
-			t.Errorf("restore lifecycle guard test database config failed: %v", err)
+			t.Errorf("restore lifecycle precondition test database config failed: %v", err)
 		}
 	})
 }
 
-// ensureLifecycleGuardTestTables creates the minimal tenant table required by
-// guard tests when the local database has not installed the plugin.
-func ensureLifecycleGuardTestTables(t *testing.T, ctx context.Context) {
+// ensureLifecyclePreconditionTestTables creates the minimal tenant table
+// required by precondition tests when the local database has not installed the plugin.
+func ensureLifecyclePreconditionTestTables(t *testing.T, ctx context.Context) {
 	t.Helper()
 
 	statement := `CREATE TABLE IF NOT EXISTS plugin_multi_tenant_tenant (
@@ -103,6 +107,6 @@ func ensureLifecycleGuardTestTables(t *testing.T, ctx context.Context) {
 		CONSTRAINT uk_plugin_multi_tenant_tenant_code UNIQUE ("code")
 	)`
 	if _, err := g.DB().Exec(ctx, statement); err != nil {
-		t.Fatalf("ensure lifecycle guard test table failed: %v", err)
+		t.Fatalf("ensure lifecycle precondition test table failed: %v", err)
 	}
 }

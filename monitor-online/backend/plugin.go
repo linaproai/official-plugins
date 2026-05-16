@@ -4,6 +4,8 @@ package backend
 import (
 	"context"
 
+	"github.com/gogf/gf/v2/errors/gerror"
+
 	"lina-core/pkg/pluginhost"
 	monitoronlineplugin "lina-plugin-monitor-online"
 	monitorcontroller "lina-plugin-monitor-online/backend/internal/controller/monitor"
@@ -20,19 +22,23 @@ const (
 func init() {
 	plugin := pluginhost.NewSourcePlugin(pluginID)
 	plugin.Assets().UseEmbeddedFiles(monitoronlineplugin.EmbeddedFiles)
-	plugin.HTTP().RegisterRoutes(
+	if err := plugin.HTTP().RegisterRoutes(
 		pluginhost.ExtensionPointHTTPRouteRegister,
 		pluginhost.CallbackExecutionModeBlocking,
 		registerRoutes,
-	)
-	pluginhost.RegisterSourcePlugin(plugin)
+	); err != nil {
+		panic(err)
+	}
+	if err := pluginhost.RegisterSourcePlugin(plugin); err != nil {
+		panic(err)
+	}
 }
 
 // registerRoutes binds online-user governance routes through the published host middleware set.
 func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) error {
 	hostServices := registrar.HostServices()
 	if hostServices == nil || hostServices.Session() == nil {
-		panic("monitor-online routes require host session service")
+		return gerror.New("monitor-online routes require host session service")
 	}
 	monitorSvc := monitorsvc.New(hostServices.Session())
 	routes := registrar.Routes()

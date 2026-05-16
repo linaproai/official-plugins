@@ -4,6 +4,8 @@ package backend
 import (
 	"context"
 
+	"github.com/gogf/gf/v2/errors/gerror"
+
 	"lina-core/pkg/pluginhost"
 	monitorloginlogplugin "lina-plugin-monitor-loginlog"
 	loginlogcontroller "lina-plugin-monitor-loginlog/backend/internal/controller/loginlog"
@@ -20,34 +22,44 @@ const (
 func init() {
 	plugin := pluginhost.NewSourcePlugin(pluginID)
 	plugin.Assets().UseEmbeddedFiles(monitorloginlogplugin.EmbeddedFiles)
-	plugin.HTTP().RegisterRoutes(
+	if err := plugin.HTTP().RegisterRoutes(
 		pluginhost.ExtensionPointHTTPRouteRegister,
 		pluginhost.CallbackExecutionModeBlocking,
 		registerRoutes,
-	)
-	plugin.Hooks().RegisterHook(
+	); err != nil {
+		panic(err)
+	}
+	if err := plugin.Hooks().RegisterHook(
 		pluginhost.ExtensionPointAuthLoginSucceeded,
 		pluginhost.CallbackExecutionModeAsync,
 		handleAuthEvent,
-	)
-	plugin.Hooks().RegisterHook(
+	); err != nil {
+		panic(err)
+	}
+	if err := plugin.Hooks().RegisterHook(
 		pluginhost.ExtensionPointAuthLoginFailed,
 		pluginhost.CallbackExecutionModeAsync,
 		handleAuthEvent,
-	)
-	plugin.Hooks().RegisterHook(
+	); err != nil {
+		panic(err)
+	}
+	if err := plugin.Hooks().RegisterHook(
 		pluginhost.ExtensionPointAuthLogoutSucceeded,
 		pluginhost.CallbackExecutionModeAsync,
 		handleAuthEvent,
-	)
-	pluginhost.RegisterSourcePlugin(plugin)
+	); err != nil {
+		panic(err)
+	}
+	if err := pluginhost.RegisterSourcePlugin(plugin); err != nil {
+		panic(err)
+	}
 }
 
 // registerRoutes binds login-log governance routes through the published host middleware set.
 func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) error {
 	hostServices := registrar.HostServices()
 	if hostServices == nil || hostServices.I18n() == nil || hostServices.TenantFilter() == nil {
-		panic("monitor-loginlog routes require host i18n and tenant-filter services")
+		return gerror.New("monitor-loginlog routes require host i18n and tenant-filter services")
 	}
 	loginLogSvc := loginlogsvc.New(hostServices.I18n(), hostServices.TenantFilter())
 	routes := registrar.Routes()
@@ -76,7 +88,7 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 func handleAuthEvent(ctx context.Context, payload pluginhost.HookPayload) error {
 	hostServices := payload.HostServices()
 	if hostServices == nil || hostServices.I18n() == nil || hostServices.TenantFilter() == nil {
-		panic("monitor-loginlog hook requires host i18n and tenant-filter services")
+		return gerror.New("monitor-loginlog hook requires host i18n and tenant-filter services")
 	}
 	values := payload.Values()
 	status, _ := pluginhost.HookPayloadIntValue(values, pluginhost.HookPayloadKeyStatus)

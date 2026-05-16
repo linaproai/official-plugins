@@ -24,7 +24,7 @@ func TestTenantBusinessErrorMetadata(t *testing.T) {
 		{name: "code reserved", code: CodeTenantCodeReserved, runtimeCode: "MULTI_TENANT_TENANT_CODE_RESERVED", messageKey: "error.multi.tenant.tenant.code.reserved"},
 		{name: "invalid status", code: CodeTenantInvalidStatus, runtimeCode: "MULTI_TENANT_INVALID_TENANT_STATUS", messageKey: "error.multi.tenant.invalid.tenant.status"},
 		{name: "transition invalid", code: CodeTenantStatusTransitionInvalid, runtimeCode: "MULTI_TENANT_TENANT_STATUS_TRANSITION_INVALID", messageKey: "error.multi.tenant.tenant.status.transition.invalid"},
-		{name: "delete guard vetoed", code: CodeTenantDeleteGuardVetoed, runtimeCode: "MULTI_TENANT_DELETE_GUARD_VETOED", messageKey: "error.multi.tenant.delete.guard.vetoed"},
+		{name: "delete precondition vetoed", code: CodeTenantDeletePreconditionVetoed, runtimeCode: "MULTI_TENANT_DELETE_PRECONDITION_VETOED", messageKey: "error.multi.tenant.delete.precondition.vetoed"},
 	}
 
 	for _, testCase := range testCases {

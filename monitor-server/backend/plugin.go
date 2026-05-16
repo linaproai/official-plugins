@@ -5,6 +5,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/gogf/gf/v2/errors/gerror"
+
 	"lina-core/pkg/pluginhost"
 	monitorserverplugin "lina-plugin-monitor-server"
 	servercontroller "lina-plugin-monitor-server/backend/internal/controller/monitor"
@@ -38,22 +40,30 @@ var sharedMonitorSvc = monitorsvc.New()
 func init() {
 	plugin := pluginhost.NewSourcePlugin(pluginID)
 	plugin.Assets().UseEmbeddedFiles(monitorserverplugin.EmbeddedFiles)
-	plugin.HTTP().RegisterRoutes(
+	if err := plugin.HTTP().RegisterRoutes(
 		pluginhost.ExtensionPointHTTPRouteRegister,
 		pluginhost.CallbackExecutionModeBlocking,
 		registerRoutes,
-	)
-	plugin.Cron().RegisterCron(
+	); err != nil {
+		panic(err)
+	}
+	if err := plugin.Cron().RegisterCron(
 		pluginhost.ExtensionPointCronRegister,
 		pluginhost.CallbackExecutionModeBlocking,
 		registerBuiltinCrons,
-	)
-	plugin.Hooks().RegisterHook(
+	); err != nil {
+		panic(err)
+	}
+	if err := plugin.Hooks().RegisterHook(
 		pluginhost.ExtensionPointSystemStarted,
 		pluginhost.CallbackExecutionModeAsync,
 		collectOnSystemStarted,
-	)
-	pluginhost.RegisterSourcePlugin(plugin)
+	); err != nil {
+		panic(err)
+	}
+	if err := pluginhost.RegisterSourcePlugin(plugin); err != nil {
+		panic(err)
+	}
 }
 
 // registerRoutes binds server-monitor query routes through the published host middleware set.
@@ -84,7 +94,7 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 func registerBuiltinCrons(ctx context.Context, registrar pluginhost.CronRegistrar) error {
 	hostServices := registrar.HostServices()
 	if hostServices == nil || hostServices.Config() == nil {
-		panic("monitor-server cron requires host config service")
+		return gerror.New("monitor-server cron requires host config service")
 	}
 	monitorCfg, err := monitorconfig.Load(ctx, hostServices.Config())
 	if err != nil {
@@ -136,7 +146,7 @@ func cleanupSnapshots(ctx context.Context, registrar pluginhost.CronRegistrar, m
 
 	hostServices := registrar.HostServices()
 	if hostServices == nil || hostServices.Config() == nil {
-		panic("monitor-server cleanup requires host config service")
+		return gerror.New("monitor-server cleanup requires host config service")
 	}
 	monitorCfg, err := monitorconfig.Load(ctx, hostServices.Config())
 	if err != nil {

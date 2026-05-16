@@ -34,6 +34,7 @@ plugin-demo-source/
 - 插件自有附件文件存放在宿主上传目录下的 `plugin-demo-source/` 命名空间中
 - 禁用插件时仅隐藏菜单和路由，不清理数据表数据和已存储文件
 - 卸载插件时宿主会弹窗，让用户选择是否同时清理插件自有数据表数据和存储文件
+- 生命周期回调会打印 `BeforeInstall`、`AfterInstall`、`BeforeUpgrade`、`Upgrade`、`AfterUpgrade`、`BeforeDisable`、`AfterDisable`、`BeforeUninstall`、`AfterUninstall`、租户生命周期回调和安装模式回调，便于开发者观察源码插件生命周期流程
 
 ## 清单范围
 
@@ -44,7 +45,7 @@ plugin-demo-source/
 - 在 `backend/` 中实现插件后端入口
 - 将业务逻辑保留在 `backend/internal/service/` 下
 - 插件访问数据库时，将本地 ORM 生成工件维护在 `backend/internal/dao` 与 `backend/internal/model/{do,entity}` 下
-- 通过宿主构建使用的源码插件注册入口显式接线安装、启用、禁用和卸载生命周期
+- 通过宿主构建使用的源码插件注册入口显式接线安装、升级、禁用、卸载、租户和安装模式生命周期回调
 - 将插件自有清理逻辑保留在插件服务中，便于在卸载 `SQL` 删除表之前按需清理附件文件
 
 ## 前端接入

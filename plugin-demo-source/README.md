@@ -34,6 +34,7 @@ plugin-demo-source/
 - plugin-owned attachment files are stored under the host upload root in the `plugin-demo-source/` namespace
 - disabling the plugin hides menus and routes but keeps table data and stored files
 - uninstalling the plugin opens a confirmation dialog that lets the user choose whether to purge plugin-owned table data and stored files
+- lifecycle callbacks log `BeforeInstall`, `AfterInstall`, `BeforeUpgrade`, `Upgrade`, `AfterUpgrade`, `BeforeDisable`, `AfterDisable`, `BeforeUninstall`, `AfterUninstall`, tenant lifecycle callbacks, and install-mode callbacks so developers can observe the source-plugin lifecycle flow
 
 ## Manifest Scope
 
@@ -44,7 +45,7 @@ plugin-demo-source/
 - implement backend entry points under `backend/`
 - keep service logic under `backend/internal/service/`
 - keep plugin-local ORM codegen output under `backend/internal/dao` and `backend/internal/model/{do,entity}` when the plugin accesses database tables
-- register install, enable, disable, and uninstall lifecycle hooks through the source-plugin registration entry used by the host build
+- register install, upgrade, disable, uninstall, tenant, and install-mode lifecycle callbacks through the source-plugin registration entry used by the host build
 - keep plugin-owned cleanup logic in the plugin service so uninstall can optionally purge files before uninstall SQL drops the table
 
 ## Front-end Integration

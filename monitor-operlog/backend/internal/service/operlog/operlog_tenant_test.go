@@ -78,5 +78,9 @@ func TestResolveAuditTenantContextHonorsExplicitOverrides(t *testing.T) {
 
 // newTenantFilterForTest creates an explicitly injected tenant filter service.
 func newTenantFilterForTest(current plugincontract.CurrentContext) plugincontract.TenantFilterService {
-	return tenantfilter.New(testBizCtxService{current: current}, nil)
+	service, err := tenantfilter.New(testBizCtxService{current: current}, nil)
+	if err != nil {
+		panic(err)
+	}
+	return service
 }

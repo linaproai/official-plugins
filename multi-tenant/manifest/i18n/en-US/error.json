@@ -1,0 +1,13 @@
+{
+  "error": {
+    "multi": {
+      "tenant": {
+        "delete": {
+          "precondition": {
+            "vetoed": "Tenant deletion was blocked by a lifecycle precondition"
+          }
+        }
+      }
+    }
+  }
+}

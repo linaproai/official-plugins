@@ -260,39 +260,42 @@ func (s *serviceImpl) ChangeStatus(ctx context.Context, id int64, status shared.
 	return nil
 }
 
-// Delete soft-deletes a tenant after lifecycle guard checks pass.
+// Delete soft-deletes a tenant after lifecycle precondition checks pass.
 func (s *serviceImpl) Delete(ctx context.Context, id int64) error {
 	if _, err := s.Get(ctx, id); err != nil {
 		return err
 	}
-	if err := ensureTenantDeleteGuardAllowed(ctx, id); err != nil {
+	if err := ensureTenantDeletePreconditionAllowed(ctx, id); err != nil {
 		return err
 	}
 	_, err := shared.Model(ctx, shared.TableTenant).Where("id", id).Delete()
 	return err
 }
 
-// ensureTenantDeleteGuardAllowed asks all registered source-plugin lifecycle
-// guards whether a tenant can be deleted.
-func ensureTenantDeleteGuardAllowed(ctx context.Context, tenantID int64) error {
-	result := pluginhost.RunLifecycleGuards(ctx, pluginhost.GuardRequest{
-		Hook:         pluginhost.GuardHookCanTenantDelete,
-		TenantID:     int(tenantID),
-		Participants: pluginhost.ListLifecycleGuardParticipants(),
+// ensureTenantDeletePreconditionAllowed asks source-plugin lifecycle
+// preconditions whether a tenant can be deleted.
+func ensureTenantDeletePreconditionAllowed(ctx context.Context, tenantID int64) error {
+	result := pluginhost.RunLifecycleCallbacks(ctx, pluginhost.LifecycleRequest{
+		Hook: pluginhost.LifecycleHookBeforeTenantDelete,
+		TenantInput: pluginhost.NewSourcePluginTenantLifecycleInput(
+			pluginhost.LifecycleHookBeforeTenantDelete.String(),
+			int(tenantID),
+		),
+		Participants: pluginhost.ListSourcePluginLifecycleParticipants(),
 	})
 	if result.OK {
 		return nil
 	}
 	return bizerr.NewCode(
-		CodeTenantDeleteGuardVetoed,
+		CodeTenantDeletePreconditionVetoed,
 		bizerr.P("tenantId", tenantID),
-		bizerr.P("reasons", summarizeTenantDeleteGuardVetoReasons(result.Decisions)),
+		bizerr.P("reasons", summarizeTenantDeletePreconditionVetoReasons(result.Decisions)),
 	)
 }
 
-// summarizeTenantDeleteGuardVetoReasons converts guard decisions into a compact
-// reason string suitable for structured business error parameters.
-func summarizeTenantDeleteGuardVetoReasons(decisions []pluginhost.GuardDecision) string {
+// summarizeTenantDeletePreconditionVetoReasons converts callback decisions into
+// a compact reason string suitable for structured business error parameters.
+func summarizeTenantDeletePreconditionVetoReasons(decisions []pluginhost.LifecycleDecision) string {
 	reasons := make([]string, 0, len(decisions))
 	for _, decision := range decisions {
 		if decision.OK {
@@ -303,7 +306,7 @@ func summarizeTenantDeleteGuardVetoReasons(decisions []pluginhost.GuardDecision)
 			reason = decision.Err.Error()
 		}
 		if reason == "" {
-			reason = "plugin." + strings.TrimSpace(decision.PluginID) + ".guard.vetoed"
+			reason = "plugin." + strings.TrimSpace(decision.PluginID) + ".lifecycle.vetoed"
 		}
 		reasons = append(reasons, strings.TrimSpace(decision.PluginID)+":"+reason)
 	}

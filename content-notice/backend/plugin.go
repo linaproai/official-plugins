@@ -4,6 +4,8 @@ package backend
 import (
 	"context"
 
+	"github.com/gogf/gf/v2/errors/gerror"
+
 	"lina-core/pkg/pluginhost"
 	contentnotice "lina-plugin-content-notice"
 	noticecontroller "lina-plugin-content-notice/backend/internal/controller/notice"
@@ -20,12 +22,16 @@ const (
 func init() {
 	plugin := pluginhost.NewSourcePlugin(pluginID)
 	plugin.Assets().UseEmbeddedFiles(contentnotice.EmbeddedFiles)
-	plugin.HTTP().RegisterRoutes(
+	if err := plugin.HTTP().RegisterRoutes(
 		pluginhost.ExtensionPointHTTPRouteRegister,
 		pluginhost.CallbackExecutionModeBlocking,
 		registerRoutes,
-	)
-	pluginhost.RegisterSourcePlugin(plugin)
+	); err != nil {
+		panic(err)
+	}
+	if err := pluginhost.RegisterSourcePlugin(plugin); err != nil {
+		panic(err)
+	}
 }
 
 // registerRoutes binds notice-management routes through the published host middleware set.
@@ -37,7 +43,7 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		hostServices.BizCtx() == nil ||
 		hostServices.Notify() == nil ||
 		hostServices.TenantFilter() == nil {
-		panic("content-notice routes require host bizctx, notify, and tenant-filter services")
+		return gerror.New("content-notice routes require host bizctx, notify, and tenant-filter services")
 	}
 	noticeSvc := noticesvc.New(hostServices.BizCtx(), hostServices.Notify(), hostServices.TenantFilter())
 	routes.Group("/api/v1", func(group pluginhost.RouteGroup) {

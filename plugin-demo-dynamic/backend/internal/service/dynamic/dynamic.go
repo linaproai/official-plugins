@@ -34,6 +34,8 @@ type Service interface {
 	// BuildCronHeartbeatPayload executes the declared cron heartbeat task and
 	// returns a lightweight execution summary.
 	BuildCronHeartbeatPayload() (*cronHeartbeatPayload, error)
+	// RunLifecycleDebugHook logs one lifecycle callback invocation.
+	RunLifecycleDebugHook(input *LifecycleDebugInput) error
 }
 
 // Interface compliance assertion for the default dynamic sample service

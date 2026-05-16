@@ -4,6 +4,8 @@ package backend
 import (
 	"context"
 
+	"github.com/gogf/gf/v2/errors/gerror"
+
 	"lina-core/pkg/pluginhost"
 	democontrolplugin "lina-plugin-demo-control"
 	middlewaresvc "lina-plugin-demo-control/backend/internal/service/middleware"
@@ -19,12 +21,16 @@ const (
 func init() {
 	plugin := pluginhost.NewSourcePlugin(pluginID)
 	plugin.Assets().UseEmbeddedFiles(democontrolplugin.EmbeddedFiles)
-	plugin.HTTP().RegisterRoutes(
+	if err := plugin.HTTP().RegisterRoutes(
 		pluginhost.ExtensionPointHTTPRouteRegister,
 		pluginhost.CallbackExecutionModeBlocking,
 		registerGlobalMiddleware,
-	)
-	pluginhost.RegisterSourcePlugin(plugin)
+	); err != nil {
+		panic(err)
+	}
+	if err := pluginhost.RegisterSourcePlugin(plugin); err != nil {
+		panic(err)
+	}
 }
 
 // registerGlobalMiddleware binds the demo read-only guard into the host-wide
@@ -32,9 +38,8 @@ func init() {
 func registerGlobalMiddleware(_ context.Context, registrar pluginhost.HTTPRegistrar) error {
 	hostServices := registrar.HostServices()
 	if hostServices == nil || hostServices.I18n() == nil || hostServices.PluginState() == nil {
-		panic("demo-control middleware requires host i18n and plugin-state services")
+		return gerror.New("demo-control middleware requires host i18n and plugin-state services")
 	}
 	guardSvc := middlewaresvc.New(hostServices.I18n(), hostServices.PluginState())
-	registrar.GlobalMiddlewares().Bind("/*", guardSvc.Guard)
-	return nil
+	return registrar.GlobalMiddlewares().Bind("/*", guardSvc.Guard)
 }

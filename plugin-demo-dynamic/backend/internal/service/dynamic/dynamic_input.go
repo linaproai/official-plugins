@@ -42,3 +42,15 @@ type HostCallDemoInput struct {
 	RoutePath   string
 	SkipNetwork bool
 }
+
+// LifecycleDebugInput defines one lifecycle callback invocation published by
+// the host before or after lifecycle side effects run.
+type LifecycleDebugInput struct {
+	PluginID    string
+	Operation   string
+	FromVersion string
+	ToVersion   string
+	TenantID    int
+	FromMode    string
+	ToMode      string
+}

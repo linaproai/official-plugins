@@ -114,13 +114,36 @@ export async function addTenantMember(
   _api: APIRequestContext,
   payload: { tenantId: number; userId: number },
 ) {
+  const membershipColumns = new Set(
+    queryPgRows(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'plugin_multi_tenant_user_membership';
+    `),
+  );
+  const insertColumns = ['"user_id"', '"tenant_id"', '"status"'];
+  const insertValues = [`${payload.userId}`, `${payload.tenantId}`, "1"];
+  if (membershipColumns.has("created_by")) {
+    insertColumns.push('"created_by"');
+    insertValues.push("0");
+  }
+  if (membershipColumns.has("updated_by")) {
+    insertColumns.push('"updated_by"');
+    insertValues.push("0");
+  }
+  const updateClauses = ['"status" = 1'];
+  if (membershipColumns.has("deleted_at")) {
+    updateClauses.push('"deleted_at" = NULL');
+  }
+  if (membershipColumns.has("updated_at")) {
+    updateClauses.push('"updated_at" = NOW()');
+  }
   execPgSQL(`
-    INSERT INTO plugin_multi_tenant_user_membership ("user_id", "tenant_id", "status", "created_by", "updated_by")
-    VALUES (${payload.userId}, ${payload.tenantId}, 1, 0, 0)
+    INSERT INTO plugin_multi_tenant_user_membership (${insertColumns.join(", ")})
+    VALUES (${insertValues.join(", ")})
     ON CONFLICT ("user_id", "tenant_id") DO UPDATE SET
-      "status" = 1,
-      "deleted_at" = NULL,
-      "updated_at" = NOW();
+      ${updateClauses.join(",\n      ")};
   `);
   return {
     id: Number(
