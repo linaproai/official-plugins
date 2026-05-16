@@ -9,11 +9,13 @@ import (
 	sessionsvc "lina-core/pkg/pluginservice/contract"
 )
 
-// Service defines the monitor-online service contract.
+// Service defines online-session read and revocation operations backed by the host session seam.
 type Service interface {
-	// List returns one paginated online-user list.
+	// List returns one paginated online-user list filtered by username and IP.
+	// The host session service remains the source of truth for tenant/data visibility.
 	List(ctx context.Context, in ListInput) (*ListOutput, error)
-	// ForceLogout invalidates one online-user session by token ID.
+	// ForceLogout invalidates one online-user session by token ID through the
+	// host session service and returns its authorization or revocation error.
 	ForceLogout(ctx context.Context, tokenID string) error
 }
 
@@ -42,21 +44,4 @@ type ListInput struct {
 type ListOutput struct {
 	Items []*sessionsvc.Session
 	Total int
-}
-
-// List returns one paginated online-user list.
-func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, error) {
-	out, err := s.sessionSvc.ListPage(ctx, &sessionsvc.ListFilter{
-		Username: in.Username,
-		Ip:       in.Ip,
-	}, in.PageNum, in.PageSize)
-	if err != nil {
-		return nil, err
-	}
-	return &ListOutput{Items: out.Items, Total: out.Total}, nil
-}
-
-// ForceLogout invalidates one online-user session by token ID.
-func (s *serviceImpl) ForceLogout(ctx context.Context, tokenID string) error {
-	return s.sessionSvc.Revoke(ctx, tokenID)
 }

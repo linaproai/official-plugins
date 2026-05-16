@@ -5,8 +5,6 @@ import (
 	"context"
 
 	"github.com/gogf/gf/v2/errors/gerror"
-
-	"lina-core/pkg/pluginhost"
 )
 
 const (
@@ -18,11 +16,14 @@ const (
 
 // TenantCounter counts tenants relevant to lifecycle precondition decisions.
 type TenantCounter interface {
-	// CountExisting returns the number of non-deleted tenants.
+	// CountExisting returns the number of non-deleted tenants that make uninstall,
+	// disable, or tenant-delete operations unsafe. It returns storage errors from
+	// the authoritative tenant table.
 	CountExisting(ctx context.Context) (int, error)
 }
 
-// Checker implements plugin-owned lifecycle precondition checks.
+// Checker implements plugin-owned lifecycle precondition checks without changing
+// tenant data, cache state, i18n resources, or plugin registration.
 type Checker struct {
 	tenantCounter TenantCounter
 }
@@ -33,42 +34,4 @@ func New(tenantCounter TenantCounter) (*Checker, error) {
 		return nil, gerror.New("multi-tenant lifecycle precondition requires tenant counter")
 	}
 	return &Checker{tenantCounter: tenantCounter}, nil
-}
-
-// BeforeUninstall rejects uninstall while tenants exist.
-func (c *Checker) BeforeUninstall(
-	ctx context.Context,
-	input pluginhost.SourcePluginLifecycleInput,
-) (bool, string, error) {
-	count, err := c.tenantCounter.CountExisting(ctx)
-	if err != nil {
-		return false, ReasonUninstallTenantsExist, err
-	}
-	if count > 0 {
-		return false, ReasonUninstallTenantsExist, nil
-	}
-	return true, "", nil
-}
-
-// BeforeDisable rejects global disable while tenants exist.
-func (c *Checker) BeforeDisable(
-	ctx context.Context,
-	input pluginhost.SourcePluginLifecycleInput,
-) (bool, string, error) {
-	count, err := c.tenantCounter.CountExisting(ctx)
-	if err != nil {
-		return false, ReasonDisableTenantsExist, err
-	}
-	if count > 0 {
-		return false, ReasonDisableTenantsExist, nil
-	}
-	return true, "", nil
-}
-
-// BeforeTenantDelete reserves the cross-plugin tenant delete precondition surface.
-func (c *Checker) BeforeTenantDelete(
-	ctx context.Context,
-	input pluginhost.SourcePluginTenantLifecycleInput,
-) (bool, string, error) {
-	return true, "", nil
 }

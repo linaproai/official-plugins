@@ -3,14 +3,11 @@ package resolver
 
 import (
 	"context"
-	"strings"
 
 	"github.com/gogf/gf/v2/net/ghttp"
 
-	"lina-core/pkg/bizerr"
 	plugincontract "lina-core/pkg/pluginservice/contract"
 	"lina-plugin-multi-tenant/backend/internal/service/membership"
-	"lina-plugin-multi-tenant/backend/internal/service/shared"
 )
 
 // Result is the output of one resolver.
@@ -20,11 +17,13 @@ type Result struct {
 	ActingAsTenant bool
 }
 
-// Resolver resolves a tenant from a request.
+// Resolver resolves a tenant from an HTTP request without mutating tenant data.
 type Resolver interface {
 	// Name returns the configured resolver name.
 	Name() string
-	// Resolve returns a tenant result and whether this resolver matched.
+	// Resolve evaluates the request, authenticated identity, and resolver config.
+	// It returns the resolved tenant, whether this resolver matched, and any
+	// parsing or validation error.
 	Resolve(ctx context.Context, r *ghttp.Request, identity Identity, config Config) (*Result, bool, error)
 }
 
@@ -46,11 +45,14 @@ type Config struct {
 	OnAmbiguous        string
 }
 
-// Service defines tenant resolution operations.
+// Service defines tenant resolution operations for the plugin provider seam.
 type Service interface {
-	// Resolve runs the configured resolver chain.
+	// Resolve runs the configured resolver chain for the current request, then
+	// validates membership when required. It returns business/config errors without
+	// changing cache, i18n, or persisted tenant state.
 	Resolve(ctx context.Context, r *ghttp.Request, config Config) (*Result, error)
-	// Register registers or replaces one resolver implementation.
+	// Register registers or replaces one resolver implementation by name for the
+	// in-process chain used by this service instance.
 	Register(resolver Resolver)
 }
 
@@ -78,67 +80,4 @@ func New(bizCtxSvc plugincontract.BizCtxService, membershipSvc membership.Servic
 	s.Register(subdomainResolver{})
 	s.Register(defaultResolver{membershipSvc: s.membershipSvc})
 	return s
-}
-
-// Register registers or replaces one resolver implementation.
-func (s *serviceImpl) Register(resolver Resolver) {
-	if resolver == nil {
-		return
-	}
-	s.resolvers[resolver.Name()] = resolver
-}
-
-// Resolve runs the configured resolver chain.
-func (s *serviceImpl) Resolve(ctx context.Context, r *ghttp.Request, config Config) (*Result, error) {
-	bizCtx := s.bizCtxSvc.Current(ctx)
-	identity := Identity{
-		UserID:          int64(bizCtx.UserID),
-		TenantID:        int64(bizCtx.TenantID),
-		ActingUserID:    int64(bizCtx.ActingUserID),
-		ActingAsTenant:  bizCtx.ActingAsTenant,
-		IsImpersonation: bizCtx.IsImpersonation,
-		IsPlatform:      int64(bizCtx.TenantID) == shared.PlatformTenantID,
-	}
-	chain := config.Chain
-	if len(chain) == 0 {
-		chain = shared.DefaultResolverChain()
-	}
-	for _, name := range chain {
-		resolverImpl := s.resolvers[strings.TrimSpace(name)]
-		if resolverImpl == nil {
-			continue
-		}
-		result, ok, err := resolverImpl.Resolve(ctx, r, identity, config)
-		if err != nil || !ok {
-			if err != nil {
-				return nil, err
-			}
-			continue
-		}
-		if err = s.validateMembership(ctx, identity, result); err != nil {
-			return nil, err
-		}
-		return result, nil
-	}
-	switch config.OnAmbiguous {
-	case shared.OnAmbiguousReject:
-		return nil, bizerr.NewCode(CodeTenantForbidden)
-	default:
-		return nil, bizerr.NewCode(CodeTenantRequired)
-	}
-}
-
-// validateMembership verifies non-platform users belong to the resolved tenant.
-func (s *serviceImpl) validateMembership(ctx context.Context, identity Identity, result *Result) error {
-	if result == nil || result.TenantID == shared.PlatformTenantID {
-		return nil
-	}
-	if result.ActingAsTenant || identity.ActingAsTenant || identity.IsImpersonation {
-		return nil
-	}
-	if identity.UserID == 0 {
-		return nil
-	}
-	_, err := s.membershipSvc.GetByUserAndTenant(ctx, identity.UserID, result.TenantID)
-	return err
 }
