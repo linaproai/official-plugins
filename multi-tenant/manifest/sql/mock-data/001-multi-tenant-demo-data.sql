@@ -56,6 +56,7 @@ WITH v("tenant_code", "username", "password", "nickname", "email", "phone", "sta
     VALUES
         ('alpha-retail', 'tenant_alpha_admin', '$2a$10$6u4IIEd63chleDWJIY6.NewSU7YrpBQ0Tbp.KfLiG71NQrRlL9qTe', '摸鱼科技 租户管理员', 'alpha.admin@example.com', '13860010001', 1, '摸鱼科技有限公司租户管理员', '2026-05-01 11:00:00', '2026-05-01 11:00:00'),
         ('alpha-retail', 'tenant_alpha_ops', '$2a$10$6u4IIEd63chleDWJIY6.NewSU7YrpBQ0Tbp.KfLiG71NQrRlL9qTe', '摸鱼科技 运营用户', 'alpha.ops@example.com', '13860010002', 1, '摸鱼科技有限公司运营用户', '2026-05-01 11:05:00', '2026-05-01 11:05:00'),
+        ('alpha-retail', 'tenant-user', '$2a$10$6u4IIEd63chleDWJIY6.NewSU7YrpBQ0Tbp.KfLiG71NQrRlL9qTe', '摸鱼科技 本租户演示用户', 'tenant.user@example.com', '13860010003', 1, '摸鱼科技有限公司本租户权限演示用户', '2026-05-01 11:07:00', '2026-05-01 11:07:00'),
         ('beta-manufacturing', 'tenant_beta_admin', '$2a$10$6u4IIEd63chleDWJIY6.NewSU7YrpBQ0Tbp.KfLiG71NQrRlL9qTe', '精神股东 租户管理员', 'beta.admin@example.com', '13860020001', 1, '精神股东科技有限公司租户管理员', '2026-05-01 11:10:00', '2026-05-01 11:10:00'),
         ('beta-manufacturing', 'tenant_beta_auditor', '$2a$10$6u4IIEd63chleDWJIY6.NewSU7YrpBQ0Tbp.KfLiG71NQrRlL9qTe', '精神股东 审计用户', 'beta.auditor@example.com', '13860020002', 1, '精神股东科技有限公司审计用户', '2026-05-01 11:15:00', '2026-05-01 11:15:00'),
         ('gamma-sandbox', 'tenant_gamma_admin', '$2a$10$6u4IIEd63chleDWJIY6.NewSU7YrpBQ0Tbp.KfLiG71NQrRlL9qTe', '打工人 暂停租户管理员', 'gamma.admin@example.com', '13860030001', 0, '打工人企业服务有限公司暂停租户管理员', '2026-05-01 11:20:00', '2026-05-01 11:20:00'),
@@ -92,6 +93,11 @@ WITH v("username", "tenant_code", "status", "joined_at") AS (
     VALUES
         ('tenant_alpha_admin', 'alpha-retail', 1, '2026-05-01 11:00:00'),
         ('tenant_alpha_ops', 'alpha-retail', 1, '2026-05-01 11:05:00'),
+        ('tenant-user', 'alpha-retail', 1, '2026-05-01 11:07:00'),
+        ('tenant-user', 'beta-manufacturing', 1, '2026-05-03 10:00:00'),
+        ('tenant-user', 'one-click-triple-media', 1, '2026-05-03 10:10:00'),
+        ('tenant-user', 'cyber-wellness-health', 1, '2026-05-03 10:20:00'),
+        ('tenant-user', 'clock-in-on-time-hr', 1, '2026-05-03 10:30:00'),
         ('tenant_beta_admin', 'beta-manufacturing', 1, '2026-05-01 11:10:00'),
         ('tenant_beta_auditor', 'beta-manufacturing', 1, '2026-05-01 11:15:00'),
         ('tenant_gamma_admin', 'gamma-sandbox', 0, '2026-05-01 11:20:00'),
@@ -144,12 +150,17 @@ WITH v("tenant_code", "name", "key", "sort", "data_scope", "status", "remark") A
     VALUES
         ('alpha-retail', '摸鱼科技租户管理员', 'tenant-alpha-admin', 20, 2, 1, '摸鱼科技有限公司租户管理员角色'),
         ('alpha-retail', '摸鱼科技运营员', 'tenant-alpha-ops', 21, 3, 1, '摸鱼科技有限公司运营角色'),
+        ('alpha-retail', '摸鱼科技本租户演示用户', 'tenant-user', 22, 2, 1, 'tenant-user 演示账号角色，拥有除平台管理外的其他全部菜单权限'),
         ('beta-manufacturing', '精神股东租户管理员', 'tenant-beta-admin', 20, 2, 1, '精神股东科技有限公司租户管理员角色'),
         ('beta-manufacturing', '精神股东审计员', 'tenant-beta-auditor', 22, 4, 1, '精神股东科技有限公司审计角色'),
+        ('beta-manufacturing', '精神股东本租户演示用户', 'tenant-user', 23, 2, 1, 'tenant-user 演示账号在精神股东租户下的本租户角色'),
         ('gamma-sandbox', '打工人暂停租户管理员', 'tenant-gamma-admin', 90, 2, 0, '打工人企业服务有限公司暂停租户角色'),
         ('one-click-triple-media', '一键三连演示用户', 'tenant-one-click-triple-media-user', 50, 4, 1, '一键三连文化传媒有限公司演示用户角色'),
+        ('one-click-triple-media', '一键三连本租户演示用户', 'tenant-user', 51, 2, 1, 'tenant-user 演示账号在一键三连租户下的本租户角色'),
         ('cyber-wellness-health', '赛博养生演示用户', 'tenant-cyber-wellness-health-user', 50, 4, 1, '赛博养生健康科技有限公司演示用户角色'),
+        ('cyber-wellness-health', '赛博养生本租户演示用户', 'tenant-user', 51, 2, 1, 'tenant-user 演示账号在赛博养生租户下的本租户角色'),
         ('clock-in-on-time-hr', '踩点到岗演示用户', 'tenant-clock-in-on-time-hr-user', 50, 4, 1, '踩点到岗人力资源有限公司演示用户角色'),
+        ('clock-in-on-time-hr', '踩点到岗本租户演示用户', 'tenant-user', 51, 2, 1, 'tenant-user 演示账号在踩点到岗租户下的本租户角色'),
         ('crazy-thursday-catering', '疯狂星期四演示用户', 'tenant-crazy-thursday-catering-user', 50, 4, 1, '疯狂星期四餐饮管理有限公司演示用户角色'),
         ('deal-hunter-trading', '薅羊毛优选演示用户', 'tenant-deal-hunter-trading-user', 50, 4, 1, '薅羊毛优选商贸有限公司演示用户角色'),
         ('stay-calm-auto-service', '稳住别浪演示用户', 'tenant-stay-calm-auto-service-user', 50, 4, 1, '稳住别浪汽车服务有限公司演示用户角色'),
@@ -272,6 +283,29 @@ WHERE r."key" IN (
 )
 ON CONFLICT DO NOTHING;
 
+-- Mock data: grant tenant-user every enabled menu and permission outside the
+-- platform-management subtree so it can demonstrate tenant-local data isolation
+-- while still exercising the regular workbench feature set.
+-- 模拟数据：为 tenant-user 授予平台管理子树以外的所有启用菜单和权限，用于演示
+-- 登录后只能看到本租户数据，同时仍可访问常规工作台功能。
+WITH RECURSIVE platform_menu("id") AS (
+    SELECT parent."id"
+    FROM sys_menu parent
+    WHERE parent."menu_key" = 'platform'
+    UNION ALL
+    SELECT child."id"
+    FROM sys_menu child
+    JOIN platform_menu parent ON child."parent_id" = parent."id"
+)
+INSERT INTO sys_role_menu ("tenant_id", "role_id", "menu_id")
+SELECT r."tenant_id", r."id", m."id"
+FROM sys_role r
+JOIN sys_menu m ON m."status" = 1
+LEFT JOIN platform_menu pm ON pm."id" = m."id"
+WHERE r."key" = 'tenant-user'
+  AND pm."id" IS NULL
+ON CONFLICT DO NOTHING;
+
 -- Mock data: bind tenant users to their scenario roles. These bindings drive
 -- login, permission snapshot, and tenant data-scope demos.
 -- 模拟数据：把租户用户绑定到对应场景角色，用于登录、权限快照和租户数据权限演示。
@@ -279,6 +313,7 @@ WITH v("username", "role_key") AS (
     VALUES
         ('tenant_alpha_admin', 'tenant-alpha-admin'),
         ('tenant_alpha_ops', 'tenant-alpha-ops'),
+        ('tenant-user', 'tenant-user'),
         ('tenant_alpha_ops', 'tenant-beta-auditor'),
         ('tenant_alpha_ops', 'tenant-one-click-triple-media-user'),
         ('tenant_beta_admin', 'tenant-beta-admin'),
