@@ -113,20 +113,27 @@ func TestGuardCoversWholeSystemScope(t *testing.T) {
 	assertDemoControlRejectedResponse(t, response, http.MethodPost, "/system/write")
 }
 
-// TestGuardAllowsLoginAndLogoutWhitelist verifies the plugin preserves the
-// minimal session whitelist needed for usable demos.
-func TestGuardAllowsLoginAndLogoutWhitelist(t *testing.T) {
+// TestGuardAllowsSessionWhitelist verifies the plugin preserves the session
+// token lifecycle whitelist needed for usable demo logins.
+func TestGuardAllowsSessionWhitelist(t *testing.T) {
 	baseURL, shutdown := startDemoControlTestServer(t, true)
 	defer shutdown()
 
-	loginResponse := doDemoControlRequest(t, http.MethodPost, baseURL+"/api/v1/auth/login")
-	if loginResponse.status != http.StatusOK || loginResponse.body != "login-ok" {
-		t.Fatalf("expected login whitelist to pass, got status=%d body=%q", loginResponse.status, loginResponse.body)
+	allowedRequests := []struct {
+		path string
+		body string
+	}{
+		{path: "/api/v1/auth/login", body: "login-ok"},
+		{path: "/api/v1/auth/refresh", body: "refresh-ok"},
+		{path: "/api/v1/auth/select-tenant", body: "select-tenant-ok"},
+		{path: "/api/v1/auth/switch-tenant", body: "switch-tenant-ok"},
+		{path: "/api/v1/auth/logout", body: "logout-ok"},
 	}
-
-	logoutResponse := doDemoControlRequest(t, http.MethodPost, baseURL+"/api/v1/auth/logout")
-	if logoutResponse.status != http.StatusOK || logoutResponse.body != "logout-ok" {
-		t.Fatalf("expected logout whitelist to pass, got status=%d body=%q", logoutResponse.status, logoutResponse.body)
+	for _, item := range allowedRequests {
+		response := doDemoControlRequest(t, http.MethodPost, baseURL+item.path)
+		if response.status != http.StatusOK || response.body != item.body {
+			t.Fatalf("expected session whitelist %s to pass, got status=%d body=%q", item.path, response.status, response.body)
+		}
 	}
 }
 
@@ -204,6 +211,15 @@ func startDemoControlTestServer(t *testing.T, enabled bool) (string, func()) {
 		})
 		group.ALL("/auth/login", func(request *ghttp.Request) {
 			request.Response.Write("login-ok")
+		})
+		group.ALL("/auth/refresh", func(request *ghttp.Request) {
+			request.Response.Write("refresh-ok")
+		})
+		group.ALL("/auth/select-tenant", func(request *ghttp.Request) {
+			request.Response.Write("select-tenant-ok")
+		})
+		group.ALL("/auth/switch-tenant", func(request *ghttp.Request) {
+			request.Response.Write("switch-tenant-ok")
 		})
 		group.ALL("/auth/logout", func(request *ghttp.Request) {
 			request.Response.Write("logout-ok")

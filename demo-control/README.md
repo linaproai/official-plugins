@@ -11,4 +11,4 @@ This plugin owns:
 - environment-level demo request guarding based on `HTTP Method`
 - whole-system request interception on the host `/*` scope
 - write-operation interception for host and plugin write endpoints across the system
-- the minimal session whitelist required for login and logout in demo mode
+- the minimal session whitelist required for login, token refresh, tenant selection, tenant switching, and logout in demo mode

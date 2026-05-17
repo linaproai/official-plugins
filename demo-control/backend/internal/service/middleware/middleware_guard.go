@@ -13,6 +13,19 @@ import (
 	"lina-core/pkg/bizerr"
 )
 
+const (
+	// demoControlAuthLoginPath starts a host session after credential validation.
+	demoControlAuthLoginPath = "/api/v1/auth/login"
+	// demoControlAuthLogoutPath revokes the current host session.
+	demoControlAuthLogoutPath = "/api/v1/auth/logout"
+	// demoControlAuthRefreshPath refreshes the access token for an existing host session.
+	demoControlAuthRefreshPath = "/api/v1/auth/refresh"
+	// demoControlAuthSelectTenantPath exchanges a pre-login token for a tenant session.
+	demoControlAuthSelectTenantPath = "/api/v1/auth/select-tenant"
+	// demoControlAuthSwitchTenantPath reissues a session token for another tenant membership.
+	demoControlAuthSwitchTenantPath = "/api/v1/auth/switch-tenant"
+)
+
 // demoControlErrorResponse defines the JSON payload returned for blocked demo writes.
 type demoControlErrorResponse struct {
 	Code          int            `json:"code"`
@@ -89,7 +102,11 @@ func isDemoControlSessionWhitelist(method string, path string) bool {
 	}
 
 	switch normalizeDemoControlPath(path) {
-	case "/api/v1/auth/login", "/api/v1/auth/logout":
+	case demoControlAuthLoginPath,
+		demoControlAuthLogoutPath,
+		demoControlAuthRefreshPath,
+		demoControlAuthSelectTenantPath,
+		demoControlAuthSwitchTenantPath:
 		return true
 	default:
 		return false
