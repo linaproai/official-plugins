@@ -24,7 +24,7 @@ import (
 
 // List queries the paged post list.
 func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, error) {
-	model := s.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx))
+	model := s.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx), "")
 	if in.DeptId != nil {
 		if *in.DeptId == 0 {
 			model = model.Where(colPostDeptID, 0)
@@ -63,8 +63,9 @@ func (s *serviceImpl) Create(ctx context.Context, in CreateInput) (int, error) {
 	if err := s.checkCodeUnique(ctx, in.Code, 0); err != nil {
 		return 0, err
 	}
+	tenantID := s.tenantFilter.Context(ctx).TenantID
 	id, err := dao.Post.Ctx(ctx).Data(do.Post{
-		TenantId: s.tenantFilter.Current(ctx),
+		TenantId: tenantID,
 		DeptId:   in.DeptId,
 		Code:     in.Code,
 		Name:     in.Name,
@@ -81,7 +82,7 @@ func (s *serviceImpl) Create(ctx context.Context, in CreateInput) (int, error) {
 // GetByID retrieves one post detail by primary key.
 func (s *serviceImpl) GetByID(ctx context.Context, id int) (*PostEntity, error) {
 	var post *PostEntity
-	err := s.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx)).Where(colPostID, id).Scan(&post)
+	err := s.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx), "").Where(colPostID, id).Scan(&post)
 	if err != nil {
 		return nil, err
 	}
@@ -118,9 +119,10 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 	if in.Remark != nil {
 		data.Remark = *in.Remark
 	}
+	tenantID := s.tenantFilter.Context(ctx).TenantID
 	_, err := dao.Post.Ctx(ctx).
 		OmitNilData().
-		Where(plugincontract.TenantFilterColumn, s.tenantFilter.Current(ctx)).
+		Where(plugincontract.TenantFilterColumn, tenantID).
 		Where(colPostID, in.Id).
 		Data(data).
 		Update()
@@ -140,7 +142,7 @@ func (s *serviceImpl) Delete(ctx context.Context, ids string) error {
 		if id == 0 {
 			continue
 		}
-		count, err := s.tenantFilter.Apply(ctx, dao.UserPost.Ctx(ctx)).
+		count, err := s.tenantFilter.Apply(ctx, dao.UserPost.Ctx(ctx), "").
 			Where(colUserPostPostID, id).
 			Count()
 		if err != nil {
@@ -154,14 +156,14 @@ func (s *serviceImpl) Delete(ctx context.Context, ids string) error {
 	if len(validIDs) == 0 {
 		return bizerr.NewCode(CodePostValidIDRequired)
 	}
-	_, err := s.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx)).WhereIn(colPostID, validIDs).Delete()
+	_, err := s.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx), "").WhereIn(colPostID, validIDs).Delete()
 	return err
 }
 
 // DeptTree returns the department tree decorated with post counts.
 func (s *serviceImpl) DeptTree(ctx context.Context) ([]*DeptTreeNode, error) {
 	deptList := make([]*deptRow, 0)
-	err := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx)).OrderAsc(colDeptOrderNum).Scan(&deptList)
+	err := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").OrderAsc(colDeptOrderNum).Scan(&deptList)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +193,7 @@ func (s *serviceImpl) DeptTree(ctx context.Context) ([]*DeptTreeNode, error) {
 	roots = append(roots, unassignedNode)
 
 	counts := make([]deptCountRow, 0)
-	err = s.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx)).Fields("dept_id, COUNT(*) as cnt").Group("dept_id").Scan(&counts)
+	err = s.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx), "").Fields("dept_id, COUNT(*) as cnt").Group("dept_id").Scan(&counts)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +227,7 @@ func (s *serviceImpl) DeptTree(ctx context.Context) ([]*DeptTreeNode, error) {
 
 // OptionSelect returns post options for one department subtree.
 func (s *serviceImpl) OptionSelect(ctx context.Context, in OptionSelectInput) ([]PostOption, error) {
-	model := s.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx)).Where(colPostStatus, 1)
+	model := s.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx), "").Where(colPostStatus, 1)
 	if in.DeptId != nil {
 		deptIDs, err := s.descendantDeptIDs(ctx, *in.DeptId)
 		if err != nil {
@@ -249,7 +251,7 @@ func (s *serviceImpl) OptionSelect(ctx context.Context, in OptionSelectInput) ([
 
 // Export generates one Excel file for the filtered post set.
 func (s *serviceImpl) Export(ctx context.Context, in ExportInput) (data []byte, err error) {
-	model := s.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx))
+	model := s.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx), "")
 	if in.DeptId != nil {
 		if *in.DeptId == 0 {
 			model = model.Where(colPostDeptID, 0)
@@ -345,7 +347,7 @@ func (s *serviceImpl) descendantDeptIDs(ctx context.Context, deptID int) ([]int,
 	deptIDs := []int{deptID}
 	parentIDs := []int{deptID}
 	for len(parentIDs) > 0 {
-		childValues, err := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx)).
+		childValues, err := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
 			WhereIn(colDeptParentID, parentIDs).
 			Fields(colDeptID).
 			Array()
@@ -361,7 +363,7 @@ func (s *serviceImpl) descendantDeptIDs(ctx context.Context, deptID int) ([]int,
 
 // checkCodeUnique checks whether one post code already exists.
 func (s *serviceImpl) checkCodeUnique(ctx context.Context, code string, excludeID int) error {
-	model := s.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx)).Where(colPostCode, code)
+	model := s.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx), "").Where(colPostCode, code)
 	if excludeID > 0 {
 		model = model.WhereNot(colPostID, excludeID)
 	}

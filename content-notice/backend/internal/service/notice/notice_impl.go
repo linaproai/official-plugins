@@ -24,7 +24,7 @@ func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, erro
 		userColumns   = dao.SysUser.Columns()
 	)
 
-	m := s.tenantFilter.Apply(ctx, dao.Notice.Ctx(ctx))
+	m := s.tenantFilter.Apply(ctx, dao.Notice.Ctx(ctx), "")
 
 	// Apply filters
 	if in.Title != "" {
@@ -35,7 +35,7 @@ func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, erro
 	}
 	if in.CreatedBy != "" {
 		// Filter by creator username via subquery on sys_user.
-		subQuery := s.tenantFilter.Apply(ctx, dao.SysUser.Ctx(ctx)).
+		subQuery := s.tenantFilter.Apply(ctx, dao.SysUser.Ctx(ctx), "").
 			Fields(userColumns.Id).
 			WhereLike(userColumns.Username, "%"+in.CreatedBy+"%")
 		m = m.Where(noticeColumns.CreatedBy+" IN (?)", subQuery)
@@ -70,7 +70,7 @@ func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, erro
 	userNameMap := make(map[int64]string)
 	if len(userIds) > 0 {
 		users := make([]*entitymodel.SysUser, 0)
-		err = s.tenantFilter.Apply(ctx, dao.SysUser.Ctx(ctx)).
+		err = s.tenantFilter.Apply(ctx, dao.SysUser.Ctx(ctx), "").
 			Fields(userColumns.Id, userColumns.Username).
 			WhereIn(userColumns.Id, userIds).
 			Scan(&users)
@@ -104,7 +104,7 @@ func (s *serviceImpl) GetById(ctx context.Context, id int64) (*ListItem, error) 
 	)
 
 	var notice *NoticeEntity
-	err := s.tenantFilter.Apply(ctx, dao.Notice.Ctx(ctx)).
+	err := s.tenantFilter.Apply(ctx, dao.Notice.Ctx(ctx), "").
 		Where(noticeColumns.Id, id).
 		Scan(&notice)
 	if err != nil {
@@ -119,7 +119,7 @@ func (s *serviceImpl) GetById(ctx context.Context, id int64) (*ListItem, error) 
 	// Resolve creator username
 	if notice.CreatedBy > 0 {
 		var user *entitymodel.SysUser
-		err = s.tenantFilter.Apply(ctx, dao.SysUser.Ctx(ctx)).
+		err = s.tenantFilter.Apply(ctx, dao.SysUser.Ctx(ctx), "").
 			Fields(userColumns.Id, userColumns.Username).
 			Where(userColumns.Id, notice.CreatedBy).
 			Scan(&user)
@@ -135,10 +135,11 @@ func (s *serviceImpl) GetById(ctx context.Context, id int64) (*ListItem, error) 
 func (s *serviceImpl) Create(ctx context.Context, in CreateInput) (int64, error) {
 	bizCtx := s.bizCtxSvc.Current(ctx)
 	createdBy := int64(bizCtx.UserID)
+	tenantID := s.tenantFilter.Context(ctx).TenantID
 
 	// Insert notice (GoFrame auto-fills created_at and updated_at).
 	id, err := dao.Notice.Ctx(ctx).Data(do.Notice{
-		TenantId:  s.tenantFilter.Current(ctx),
+		TenantId:  tenantID,
 		Title:     in.Title,
 		Type:      in.Type,
 		Content:   in.Content,
@@ -168,7 +169,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 
 	// Check notice exists and get old status.
 	var oldNotice *NoticeEntity
-	err := s.tenantFilter.Apply(ctx, dao.Notice.Ctx(ctx)).
+	err := s.tenantFilter.Apply(ctx, dao.Notice.Ctx(ctx), "").
 		Where(noticeColumns.Id, in.Id).
 		Scan(&oldNotice)
 	if err != nil {
@@ -180,6 +181,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 
 	bizCtx := s.bizCtxSvc.Current(ctx)
 	updatedBy := int64(bizCtx.UserID)
+	tenantID := s.tenantFilter.Context(ctx).TenantID
 
 	data := do.Notice{UpdatedBy: updatedBy}
 	if in.Title != nil {
@@ -203,7 +205,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 
 	_, err = dao.Notice.Ctx(ctx).
 		OmitNilData().
-		Where(plugincontract.TenantFilterColumn, s.tenantFilter.Current(ctx)).
+		Where(plugincontract.TenantFilterColumn, tenantID).
 		Where(noticeColumns.Id, in.Id).
 		Data(data).
 		Update()
@@ -242,7 +244,7 @@ func (s *serviceImpl) Delete(ctx context.Context, ids string) error {
 
 	// Soft delete using GoFrame's auto soft-delete feature.
 	noticeColumns := dao.Notice.Columns()
-	_, err := s.tenantFilter.Apply(ctx, dao.Notice.Ctx(ctx)).
+	_, err := s.tenantFilter.Apply(ctx, dao.Notice.Ctx(ctx), "").
 		WhereIn(noticeColumns.Id, idList).
 		Delete()
 	if err != nil {

@@ -22,7 +22,7 @@ import (
 
 // List queries the department list with optional filters.
 func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, error) {
-	model := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx))
+	model := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "")
 	if in.Name != "" {
 		model = model.WhereLike(colDeptName, "%"+in.Name+"%")
 	}
@@ -54,8 +54,9 @@ func (s *serviceImpl) Create(ctx context.Context, in CreateInput) (int, error) {
 		ancestors = fmt.Sprintf("%s,%d", parent.Ancestors, in.ParentId)
 	}
 
+	tenantID := s.tenantFilter.Context(ctx).TenantID
 	id, err := dao.Dept.Ctx(ctx).Data(do.Dept{
-		TenantId:  s.tenantFilter.Current(ctx),
+		TenantId:  tenantID,
 		ParentId:  in.ParentId,
 		Ancestors: ancestors,
 		Name:      in.Name,
@@ -76,7 +77,7 @@ func (s *serviceImpl) Create(ctx context.Context, in CreateInput) (int, error) {
 // GetByID retrieves one department detail by primary key.
 func (s *serviceImpl) GetByID(ctx context.Context, id int) (*DeptEntity, error) {
 	var dept *DeptEntity
-	err := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx)).
+	err := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
 		Where(colDeptID, id).
 		Scan(&dept)
 	if err != nil {
@@ -147,7 +148,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 		oldPrefix := fmt.Sprintf("%s,%d", dept.Ancestors, in.Id)
 		newPrefix := fmt.Sprintf("%s,%d", newAncestors, in.Id)
 		children := make([]*DeptEntity, 0)
-		err = s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx)).
+		err = s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
 			WhereLike(colDeptAncestors, oldPrefix+",%").
 			WhereOr(colDeptParentID, in.Id).
 			Scan(&children)
@@ -155,6 +156,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 			return err
 		}
 
+		tenantID := s.tenantFilter.Context(ctx).TenantID
 		err = dao.Dept.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 			for _, child := range children {
 				if child == nil {
@@ -163,7 +165,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 				childAncestors := gstr.Replace(child.Ancestors, oldPrefix, newPrefix, 1)
 				_, err = tx.Model(dao.Dept.Table()).Safe().Ctx(ctx).
 					OmitNilData().
-					Where(plugincontract.TenantFilterColumn, s.tenantFilter.Current(ctx)).
+					Where(plugincontract.TenantFilterColumn, tenantID).
 					Where(colDeptID, child.Id).
 					Data(do.Dept{Ancestors: childAncestors}).
 					Update()
@@ -177,7 +179,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 			}
 			_, err = tx.Model(dao.Dept.Table()).Safe().Ctx(ctx).
 				OmitNilData().
-				Where(plugincontract.TenantFilterColumn, s.tenantFilter.Current(ctx)).
+				Where(plugincontract.TenantFilterColumn, tenantID).
 				Where(colDeptID, in.Id).
 				Data(data).
 				Update()
@@ -190,9 +192,10 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 	if err != nil {
 		return err
 	}
+	tenantID := s.tenantFilter.Context(ctx).TenantID
 	_, err = dao.Dept.Ctx(ctx).
 		OmitNilData().
-		Where(plugincontract.TenantFilterColumn, s.tenantFilter.Current(ctx)).
+		Where(plugincontract.TenantFilterColumn, tenantID).
 		Where(colDeptID, in.Id).
 		Data(data).
 		Update()
@@ -201,7 +204,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 
 // Delete deletes one department when no child or user binding blocks it.
 func (s *serviceImpl) Delete(ctx context.Context, id int) error {
-	childCount, err := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx)).
+	childCount, err := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
 		Where(colDeptParentID, id).
 		Count()
 	if err != nil {
@@ -211,7 +214,7 @@ func (s *serviceImpl) Delete(ctx context.Context, id int) error {
 		return bizerr.NewCode(CodeDeptHasChildrenDeleteDenied)
 	}
 
-	userCount, err := s.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx)).
+	userCount, err := s.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx), "").
 		Where(colUserDeptID, id).
 		Count()
 	if err != nil {
@@ -221,7 +224,7 @@ func (s *serviceImpl) Delete(ctx context.Context, id int) error {
 		return bizerr.NewCode(CodeDeptHasUsersDeleteDenied)
 	}
 
-	_, err = s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx)).
+	_, err = s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
 		Where(colDeptID, id).
 		Delete()
 	return err
@@ -230,7 +233,7 @@ func (s *serviceImpl) Delete(ctx context.Context, id int) error {
 // Tree returns the plain department tree.
 func (s *serviceImpl) Tree(ctx context.Context) ([]*TreeNode, error) {
 	deptList := make([]*DeptEntity, 0)
-	err := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx)).
+	err := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
 		OrderAsc(colDeptOrderNum).
 		Scan(&deptList)
 	if err != nil {
@@ -269,7 +272,7 @@ func (s *serviceImpl) Exclude(ctx context.Context, in ExcludeInput) ([]*DeptEnti
 
 	prefix := fmt.Sprintf("%s,%d", dept.Ancestors, in.Id)
 	list := make([]*DeptEntity, 0)
-	err = s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx)).
+	err = s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
 		WhereNot(colDeptID, in.Id).
 		WhereNotLike(colDeptAncestors, prefix+",%").
 		WhereNotLike(colDeptAncestors, prefix).
@@ -284,7 +287,7 @@ func (s *serviceImpl) Exclude(ctx context.Context, in ExcludeInput) ([]*DeptEnti
 // Users returns selectable users for one department subtree.
 func (s *serviceImpl) Users(ctx context.Context, deptID int, keyword string, limit int) ([]*DeptUser, error) {
 	if deptID == 0 {
-		model := s.tenantFilter.Apply(ctx, dao.SysUser.Ctx(ctx)).Fields(colUserID, colUserUsername, colUserNickname)
+		model := s.tenantFilter.Apply(ctx, dao.SysUser.Ctx(ctx), "").Fields(colUserID, colUserUsername, colUserNickname)
 		if keyword != "" {
 			model = model.Where(
 				fmt.Sprintf("(%s LIKE ? OR %s LIKE ?)", colUserUsername, colUserNickname),
@@ -307,7 +310,7 @@ func (s *serviceImpl) Users(ctx context.Context, deptID int, keyword string, lim
 	}
 
 	userDeptRows := make([]*entitymodel.UserDept, 0)
-	err = s.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx)).
+	err = s.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx), "").
 		WhereIn(colUserDeptID, deptIDs).
 		Scan(&userDeptRows)
 	if err != nil {
@@ -330,9 +333,10 @@ func (s *serviceImpl) Users(ctx context.Context, deptID int, keyword string, lim
 		userIDs = append(userIDs, row.UserId)
 	}
 
+	tenantID := s.tenantFilter.Context(ctx).TenantID
 	model := dao.SysUser.Ctx(ctx).
 		Fields(colUserID, colUserUsername, colUserNickname).
-		Where(plugincontract.TenantFilterColumn, s.tenantFilter.Current(ctx)).
+		Where(plugincontract.TenantFilterColumn, tenantID).
 		WhereIn(colUserID, userIDs)
 	if keyword != "" {
 		model = model.Where(
@@ -355,7 +359,7 @@ func (s *serviceImpl) DescendantDeptIDs(ctx context.Context, deptID int) ([]int,
 	deptIDs := []int{deptID}
 	parentIDs := []int{deptID}
 	for len(parentIDs) > 0 {
-		childValues, err := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx)).
+		childValues, err := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
 			WhereIn(colDeptParentID, parentIDs).
 			Fields(colDeptID).
 			Array()
@@ -371,7 +375,7 @@ func (s *serviceImpl) DescendantDeptIDs(ctx context.Context, deptID int) ([]int,
 
 // checkCodeUnique checks whether one department code already exists.
 func (s *serviceImpl) checkCodeUnique(ctx context.Context, code string, excludeID int) error {
-	model := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx)).Where(colDeptCode, code)
+	model := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").Where(colDeptCode, code)
 	if excludeID > 0 {
 		model = model.WhereNot(colDeptID, excludeID)
 	}

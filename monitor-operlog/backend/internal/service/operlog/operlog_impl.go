@@ -68,7 +68,7 @@ func (s *serviceImpl) Create(ctx context.Context, in CreateInput) error {
 
 // List queries the paginated operation-log list.
 func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, error) {
-	model := s.tenantFilter.Apply(ctx, dao.Operlog.Ctx(ctx))
+	model := s.tenantFilter.Apply(ctx, dao.Operlog.Ctx(ctx), "")
 	titleOperationKeys := s.findLocalizedRouteTitleOperationKeys(ctx, in.Title)
 	model = applyOperLogFilters(model, in.Title, titleOperationKeys, in.OperName, in.OperType, in.Status, in.BeginTime, in.EndTime)
 
@@ -107,7 +107,7 @@ func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, erro
 // GetById retrieves one operation-log record by primary key.
 func (s *serviceImpl) GetById(ctx context.Context, id int) (*OperLogEntity, error) {
 	var record *OperLogEntity
-	err := s.tenantFilter.Apply(ctx, dao.Operlog.Ctx(ctx)).Where(colID, id).Scan(&record)
+	err := s.tenantFilter.Apply(ctx, dao.Operlog.Ctx(ctx), "").Where(colID, id).Scan(&record)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (s *serviceImpl) GetById(ctx context.Context, id int) (*OperLogEntity, erro
 
 // Clean hard-deletes operation logs within one optional time range.
 func (s *serviceImpl) Clean(ctx context.Context, in CleanInput) (int, error) {
-	model := s.tenantFilter.Apply(ctx, dao.Operlog.Ctx(ctx))
+	model := s.tenantFilter.Apply(ctx, dao.Operlog.Ctx(ctx), "")
 	hasFilter := false
 	if in.BeginTime != "" {
 		model = model.WhereGTE(colOperTime, in.BeginTime)
@@ -150,7 +150,7 @@ func (s *serviceImpl) DeleteByIds(ctx context.Context, ids []int) (int, error) {
 	if len(ids) == 0 {
 		return 0, nil
 	}
-	result, err := s.tenantFilter.Apply(ctx, dao.Operlog.Ctx(ctx)).WhereIn(colID, ids).Delete()
+	result, err := s.tenantFilter.Apply(ctx, dao.Operlog.Ctx(ctx), "").WhereIn(colID, ids).Delete()
 	if err != nil {
 		return 0, err
 	}
@@ -163,7 +163,7 @@ func (s *serviceImpl) DeleteByIds(ctx context.Context, ids []int) (int, error) {
 
 // Export generates an Excel workbook for operation logs.
 func (s *serviceImpl) Export(ctx context.Context, in ExportInput) (data []byte, err error) {
-	model := s.tenantFilter.Apply(ctx, dao.Operlog.Ctx(ctx))
+	model := s.tenantFilter.Apply(ctx, dao.Operlog.Ctx(ctx), "")
 	if len(in.Ids) > 0 {
 		model = model.WhereIn(colID, in.Ids)
 	} else {
@@ -455,7 +455,7 @@ func resolveAuditTenantContext(
 	onBehalfOfTenantID *int,
 	isImpersonation *bool,
 ) auditTenantContext {
-	current := tenantFilter.CurrentContext(ctx)
+	current := tenantFilter.Context(ctx)
 	result := auditTenantContext{
 		TenantID:           current.TenantID,
 		ActingUserID:       current.ActingUserID,
