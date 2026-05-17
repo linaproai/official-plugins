@@ -89,14 +89,23 @@ test.describe('TC0052 服务监控页面展示', () => {
       .locator('.cursor-pointer')
       .filter({ hasText: /\(/ })
       .first();
+    await expect(
+      nodeHeader.locator('.icon-\\[ant-design--caret-down-outlined\\]').first(),
+    ).toBeVisible();
     const firstNodeContent = nodeHeader.locator('xpath=following-sibling::div[1]');
     await expect(firstNodeContent).toBeVisible();
     await nodeHeader.click();
     await expect(firstNodeContent).toBeHidden();
+    await expect(
+      nodeHeader.locator('.icon-\\[ant-design--caret-right-outlined\\]').first(),
+    ).toBeVisible();
 
     // Click again to expand
     await nodeHeader.click();
     await expect(firstNodeContent).toBeVisible();
+    await expect(
+      nodeHeader.locator('.icon-\\[ant-design--caret-down-outlined\\]').first(),
+    ).toBeVisible();
 
     // CPU should be visible again after expand
     await expect(adminPage.getByText('CPU').first()).toBeVisible();

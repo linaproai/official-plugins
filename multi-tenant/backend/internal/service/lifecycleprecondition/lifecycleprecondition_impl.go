@@ -1,5 +1,5 @@
-// lifecycleprecondition_impl.go implements plugin lifecycle guards for tenant
-// disable and tenant delete operations. It checks tenant-plugin bindings before
+// lifecycleprecondition_impl.go implements plugin lifecycle preconditions for
+// tenant disable and tenant delete operations. It checks tenant state before
 // allowing destructive lifecycle steps so plugin state cannot be orphaned.
 
 package lifecycleprecondition
@@ -10,11 +10,14 @@ import (
 	"lina-core/pkg/pluginhost"
 )
 
-// BeforeUninstall rejects uninstall while tenants exist.
+// BeforeUninstall rejects data-preserving uninstall while tenants exist.
 func (c *Checker) BeforeUninstall(
 	ctx context.Context,
 	input pluginhost.SourcePluginLifecycleInput,
 ) (bool, string, error) {
+	if input != nil && input.PurgeStorageData() {
+		return true, "", nil
+	}
 	count, err := c.tenantCounter.CountExisting(ctx)
 	if err != nil {
 		return false, ReasonUninstallTenantsExist, err
