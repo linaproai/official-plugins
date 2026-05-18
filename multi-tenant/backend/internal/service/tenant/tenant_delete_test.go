@@ -13,6 +13,7 @@ import (
 	"lina-core/pkg/bizerr"
 	_ "lina-core/pkg/dbdriver"
 	pluginbizctx "lina-core/pkg/pluginservice/bizctx"
+	plugincontract "lina-core/pkg/pluginservice/contract"
 	"lina-plugin-multi-tenant/backend/internal/service/resolverconfig"
 	"lina-plugin-multi-tenant/backend/internal/service/shared"
 	"lina-plugin-multi-tenant/backend/internal/service/tenantplugin"
@@ -78,7 +79,7 @@ func TestDeleteRunsLifecyclePreconditionBeforeSoftDelete(t *testing.T) {
 
 	lifecycleSvc := &fakePluginLifecycleService{deleteErr: errors.New("tenant delete vetoed")}
 	err = New(
-		pluginbizctx.New(nil),
+		pluginbizctx.New(tenantDeletePlatformBizCtx{}),
 		resolverconfig.New(),
 		tenantplugin.New(pluginbizctx.New(nil), nil),
 		lifecycleSvc,
@@ -123,7 +124,7 @@ func TestDeleteNotifiesLifecycleAfterSoftDelete(t *testing.T) {
 
 	lifecycleSvc := &fakePluginLifecycleService{}
 	err = New(
-		pluginbizctx.New(nil),
+		pluginbizctx.New(tenantDeletePlatformBizCtx{}),
 		resolverconfig.New(),
 		tenantplugin.New(pluginbizctx.New(nil), nil),
 		lifecycleSvc,
@@ -145,6 +146,15 @@ func TestDeleteNotifiesLifecycleAfterSoftDelete(t *testing.T) {
 	if count != 0 {
 		t.Fatalf("expected tenant to be soft-deleted, got count=%d", count)
 	}
+}
+
+// tenantDeletePlatformBizCtx provides strict platform context for lifecycle
+// delete tests that focus on precondition and notification behavior.
+type tenantDeletePlatformBizCtx struct{}
+
+// Current returns a platform all-data plugin-visible business context.
+func (tenantDeletePlatformBizCtx) Current(context.Context) plugincontract.CurrentContext {
+	return plugincontract.CurrentContext{UserID: 1, TenantID: 0, PlatformBypass: true}
 }
 
 // configureTenantDeleteTestDB points the package test at the local PostgreSQL

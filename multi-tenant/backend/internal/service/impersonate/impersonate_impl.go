@@ -25,6 +25,9 @@ import (
 // Start validates an impersonation request and returns token metadata.
 func (s *serviceImpl) Start(ctx context.Context, in StartInput) (*StartOutput, error) {
 	bizCtx := s.bizCtxSvc.Current(ctx)
+	if !bizCtx.PlatformBypass {
+		return nil, bizerr.NewCode(CodeImpersonationPermissionDenied)
+	}
 	actingUserID := int64(bizCtx.UserID)
 	if actingUserID <= 0 {
 		return nil, bizerr.NewCode(CodeImpersonationPermissionDenied)

@@ -284,10 +284,11 @@ WHERE r."key" IN (
 ON CONFLICT DO NOTHING;
 
 -- Mock data: grant tenant-user every enabled menu and permission outside the
--- platform-management subtree so it can demonstrate tenant-local data isolation
--- while still exercising the regular workbench feature set.
--- 模拟数据：为 tenant-user 授予平台管理子树以外的所有启用菜单和权限，用于演示
--- 登录后只能看到本租户数据，同时仍可访问常规工作台功能。
+-- platform-management subtree and platform-only service-monitor plugin so it
+-- can demonstrate tenant-local data isolation while still exercising the
+-- regular tenant workbench feature set.
+-- 模拟数据：为 tenant-user 授予平台管理子树和平台级服务监控插件以外的所有启用菜单和权限，
+-- 用于演示登录后只能看到本租户数据，同时仍可访问常规租户工作台功能。
 WITH RECURSIVE platform_menu("id") AS (
     SELECT parent."id"
     FROM sys_menu parent
@@ -304,6 +305,7 @@ JOIN sys_menu m ON m."status" = 1
 LEFT JOIN platform_menu pm ON pm."id" = m."id"
 WHERE r."key" = 'tenant-user'
   AND pm."id" IS NULL
+  AND m."menu_key" NOT LIKE 'plugin:monitor-server:%'
 ON CONFLICT DO NOTHING;
 
 -- Mock data: bind tenant users to their scenario roles. These bindings drive

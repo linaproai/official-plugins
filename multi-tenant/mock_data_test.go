@@ -271,7 +271,7 @@ func TestMultiTenantMockDataContainsTenantUserIsolationAccount(t *testing.T) {
 	assertMockSQLUserNickname(t, pluginSQL, "tenant-user", "摸鱼科技 本租户演示用户")
 	assertTenantUserLoginTenantChoices(t, pluginSQL)
 	assertMockSQLLineContainsFragments(t, pluginSQL, "('tenant-user', 'tenant-user')")
-	assertTenantUserPermissionBlockExcludesPlatformManagement(t, pluginSQL)
+	assertTenantUserPermissionBlockExcludesPlatformOnlyMenus(t, pluginSQL)
 }
 
 // readMultiTenantMockSQLAsset reads the plugin-owned mock SQL asset.
@@ -480,10 +480,10 @@ func assertTenantUserLoginTenantChoices(t *testing.T, sql string) {
 	}
 }
 
-// assertTenantUserPermissionBlockExcludesPlatformManagement verifies the
-// tenant-user role grants the full non-platform menu set dynamically while
-// excluding the platform-management menu subtree.
-func assertTenantUserPermissionBlockExcludesPlatformManagement(t *testing.T, sql string) {
+// assertTenantUserPermissionBlockExcludesPlatformOnlyMenus verifies the
+// tenant-user role grants tenant workbench menus dynamically while excluding
+// platform-only governance and service-monitor menus.
+func assertTenantUserPermissionBlockExcludesPlatformOnlyMenus(t *testing.T, sql string) {
 	t.Helper()
 
 	block := extractMockSQLBlock(t, sql, "-- Mock data: grant tenant-user every enabled menu")
@@ -495,6 +495,7 @@ func assertTenantUserPermissionBlockExcludesPlatformManagement(t *testing.T, sql
 		`LEFT JOIN platform_menu pm ON pm."id" = m."id"`,
 		`WHERE r."key" = 'tenant-user'`,
 		`AND pm."id" IS NULL`,
+		`AND m."menu_key" NOT LIKE 'plugin:monitor-server:%'`,
 	} {
 		if !strings.Contains(block, fragment) {
 			t.Fatalf("expected tenant-user permission block to contain %q", fragment)

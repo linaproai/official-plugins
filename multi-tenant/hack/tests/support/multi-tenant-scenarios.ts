@@ -11,13 +11,17 @@ import {
   installPlugin,
   syncPlugins,
   type APIRequestContext,
+  type APIResponse,
 } from "@host-tests/support/api/job";
+import type { Page } from "@host-tests/support/playwright";
+import { LoginPage } from "@host-tests/pages/LoginPage";
 import {
   execPgSQL,
   pgEscapeLiteral,
   queryPgRows,
   queryPgScalar,
 } from "@host-tests/support/postgres";
+import { waitForRouteReady } from "@host-tests/support/ui";
 import {
   addTenantMember,
   createTenant,
@@ -52,6 +56,65 @@ type MonitorAutoEnableSnapshot = {
   installed: string;
   pluginId: string;
   status: string;
+};
+
+type ErrorEnvelope = {
+  code: number;
+  errorCode?: string;
+  message?: string;
+  messageKey?: string;
+};
+
+type RoleMenuTreeNode = {
+  children?: RoleMenuTreeNode[];
+  id: number;
+  label: string;
+  parentId: number;
+  type: string;
+};
+
+type RoleMenuTreeResponse = {
+  checkedKeys: number[];
+  menus: RoleMenuTreeNode[];
+};
+
+type ConfigFallbackItem = {
+  canEdit: boolean;
+  canOverride: boolean;
+  id: number;
+  isFallback: boolean;
+  key: string;
+  overrideMode: string;
+  sourceTenantId: number;
+};
+
+type DictTypeFallbackItem = {
+  canEdit: boolean;
+  canOverride: boolean;
+  id: number;
+  isFallback: boolean;
+  overrideMode: string;
+  sourceTenantId: number;
+  type: string;
+};
+
+type DictDataFallbackItem = {
+  canEdit: boolean;
+  canOverride: boolean;
+  dictType: string;
+  id: number;
+  isFallback: boolean;
+  label: string;
+  overrideMode: string;
+  sourceTenantId: number;
+  value: string;
+};
+
+type JobGroupFallbackItem = {
+  code: string;
+  id: number;
+  jobCount: number;
+  name: string;
 };
 
 type ScenarioContext = {
@@ -223,6 +286,175 @@ function flattenAccessibleMenus(list: Array<any>): Array<any> {
     item,
     ...flattenAccessibleMenus(item?.children ?? []),
   ]);
+}
+
+function flattenRoleMenuTreeNodes(list: RoleMenuTreeNode[]): RoleMenuTreeNode[] {
+  return list.flatMap((item) => [
+    item,
+    ...flattenRoleMenuTreeNodes(item.children ?? []),
+  ]);
+}
+
+function menuIDByPermission(permission: string) {
+  const menuID = scalarNumber(`
+    SELECT id
+    FROM sys_menu
+    WHERE perms = '${pgEscapeLiteral(permission)}'
+    ORDER BY id
+    LIMIT 1;
+  `);
+  expect(menuID, `missing menu permission ${permission}`).toBeGreaterThan(0);
+  return menuID;
+}
+
+function menuIDsByPermissions(permissions: string[]) {
+  return permissions.map((permission) => menuIDByPermission(permission));
+}
+
+async function expectBusinessErrorCode(
+  response: APIResponse,
+  expectedErrorCode: string,
+) {
+  const payload = (await expectBusinessError(response)) as ErrorEnvelope;
+  expect(payload.errorCode).toBe(expectedErrorCode);
+  return payload;
+}
+
+async function loginTenantUserInBrowser(page: Page, username: string) {
+  const loginPage = new LoginPage(page);
+  await loginPage.goto();
+  await loginPage.login(username, password);
+  await page
+    .waitForURL((url) => !url.pathname.includes("/auth/login"), {
+      timeout: 15000,
+    })
+    .catch(() => {});
+  const tenantSelector = page.getByTestId("login-tenant-selector");
+  if (await tenantSelector.isVisible({ timeout: 1000 }).catch(() => false)) {
+    await page.getByTestId("login-tenant-confirm").click();
+    await page.waitForURL((url) => !url.pathname.includes("/auth/login"), {
+      timeout: 15000,
+    });
+  }
+  await waitForRouteReady(page, 15000);
+}
+
+function assertNoRoutePath(list: Array<any>, path: string) {
+  const pathsByMenu = new Set(
+    flattenAccessibleMenus(list).map((item) => item?.path),
+  );
+  expect(pathsByMenu.has(path), `route path ${path} should be hidden`).toBe(
+    false,
+  );
+}
+
+function expectRoleTreeExcludesMenuIDs(
+  tree: RoleMenuTreeResponse,
+  menuIDs: number[],
+) {
+  const treeIDs = new Set(flattenRoleMenuTreeNodes(tree.menus).map((node) => node.id));
+  for (const menuID of menuIDs) {
+    expect(treeIDs.has(menuID), `role tree should not expose menu ${menuID}`).toBe(
+      false,
+    );
+    expect(
+      tree.checkedKeys.includes(menuID),
+      `checked keys should not expose menu ${menuID}`,
+    ).toBe(false);
+  }
+}
+
+function expectFallbackMetadata(
+  row: {
+    canEdit: boolean;
+    canOverride: boolean;
+    isFallback: boolean;
+    overrideMode: string;
+    sourceTenantId: number;
+  },
+  label: string,
+) {
+  expect(row.sourceTenantId, `${label} source tenant`).toBe(0);
+  expect(row.isFallback, `${label} fallback flag`).toBe(true);
+  expect(row.canEdit, `${label} direct edit flag`).toBe(false);
+  expect(row.canOverride, `${label} override flag`).toBe(true);
+  expect(row.overrideMode, `${label} override mode`).toBe(
+    "createTenantOverride",
+  );
+}
+
+function insertTenantDefaultJobGroup(tenantId: number) {
+  return scalarNumber(`
+    INSERT INTO sys_job_group (tenant_id, code, name, remark, sort_order, is_default, created_at, updated_at)
+    VALUES (${tenantId}, 'default', 'Default group', 'Tenant default scheduled-job group', 0, 1, NOW(), NOW())
+    ON CONFLICT (tenant_id, code) DO UPDATE SET is_default = 1, updated_at = NOW()
+    RETURNING id;
+  `);
+}
+
+function insertJobGroup(
+  tenantId: number,
+  code: string,
+  name: string,
+  isDefault = false,
+) {
+  return scalarNumber(`
+    INSERT INTO sys_job_group (tenant_id, code, name, remark, sort_order, is_default, created_at, updated_at)
+    VALUES (${tenantId}, '${pgEscapeLiteral(code)}', '${pgEscapeLiteral(name)}', 'multi-tenant e2e', 10, ${isDefault ? 1 : 0}, NOW(), NOW())
+    RETURNING id;
+  `);
+}
+
+function insertShellJob(tenantId: number, groupId: number, name: string) {
+  return scalarNumber(`
+    INSERT INTO sys_job (
+      tenant_id,
+      group_id,
+      name,
+      description,
+      task_type,
+      handler_ref,
+      params,
+      timeout_seconds,
+      shell_cmd,
+      work_dir,
+      env,
+      cron_expr,
+      timezone,
+      scope,
+      concurrency,
+      max_concurrency,
+      max_executions,
+      status,
+      is_builtin,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      ${tenantId},
+      ${groupId},
+      '${pgEscapeLiteral(name)}',
+      'Tenant job-group isolation fixture',
+      'shell',
+      '',
+      '{}',
+      300,
+      'echo tc',
+      '',
+      '{}',
+      '0 0 1 1 *',
+      'Asia/Shanghai',
+      'master_only',
+      'singleton',
+      1,
+      0,
+      'disabled',
+      0,
+      NOW(),
+      NOW()
+    )
+    RETURNING id;
+  `);
 }
 
 function monitorPluginSnapshot(pluginId: string): MonitorAutoEnableSnapshot {
@@ -1405,6 +1637,427 @@ export async function scenarioTC0237() {
         restoreMonitorPluginSnapshot(snapshot);
       }
     }
+  });
+}
+
+export async function scenarioTC0239() {
+  await withAdmin(async ({ api, suffix }) => {
+    await withTenant(api, suffix, "tc239", async (tenant) => {
+      const user = await addTenantUser(api, suffix, "tc239_user", tenant.id);
+      const grants: TenantUserGrant[] = [];
+      try {
+        const blockedMenuIDs = menuIDsByPermissions([
+          "system:tenant:list",
+          "plugin:install",
+          "system:menu:add",
+        ]);
+        grants.push(
+          await grantTenantPermissions(api, {
+            roleKey: `tc239-dirty-${suffix}`,
+            roleName: `TC239 Dirty ${suffix}`,
+            tenantId: tenant.id,
+            userId: user.id,
+            permissions: [
+              "system:tenant:list",
+              "system:tenant:add",
+              "system:role:add",
+              "system:role:edit",
+              "system:menu:query",
+            ],
+          }),
+        );
+        const token = await loginAndSelect(user.username, tenant.id);
+        const tenantApi = await createTenantApiContext(token);
+        try {
+          await expectBusinessErrorCode(
+            await tenantApi.get("platform/tenants?pageNum=1&pageSize=10"),
+            "MULTI_TENANT_PLATFORM_PERMISSION_REQUIRED",
+          );
+          const tree = await expectSuccess<RoleMenuTreeResponse>(
+            await tenantApi.get(`menu/role/${grants[0]!.roleId}`),
+          );
+          expectRoleTreeExcludesMenuIDs(tree, blockedMenuIDs);
+          await expectBusinessErrorCode(
+            await tenantApi.post("role", {
+              data: {
+                name: `TC239 Create`.slice(0, 30),
+                key: `tc239_create_${suffix}`.slice(0, 30),
+                sort: 1,
+                dataScope: 2,
+                status: 1,
+                menuIds: [blockedMenuIDs[0]!],
+              },
+            }),
+            "ROLE_MENU_ASSIGNMENT_FORBIDDEN",
+          );
+          await expectBusinessErrorCode(
+            await tenantApi.put(`role/${grants[0]!.roleId}`, {
+              data: {
+                name: `TC239 Update`.slice(0, 30),
+                key: `tc239_dirty_${suffix}`.slice(0, 30),
+                sort: 1,
+                dataScope: 2,
+                status: 1,
+                menuIds: [blockedMenuIDs[1]!],
+              },
+            }),
+            "ROLE_MENU_ASSIGNMENT_FORBIDDEN",
+          );
+        } finally {
+          await tenantApi.dispose();
+        }
+      } finally {
+        revokeTenantPermissionGrants(grants);
+        await cleanupTenantUser(api, user.id, user.memberId);
+      }
+    });
+  });
+}
+
+export async function scenarioTC0240() {
+  await withAdmin(async ({ api, suffix }) => {
+    await ensurePluginInstalled(api, "org-center");
+    await withTenant(api, suffix, "tc240", async (tenant) => {
+      const user = await addTenantUser(api, suffix, "tc240_user", tenant.id);
+      const grants: TenantUserGrant[] = [];
+      const prefix = `tc240_${suffix}`;
+      try {
+        const blockedMenuIDs = menuIDsByPermissions([
+          "system:menu:add",
+          "plugin:install",
+        ]);
+        grants.push(
+          await grantTenantPermissions(api, {
+            roleKey: `tc240-governance-${suffix}`,
+            roleName: `TC240 Governance ${suffix}`,
+            tenantId: tenant.id,
+            userId: user.id,
+            permissions: [
+              "system:menu:query",
+              "system:menu:add",
+              "system:menu:edit",
+              "system:menu:remove",
+              "plugin:list",
+              "plugin:query",
+              "plugin:install",
+              "plugin:enable",
+              "plugin:disable",
+              "plugin:edit",
+              "plugin:uninstall",
+            ],
+          }),
+        );
+        const token = await loginAndSelect(user.username, tenant.id);
+        const tenantApi = await createTenantApiContext(token);
+        try {
+          const tree = await expectSuccess<RoleMenuTreeResponse>(
+            await tenantApi.get(`menu/role/${grants[0]!.roleId}`),
+          );
+          expectRoleTreeExcludesMenuIDs(tree, blockedMenuIDs);
+          const routes = await getAccessibleMenus(tenantApi);
+          assertNoRoutePath(routes.list, "/platform/tenants");
+          await expectBusinessErrorCode(
+            await tenantApi.post("menu", {
+              data: {
+                parentId: 0,
+                name: `TC240 ${suffix}`,
+                path: `tc240-${suffix}`,
+                component: "system/user/index",
+                perms: `${prefix}:menu:list`,
+                icon: `lucide:test-tube-${suffix}`,
+                type: "M",
+                sort: 999,
+                visible: 1,
+                status: 1,
+                isFrame: 0,
+                isCache: 0,
+                remark: "multi-tenant e2e",
+              },
+            }),
+            "PLATFORM_PERMISSION_REQUIRED",
+          );
+          await expectBusinessErrorCode(
+            await tenantApi.post("plugins/sync"),
+            "PLATFORM_PERMISSION_REQUIRED",
+          );
+          await expectBusinessErrorCode(
+            await tenantApi.put("plugins/org-center/tenant-provisioning-policy", {
+              data: { autoEnableForNewTenants: true },
+            }),
+            "PLATFORM_PERMISSION_REQUIRED",
+          );
+          await expectBusinessErrorCode(
+            await tenantApi.put("plugins/org-center/enable"),
+            "PLATFORM_PERMISSION_REQUIRED",
+          );
+          expect(
+            scalarNumber(
+              `SELECT COUNT(1) FROM sys_menu WHERE perms = '${pgEscapeLiteral(`${prefix}:menu:list`)}';`,
+            ),
+          ).toBe(0);
+        } finally {
+          await tenantApi.dispose();
+        }
+      } finally {
+        revokeTenantPermissionGrants(grants);
+        cleanupRowsByPrefix(prefix);
+        await cleanupTenantUser(api, user.id, user.memberId);
+      }
+    });
+  });
+}
+
+export async function scenarioTC0241() {
+  await withAdmin(async ({ api, suffix }) => {
+    const tenantA = await createNamedTenant(api, suffix, "tc241-a");
+    const tenantB = await createNamedTenant(api, suffix, "tc241-b");
+    const user = await addTenantUser(api, suffix, "tc241_user", tenantA.id);
+    const grants: TenantUserGrant[] = [];
+    const prefix = `tc241_${suffix}`;
+      try {
+        cleanupRowsByPrefix(prefix);
+        insertTenantDefaultJobGroup(tenantA.id);
+        insertTenantDefaultJobGroup(tenantB.id);
+        grants.push(
+          await grantTenantPermissions(api, {
+          roleKey: `tc241-jobgroup-${suffix}`,
+          roleName: `TC241 Job Group ${suffix}`,
+          tenantId: tenantA.id,
+          userId: user.id,
+          permissions: [
+            "system:jobgroup:list",
+            "system:jobgroup:add",
+            "system:jobgroup:edit",
+            "system:jobgroup:remove",
+            "system:job:list",
+            "system:job:add",
+          ],
+        }),
+      );
+      const tenantADefaultGroup = scalarNumber(
+        `SELECT id FROM sys_job_group WHERE tenant_id = ${tenantA.id} AND code = 'default' LIMIT 1;`,
+      );
+      const tenantBGroup = insertJobGroup(
+        tenantB.id,
+        `${prefix}_tenant_b`,
+        "TC241 Tenant B",
+      );
+      const platformGroup = insertJobGroup(
+        0,
+        `${prefix}_platform`,
+        "TC241 Platform",
+      );
+      const token = await loginAndSelect(user.username, tenantA.id);
+      const tenantApi = await createTenantApiContext(token);
+      try {
+        const created = await expectSuccess<{ id: number }>(
+          await tenantApi.post("job-group", {
+            data: {
+              code: `${prefix}_tenant_a`,
+              name: "TC241 Tenant A",
+              remark: "multi-tenant e2e",
+              sortOrder: 20,
+            },
+          }),
+        );
+        expect(
+          scalarNumber(
+            `SELECT tenant_id FROM sys_job_group WHERE id = ${created.id};`,
+          ),
+        ).toBe(tenantA.id);
+        insertShellJob(tenantA.id, created.id, `${prefix}_tenant_a_job`);
+        const tenantBJob = insertShellJob(
+          tenantB.id,
+          tenantBGroup,
+          `${prefix}_tenant_b_job`,
+        );
+        insertShellJob(0, platformGroup, `${prefix}_platform_job`);
+        const groups = await expectSuccess<{
+          list: JobGroupFallbackItem[];
+          total: number;
+        }>(
+          await tenantApi.get(
+            `job-group?pageNum=1&pageSize=100&code=${encodeURIComponent(prefix)}`,
+          ),
+        );
+        expect(groups.list.map((item) => item.id)).toContain(created.id);
+        expect(groups.list.map((item) => item.id)).not.toContain(tenantBGroup);
+        expect(groups.list.map((item) => item.id)).not.toContain(platformGroup);
+        expect(groups.list.find((item) => item.id === created.id)?.jobCount).toBe(
+          1,
+        );
+        await expectBusinessErrorCode(
+          await tenantApi.put(`job-group/${tenantBGroup}`, {
+            data: {
+              code: `${prefix}_tenant_b_update`,
+              name: "TC241 Tenant B Update",
+              remark: "out of scope",
+              sortOrder: 30,
+            },
+          }),
+          "JOB_GROUP_NOT_FOUND",
+        );
+        await expectBusinessErrorCode(
+          await tenantApi.delete(`job-group/${tenantBGroup}`),
+          "JOB_GROUP_NOT_FOUND",
+        );
+        await expectSuccess(await tenantApi.delete(`job-group/${created.id}`));
+        expect(
+          scalarNumber(
+            `SELECT group_id FROM sys_job WHERE tenant_id = ${tenantA.id} AND name = '${pgEscapeLiteral(`${prefix}_tenant_a_job`)}';`,
+          ),
+        ).toBe(tenantADefaultGroup);
+        expect(
+          scalarNumber(`SELECT group_id FROM sys_job WHERE id = ${tenantBJob};`),
+        ).toBe(tenantBGroup);
+      } finally {
+        await tenantApi.dispose();
+      }
+    } finally {
+      revokeTenantPermissionGrants(grants);
+      cleanupRowsByPrefix(prefix);
+      await cleanupTenantUser(api, user.id, user.memberId);
+      await deleteTenant(api, tenantA.id).catch(() => {});
+      await deleteTenant(api, tenantB.id).catch(() => {});
+    }
+  });
+}
+
+export async function scenarioTC0242(page: Page) {
+  await withAdmin(async ({ api, suffix }) => {
+    await withTenant(api, suffix, "tc242", async (tenant) => {
+      const user = await addTenantUser(api, suffix, "tc242_user", tenant.id);
+      const grants: TenantUserGrant[] = [];
+      const configKey = `tc242.${suffix}`;
+      const dictType = `tc242_${suffix}`;
+      try {
+        cleanupRowsByPrefix("tc242.");
+        cleanupRowsByPrefix("tc242_");
+        grants.push(
+          await grantTenantPermissions(api, {
+            roleKey: `tc242-fallback-${suffix}`,
+            roleName: `TC242 Fallback ${suffix}`,
+            tenantId: tenant.id,
+            userId: user.id,
+            permissions: [
+              "system:config:list",
+              "system:config:query",
+              "system:dict:list",
+              "system:dict:query",
+            ],
+          }),
+        );
+        const configID = scalarNumber(`
+          INSERT INTO sys_config (tenant_id, name, key, value, is_builtin, remark, created_at, updated_at)
+          VALUES (0, 'TC242 Platform Config ${pgEscapeLiteral(suffix)}', '${pgEscapeLiteral(configKey)}', 'platform', 0, 'multi-tenant e2e', NOW(), NOW())
+          RETURNING id;
+        `);
+        const dictTypeID = scalarNumber(`
+          INSERT INTO sys_dict_type (tenant_id, name, type, status, is_builtin, allow_tenant_override, remark, created_at, updated_at)
+          VALUES (0, 'TC242 Platform Dict ${pgEscapeLiteral(suffix)}', '${pgEscapeLiteral(dictType)}', 1, 0, TRUE, 'multi-tenant e2e', NOW(), NOW())
+          RETURNING id;
+        `);
+        const dictDataID = scalarNumber(`
+          INSERT INTO sys_dict_data (tenant_id, dict_type, label, value, sort, tag_style, css_class, status, is_builtin, remark, created_at, updated_at)
+          VALUES (0, '${pgEscapeLiteral(dictType)}', 'TC242 Platform Data ${pgEscapeLiteral(suffix)}', 'platform', 1, '', '', 1, 0, 'multi-tenant e2e', NOW(), NOW())
+          RETURNING id;
+        `);
+        const token = await loginAndSelect(user.username, tenant.id);
+        const tenantApi = await createTenantApiContext(token);
+        try {
+          const configList = await expectSuccess<{
+            list: ConfigFallbackItem[];
+          }>(
+            await tenantApi.get(
+              `config?pageNum=1&pageSize=10&key=${encodeURIComponent(configKey)}`,
+            ),
+          );
+          const configRow = configList.list.find((item) => item.key === configKey);
+          expect(configRow).toBeTruthy();
+          expectFallbackMetadata(configRow!, "config");
+
+          const dictTypeList = await expectSuccess<{
+            list: DictTypeFallbackItem[];
+          }>(
+            await tenantApi.get(
+              `dict/type?pageNum=1&pageSize=10&type=${encodeURIComponent(dictType)}`,
+            ),
+          );
+          const dictTypeRow = dictTypeList.list.find(
+            (item) => item.type === dictType,
+          );
+          expect(dictTypeRow).toBeTruthy();
+          expectFallbackMetadata(dictTypeRow!, "dict type");
+
+          const dictDataList = await expectSuccess<{
+            list: DictDataFallbackItem[];
+          }>(
+            await tenantApi.get(
+              `dict/data?pageNum=1&pageSize=10&dictType=${encodeURIComponent(dictType)}`,
+            ),
+          );
+          const dictDataRow = dictDataList.list.find(
+            (item) => item.dictType === dictType && item.value === "platform",
+          );
+          expect(dictDataRow).toBeTruthy();
+          expectFallbackMetadata(dictDataRow!, "dict data");
+
+          await expectBusinessError(await tenantApi.get(`config/${configID}`));
+          await expectBusinessError(await tenantApi.get(`dict/type/${dictTypeID}`));
+          await expectBusinessError(await tenantApi.get(`dict/data/${dictDataID}`));
+
+          const detailRequests: string[] = [];
+          page.on("request", (request) => {
+            const url = new URL(request.url());
+            if (request.method() !== "GET" || !url.pathname.includes("/api/v1/")) {
+              return;
+            }
+            if (
+              url.pathname.endsWith(`/config/${configID}`) ||
+              url.pathname.endsWith(`/dict/type/${dictTypeID}`) ||
+              url.pathname.endsWith(`/dict/data/${dictDataID}`)
+            ) {
+              detailRequests.push(url.pathname);
+            }
+          });
+          await loginTenantUserInBrowser(page, user.username);
+
+          await page.goto("/system/config");
+          await waitForRouteReady(page, 15000);
+          await expect(page.getByText(configKey, { exact: false })).toBeVisible({
+            timeout: 15000,
+          });
+          await expect(page.getByTestId(`config-delete-${configID}`)).toHaveCount(
+            0,
+          );
+
+          await page.goto("/system/dict");
+          await waitForRouteReady(page, 15000);
+          await expect(page.getByText(dictType, { exact: false })).toBeVisible({
+            timeout: 15000,
+          });
+          await expect(
+            page.getByTestId(`dict-type-delete-${dictTypeID}`),
+          ).toHaveCount(0);
+          await page.getByText(dictType, { exact: false }).first().click();
+          await waitForRouteReady(page, 15000);
+          await expect(
+            page.getByText(`TC242 Platform Data ${suffix}`, { exact: false }),
+          ).toBeVisible({ timeout: 15000 });
+          await expect(
+            page.getByTestId(`dict-data-delete-${dictDataID}`),
+          ).toHaveCount(0);
+          expect(detailRequests).toEqual([]);
+        } finally {
+          await tenantApi.dispose();
+        }
+      } finally {
+        revokeTenantPermissionGrants(grants);
+        await cleanupTenantUser(api, user.id, user.memberId);
+        cleanupRowsByPrefix("tc242.");
+        cleanupRowsByPrefix("tc242_");
+      }
+    });
   });
 }
 

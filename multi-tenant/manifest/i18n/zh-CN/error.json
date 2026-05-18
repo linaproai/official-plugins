@@ -7,6 +7,11 @@
             "vetoed": "租户删除被生命周期前置条件阻断"
           }
         }
+      },
+      "platform": {
+        "permission": {
+          "required": "需要平台上下文权限"
+        }
       }
     }
   }

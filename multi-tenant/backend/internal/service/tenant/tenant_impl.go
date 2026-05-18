@@ -15,11 +15,15 @@ import (
 
 	"lina-core/pkg/bizerr"
 	"lina-plugin-multi-tenant/backend/internal/dao"
+	"lina-plugin-multi-tenant/backend/internal/service/resolver"
 	"lina-plugin-multi-tenant/backend/internal/service/shared"
 )
 
 // List queries tenants with pagination and filters.
 func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, error) {
+	if err := s.ensurePlatformTenantGovernance(ctx); err != nil {
+		return nil, err
+	}
 	model := shared.Model(ctx, shared.TableTenant)
 	if in.Code != "" {
 		model = model.WhereLike("code", "%"+in.Code+"%")
@@ -45,6 +49,9 @@ func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, erro
 
 // Get retrieves one tenant by primary key.
 func (s *serviceImpl) Get(ctx context.Context, id int64) (*Entity, error) {
+	if err := s.ensurePlatformTenantGovernance(ctx); err != nil {
+		return nil, err
+	}
 	var item *Entity
 	if err := shared.Model(ctx, shared.TableTenant).Where("id", id).Scan(&item); err != nil {
 		return nil, err
@@ -57,6 +64,9 @@ func (s *serviceImpl) Get(ctx context.Context, id int64) (*Entity, error) {
 
 // Create creates one tenant and provisions built-in tenant plugin state.
 func (s *serviceImpl) Create(ctx context.Context, in CreateInput) (int64, error) {
+	if err := s.ensurePlatformTenantGovernance(ctx); err != nil {
+		return 0, err
+	}
 	code := strings.TrimSpace(in.Code)
 	if err := validateTenantCode(code); err != nil {
 		return 0, err
@@ -99,6 +109,9 @@ func (s *serviceImpl) Create(ctx context.Context, in CreateInput) (int64, error)
 
 // Update updates tenant basic fields.
 func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
+	if err := s.ensurePlatformTenantGovernance(ctx); err != nil {
+		return err
+	}
 	if _, err := s.Get(ctx, in.Id); err != nil {
 		return err
 	}
@@ -116,6 +129,9 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 
 // ChangeStatus performs a lifecycle status transition.
 func (s *serviceImpl) ChangeStatus(ctx context.Context, id int64, status shared.TenantStatus) error {
+	if err := s.ensurePlatformTenantGovernance(ctx); err != nil {
+		return err
+	}
 	if !isValidStatus(status) {
 		return bizerr.NewCode(CodeTenantInvalidStatus)
 	}
@@ -144,6 +160,9 @@ func (s *serviceImpl) ChangeStatus(ctx context.Context, id int64, status shared.
 
 // Delete soft-deletes a tenant after lifecycle precondition checks pass.
 func (s *serviceImpl) Delete(ctx context.Context, id int64) error {
+	if err := s.ensurePlatformTenantGovernance(ctx); err != nil {
+		return err
+	}
 	if _, err := s.Get(ctx, id); err != nil {
 		return err
 	}
@@ -158,6 +177,15 @@ func (s *serviceImpl) Delete(ctx context.Context, id int64) error {
 		s.pluginLifecycleSvc.NotifyTenantDeleted(ctx, int(id))
 	}
 	return nil
+}
+
+// ensurePlatformTenantGovernance verifies the caller is in platform context
+// before reading or mutating platform-owned tenant rows.
+func (s *serviceImpl) ensurePlatformTenantGovernance(ctx context.Context) error {
+	if s != nil && s.bizCtxSvc != nil && s.bizCtxSvc.Current(ctx).PlatformBypass {
+		return nil
+	}
+	return bizerr.NewCode(resolver.CodePlatformPermissionRequired)
 }
 
 // ensureTenantDeletePreconditionAllowed asks the host lifecycle service whether

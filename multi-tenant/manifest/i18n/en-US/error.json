@@ -7,6 +7,11 @@
             "vetoed": "Tenant deletion was blocked by a lifecycle precondition"
           }
         }
+      },
+      "platform": {
+        "permission": {
+          "required": "Platform context permission is required"
+        }
       }
     }
   }
