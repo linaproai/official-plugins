@@ -2,6 +2,11 @@
   "error": {
     "demo": {
       "control": {
+        "install": {
+          "manual": {
+            "denied": "演示控制插件只能通过配置 plugin.autoEnable 并重启宿主来安装，不能从页面直接安装。"
+          }
+        },
         "write": {
           "denied": "演示模式已开启，禁止执行写操作"
         }
@@ -9,4 +14,3 @@
     }
   }
 }
-

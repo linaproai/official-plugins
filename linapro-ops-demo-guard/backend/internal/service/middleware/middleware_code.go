@@ -10,6 +10,14 @@ import (
 )
 
 var (
+	// CodeDemoControlInstallManualDenied reports that demo mode install must
+	// happen through startup plugin.autoEnable instead of plugin management.
+	CodeDemoControlInstallManualDenied = bizerr.MustDefineWithKey(
+		"DEMO_CONTROL_INSTALL_MANUAL_DENIED",
+		"error.demo.control.install.manual.denied",
+		"The demo control plugin can only be installed by configuring plugin.autoEnable and restarting the host; it cannot be installed from the page",
+		gcode.CodeNotAuthorized,
+	)
 	// CodeDemoControlWriteDenied reports that demo mode rejected a write request.
 	CodeDemoControlWriteDenied = bizerr.MustDefine(
 		"DEMO_CONTROL_WRITE_DENIED",

@@ -2,6 +2,11 @@
   "error": {
     "demo": {
       "control": {
+        "install": {
+          "manual": {
+            "denied": "The demo control plugin can only be installed by configuring plugin.autoEnable and restarting the host; it cannot be installed from the page."
+          }
+        },
         "write": {
           "denied": "Demo mode is enabled; write operations are disabled"
         }
@@ -9,4 +14,3 @@
     }
   }
 }
-

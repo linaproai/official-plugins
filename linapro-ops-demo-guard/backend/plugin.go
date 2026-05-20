@@ -21,6 +21,9 @@ const (
 func init() {
 	plugin := pluginhost.NewSourcePlugin(pluginID)
 	plugin.Assets().UseEmbeddedFiles(democontrolplugin.EmbeddedFiles)
+	if err := plugin.Lifecycle().RegisterBeforeInstallHandler(beforeInstall); err != nil {
+		panic(err)
+	}
 	if err := plugin.HTTP().RegisterRoutes(
 		pluginhost.ExtensionPointHTTPRouteRegister,
 		pluginhost.CallbackExecutionModeBlocking,
@@ -31,6 +34,14 @@ func init() {
 	if err := pluginhost.RegisterSourcePlugin(plugin); err != nil {
 		panic(err)
 	}
+}
+
+// beforeInstall prevents accidental management-page installation of demo mode.
+func beforeInstall(_ context.Context, input pluginhost.SourcePluginLifecycleInput) (bool, string, error) {
+	if input != nil && input.StartupAutoEnable() {
+		return true, "", nil
+	}
+	return false, middlewaresvc.CodeDemoControlInstallManualDenied.MessageKey(), nil
 }
 
 // registerGlobalMiddleware binds the demo read-only guard into the host-wide
