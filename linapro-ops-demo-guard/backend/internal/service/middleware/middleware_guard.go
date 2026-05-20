@@ -24,6 +24,8 @@ const (
 	demoControlAuthSelectTenantPath = "/api/v1/auth/select-tenant"
 	// demoControlAuthSwitchTenantPath reissues a session token for another tenant membership.
 	demoControlAuthSwitchTenantPath = "/api/v1/auth/switch-tenant"
+	// demoControlSelfDisablePath disables this plugin so operators can leave demo mode.
+	demoControlSelfDisablePath = "/api/v1/plugins/" + demoControlPluginID + "/disable"
 )
 
 // demoControlErrorResponse defines the JSON payload returned for blocked demo writes.
@@ -75,6 +77,9 @@ func isDemoControlAllowedRequest(request *ghttp.Request) bool {
 	if isDemoControlSessionWhitelist(method, path) {
 		return true
 	}
+	if isDemoControlGovernanceWhitelist(method, path) {
+		return true
+	}
 	return false
 }
 
@@ -111,6 +116,12 @@ func isDemoControlSessionWhitelist(method string, path string) bool {
 	default:
 		return false
 	}
+}
+
+// isDemoControlGovernanceWhitelist allows only the minimum plugin-governance
+// write needed to turn off demo protection after it has been enabled.
+func isDemoControlGovernanceWhitelist(method string, path string) bool {
+	return method == http.MethodPut && normalizeDemoControlPath(path) == demoControlSelfDisablePath
 }
 
 // normalizeDemoControlPath canonicalizes one request path for whitelist matching.

@@ -137,8 +137,8 @@ func TestGuardAllowsSessionWhitelist(t *testing.T) {
 	}
 }
 
-// TestGuardRejectsPluginManagementWriteRequests verifies demo mode blocks all
-// plugin-governance write operations after the guard is enabled.
+// TestGuardRejectsPluginManagementWriteRequests verifies demo mode blocks
+// plugin-governance write operations except for disabling the guard itself.
 func TestGuardRejectsPluginManagementWriteRequests(t *testing.T) {
 	baseURL, shutdown := startDemoControlTestServer(t, true)
 	defer shutdown()
@@ -153,7 +153,6 @@ func TestGuardRejectsPluginManagementWriteRequests(t *testing.T) {
 		{method: http.MethodDelete, path: "/api/v1/plugins/linapro-demo-source"},
 		{method: http.MethodPost, path: "/api/v1/plugins/linapro-ops-demo-guard/install"},
 		{method: http.MethodPut, path: "/api/v1/plugins/linapro-ops-demo-guard/enable"},
-		{method: http.MethodPut, path: "/api/v1/plugins/linapro-ops-demo-guard/disable"},
 		{method: http.MethodDelete, path: "/api/v1/plugins/linapro-ops-demo-guard"},
 		{method: http.MethodPost, path: "/api/v1/plugins/sync"},
 		{method: http.MethodPost, path: "/api/v1/plugins/dynamic/package"},
@@ -165,6 +164,21 @@ func TestGuardRejectsPluginManagementWriteRequests(t *testing.T) {
 			t.Fatalf("expected %s %s to be rejected, got %d", item.method, item.path, response.status)
 		}
 		assertDemoControlRejectedResponse(t, response, item.method, item.path)
+	}
+}
+
+// TestGuardAllowsSelfDisableRequest verifies administrators can leave demo mode
+// after linapro-ops-demo-guard has been enabled.
+func TestGuardAllowsSelfDisableRequest(t *testing.T) {
+	baseURL, shutdown := startDemoControlTestServer(t, true)
+	defer shutdown()
+
+	response := doDemoControlRequest(t, http.MethodPut, baseURL+"/api/v1/plugins/linapro-ops-demo-guard/disable")
+	if response.status != http.StatusOK {
+		t.Fatalf("expected self disable request to pass, got %d body=%q", response.status, response.body)
+	}
+	if response.body != "linapro-ops-demo-guard-disable-ok" {
+		t.Fatalf("expected downstream self disable handler body, got %q", response.body)
 	}
 }
 
