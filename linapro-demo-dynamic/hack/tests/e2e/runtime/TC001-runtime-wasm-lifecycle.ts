@@ -1574,55 +1574,63 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     const oversizedProbeBytes = uploadMaxSizeMB * bytesPerMegabyte + 2 * bytesPerMegabyte;
     const expectedMessage = `文件大小不能超过${uploadMaxSizeMB}MB`;
     const oversizedBuffer = Buffer.alloc(oversizedProbeBytes, 0x61);
-
-    const apiResponse = await adminApi!.post("plugins/dynamic/package", {
-      multipart: {
-        overwriteSupport: "0",
-        file: {
-          name: "linapro-demo-dynamic-oversized.wasm",
-          mimeType: "application/wasm",
-          buffer: oversizedBuffer,
-        },
-      },
-    });
-    const apiPayload = (await apiResponse.json()) as {
-      code?: number;
-      message?: string;
-    };
-
-    expect(apiResponse.status(), "超限上传不应再返回服务器 500").toBe(200);
-    expect(apiPayload.code ?? 0, "超限上传应返回业务错误码").not.toBe(0);
-    expect(apiPayload.message ?? "").toContain(expectedMessage);
-
-    const pluginPage = new DemoDynamicPage(page);
-    await pluginPage.gotoManage();
-    await pluginPage.dynamicUploadTrigger.click();
-    await expect(pluginPage.dynamicUploadDialog()).toBeVisible();
-
-    const [fileChooser] = await Promise.all([
-      page.waitForEvent("filechooser"),
-      pluginPage.dynamicUploadDragger.click(),
-    ]);
-    await fileChooser.setFiles({
-      name: "linapro-demo-dynamic-oversized.wasm",
-      mimeType: "application/wasm",
-      buffer: oversizedBuffer,
-    });
-    await waitForUploadReady(pluginPage.dynamicUploadDialog());
-
-    const uploadResponsePromise = page.waitForResponse(
-      (response) =>
-        response.url().includes("/plugins/dynamic/package") &&
-        response.request().method() === "POST",
-      { timeout: 30000 },
+    const oversizedFilePath = path.join(
+      repoRoot(),
+      "temp",
+      "runtime-e2e",
+      "linapro-demo-dynamic-oversized.wasm",
     );
+    mkdirSync(path.dirname(oversizedFilePath), { recursive: true });
+    writeFileSync(oversizedFilePath, oversizedBuffer);
 
-    await pluginPage.dynamicUploadConfirmButton().click();
+    try {
+      const apiResponse = await adminApi!.post("plugins/dynamic/package", {
+        multipart: {
+          overwriteSupport: "0",
+          file: {
+            name: "linapro-demo-dynamic-oversized.wasm",
+            mimeType: "application/wasm",
+            buffer: oversizedBuffer,
+          },
+        },
+      });
+      const apiPayload = (await apiResponse.json()) as {
+        code?: number;
+        message?: string;
+      };
 
-    const uploadResponse = await uploadResponsePromise;
-    expect(uploadResponse.status(), "超限上传不应再返回服务器 500").toBe(200);
-    await expect(pluginPage.messageNotice(expectedMessage)).toBeVisible();
-    await expect(pluginPage.dynamicUploadDialog()).toBeVisible();
-    await expect(pluginPage.uploadSuccessDialog()).toHaveCount(0);
+      expect(apiResponse.status(), "超限上传不应再返回服务器 500").toBe(200);
+      expect(apiPayload.code ?? 0, "超限上传应返回业务错误码").not.toBe(0);
+      expect(apiPayload.message ?? "").toContain(expectedMessage);
+
+      const pluginPage = new DemoDynamicPage(page);
+      await pluginPage.gotoManage();
+      await pluginPage.dynamicUploadTrigger.click();
+      await expect(pluginPage.dynamicUploadDialog()).toBeVisible();
+
+      const [fileChooser] = await Promise.all([
+        page.waitForEvent("filechooser"),
+        pluginPage.dynamicUploadDragger.click(),
+      ]);
+      await fileChooser.setFiles(oversizedFilePath);
+      await waitForUploadReady(pluginPage.dynamicUploadDialog());
+
+      const uploadResponsePromise = page.waitForResponse(
+        (response) =>
+          response.url().includes("/plugins/dynamic/package") &&
+          response.request().method() === "POST",
+        { timeout: 30000 },
+      );
+
+      await pluginPage.dynamicUploadConfirmButton().click();
+
+      const uploadResponse = await uploadResponsePromise;
+      expect(uploadResponse.status(), "超限上传不应再返回服务器 500").toBe(200);
+      await expect(pluginPage.messageNotice(expectedMessage)).toBeVisible();
+      await expect(pluginPage.dynamicUploadDialog()).toBeVisible();
+      await expect(pluginPage.uploadSuccessDialog()).toHaveCount(0);
+    } finally {
+      rmSync(oversizedFilePath, { force: true });
+    }
   });
 });
