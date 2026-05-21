@@ -4,6 +4,7 @@ package dynamicservice
 
 import (
 	"testing"
+	"time"
 
 	"lina-core/pkg/bizerr"
 )
@@ -25,5 +26,36 @@ func TestDynamicDemoBusinessErrorMetadata(t *testing.T) {
 	params := messageErr.Params()
 	if params["maxChars"] != 128 {
 		t.Fatalf("expected maxChars message param 128, got %#v", params["maxChars"])
+	}
+}
+
+// TestDemoRecordMilliFromStringParsesDatabaseTimestamp verifies demo-record
+// timestamps are converted without the GoFrame parser path used outside WASM.
+func TestDemoRecordMilliFromStringParsesDatabaseTimestamp(t *testing.T) {
+	got := demoRecordMilliFromString("2026-04-16 09:00:00")
+	if got == nil {
+		t.Fatal("expected database timestamp string to parse")
+	}
+
+	want := time.Date(2026, 4, 16, 9, 0, 0, 0, time.Local).UnixMilli()
+	if *got != want {
+		t.Fatalf("expected timestamp millis %d, got %d", want, *got)
+	}
+	if demoRecordMilliFromString("not-a-time") != nil {
+		t.Fatal("expected invalid timestamp string to project as nil")
+	}
+}
+
+// TestDemoRecordMilliFromStringParsesTimestampOffset verifies database
+// timestamp strings with explicit offsets do not rely on generic time parsers.
+func TestDemoRecordMilliFromStringParsesTimestampOffset(t *testing.T) {
+	got := demoRecordMilliFromString("2026-04-16T09:00:00.123456+08:30")
+	if got == nil {
+		t.Fatal("expected offset timestamp string to parse")
+	}
+
+	want := time.Date(2026, 4, 16, 9, 0, 0, 123456000, time.FixedZone("", 8*60*60+30*60)).UnixMilli()
+	if *got != want {
+		t.Fatalf("expected timestamp millis %d, got %d", want, *got)
 	}
 }

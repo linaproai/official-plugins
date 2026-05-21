@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
-	"lina-core/pkg/apitime"
 	"lina-core/pkg/bizerr"
 )
 
@@ -123,13 +124,15 @@ func (s *serviceImpl) CreateDemoRecordPayload(input *DemoRecordMutationInput) (p
 			}
 		}()
 	}
-
-	recordMap := map[string]any{
-		"id":             recordID,
-		"title":          normalizedInput.Title,
-		"content":        normalizedInput.Content,
-		"attachmentName": attachmentName,
-		"attachmentPath": attachmentPath,
+	recordMap, err := buildRecordMap(&demoRecordCreateRecord{
+		Id:             recordID,
+		Title:          normalizedInput.Title,
+		Content:        normalizedInput.Content,
+		AttachmentName: attachmentName,
+		AttachmentPath: attachmentPath,
+	})
+	if err != nil {
+		return nil, err
 	}
 	if _, err = s.dataSvc.Table(demoRecordTable).Insert(recordMap); err != nil {
 		return nil, err
@@ -184,11 +187,14 @@ func (s *serviceImpl) UpdateDemoRecordPayload(recordID string, input *DemoRecord
 		}()
 	}
 
-	recordMap := map[string]any{
-		"title":          normalizedInput.Title,
-		"content":        normalizedInput.Content,
-		"attachmentName": newAttachmentName,
-		"attachmentPath": newAttachmentPath,
+	recordMap, err := buildRecordMap(&demoRecordUpdateRecord{
+		Title:          normalizedInput.Title,
+		Content:        normalizedInput.Content,
+		AttachmentName: newAttachmentName,
+		AttachmentPath: newAttachmentPath,
+	})
+	if err != nil {
+		return nil, err
 	}
 	if _, err = s.dataSvc.Table(demoRecordTable).WhereKey(validatedRecordID).Update(recordMap); err != nil {
 		return nil, err
@@ -299,9 +305,170 @@ func demoRecordEntityToPayload(record *demoRecordEntity) *demoRecordPayload {
 		Content:        record.Content,
 		AttachmentName: record.AttachmentName,
 		HasAttachment:  strings.TrimSpace(record.AttachmentPath) != "",
-		CreatedAt:      apitime.MilliFromString(record.CreatedAt),
-		UpdatedAt:      apitime.MilliFromString(record.UpdatedAt),
+		CreatedAt:      demoRecordMilliFromString(record.CreatedAt),
+		UpdatedAt:      demoRecordMilliFromString(record.UpdatedAt),
 	}
+}
+
+// demoRecordMilliFromString converts table timestamp strings into Unix
+// milliseconds without using GoFrame time parsing inside the WASM guest.
+func demoRecordMilliFromString(value string) *int64 {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil
+	}
+	parsed, ok := parseDemoRecordTimestamp(trimmed)
+	if !ok || parsed.IsZero() {
+		return nil
+	}
+	millis := parsed.UnixMilli()
+	return &millis
+}
+
+// parseDemoRecordTimestamp parses the stable timestamp prefixes returned by
+// PostgreSQL through GoFrame without invoking generic time parsers in WASM.
+func parseDemoRecordTimestamp(value string) (time.Time, bool) {
+	if len(value) < len(demoRecordTimestampLayoutPrefix) {
+		return time.Time{}, false
+	}
+	if value[4] != '-' || value[7] != '-' || (value[10] != ' ' && value[10] != 'T') ||
+		value[13] != ':' || value[16] != ':' {
+		return time.Time{}, false
+	}
+
+	year, ok := parseDemoRecordTimestampPart(value[0:4])
+	if !ok {
+		return time.Time{}, false
+	}
+	month, ok := parseDemoRecordTimestampPart(value[5:7])
+	if !ok {
+		return time.Time{}, false
+	}
+	day, ok := parseDemoRecordTimestampPart(value[8:10])
+	if !ok {
+		return time.Time{}, false
+	}
+	hour, ok := parseDemoRecordTimestampPart(value[11:13])
+	if !ok {
+		return time.Time{}, false
+	}
+	minute, ok := parseDemoRecordTimestampPart(value[14:16])
+	if !ok {
+		return time.Time{}, false
+	}
+	second, ok := parseDemoRecordTimestampPart(value[17:19])
+	if !ok {
+		return time.Time{}, false
+	}
+
+	nanosecond, offsetSeconds, offsetSet, ok := parseDemoRecordTimestampSuffix(value[19:])
+	if !ok {
+		return time.Time{}, false
+	}
+	location := time.Local
+	if offsetSet {
+		location = time.FixedZone("", offsetSeconds)
+	}
+	return time.Date(year, time.Month(month), day, hour, minute, second, nanosecond, location), true
+}
+
+// parseDemoRecordTimestampPart parses one zero-padded numeric timestamp part.
+func parseDemoRecordTimestampPart(value string) (int, bool) {
+	if value == "" {
+		return 0, false
+	}
+	for _, r := range value {
+		if r < '0' || r > '9' {
+			return 0, false
+		}
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, false
+	}
+	return parsed, true
+}
+
+// parseDemoRecordTimestampSuffix parses optional fractional seconds and
+// timezone suffixes for database timestamp strings.
+func parseDemoRecordTimestampSuffix(value string) (int, int, bool, bool) {
+	rest := strings.TrimSpace(value)
+	nanosecond := 0
+	if strings.HasPrefix(rest, ".") {
+		digitsEnd := 1
+		for digitsEnd < len(rest) {
+			r := rest[digitsEnd]
+			if r < '0' || r > '9' {
+				break
+			}
+			digitsEnd++
+		}
+		fraction := rest[1:digitsEnd]
+		if fraction == "" {
+			return 0, 0, false, false
+		}
+		if len(fraction) > 9 {
+			fraction = fraction[:9]
+		}
+		for len(fraction) < 9 {
+			fraction += "0"
+		}
+		parsed, ok := parseDemoRecordTimestampPart(fraction)
+		if !ok {
+			return 0, 0, false, false
+		}
+		nanosecond = parsed
+		rest = strings.TrimSpace(rest[digitsEnd:])
+	}
+	if rest == "" {
+		return nanosecond, 0, false, true
+	}
+	if rest == "Z" || rest == "z" {
+		return nanosecond, 0, true, true
+	}
+	offsetSeconds, ok := parseDemoRecordTimezoneOffset(rest)
+	if !ok {
+		return 0, 0, false, false
+	}
+	return nanosecond, offsetSeconds, true, true
+}
+
+// parseDemoRecordTimezoneOffset parses +08, +0800, and +08:00 suffixes.
+func parseDemoRecordTimezoneOffset(value string) (int, bool) {
+	if len(value) != 3 && len(value) != 5 && len(value) != 6 {
+		return 0, false
+	}
+	sign := 1
+	switch value[0] {
+	case '+':
+	case '-':
+		sign = -1
+	default:
+		return 0, false
+	}
+	hourText := value[1:3]
+	minuteText := "00"
+	if len(value) == 5 {
+		minuteText = value[3:5]
+	}
+	if len(value) == 6 {
+		if value[3] != ':' {
+			return 0, false
+		}
+		minuteText = value[4:6]
+	}
+	hour, ok := parseDemoRecordTimestampPart(hourText)
+	if !ok {
+		return 0, false
+	}
+	minute, ok := parseDemoRecordTimestampPart(minuteText)
+	if !ok {
+		return 0, false
+	}
+	if hour > 23 || minute > 59 {
+		return 0, false
+	}
+	return sign * ((hour * 60 * 60) + (minute * 60)), true
 }
 
 // normalizeDemoRecordListInput applies paging defaults and trims the keyword

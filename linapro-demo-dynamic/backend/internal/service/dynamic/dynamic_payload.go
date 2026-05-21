@@ -4,6 +4,7 @@
 package dynamicservice
 
 import (
+	"bytes"
 	"encoding/json"
 
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -66,6 +67,30 @@ type demoRecordEntity struct {
 	AttachmentPath string `json:"attachmentPath"`
 	CreatedAt      string `json:"createdAt"`
 	UpdatedAt      string `json:"updatedAt"`
+}
+
+// demoRecordTimestampLayouts lists database timestamp encodings observed from
+// governed plugindb responses for the dynamic sample table.
+const demoRecordTimestampLayoutPrefix = "2006-01-02 15:04:05"
+
+// demoRecordCreateRecord defines the typed insert payload used for sample
+// records. Keeping plugindb mutation input typed avoids Go's wasm JSON encoder
+// edge cases with directly constructed map[string]any values.
+type demoRecordCreateRecord struct {
+	Id             string `json:"id"`
+	Title          string `json:"title"`
+	Content        string `json:"content"`
+	AttachmentName string `json:"attachmentName"`
+	AttachmentPath string `json:"attachmentPath"`
+}
+
+// demoRecordUpdateRecord defines the typed update payload used for sample
+// records.
+type demoRecordUpdateRecord struct {
+	Title          string `json:"title"`
+	Content        string `json:"content"`
+	AttachmentName string `json:"attachmentName"`
+	AttachmentPath string `json:"attachmentPath"`
 }
 
 // hostCallDemoPayload defines the top-level host-service demo response.
@@ -160,7 +185,9 @@ func buildRecordMap(record any) (map[string]any, error) {
 	}
 
 	payload := make(map[string]any)
-	if err = json.Unmarshal(content, &payload); err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(content))
+	decoder.UseNumber()
+	if err = decoder.Decode(&payload); err != nil {
 		return nil, gerror.Wrap(err, "unmarshal demo record failed")
 	}
 	return payload, nil

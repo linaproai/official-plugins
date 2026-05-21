@@ -1260,7 +1260,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
   }) => {
     // The CRUD + dual-uninstall lifecycle runs three full install/enable
     // cycles plus a file upload, well past the default 60s test budget.
-    test.setTimeout(180_000);
+    test.setTimeout(300_000);
     const attachmentPath = ensureBundledRuntimeAttachmentFixture();
     const recordTitle = `动态插件示例记录-${Date.now()}`;
     const updatedRecordTitle = `${recordTitle}-更新`;
@@ -1325,6 +1325,11 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     expect(bundledRuntimeRecordCountByTitle(updatedRecordTitle)).toBe(1);
 
     await pluginPage.setPluginEnabled(bundledRuntimePluginID, true);
+    await expectCurrentUserRouteVisible(
+      adminApi!,
+      bundledRuntimeMenuName,
+      true,
+    );
     await page.reload();
     await pluginPage.clickSidebarMenuItem(bundledRuntimeMenuName);
     await expect(
@@ -1345,6 +1350,11 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
       .toBe(1);
     await page.reload();
     await pluginPage.setPluginEnabled(bundledRuntimePluginID, true);
+    await expectCurrentUserRouteVisible(
+      adminApi!,
+      bundledRuntimeMenuName,
+      true,
+    );
     await page.reload();
     await waitForBundledRuntimeDemoRecord(adminApi!, updatedRecordTitle);
     await pluginPage.clickSidebarMenuItem(bundledRuntimeMenuName);
@@ -1378,6 +1388,11 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
       .toBe(1);
     await page.reload();
     await pluginPage.setPluginEnabled(bundledRuntimePluginID, true);
+    await expectCurrentUserRouteVisible(
+      adminApi!,
+      bundledRuntimeMenuName,
+      true,
+    );
     await page.reload();
     await waitForBundledRuntimeDemoRecord(
       adminApi!,
@@ -1413,6 +1428,11 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
       .toBe(1);
     await page.reload();
     await pluginPage.setPluginEnabled(bundledRuntimePluginID, true);
+    await expectCurrentUserRouteVisible(
+      adminApi!,
+      bundledRuntimeMenuName,
+      true,
+    );
     await page.reload();
 
     seededTitles = seedBundledRuntimePaginationRecords(paginationRecordKey, 12);

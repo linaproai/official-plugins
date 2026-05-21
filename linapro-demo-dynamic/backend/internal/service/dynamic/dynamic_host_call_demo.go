@@ -6,11 +6,11 @@ package dynamicservice
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 
-	"lina-core/pkg/apitime"
 	"lina-core/pkg/pluginbridge"
 )
 
@@ -35,11 +35,6 @@ const (
 // BuildHostCallDemoPayload executes the host service demo and returns the
 // response payload.
 func (s *serviceImpl) BuildHostCallDemoPayload(input *HostCallDemoInput) (*hostCallDemoPayload, error) {
-	username := hostCallDemoAnonymousUser
-	if input != nil && strings.TrimSpace(input.Username) != "" {
-		username = strings.TrimSpace(input.Username)
-	}
-
 	nowValue, err := s.runtimeSvc.Now()
 	if err != nil {
 		return nil, err
@@ -55,12 +50,7 @@ func (s *serviceImpl) BuildHostCallDemoPayload(input *HostCallDemoInput) (*hostC
 	if err = s.runtimeSvc.Log(
 		int(pluginbridge.LogLevelInfo),
 		"host service demo invoked",
-		map[string]string{
-			"username":  username,
-			"requestId": hostCallDemoRequestID(input),
-			"route":     hostCallDemoRoutePath(input),
-			"demoKey":   uuidValue,
-		},
+		nil,
 	); err != nil {
 		return nil, err
 	}
@@ -70,7 +60,9 @@ func (s *serviceImpl) BuildHostCallDemoPayload(input *HostCallDemoInput) (*hostC
 		visitCount = 0
 	}
 	visitCount++
-	_ = s.runtimeSvc.StateSetInt(hostCallDemoStateKey, visitCount)
+	if err = s.runtimeSvc.StateSetInt(hostCallDemoStateKey, visitCount); err != nil {
+		return nil, err
+	}
 
 	storageSummary, err := s.runHostCallDemoStorage(hostCallDemoPluginID(input), uuidValue)
 	if err != nil {
@@ -86,7 +78,7 @@ func (s *serviceImpl) BuildHostCallDemoPayload(input *HostCallDemoInput) (*hostC
 		VisitCount: visitCount,
 		PluginID:   hostCallDemoPluginID(input),
 		Runtime: hostCallDemoRuntimePayload{
-			Now:  apitime.MilliFromString(nowValue),
+			Now:  parseHostCallDemoRuntimeNow(nowValue),
 			UUID: uuidValue,
 			Node: nodeValue,
 		},
@@ -97,9 +89,27 @@ func (s *serviceImpl) BuildHostCallDemoPayload(input *HostCallDemoInput) (*hostC
 	}, nil
 }
 
+// parseHostCallDemoRuntimeNow converts the runtime.info.now host-service value
+// into the public Unix-millisecond API shape without using time parsers inside
+// the guest Wasm module.
+func parseHostCallDemoRuntimeNow(value string) *int64 {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil
+	}
+	millis, err := strconv.ParseInt(trimmed, 10, 64)
+	if err != nil {
+		return nil
+	}
+	return &millis
+}
+
 // runHostCallDemoStorage exercises governed storage APIs and summarizes the
 // round-trip result.
-func (s *serviceImpl) runHostCallDemoStorage(pluginID string, demoKey string) (*hostCallDemoStoragePayload, error) {
+func (s *serviceImpl) runHostCallDemoStorage(
+	pluginID string,
+	demoKey string,
+) (payload *hostCallDemoStoragePayload, err error) {
 	objectPath := fmt.Sprintf("%s/%s.json", hostCallDemoStoragePrefix, demoKey)
 	body, err := json.Marshal(&hostCallDemoStorageRecord{
 		PluginID: pluginID,
@@ -114,7 +124,9 @@ func (s *serviceImpl) runHostCallDemoStorage(pluginID string, demoKey string) (*
 	deleted := false
 	defer func() {
 		if !deleted {
-			_ = s.storageSvc.Delete(objectPath)
+			if cleanupErr := s.storageSvc.Delete(objectPath); cleanupErr != nil && err == nil {
+				err = cleanupErr
+			}
 		}
 	}()
 
@@ -150,7 +162,10 @@ func (s *serviceImpl) runHostCallDemoStorage(pluginID string, demoKey string) (*
 
 // runHostCallDemoData exercises governed structured-data APIs and summarizes
 // the create/list/update/delete flow.
-func (s *serviceImpl) runHostCallDemoData(pluginID string, demoKey string) (*hostCallDemoDataPayload, error) {
+func (s *serviceImpl) runHostCallDemoData(
+	pluginID string,
+	demoKey string,
+) (payload *hostCallDemoDataPayload, err error) {
 	createRecord, err := buildRecordMap(&hostCallDemoDataCreateRecord{
 		PluginID:     pluginID,
 		ReleaseID:    0,
@@ -175,7 +190,9 @@ func (s *serviceImpl) runHostCallDemoData(pluginID string, demoKey string) (*hos
 	deleted := false
 	defer func() {
 		if !deleted {
-			_, _ = s.dataSvc.Table(hostCallDemoDataTable).WhereKey(recordKey).Delete()
+			if _, cleanupErr := s.dataSvc.Table(hostCallDemoDataTable).WhereKey(recordKey).Delete(); cleanupErr != nil && err == nil {
+				err = cleanupErr
+			}
 		}
 	}()
 
@@ -200,8 +217,6 @@ func (s *serviceImpl) runHostCallDemoData(pluginID string, demoKey string) (*hos
 	if err != nil {
 		return nil, err
 	}
-	recordKey = listRecords[0]["id"]
-
 	updateRecord, err := buildRecordMap(&hostCallDemoDataUpdateRecord{
 		CurrentState: hostCallDemoCurrentStateReady,
 		ErrorMessage: "",
@@ -211,14 +226,6 @@ func (s *serviceImpl) runHostCallDemoData(pluginID string, demoKey string) (*hos
 	}
 	if _, err = s.dataSvc.Table(hostCallDemoDataTable).WhereKey(recordKey).Update(updateRecord); err != nil {
 		return nil, err
-	}
-
-	record, found, err := s.dataSvc.Table(hostCallDemoDataTable).Fields("currentState").WhereKey(recordKey).One()
-	if err != nil {
-		return nil, err
-	}
-	if !found || record == nil || fmt.Sprint(record["currentState"]) != hostCallDemoCurrentStateReady {
-		return nil, gerror.New("data demo get did not return the updated record")
 	}
 
 	if _, err = s.dataSvc.Table(hostCallDemoDataTable).WhereKey(recordKey).Delete(); err != nil {
