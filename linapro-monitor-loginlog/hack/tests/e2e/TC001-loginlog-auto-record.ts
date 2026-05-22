@@ -13,7 +13,7 @@ test.describe('TC001 登录日志自动记录', () => {
     // The adminPage fixture already logged in, so a login log should exist
     const responsePromise = adminPage.waitForResponse(
       (res) =>
-        res.url().includes('/api/v1/loginlog') &&
+        res.url().includes('/x/linapro-monitor-loginlog/api/v1/loginlog') &&
         res.request().method() === 'GET' &&
         res.status() === 200,
       { timeout: 15000 },
@@ -51,7 +51,7 @@ test.describe('TC001 登录日志自动记录', () => {
       // Navigate to login log page.
       const responsePromise = page.waitForResponse(
         (res) =>
-          res.url().includes('/api/v1/loginlog') &&
+          res.url().includes('/x/linapro-monitor-loginlog/api/v1/loginlog') &&
           res.request().method() === 'GET' &&
           res.status() === 200,
         { timeout: 15000 },

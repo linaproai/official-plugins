@@ -1,6 +1,7 @@
 import type { APIRequestContext } from "@host-tests/support/playwright";
 
 import { test, expect } from "@host-tests/fixtures/auth";
+import { pluginApiPath } from "@host-tests/fixtures/config";
 import {
   createAdminApiContext,
   createApiContext,
@@ -66,7 +67,9 @@ async function listOnline(api: APIRequestContext, username = "") {
     query.set("username", username);
   }
   return expectSuccess<{ items: OnlineUserItem[]; total: number }>(
-    await api.get(`monitor/online/list?${query.toString()}`),
+    await api.get(
+      pluginApiPath(pluginID, `monitor/online/list?${query.toString()}`),
+    ),
   );
 }
 
@@ -158,7 +161,9 @@ test.describe("TC-4 在线用户数据权限", () => {
     expect(otherSession, "other user should have an online session").toBeTruthy();
 
     await expectBusinessError(
-      await limitedApi.delete(`monitor/online/${otherSession!.tokenId}`),
+      await limitedApi.delete(
+        pluginApiPath(pluginID, `monitor/online/${otherSession!.tokenId}`),
+      ),
     );
 
     const otherStillOnline = await listOnline(adminApi, otherUsername);

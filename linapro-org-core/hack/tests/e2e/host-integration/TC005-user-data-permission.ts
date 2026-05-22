@@ -1,6 +1,7 @@
 import type { APIRequestContext } from "@host-tests/support/playwright";
 
 import { test, expect } from '@host-tests/fixtures/auth';
+import { pluginApiPath } from '@host-tests/fixtures/config';
 import {
   createAdminApiContext,
   createApiContext,
@@ -75,7 +76,7 @@ async function createDept(
   label: string,
 ) {
   return expectSuccess<DeptCreateResult>(
-    await api.post("dept", {
+    await api.post(pluginApiPath(pluginID, "dept"), {
       data: {
         parentId: 0,
         name: `E2E ${label} Dept ${suffix}`,
@@ -208,7 +209,9 @@ test.describe("TC-1 用户管理数据权限", () => {
     }
     for (const deptID of [deptAID, deptBID]) {
       if (deptID > 0) {
-        await adminApi.delete(`dept/${deptID}`).catch(() => {});
+        await adminApi
+          .delete(pluginApiPath(pluginID, `dept/${deptID}`))
+          .catch(() => {});
       }
     }
     if (originalPluginState) {

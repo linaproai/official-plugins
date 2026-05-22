@@ -1,6 +1,6 @@
-import { test, expect } from '@host-tests/fixtures/auth';
-import { MainLayout } from '@host-tests/pages/MainLayout';
-import { UserPage } from '@host-tests/pages/UserPage';
+import { test, expect } from "@host-tests/fixtures/auth";
+import { MainLayout } from "@host-tests/pages/MainLayout";
+import { UserPage } from "@host-tests/pages/UserPage";
 
 test.describe("TC-3 多租户插件未安装时 UI 退化", () => {
   test("TC-3a: 租户状态缓存残留时顶部切换器隐藏且用户管理不请求租户插件接口", async ({
@@ -29,17 +29,20 @@ test.describe("TC-3 多租户插件未安装时 UI 退化", () => {
     });
 
     const platformTenantRequests: string[] = [];
-    await adminPage.route("**/api/v1/platform/tenants**", async (route) => {
-      platformTenantRequests.push(route.request().url());
-      await route.fulfill({
-        contentType: "application/json",
-        status: 404,
-        json: {
-          code: 404,
-          message: "未找到, 请求的资源不存在。",
-        },
-      });
-    });
+    await adminPage.route(
+      "**/x/linapro-tenant-core/api/v1/platform/tenants**",
+      async (route) => {
+        platformTenantRequests.push(route.request().url());
+        await route.fulfill({
+          contentType: "application/json",
+          status: 404,
+          json: {
+            code: 404,
+            message: "未找到, 请求的资源不存在。",
+          },
+        });
+      },
+    );
 
     await adminPage.evaluate(() => {
       localStorage.setItem(

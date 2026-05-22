@@ -86,7 +86,7 @@ async function ensurePluginInstalledAndEnabled() {
 async function demoRecordListSnapshot(pageSize = 20) {
   try {
     const response = await adminApi.get(
-      `${publicBaseURL}/x/${pluginID}/demo-records`,
+      `${publicBaseURL}/x/${pluginID}/api/v1/demo-records`,
       {
         params: {
           pageNum: 1,

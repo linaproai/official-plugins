@@ -1,4 +1,10 @@
-import { requestClient } from '#/api/request';
+import { pluginApiPath, requestClient } from '#/api/request';
+
+const pluginID = 'linapro-monitor-loginlog';
+
+function loginLogApi(pathName: string) {
+  return pluginApiPath(pluginID, pathName);
+}
 
 export interface LoginLog {
   id: number;
@@ -29,21 +35,25 @@ export interface LoginLogListResult {
 }
 
 export async function loginLogList(params?: LoginLogListParams) {
-  return await requestClient.get<LoginLogListResult>('/loginlog', { params });
+  return await requestClient.get<LoginLogListResult>(loginLogApi('loginlog'), {
+    params,
+  });
 }
 
 export function loginLogDetail(id: number) {
-  return requestClient.get<LoginLog>(`/loginlog/${id}`);
+  return requestClient.get<LoginLog>(loginLogApi(`loginlog/${id}`));
 }
 
 export function loginLogClean(params?: { beginTime?: string; endTime?: string }) {
-  return requestClient.delete('/loginlog/clean', { params });
+  return requestClient.delete(loginLogApi('loginlog/clean'), { params });
 }
 
 export function loginLogDelete(ids: number[]) {
-  return requestClient.delete(`/loginlog/${ids.join(',')}`);
+  return requestClient.delete(loginLogApi(`loginlog/${ids.join(',')}`));
 }
 
 export function loginLogExport(params?: LoginLogListParams) {
-  return requestClient.download<Blob>('/loginlog/export', { params });
+  return requestClient.download<Blob>(loginLogApi('loginlog/export'), {
+    params,
+  });
 }

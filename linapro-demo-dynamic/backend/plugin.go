@@ -6,14 +6,10 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 
 	"lina-core/pkg/pluginbridge"
-	"lina-plugin-linapro-demo-dynamic/backend/internal/controller/dynamic"
 )
 
 // dynamicAPIV1GroupPrefix is the demo plugin-owned API route group prefix.
 const dynamicAPIV1GroupPrefix = "/api/v1"
-
-// guestRouteDispatcher is the reflection-based bridge dispatcher for the demo plugin backend.
-var guestRouteDispatcher = pluginbridge.MustNewGuestControllerRouteDispatcher(dynamic.New())
 
 // RegisterRoutes declares dynamic plugin route groups for the WASM builder.
 // The function is a build-time convention entrypoint: the builder parses this
@@ -47,12 +43,4 @@ func RegisterRoutes(registrar pluginbridge.DynamicRouteRegistrar) error {
 	// Bind backend/api/dynamic/v1 DTO routes to the plugin-owned /api/v1 group.
 	// 将 backend/api/dynamic/v1 下的 DTO 路由绑定到插件自有的 /api/v1 分组。
 	return registrar.Group(dynamicAPIV1GroupPrefix, "dynamic/v1")
-}
-
-// HandleRequest dispatches bridge requests to the matching dynamic controller
-// method using the build-time RequestType contract.
-func HandleRequest(
-	request *pluginbridge.BridgeRequestEnvelopeV1,
-) (*pluginbridge.BridgeResponseEnvelopeV1, error) {
-	return guestRouteDispatcher.HandleRequest(request)
 }

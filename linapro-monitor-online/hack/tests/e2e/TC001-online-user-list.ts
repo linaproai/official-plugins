@@ -10,7 +10,7 @@ test.describe('TC001 在线用户列表展示', () => {
   test.beforeEach(async ({ adminPage }) => {
     const responsePromise = adminPage.waitForResponse(
       (res) =>
-        res.url().includes('/api/v1/monitor/online/list') &&
+        res.url().includes('/x/linapro-monitor-online/api/v1/monitor/online/list') &&
         res.request().method() === 'GET' &&
         res.status() === 200,
       { timeout: 15000 },
@@ -58,7 +58,7 @@ test.describe('TC001 在线用户列表展示', () => {
     // Trigger a query and verify the request includes pagination params
     const requestPromise = adminPage.waitForRequest(
       (req) =>
-        req.url().includes('/api/v1/monitor/online/list') &&
+        req.url().includes('/x/linapro-monitor-online/api/v1/monitor/online/list') &&
         req.url().includes('pageNum=') &&
         req.url().includes('pageSize='),
     );

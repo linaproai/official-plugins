@@ -10,7 +10,7 @@ test.describe('TC001 服务监控页面展示', () => {
   test.beforeEach(async ({ adminPage }) => {
     const responsePromise = adminPage.waitForResponse(
       (res) =>
-        res.url().includes('/api/v1/monitor/server') &&
+        res.url().includes('/x/linapro-monitor-server/api/v1/monitor/server') &&
         res.request().method() === 'GET' &&
         res.status() === 200,
       { timeout: 15000 },

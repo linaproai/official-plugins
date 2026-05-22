@@ -1,4 +1,10 @@
-import { requestClient } from '#/api/request';
+import { pluginApiPath, requestClient } from '#/api/request';
+
+const pluginID = 'linapro-monitor-server';
+
+function serverApi(pathName: string) {
+  return pluginApiPath(pluginID, pathName);
+}
 
 export interface ServerNodeInfo {
   nodeName: string;
@@ -64,5 +70,8 @@ export interface ServerMonitorParams {
 }
 
 export function getServerMonitor(params?: ServerMonitorParams) {
-  return requestClient.get<ServerMonitorResult>('/monitor/server', { params });
+  return requestClient.get<ServerMonitorResult>(
+    serverApi('monitor/server'),
+    { params },
+  );
 }

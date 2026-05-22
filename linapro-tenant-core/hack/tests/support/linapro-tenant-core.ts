@@ -18,7 +18,9 @@ import {
   queryPgScalar,
 } from "@host-tests/support/postgres";
 
-export type MultiTenantMode = "linapro-tenant-core-disabled" | "linapro-tenant-core-enabled";
+export type MultiTenantMode =
+  | "linapro-tenant-core-disabled"
+  | "linapro-tenant-core-enabled";
 
 export type MultiTenantFixtures = {
   multiTenantMode: MultiTenantMode;
@@ -27,6 +29,12 @@ export type MultiTenantFixtures = {
 const apiBaseURL =
   process.env.E2E_API_BASE_URL ??
   new URL("/api/v1/", config.baseURL).toString();
+const tenantCorePluginID = "linapro-tenant-core";
+const tenantCoreApiBaseURL = `${config.publicBaseURL.replace(/\/$/, "")}/x/${tenantCorePluginID}/api/v1/`;
+
+export function tenantCoreApiPath(pathName: string) {
+  return new URL(pathName.replace(/^\/+/, ""), tenantCoreApiBaseURL).toString();
+}
 
 export type LoginTenant = {
   id: number;
@@ -70,7 +78,10 @@ export async function ensureMultiTenantPluginEnabled(api: APIRequestContext) {
   return plugin;
 }
 
-export async function loginRaw(username = config.adminUser, password = config.adminPass) {
+export async function loginRaw(
+  username = config.adminUser,
+  password = config.adminPass,
+) {
   const api = await playwrightRequest.newContext({ baseURL: apiBaseURL });
   const response = await api.post("auth/login", {
     data: { username, password },
@@ -91,7 +102,7 @@ export async function createTenant(
   payload: { code: string; name: string; remark?: string },
 ) {
   return expectSuccess<TenantCreateResult>(
-    await api.post("platform/tenants", {
+    await api.post(tenantCoreApiPath("platform/tenants"), {
       data: {
         remark: "",
         ...payload,
@@ -107,7 +118,7 @@ export function updateUserPrimaryTenant(username: string, tenantId: number) {
 }
 
 export async function deleteTenant(api: APIRequestContext, id: number) {
-  await api.delete(`platform/tenants/${id}`).catch(() => {});
+  await api.delete(tenantCoreApiPath(`platform/tenants/${id}`)).catch(() => {});
 }
 
 export async function addTenantMember(
@@ -254,7 +265,7 @@ export function listTenantMembers(_api: APIRequestContext, tenantId: number) {
 
 export async function selectTenant(preToken: string, tenantId: number) {
   const api = await playwrightRequest.newContext({ baseURL: apiBaseURL });
-  const response = await api.post("auth/select-tenant", {
+  const response = await api.post(tenantCoreApiPath("auth/select-tenant"), {
     data: { preToken, tenantId },
   });
   const data = await expectSuccess<{ accessToken: string }>(response);
@@ -275,7 +286,7 @@ export async function switchTenant(
   api: APIRequestContext,
   tenantId: number,
 ): Promise<APIResponse> {
-  return api.post("auth/switch-tenant", {
+  return api.post(tenantCoreApiPath("auth/switch-tenant"), {
     data: { tenantId },
   });
 }

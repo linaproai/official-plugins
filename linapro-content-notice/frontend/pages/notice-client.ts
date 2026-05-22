@@ -1,4 +1,10 @@
-import { requestClient } from '#/api/request';
+import { pluginApiPath, requestClient } from '#/api/request';
+
+const pluginID = 'linapro-content-notice';
+
+function noticeApi(pathName: string) {
+  return pluginApiPath(pluginID, pathName);
+}
 
 export interface Notice {
   id: number;
@@ -24,22 +30,25 @@ export interface NoticeListParams {
 }
 
 export async function noticeList(params?: NoticeListParams) {
-  const res = await requestClient.get<{ list: Notice[]; total: number }>('/notice', { params });
+  const res = await requestClient.get<{ list: Notice[]; total: number }>(
+    noticeApi('notice'),
+    { params },
+  );
   return { items: res.list, total: res.total };
 }
 
 export function noticeAdd(data: Partial<Notice>) {
-  return requestClient.post('/notice', data);
+  return requestClient.post(noticeApi('notice'), data);
 }
 
 export function noticeUpdate(id: number, data: Partial<Notice>) {
-  return requestClient.put(`/notice/${id}`, data);
+  return requestClient.put(noticeApi(`notice/${id}`), data);
 }
 
 export function noticeDelete(ids: string) {
-  return requestClient.delete(`/notice/${ids}`);
+  return requestClient.delete(noticeApi(`notice/${ids}`));
 }
 
 export function noticeInfo(id: number) {
-  return requestClient.get<Notice>(`/notice/${id}`);
+  return requestClient.get<Notice>(noticeApi(`notice/${id}`));
 }

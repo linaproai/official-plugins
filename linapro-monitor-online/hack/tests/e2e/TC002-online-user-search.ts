@@ -10,7 +10,7 @@ test.describe('TC002 在线用户搜索过滤', () => {
   test.beforeEach(async ({ adminPage }) => {
     const responsePromise = adminPage.waitForResponse(
       (res) =>
-        res.url().includes('/api/v1/monitor/online/list') &&
+        res.url().includes('/x/linapro-monitor-online/api/v1/monitor/online/list') &&
         res.request().method() === 'GET' &&
         res.status() === 200,
       { timeout: 15000 },
@@ -30,7 +30,7 @@ test.describe('TC002 在线用户搜索过滤', () => {
     // Click search and wait for response
     const requestPromise = adminPage.waitForRequest(
       (req) =>
-        req.url().includes('/api/v1/monitor/online/list') &&
+        req.url().includes('/x/linapro-monitor-online/api/v1/monitor/online/list') &&
         req.url().includes('username=admin'),
     );
     await adminPage.getByRole('button', { name: /搜\s*索/ }).click();
@@ -53,7 +53,7 @@ test.describe('TC002 在线用户搜索过滤', () => {
     // Click search and wait for response
     const responsePromise = adminPage.waitForResponse(
       (res) =>
-        res.url().includes('/api/v1/monitor/online/list') &&
+        res.url().includes('/x/linapro-monitor-online/api/v1/monitor/online/list') &&
         res.status() === 200,
     );
     await adminPage.getByRole('button', { name: /搜\s*索/ }).click();
@@ -78,7 +78,7 @@ test.describe('TC002 在线用户搜索过滤', () => {
     // Reset
     const responsePromise = adminPage.waitForResponse(
       (res) =>
-        res.url().includes('/api/v1/monitor/online/list') &&
+        res.url().includes('/x/linapro-monitor-online/api/v1/monitor/online/list') &&
         res.status() === 200,
     );
     await adminPage.getByRole('button', { name: /重\s*置/ }).click();

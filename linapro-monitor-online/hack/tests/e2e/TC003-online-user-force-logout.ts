@@ -13,7 +13,7 @@ test.describe('TC003 在线用户强制下线', () => {
   test.beforeEach(async ({ adminPage }) => {
     const responsePromise = adminPage.waitForResponse(
       (res) =>
-        res.url().includes('/api/v1/monitor/online/list') &&
+        res.url().includes('/x/linapro-monitor-online/api/v1/monitor/online/list') &&
         res.request().method() === 'GET' &&
         res.status() === 200,
       { timeout: 15000 },

@@ -405,7 +405,7 @@ async function bundledRuntimeDemoRecordListSnapshot(
 ) {
   try {
     const response = await adminApi.get(
-      `${publicBaseURL}/x/${bundledRuntimePluginID}/demo-records`,
+      `${publicBaseURL}/x/${bundledRuntimePluginID}/api/v1/demo-records`,
       {
         params: {
           pageNum: 1,
@@ -1200,7 +1200,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     await pluginPage.setPluginEnabled(bundledRuntimePluginID, true);
 
     const response = await adminApi!.get(
-      `/x/${bundledRuntimePluginID}/backend-summary`,
+      `/x/${bundledRuntimePluginID}/api/v1/backend-summary`,
     );
     assertOk(response, "请求动态插件固定前缀路由失败");
     expect(response.status()).toBe(200);
@@ -1217,7 +1217,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     );
     expect(payload.pluginId).toBe(bundledRuntimePluginID);
     expect(payload.publicPath).toBe(
-      `/x/${bundledRuntimePluginID}/backend-summary`,
+      `/x/${bundledRuntimePluginID}/api/v1/backend-summary`,
     );
     expect(payload.access).toBe("login");
     expect(payload.permission).toBe("linapro-demo-dynamic:backend:view");

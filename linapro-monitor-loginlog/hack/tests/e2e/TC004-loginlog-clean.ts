@@ -39,7 +39,7 @@ test.describe('TC004 登录日志清理', () => {
     // Set up response interception before clicking OK
     const responsePromise = adminPage.waitForResponse(
       (res) =>
-        res.url().includes('/api/v1/loginlog/clean') && res.request().method() === 'DELETE',
+        res.url().includes('/x/linapro-monitor-loginlog/api/v1/loginlog/clean') && res.request().method() === 'DELETE',
       { timeout: 10000 },
     );
 

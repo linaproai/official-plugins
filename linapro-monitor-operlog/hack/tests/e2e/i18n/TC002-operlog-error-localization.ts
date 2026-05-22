@@ -1,6 +1,7 @@
 import type { APIRequestContext, APIResponse } from "@host-tests/support/playwright";
 
 import { test, expect } from '@host-tests/fixtures/auth';
+import { pluginApiPath } from '@host-tests/fixtures/config';
 import {
   createAdminApiContext,
   enablePlugin,
@@ -18,6 +19,7 @@ type ErrorEnvelope = {
 };
 
 const sourcePluginIDs = ["linapro-monitor-operlog"] as const;
+const pluginID = "linapro-monitor-operlog";
 
 async function ensureSourcePluginsEnabled(
   api: APIRequestContext,
@@ -59,7 +61,7 @@ test.describe("TC-2 Operation log backend error localization", () => {
   test("TC-2a: operation-log not-found error keeps stable code while message follows request locale", async () => {
     for (const locale of ["zh-CN", "en-US"] as const) {
       const payload = await expectBackendError(
-        await adminApi.get("operlog/99999999", {
+        await adminApi.get(pluginApiPath(pluginID, "operlog/99999999"), {
           headers: { "Accept-Language": locale },
         }),
       );

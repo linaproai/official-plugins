@@ -3,6 +3,7 @@ import type { APIRequestContext, APIResponse } from "@host-tests/support/playwri
 import * as XLSX from "xlsx";
 
 import { test, expect } from '@host-tests/fixtures/auth';
+import { pluginApiPath } from '@host-tests/fixtures/config';
 import {
   createAdminApiContext,
   enablePlugin,
@@ -15,6 +16,8 @@ const xlsxRead = (XLSX as any).read || (XLSX as any).default?.read;
 const xlsxUtils = (XLSX as any).utils || (XLSX as any).default?.utils;
 
 const sourcePluginIDs = ["linapro-monitor-loginlog", "linapro-monitor-operlog"] as const;
+const loginlogPluginID = "linapro-monitor-loginlog";
+const operlogPluginID = "linapro-monitor-operlog";
 
 async function ensureSourcePluginsEnabled(
   api: APIRequestContext,
@@ -66,7 +69,7 @@ test.describe("TC-1 Backend export localization", () => {
 
   test("TC-1a: login-log export headers and status values follow request locale", async () => {
     const enRows = await readWorkbookRows(
-      await adminApi.get("loginlog/export", {
+      await adminApi.get(pluginApiPath(loginlogPluginID, "loginlog/export"), {
         headers: { "Accept-Language": "en-US" },
       }),
     );
@@ -83,7 +86,7 @@ test.describe("TC-1 Backend export localization", () => {
     expect(flattenRows(enRows)).not.toContain("成功");
 
     const zhRows = await readWorkbookRows(
-      await adminApi.get("loginlog/export", {
+      await adminApi.get(pluginApiPath(loginlogPluginID, "loginlog/export"), {
         headers: { "Accept-Language": "zh-CN" },
       }),
     );
@@ -101,7 +104,7 @@ test.describe("TC-1 Backend export localization", () => {
 
   test("TC-1b: operation-log export headers follow request locale", async () => {
     const enRows = await readWorkbookRows(
-      await adminApi.get("operlog/export", {
+      await adminApi.get(pluginApiPath(operlogPluginID, "operlog/export"), {
         headers: { "Accept-Language": "en-US" },
       }),
     );
@@ -122,7 +125,7 @@ test.describe("TC-1 Backend export localization", () => {
     ]);
 
     const zhRows = await readWorkbookRows(
-      await adminApi.get("operlog/export", {
+      await adminApi.get(pluginApiPath(operlogPluginID, "operlog/export"), {
         headers: { "Accept-Language": "zh-CN" },
       }),
     );

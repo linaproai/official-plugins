@@ -93,7 +93,7 @@ test.describe('TC-2 Server monitor English disk table regression', () => {
     mainLayout,
   }) => {
     await adminPage.setViewportSize({ width: 1366, height: 900 });
-    await adminPage.route('**/api/v1/monitor/server**', async (route) => {
+    await adminPage.route('**/x/linapro-monitor-server/api/v1/monitor/server**', async (route) => {
       await route.fulfill({
         body: JSON.stringify(monitorPayload),
         contentType: 'application/json',

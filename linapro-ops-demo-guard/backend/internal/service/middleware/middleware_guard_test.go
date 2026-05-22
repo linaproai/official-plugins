@@ -25,9 +25,23 @@ type demoControlTestResponse struct {
 // staticDemoControlEnablementReader returns one fixed enablement value for tests.
 type staticDemoControlEnablementReader bool
 
-// IsEnabled reports the fixed test enablement value.
-func (r staticDemoControlEnablementReader) IsEnabled(_ context.Context, _ string) bool {
+// IsEnabledAuthoritative reports the fixed test enablement value.
+func (r staticDemoControlEnablementReader) IsEnabledAuthoritative(_ context.Context, _ string) bool {
 	return bool(r)
+}
+
+// staleDemoControlEnablementReader simulates a process-local snapshot that no
+// longer matches the authoritative registry state.
+type staleDemoControlEnablementReader struct{}
+
+// IsEnabled reports the stale non-authoritative value that must not gate demo protection.
+func (staleDemoControlEnablementReader) IsEnabled(_ context.Context, _ string) bool {
+	return true
+}
+
+// IsEnabledAuthoritative reports the persisted registry value used by the guard.
+func (staleDemoControlEnablementReader) IsEnabledAuthoritative(_ context.Context, _ string) bool {
+	return false
 }
 
 // TestGuardBypassesWriteRequestsWhenPluginDisabled verifies an unenabled
@@ -39,6 +53,22 @@ func TestGuardBypassesWriteRequestsWhenPluginDisabled(t *testing.T) {
 	response := doDemoControlRequest(t, http.MethodPost, baseURL+"/api/v1/resource")
 	if response.status != http.StatusOK {
 		t.Fatalf("expected disabled plugin to keep POST allowed, got %d", response.status)
+	}
+	if response.body != "mutated" {
+		t.Fatalf("expected downstream POST handler body, got %q", response.body)
+	}
+}
+
+// TestGuardBypassesStaleSnapshotWhenAuthoritativeStateDisabled verifies stale
+// source-plugin route snapshots cannot keep demo write protection active after
+// the plugin has become disabled in the persisted registry.
+func TestGuardBypassesStaleSnapshotWhenAuthoritativeStateDisabled(t *testing.T) {
+	baseURL, shutdown := startDemoControlTestServerWithReader(t, staleDemoControlEnablementReader{})
+	defer shutdown()
+
+	response := doDemoControlRequest(t, http.MethodPost, baseURL+"/api/v1/resource")
+	if response.status != http.StatusOK {
+		t.Fatalf("expected authoritative disabled state to keep POST allowed, got %d", response.status)
 	}
 	if response.body != "mutated" {
 		t.Fatalf("expected downstream POST handler body, got %q", response.body)
@@ -196,11 +226,19 @@ func TestGuardAllowsPluginManagementReadRequests(t *testing.T) {
 func startDemoControlTestServer(t *testing.T, enabled bool) (string, func()) {
 	t.Helper()
 
+	return startDemoControlTestServerWithReader(t, staticDemoControlEnablementReader(enabled))
+}
+
+// startDemoControlTestServerWithReader boots one ephemeral HTTP server with the
+// linapro-ops-demo-guard middleware and a caller-supplied plugin-state reader.
+func startDemoControlTestServerWithReader(t *testing.T, reader EnablementReader) (string, func()) {
+	t.Helper()
+
 	server := g.Server(fmt.Sprintf("linapro-ops-demo-guard-middleware-test-%d", time.Now().UnixNano()))
 	server.SetDumpRouterMap(false)
 	server.SetPort(0)
 
-	guardSvc := New(nil, staticDemoControlEnablementReader(enabled))
+	guardSvc := New(nil, reader)
 	server.BindMiddleware("/*", guardSvc.Guard)
 	server.Group("/api/v1", func(group *ghttp.RouterGroup) {
 		group.ALL("/ping", func(request *ghttp.Request) {

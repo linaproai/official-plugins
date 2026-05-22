@@ -1,6 +1,7 @@
 import type { APIRequestContext } from "@host-tests/support/playwright";
 
 import { test, expect } from '@host-tests/fixtures/auth';
+import { pluginApiPath } from '@host-tests/fixtures/config';
 import {
   createAdminApiContext,
   enablePlugin,
@@ -18,6 +19,7 @@ type DeptTreeNode = {
 };
 
 const sourcePluginIDs = ["linapro-org-core", "linapro-demo-source"] as const;
+const demoSourcePluginID = "linapro-demo-source";
 const chineseSystemCopyPattern =
   /未分配部门|服务运行时长|小时|分钟|秒|这是一条来自 linapro-demo-source 接口的简要介绍/;
 
@@ -77,9 +79,12 @@ test.describe("TC-3 Backend hardcoded Chinese regression", () => {
     expect(systemInfo.runDuration).not.toMatch(/小时|分钟|秒/);
 
     const summary = await expectSuccess<{ message: string }>(
-      await adminApi.get("plugins/linapro-demo-source/summary", {
-        headers: { "Accept-Language": "en-US" },
-      }),
+      await adminApi.get(
+        pluginApiPath(demoSourcePluginID, "plugins/linapro-demo-source/summary"),
+        {
+          headers: { "Accept-Language": "en-US" },
+        },
+      ),
     );
     expect(summary.message).toContain("linapro-demo-source API");
     expect(summary.message).not.toMatch(chineseSystemCopyPattern);

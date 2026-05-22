@@ -1,4 +1,10 @@
-import { requestClient } from "#/api/request";
+import { pluginApiPath, requestClient } from "#/api/request";
+
+const pluginID = "linapro-demo-source";
+
+function demoSourceApi(pathName: string) {
+  return pluginApiPath(pluginID, pathName);
+}
 
 export interface DemoRecordItem {
   id: number;
@@ -35,14 +41,16 @@ export interface DemoRecordSaveInput {
 }
 
 export async function getDemoSummary() {
-  return requestClient.get<DemoSummary>("/plugins/linapro-demo-source/summary");
+  return requestClient.get<DemoSummary>(
+    demoSourceApi("plugins/linapro-demo-source/summary"),
+  );
 }
 
 export async function listDemoRecords(params?: DemoRecordListParams) {
   const res = await requestClient.get<{
     list: DemoRecordItem[];
     total: number;
-  }>("/plugins/linapro-demo-source/records", { params });
+  }>(demoSourceApi("plugins/linapro-demo-source/records"), { params });
   return {
     items: res.list,
     total: res.total,
@@ -51,7 +59,7 @@ export async function listDemoRecords(params?: DemoRecordListParams) {
 
 export async function getDemoRecord(id: number) {
   return requestClient.get<DemoRecordDetail>(
-    `/plugins/linapro-demo-source/records/${id}`,
+    demoSourceApi(`plugins/linapro-demo-source/records/${id}`),
   );
 }
 
@@ -60,7 +68,7 @@ export async function createDemoRecord(
   file?: File | null,
 ) {
   return requestClient.post<{ id: number }>(
-    "/plugins/linapro-demo-source/records",
+    demoSourceApi("plugins/linapro-demo-source/records"),
     buildRecordFormData(values, file),
     {
       headers: {
@@ -76,7 +84,7 @@ export async function updateDemoRecord(
   file?: File | null,
 ) {
   return requestClient.put<{ id: number }>(
-    `/plugins/linapro-demo-source/records/${id}`,
+    demoSourceApi(`plugins/linapro-demo-source/records/${id}`),
     buildRecordFormData(values, file),
     {
       headers: {
@@ -87,12 +95,14 @@ export async function updateDemoRecord(
 }
 
 export async function deleteDemoRecord(id: number) {
-  return requestClient.delete(`/plugins/linapro-demo-source/records/${id}`);
+  return requestClient.delete(
+    demoSourceApi(`plugins/linapro-demo-source/records/${id}`),
+  );
 }
 
 export async function downloadDemoRecordAttachment(id: number) {
   return requestClient.download<Blob>(
-    `/plugins/linapro-demo-source/records/${id}/attachment`,
+    demoSourceApi(`plugins/linapro-demo-source/records/${id}/attachment`),
   );
 }
 

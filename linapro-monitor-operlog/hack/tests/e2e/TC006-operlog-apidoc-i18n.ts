@@ -1,5 +1,6 @@
 import { test, expect } from '@host-tests/fixtures/auth';
 import { ensureSourcePluginEnabled } from '@host-tests/fixtures/plugin';
+import { pluginApiPath } from '@host-tests/fixtures/config';
 import {
   createAdminApiContext,
   expectSuccess,
@@ -21,6 +22,8 @@ type OperLogList = {
   total: number;
 };
 
+const pluginID = 'linapro-monitor-operlog';
+
 async function findOperLogByLocalizedText(
   api: Awaited<ReturnType<typeof createAdminApiContext>>,
   locale: string,
@@ -29,9 +32,12 @@ async function findOperLogByLocalizedText(
 ) {
   const result = await expectSuccess<OperLogList>(
     await api.get(
-      `operlog?pageNum=1&pageSize=20&title=${encodeURIComponent(
-        title,
-      )}&orderBy=operTime&orderDirection=desc`,
+      pluginApiPath(
+        pluginID,
+        `operlog?pageNum=1&pageSize=20&title=${encodeURIComponent(
+          title,
+        )}&orderBy=operTime&orderDirection=desc`,
+      ),
       {
         headers: {
           'Accept-Language': locale,
@@ -90,7 +96,7 @@ test.describe('TC006 操作日志路由文案复用 apidoc 国际化', () => {
       expect(enLog?.id).toBe(zhLog!.id);
 
       const detail = await expectSuccess<OperLog>(
-        await api.get(`operlog/${zhLog!.id}`, {
+        await api.get(pluginApiPath(pluginID, `operlog/${zhLog!.id}`), {
           headers: {
             'Accept-Language': 'en-US',
           },
@@ -99,11 +105,14 @@ test.describe('TC006 操作日志路由文案复用 apidoc 国际化', () => {
       expect(detail.title).toBe('Dictionary Management');
       expect(detail.operSummary).toBe('Export dictionary type');
 
-      const exportResponse = await api.get(`operlog/export?ids=${zhLog!.id}`, {
-        headers: {
-          'Accept-Language': 'en-US',
+      const exportResponse = await api.get(
+        pluginApiPath(pluginID, `operlog/export?ids=${zhLog!.id}`),
+        {
+          headers: {
+            'Accept-Language': 'en-US',
+          },
         },
-      });
+      );
       expect(exportResponse.ok()).toBeTruthy();
       const workbook = xlsxRead(await exportResponse.body(), { type: 'buffer' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];

@@ -18,8 +18,11 @@ type Service interface {
 
 // EnablementReader defines the host plugin-state capability needed by the guard.
 type EnablementReader interface {
-	// IsEnabled reports whether the given plugin is currently installed and enabled.
-	IsEnabled(ctx context.Context, pluginID string) bool
+	// IsEnabledAuthoritative reports whether the given plugin is currently
+	// installed and enabled after bypassing process-local platform snapshots.
+	// The demo guard uses the authoritative path because it controls
+	// whole-system write protection.
+	IsEnabledAuthoritative(ctx context.Context, pluginID string) bool
 }
 
 // Translator defines the runtime translation capability needed by the guard.

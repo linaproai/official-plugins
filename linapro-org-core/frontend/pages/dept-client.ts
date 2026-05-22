@@ -1,4 +1,10 @@
-import { requestClient } from '#/api/request';
+import { pluginApiPath, requestClient } from '#/api/request';
+
+const pluginID = 'linapro-org-core';
+
+function orgApi(pathName: string) {
+  return pluginApiPath(pluginID, pathName);
+}
 
 export interface Dept {
   id: number;
@@ -29,37 +35,44 @@ export interface DeptUser {
 }
 
 export async function deptList(params?: Record<string, any>) {
-  const res = await requestClient.get<{ list: Dept[] }>('/dept', { params });
+  const res = await requestClient.get<{ list: Dept[] }>(orgApi('dept'), {
+    params,
+  });
   return res.list;
 }
 
 export function deptAdd(data: Partial<Dept>) {
-  return requestClient.post('/dept', data);
+  return requestClient.post(orgApi('dept'), data);
 }
 
 export function deptUpdate(id: number, data: Partial<Dept>) {
-  return requestClient.put(`/dept/${id}`, data);
+  return requestClient.put(orgApi(`dept/${id}`), data);
 }
 
 export function deptDelete(id: number) {
-  return requestClient.delete(`/dept/${id}`);
+  return requestClient.delete(orgApi(`dept/${id}`));
 }
 
 export function deptInfo(id: number) {
-  return requestClient.get<Dept>(`/dept/${id}`);
+  return requestClient.get<Dept>(orgApi(`dept/${id}`));
 }
 
 export async function deptTree() {
-  const res = await requestClient.get<{ list: DeptTree[] }>('/dept/tree');
+  const res = await requestClient.get<{ list: DeptTree[] }>(orgApi('dept/tree'));
   return res.list;
 }
 
 export async function deptExclude(id: number) {
-  const res = await requestClient.get<{ list: DeptTree[] }>(`/dept/exclude/${id}`);
+  const res = await requestClient.get<{ list: DeptTree[] }>(
+    orgApi(`dept/exclude/${id}`),
+  );
   return res.list;
 }
 
 export async function deptUsers(id: number, params?: { keyword?: string; limit?: number }) {
-  const res = await requestClient.get<{ list: DeptUser[] }>(`/dept/${id}/users`, { params });
+  const res = await requestClient.get<{ list: DeptUser[] }>(
+    orgApi(`dept/${id}/users`),
+    { params },
+  );
   return res.list;
 }

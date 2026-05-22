@@ -1,6 +1,8 @@
 import { test, expect } from '@host-tests/fixtures/auth';
 import { ensureSourcePluginEnabled } from '@host-tests/fixtures/plugin';
 
+const postApiPrefix = '/x/linapro-org-core/api/v1/post';
+
 interface DeptTreeNode {
   id: number;
   label: string;
@@ -19,7 +21,8 @@ test.describe('TC003 岗位管理部门树子部门过滤与数量', () => {
     // Intercept the dept-tree API response during page load
     const treeResponsePromise = adminPage.waitForResponse(
       (resp) =>
-        resp.url().includes('/api/v1/post/dept-tree') && resp.status() === 200,
+        resp.url().includes(`${postApiPrefix}/dept-tree`) &&
+        resp.status() === 200,
       { timeout: 15000 },
     );
 
@@ -65,8 +68,8 @@ test.describe('TC003 岗位管理部门树子部门过滤与数量', () => {
     // Click the parent dept node and intercept the post list request
     const requestPromise = adminPage.waitForResponse(
       (resp) =>
-        resp.url().includes('/api/v1/post') &&
-        !resp.url().includes('/api/v1/post/') &&
+        resp.url().includes(postApiPrefix) &&
+        !resp.url().includes(`${postApiPrefix}/`) &&
         resp.url().includes(`deptId=${parentDept.id}`) &&
         resp.status() === 200,
       { timeout: 15000 },
@@ -112,7 +115,8 @@ test.describe('TC003 岗位管理部门树子部门过滤与数量', () => {
   }) => {
     const treeResponsePromise = adminPage.waitForResponse(
       (resp) =>
-        resp.url().includes('/api/v1/post/dept-tree') && resp.status() === 200,
+        resp.url().includes(`${postApiPrefix}/dept-tree`) &&
+        resp.status() === 200,
       { timeout: 15000 },
     );
 

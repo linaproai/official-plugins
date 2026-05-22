@@ -1,6 +1,8 @@
-import { requestClient } from '#/api/request';
+import { pluginApiPath, requestClient } from "#/api/request";
 
-export type TenantStatus = 'active' | 'deleted' | 'suspended';
+const pluginID = "linapro-tenant-core";
+
+export type TenantStatus = "active" | "deleted" | "suspended";
 
 export interface PlatformTenant {
   id: number;
@@ -17,7 +19,7 @@ export interface PlatformTenantListParams {
   pageSize?: number;
   code?: string;
   name?: string;
-  status?: TenantStatus | '';
+  status?: TenantStatus | "";
 }
 
 export interface PlatformTenantPayload {
@@ -36,27 +38,36 @@ export async function platformTenantList(params?: PlatformTenantListParams) {
   const res = await requestClient.get<{
     list: PlatformTenant[];
     total: number;
-  }>('/platform/tenants', { params });
+  }>(pluginApiPath(pluginID, "platform/tenants"), { params });
   return { items: res.list, total: res.total };
 }
 
 export function platformTenantCreate(payload: PlatformTenantPayload) {
-  return requestClient.post<PlatformTenant>('/platform/tenants', payload);
+  return requestClient.post<PlatformTenant>(
+    pluginApiPath(pluginID, "platform/tenants"),
+    payload,
+  );
 }
 
 export function platformTenantUpdate(
   id: number,
-  payload: Omit<PlatformTenantPayload, 'code'>,
+  payload: Omit<PlatformTenantPayload, "code">,
 ) {
-  return requestClient.put<PlatformTenant>(`/platform/tenants/${id}`, payload);
+  return requestClient.put<PlatformTenant>(
+    pluginApiPath(pluginID, `platform/tenants/${id}`),
+    payload,
+  );
 }
 
 export function platformTenantChangeStatus(id: number, status: TenantStatus) {
-  return requestClient.put<PlatformTenant>(`/platform/tenants/${id}/status`, {
-    status,
-  });
+  return requestClient.put<PlatformTenant>(
+    pluginApiPath(pluginID, `platform/tenants/${id}/status`),
+    { status },
+  );
 }
 
 export function platformTenantDelete(id: number) {
-  return requestClient.delete(`/platform/tenants/${id}`);
+  return requestClient.delete(
+    pluginApiPath(pluginID, `platform/tenants/${id}`),
+  );
 }

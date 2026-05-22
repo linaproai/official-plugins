@@ -1,4 +1,10 @@
-import { requestClient } from '#/api/request';
+import { pluginApiPath, requestClient } from '#/api/request';
+
+const pluginID = 'linapro-monitor-online';
+
+function onlineApi(pathName: string) {
+  return pluginApiPath(pluginID, pathName);
+}
 
 export interface OnlineUser {
   tokenId: string;
@@ -23,9 +29,12 @@ export interface OnlineListParams {
 }
 
 export function onlineList(params?: OnlineListParams) {
-  return requestClient.get<OnlineListResult>('/monitor/online/list', { params });
+  return requestClient.get<OnlineListResult>(
+    onlineApi('monitor/online/list'),
+    { params },
+  );
 }
 
 export function forceLogout(tokenId: string) {
-  return requestClient.delete(`/monitor/online/${tokenId}`);
+  return requestClient.delete(onlineApi(`monitor/online/${tokenId}`));
 }

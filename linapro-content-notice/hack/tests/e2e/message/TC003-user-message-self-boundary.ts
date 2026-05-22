@@ -1,4 +1,5 @@
 import { test, expect } from '@host-tests/fixtures/auth';
+import { pluginApiPath } from '@host-tests/fixtures/config';
 import {
   createAdminApiContext,
   createApiContext,
@@ -131,7 +132,7 @@ test.describe("TC-3 用户消息自隔离边界", () => {
     messageTitle = `E2E Message Boundary ${suffix}`;
     noticeID = (
       await expectSuccess<NoticeCreateResult>(
-        await adminApi.post("notice", {
+        await adminApi.post(pluginApiPath(pluginID, "notice"), {
           data: {
             title: messageTitle,
             type: 1,
@@ -152,7 +153,9 @@ test.describe("TC-3 用户消息自隔离边界", () => {
 
   test.afterAll(async () => {
     if (noticeID > 0) {
-      await adminApi.delete(`notice/${noticeID}`).catch(() => {});
+      await adminApi
+        .delete(pluginApiPath(pluginID, `notice/${noticeID}`))
+        .catch(() => {});
     }
     await limitedApi?.delete("user/message/clear").catch(() => {});
     await otherApi?.delete("user/message/clear").catch(() => {});

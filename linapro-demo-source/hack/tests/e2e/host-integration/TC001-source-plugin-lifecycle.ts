@@ -12,7 +12,7 @@ import type { APIRequestContext, APIResponse, Page } from "@host-tests/support/p
 import { request as playwrightRequest } from "@host-tests/support/playwright";
 
 import { test, expect } from '@host-tests/fixtures/auth';
-import { config } from '@host-tests/fixtures/config';
+import { config, pluginApiPath } from '@host-tests/fixtures/config';
 import { DemoSourcePage } from '../../pages/DemoSourcePage';
 import {
   execPgSQL,
@@ -148,15 +148,17 @@ async function fetchCurrentUserRoutes(
 }
 
 async function fetchPluginSummary(adminApi: APIRequestContext) {
-  return await adminApi.get(`plugins/${pluginID}/summary`);
+  return await adminApi.get(pluginApiPath(pluginID, `plugins/${pluginID}/summary`));
 }
 
 async function fetchPluginPing(apiContext: APIRequestContext) {
-  return await apiContext.get(`plugins/${pluginID}/ping`);
+  return await apiContext.get(pluginApiPath(pluginID, `plugins/${pluginID}/ping`));
 }
 
 async function listDemoRecords(adminApi: APIRequestContext) {
-  const response = await adminApi.get(`plugins/${pluginID}/records`);
+  const response = await adminApi.get(
+    pluginApiPath(pluginID, `plugins/${pluginID}/records`),
+  );
   assertOk(response, "查询源码插件示例记录失败");
   const payload = unwrapApiData(await response.json());
   return payload?.list ?? [];
@@ -179,9 +181,12 @@ async function createDemoRecord(
       name: path.basename(filePath),
     };
   }
-  const response = await adminApi.post(`plugins/${pluginID}/records`, {
-    multipart,
-  });
+  const response = await adminApi.post(
+    pluginApiPath(pluginID, `plugins/${pluginID}/records`),
+    {
+      multipart,
+    },
+  );
   assertOk(response, `创建源码插件示例记录失败: ${title}`);
   const payload = unwrapApiData(await response.json());
   expect(payload?.id, "创建源码插件示例记录成功后应返回记录ID").toBeTruthy();

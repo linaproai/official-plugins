@@ -110,7 +110,10 @@ function ok(data: unknown) {
 }
 
 function routePath(url: string) {
-  return new URL(url).pathname.replace(/^\/api\/v1/, "").replace(/^\/api/, "");
+  return new URL(url).pathname
+    .replace(/^\/x\/linapro-tenant-core\/api\/v1/, "")
+    .replace(/^\/api\/v1/, "")
+    .replace(/^\/api/, "");
 }
 
 async function delay(ms: number) {
@@ -464,7 +467,7 @@ export class MultiTenantPage {
 
   private async mockTenantApis() {
     await this.page.route(
-      /\/api(?:\/v1)?\/platform\/tenants\/\d+\/impersonate$/,
+      /(?:\/api(?:\/v1)?|\/x\/linapro-tenant-core\/api\/v1)\/platform\/tenants\/\d+\/impersonate$/,
       async (route) => {
         this.workbenchMode = "tenant";
         await route.fulfill(
@@ -476,7 +479,7 @@ export class MultiTenantPage {
       },
     );
     await this.page.route(
-      /\/api(?:\/v1)?\/platform\/tenants\/\d+\/end-impersonate$/,
+      /(?:\/api(?:\/v1)?|\/x\/linapro-tenant-core\/api\/v1)\/platform\/tenants\/\d+\/end-impersonate$/,
       async (route) => {
         this.workbenchMode = "platform";
         this.lastEndImpersonateAuthorization =
@@ -485,7 +488,7 @@ export class MultiTenantPage {
       },
     );
     await this.page.route(
-      /\/api(?:\/v1)?\/auth\/switch-tenant$/,
+      /(?:\/api(?:\/v1)?|\/x\/linapro-tenant-core\/api\/v1)\/auth\/switch-tenant$/,
       async (route) => {
         this.workbenchMode = "tenant";
         this.lastSwitchTenantAuthorization =
@@ -495,7 +498,7 @@ export class MultiTenantPage {
       },
     );
     await this.page.route(
-      /\/api(?:\/v1)?\/auth\/login-tenants(?:\?.*)?$/,
+      /(?:\/api(?:\/v1)?|\/x\/linapro-tenant-core\/api\/v1)\/auth\/login-tenants(?:\?.*)?$/,
       async (route) => {
         const userId = new URL(route.request().url()).searchParams.get(
           "userId",
@@ -504,7 +507,7 @@ export class MultiTenantPage {
       },
     );
     await this.page.route(
-      /\/api(?:\/v1)?\/platform\/tenants(?:\/\d+(?:\/status)?)?(?:\?.*)?$/,
+      /(?:\/api(?:\/v1)?|\/x\/linapro-tenant-core\/api\/v1)\/platform\/tenants(?:\/\d+(?:\/status)?)?(?:\?.*)?$/,
       async (route) => {
         const method = route.request().method();
         const path = routePath(route.request().url());
@@ -721,7 +724,7 @@ export class MultiTenantPage {
       );
     });
     await this.page.route(
-      /\/api(?:\/v1)?\/auth\/select-tenant$/,
+      /(?:\/api(?:\/v1)?|\/x\/linapro-tenant-core\/api\/v1)\/auth\/select-tenant$/,
       async (route) => {
         if (this.loginSelectTenantDelayMs > 0) {
           await delay(this.loginSelectTenantDelayMs);
@@ -871,18 +874,14 @@ export class MultiTenantPage {
           const select = document.querySelector(
             '[data-testid="tenant-switcher-select"]',
           );
-          const searchText = document
-            .evaluate(
-              "//span[normalize-space()='搜索' or normalize-space()='Search']",
-              document,
-              null,
-              XPathResult.FIRST_ORDERED_NODE_TYPE,
-            )
-            .singleNodeValue;
+          const searchText = document.evaluate(
+            "//span[normalize-space()='搜索' or normalize-space()='Search']",
+            document,
+            null,
+            XPathResult.FIRST_ORDERED_NODE_TYPE,
+          ).singleNodeValue;
           const search =
-            searchText instanceof Element
-              ? searchText.closest(".group")
-              : null;
+            searchText instanceof Element ? searchText.closest(".group") : null;
 
           if (!switcher || !select || !search) {
             return null;
@@ -904,18 +903,18 @@ export class MultiTenantPage {
       });
 
     const metrics = await this.page.evaluate(() => {
-      const switcher = document.querySelector('[data-testid="tenant-switcher"]');
+      const switcher = document.querySelector(
+        '[data-testid="tenant-switcher"]',
+      );
       const select = document.querySelector(
         '[data-testid="tenant-switcher-select"]',
       );
-      const searchText = document
-        .evaluate(
-          "//span[normalize-space()='搜索' or normalize-space()='Search']",
-          document,
-          null,
-          XPathResult.FIRST_ORDERED_NODE_TYPE,
-        )
-        .singleNodeValue;
+      const searchText = document.evaluate(
+        "//span[normalize-space()='搜索' or normalize-space()='Search']",
+        document,
+        null,
+        XPathResult.FIRST_ORDERED_NODE_TYPE,
+      ).singleNodeValue;
       const search =
         searchText instanceof Element ? searchText.closest(".group") : null;
 
@@ -1317,9 +1316,7 @@ export class MultiTenantPage {
       .getByTestId("login-tenant-form")
       .getByRole("combobox");
     await expect(tenantSelect).toBeVisible();
-    await expect(
-      this.page.getByText("请选择本次要进入的租户"),
-    ).toBeVisible();
+    await expect(this.page.getByText("请选择本次要进入的租户")).toBeVisible();
     await expect(
       this.page.getByText("请输入您的账户信息以开始管理您的项目"),
     ).toHaveCount(0);
@@ -1348,7 +1345,9 @@ export class MultiTenantPage {
       /\/api(?:\/v1)?\/auth\/select-tenant$/.test(response.url()),
     );
     await this.page.getByTestId("login-tenant-confirm").click();
-    await expect(this.page.getByTestId("login-tenant-transition")).toBeVisible();
+    await expect(
+      this.page.getByTestId("login-tenant-transition"),
+    ).toBeVisible();
     await expect(this.page.getByText("正在进入租户")).toBeVisible();
     await expect(
       this.page.locator(

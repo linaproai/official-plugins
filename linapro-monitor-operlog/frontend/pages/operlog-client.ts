@@ -1,4 +1,10 @@
-import { requestClient } from '#/api/request';
+import { pluginApiPath, requestClient } from '#/api/request';
+
+const pluginID = 'linapro-monitor-operlog';
+
+function operLogApi(pathName: string) {
+  return pluginApiPath(pluginID, pathName);
+}
 
 export interface OperLog {
   id: number;
@@ -37,21 +43,25 @@ export interface OperLogListResult {
 }
 
 export async function operLogList(params?: OperLogListParams) {
-  return await requestClient.get<OperLogListResult>('/operlog', { params });
+  return await requestClient.get<OperLogListResult>(operLogApi('operlog'), {
+    params,
+  });
 }
 
 export function operLogDetail(id: number) {
-  return requestClient.get<OperLog>(`/operlog/${id}`);
+  return requestClient.get<OperLog>(operLogApi(`operlog/${id}`));
 }
 
 export function operLogClean(params?: { beginTime?: string; endTime?: string }) {
-  return requestClient.delete('/operlog/clean', { params });
+  return requestClient.delete(operLogApi('operlog/clean'), { params });
 }
 
 export function operLogDelete(ids: number[]) {
-  return requestClient.delete(`/operlog/${ids.join(',')}`);
+  return requestClient.delete(operLogApi(`operlog/${ids.join(',')}`));
 }
 
 export function operLogExport(params?: OperLogListParams) {
-  return requestClient.download<Blob>('/operlog/export', { params });
+  return requestClient.download<Blob>(operLogApi('operlog/export'), {
+    params,
+  });
 }

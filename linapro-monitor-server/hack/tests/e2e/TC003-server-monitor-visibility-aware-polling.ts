@@ -34,7 +34,7 @@ test.describe("TC-3 Server monitor visibility-aware polling", () => {
     adminPage.on("request", (request) => {
       if (
         request.method() === "GET" &&
-        request.url().includes("/api/v1/monitor/server")
+        request.url().includes("/x/linapro-monitor-server/api/v1/monitor/server")
       ) {
         monitorRequests.push(request.url());
       }
@@ -44,7 +44,7 @@ test.describe("TC-3 Server monitor visibility-aware polling", () => {
     const initialMonitorResponse = adminPage.waitForResponse(
       (response) =>
         response.request().method() === "GET" &&
-        response.url().includes("/api/v1/monitor/server") &&
+        response.url().includes("/x/linapro-monitor-server/api/v1/monitor/server") &&
         response.status() === 200,
     );
     await adminPage.goto("/monitor/server", { waitUntil: "domcontentloaded" });
@@ -61,7 +61,7 @@ test.describe("TC-3 Server monitor visibility-aware polling", () => {
     const visibleResponse = adminPage.waitForResponse(
       (response) =>
         response.request().method() === "GET" &&
-        response.url().includes("/api/v1/monitor/server") &&
+        response.url().includes("/x/linapro-monitor-server/api/v1/monitor/server") &&
         response.status() === 200,
     );
     await adminPage.evaluate(() => {

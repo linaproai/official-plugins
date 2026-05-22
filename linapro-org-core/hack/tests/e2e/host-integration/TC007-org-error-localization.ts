@@ -1,6 +1,7 @@
 import type { APIRequestContext, APIResponse } from "@host-tests/support/playwright";
 
 import { test, expect } from '@host-tests/fixtures/auth';
+import { pluginApiPath } from '@host-tests/fixtures/config';
 import {
   createAdminApiContext,
   enablePlugin,
@@ -18,6 +19,7 @@ type ErrorEnvelope = {
 };
 
 const sourcePluginIDs = ["linapro-org-core"] as const;
+const pluginID = "linapro-org-core";
 
 const errorCases = [
   {
@@ -81,7 +83,7 @@ test.describe("TC-3 Org backend error localization", () => {
     for (const errorCase of errorCases) {
       for (const locale of ["zh-CN", "en-US"] as const) {
         const payload = await expectBackendError(
-          await adminApi.get(errorCase.path, {
+          await adminApi.get(pluginApiPath(pluginID, errorCase.path), {
             headers: { "Accept-Language": locale },
           }),
         );

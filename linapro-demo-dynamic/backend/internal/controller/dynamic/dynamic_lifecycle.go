@@ -122,7 +122,7 @@ func buildLifecycleDebugInput(request *pluginbridge.BridgeRequestEnvelopeV1) (*d
 	if strings.TrimSpace(body.PluginID) != "" {
 		input.PluginID = strings.TrimSpace(body.PluginID)
 	}
-	input.Operation = strings.TrimSpace(body.Operation)
+	input.Operation = lifecycleOperationFromRequest(request, body)
 	input.FromVersion = strings.TrimSpace(body.FromVersion)
 	input.ToVersion = strings.TrimSpace(body.ToVersion)
 	input.TenantID = body.TenantID
@@ -130,4 +130,64 @@ func buildLifecycleDebugInput(request *pluginbridge.BridgeRequestEnvelopeV1) (*d
 	input.ToMode = strings.TrimSpace(body.ToMode)
 	input.PurgeStorageData = body.PurgeStorageData
 	return input, nil
+}
+
+// lifecycleOperationFromRequest resolves the source lifecycle operation from
+// request body first and route metadata second so generated dispatchers can
+// preserve operation context even when callers omit the optional body field.
+func lifecycleOperationFromRequest(
+	request *pluginbridge.BridgeRequestEnvelopeV1,
+	body *pluginbridge.LifecycleRequest,
+) string {
+	if body != nil {
+		if operation := strings.TrimSpace(body.Operation); operation != "" {
+			return operation
+		}
+	}
+	if request == nil || request.Route == nil {
+		return ""
+	}
+	requestType := strings.TrimSuffix(strings.TrimSpace(request.Route.RequestType), "Req")
+	if pluginbridge.IsSupportedLifecycleOperation(requestType) {
+		return requestType
+	}
+	internalPath := strings.TrimPrefix(
+		normalizeLifecycleInternalPath(request.Route.InternalPath),
+		"/__lifecycle/",
+	)
+	operation := lifecyclePathSegmentToOperation(internalPath)
+	if pluginbridge.IsSupportedLifecycleOperation(operation) {
+		return operation
+	}
+	return ""
+}
+
+// normalizeLifecycleInternalPath returns a slash-prefixed path with redundant
+// surrounding whitespace removed.
+func normalizeLifecycleInternalPath(value string) string {
+	trimmedValue := strings.TrimSpace(value)
+	if trimmedValue == "" {
+		return ""
+	}
+	if !strings.HasPrefix(trimmedValue, "/") {
+		return "/" + trimmedValue
+	}
+	return trimmedValue
+}
+
+// lifecyclePathSegmentToOperation converts a kebab-case lifecycle path segment
+// into the source-compatible operation name.
+func lifecyclePathSegmentToOperation(segment string) string {
+	parts := strings.Split(strings.Trim(strings.TrimSpace(segment), "/"), "-")
+	var builder strings.Builder
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		builder.WriteString(strings.ToUpper(part[:1]))
+		if len(part) > 1 {
+			builder.WriteString(part[1:])
+		}
+	}
+	return builder.String()
 }

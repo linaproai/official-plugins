@@ -57,7 +57,7 @@ func (s *serviceImpl) isDemoControlEnabled(ctx context.Context) bool {
 	if s == nil || s.enablementReader == nil {
 		return false
 	}
-	return s.enablementReader.IsEnabled(ctx, demoControlPluginID)
+	return s.enablementReader.IsEnabledAuthoritative(ctx, demoControlPluginID)
 }
 
 // isDemoControlAllowedRequest reports whether the incoming request should bypass

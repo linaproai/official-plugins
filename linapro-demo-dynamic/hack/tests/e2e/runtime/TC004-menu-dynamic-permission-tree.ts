@@ -1,7 +1,7 @@
 import type { APIRequestContext } from '@host-tests/support/playwright';
 
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { rmSync } from 'node:fs';
 import path from 'node:path';
 
 import { test, expect } from '@host-tests/fixtures/auth';
@@ -25,6 +25,14 @@ const runtimeArtifactPath = path.join(
   'output',
   `${pluginID}.wasm`,
 );
+const legacyRuntimeArtifactPath = path.join(
+  repoRoot,
+  'apps',
+  'lina-plugins',
+  pluginID,
+  'runtime',
+  `${pluginID}.wasm`,
+);
 
 type MenuNode = {
   children?: MenuNode[];
@@ -45,13 +53,11 @@ let originalInstalled = 0;
 let originalEnabled = 0;
 
 function ensureRuntimePluginArtifact() {
-  if (existsSync(runtimeArtifactPath)) {
-    return;
-  }
   execFileSync('make', ['wasm', `p=${pluginID}`, 'out=../../temp/output'], {
     cwd: repoRoot,
     stdio: 'inherit',
   });
+  rmSync(legacyRuntimeArtifactPath, { force: true });
 }
 
 function flattenMenus(nodes: MenuNode[], ancestors: MenuNode[] = []): FlatMenuNode[] {
