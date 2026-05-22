@@ -1,12 +1,11 @@
-import { test, expect } from '../../support/linapro-tenant-core';
 import {
-  createAdminApiContext,
-  enablePlugin,
-  getPlugin,
-  installPlugin,
-  syncPlugins,
-} from '@host-tests/support/api/job';
-import { createTenant, deleteTenant } from '../../support/linapro-tenant-core';
+  createTenant,
+  deleteTenant,
+  ensureMultiTenantPluginEnabled,
+  expect,
+  test,
+} from '../../support/linapro-tenant-core';
+import { createAdminApiContext, getPlugin } from '@host-tests/support/api/job';
 import { PluginPage } from '@host-tests/pages/PluginPage';
 
 test.describe('TC-4 多租户插件卸载前置条件弹窗', () => {
@@ -20,19 +19,14 @@ test.describe('TC-4 多租户插件卸载前置条件弹窗', () => {
 
     const api = await createAdminApiContext();
     const pluginId = 'linapro-tenant-core';
-    const tenant = await createTenant(api, {
-      code: `tc227-${Date.now()}`.slice(0, 32),
-      name: 'TC227 Tenant',
-    });
+    let tenantId = 0;
     try {
-      await syncPlugins(api);
-      const plugin = await getPlugin(api, pluginId);
-      if (plugin.installed !== 1) {
-        await installPlugin(api, pluginId);
-      }
-      if (plugin.enabled !== 1) {
-        await enablePlugin(api, pluginId);
-      }
+      await ensureMultiTenantPluginEnabled(api);
+      const tenant = await createTenant(api, {
+        code: `tc227-${Date.now()}`.slice(0, 32),
+        name: 'TC227 Tenant',
+      });
+      tenantId = tenant.id;
 
       const pluginPage = new PluginPage(adminPage);
       await pluginPage.gotoManage();
@@ -98,15 +92,14 @@ test.describe('TC-4 多租户插件卸载前置条件弹窗', () => {
       const pluginAfterForce = await getPlugin(api, pluginId);
       expect(pluginAfterForce.installed).toBe(0);
     } finally {
-      const plugin = await getPlugin(api, pluginId).catch(() => null);
-      if (plugin?.installed !== 1) {
-        await installPlugin(api, pluginId).catch(() => {});
-      }
+      await ensureMultiTenantPluginEnabled(api).catch(() => {});
       const refreshed = await getPlugin(api, pluginId).catch(() => null);
-      if (refreshed?.enabled !== 1) {
-        await enablePlugin(api, pluginId).catch(() => {});
+      if (tenantId > 0) {
+        await deleteTenant(api, tenantId).catch(() => {});
       }
-      await deleteTenant(api, tenant.id).catch(() => {});
+      if (refreshed?.enabled !== 1) {
+        await ensureMultiTenantPluginEnabled(api).catch(() => {});
+      }
       await api.dispose();
     }
   });
