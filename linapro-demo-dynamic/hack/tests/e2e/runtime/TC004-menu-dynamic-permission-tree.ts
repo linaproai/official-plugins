@@ -18,6 +18,7 @@ import {
 } from '@host-tests/support/api/job';
 
 const pluginID = 'linapro-demo-dynamic';
+const sourcePluginID = 'linapro-demo-source';
 const repoRoot = path.resolve(process.cwd(), '../..');
 const runtimeArtifactPath = path.join(
   repoRoot,
@@ -40,6 +41,7 @@ type MenuNode = {
   name: string;
   path?: string;
   perms?: string;
+  sort?: number;
   type: string;
 };
 
@@ -51,6 +53,8 @@ type FlatMenuNode = {
 let adminApi: APIRequestContext;
 let originalInstalled = 0;
 let originalEnabled = 0;
+let originalSourceInstalled = 0;
+let originalSourceEnabled = 0;
 
 function ensureRuntimePluginArtifact() {
   execFileSync('make', ['wasm', `p=${pluginID}`, 'out=../../temp/output'], {
@@ -69,9 +73,41 @@ function flattenMenus(nodes: MenuNode[], ancestors: MenuNode[] = []): FlatMenuNo
 
 async function ensurePluginInstalledAndEnabled() {
   await syncPlugins(adminApi);
+  let sourcePlugin = await getPlugin(adminApi, sourcePluginID);
   let plugin = await getPlugin(adminApi, pluginID);
+  originalSourceInstalled = sourcePlugin.installed;
+  originalSourceEnabled = sourcePlugin.enabled;
   originalInstalled = plugin.installed;
   originalEnabled = plugin.enabled;
+
+  if (plugin.enabled === 1) {
+    await disablePlugin(adminApi, pluginID);
+    plugin = await getPlugin(adminApi, pluginID);
+  }
+  if (plugin.installed === 1) {
+    await uninstallPlugin(adminApi, pluginID);
+  }
+
+  sourcePlugin = await getPlugin(adminApi, sourcePluginID);
+  if (sourcePlugin.enabled === 1) {
+    await disablePlugin(adminApi, sourcePluginID);
+    sourcePlugin = await getPlugin(adminApi, sourcePluginID);
+  }
+  if (sourcePlugin.installed === 1) {
+    await uninstallPlugin(adminApi, sourcePluginID);
+  }
+
+  await syncPlugins(adminApi);
+  sourcePlugin = await getPlugin(adminApi, sourcePluginID);
+  plugin = await getPlugin(adminApi, pluginID);
+
+  if (sourcePlugin.installed !== 1) {
+    await installPlugin(adminApi, sourcePluginID);
+    sourcePlugin = await getPlugin(adminApi, sourcePluginID);
+  }
+  if (sourcePlugin.enabled !== 1) {
+    await enablePlugin(adminApi, sourcePluginID);
+  }
 
   if (plugin.installed !== 1) {
     await installPlugin(adminApi, pluginID);
@@ -93,11 +129,37 @@ async function restorePluginState() {
     if (plugin.installed === 1) {
       await uninstallPlugin(adminApi, pluginID);
     }
-    return;
+  } else {
+    if (plugin.installed !== 1) {
+      await installPlugin(adminApi, pluginID);
+      plugin = await getPlugin(adminApi, pluginID);
+    }
+    if (originalEnabled === 1 && plugin.enabled !== 1) {
+      await enablePlugin(adminApi, pluginID);
+    } else if (originalEnabled !== 1 && plugin.enabled === 1) {
+      await disablePlugin(adminApi, pluginID);
+    }
   }
 
-  if (originalEnabled !== 1 && plugin.enabled === 1) {
-    await disablePlugin(adminApi, pluginID);
+  let sourcePlugin = await getPlugin(adminApi, sourcePluginID);
+  if (originalSourceInstalled !== 1) {
+    if (sourcePlugin.enabled === 1) {
+      await disablePlugin(adminApi, sourcePluginID);
+      sourcePlugin = await getPlugin(adminApi, sourcePluginID);
+    }
+    if (sourcePlugin.installed === 1) {
+      await uninstallPlugin(adminApi, sourcePluginID);
+    }
+  } else {
+    if (sourcePlugin.installed !== 1) {
+      await installPlugin(adminApi, sourcePluginID);
+      sourcePlugin = await getPlugin(adminApi, sourcePluginID);
+    }
+    if (originalSourceEnabled === 1 && sourcePlugin.enabled !== 1) {
+      await enablePlugin(adminApi, sourcePluginID);
+    } else if (originalSourceEnabled !== 1 && sourcePlugin.enabled === 1) {
+      await disablePlugin(adminApi, sourcePluginID);
+    }
   }
 }
 
@@ -120,6 +182,39 @@ test.describe('TC-4 Dynamic plugin permission menu tree regression', () => {
     const menuData = await expectSuccess<{ list: MenuNode[] }>(
       await adminApi.get('menu'),
     );
+    const extensionMenu = menuData.list.find(
+      (node) => node.path === 'extension' && node.type === 'D',
+    );
+    expect(extensionMenu, 'missing extension center menu').toBeTruthy();
+    const extensionChildren = (extensionMenu?.children ?? []).filter(
+      (node) => node.type !== 'B',
+    );
+    const pluginManagementIndex = extensionChildren.findIndex(
+      (node) => node.path === '/system/plugin',
+    );
+    const sourceDemoIndex = extensionChildren.findIndex(
+      (node) => node.path === 'linapro-demo-source-sidebar-entry',
+    );
+    const dynamicDemoIndex = extensionChildren.findIndex(
+      (node) => (node.path ?? '').includes(`/x-assets/${pluginID}/`),
+    );
+    expect(
+      pluginManagementIndex,
+      'plugin management menu should be under extension',
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      sourceDemoIndex,
+      'source demo menu should be under extension',
+    ).toBeGreaterThan(pluginManagementIndex);
+    expect(
+      dynamicDemoIndex,
+      'dynamic demo menu should be under extension',
+    ).toBeGreaterThan(pluginManagementIndex);
+    expect(
+      dynamicDemoIndex,
+      'dynamic demo should be ordered after source demo',
+    ).toBeGreaterThan(sourceDemoIndex);
+
     const flatMenus = flattenMenus(menuData.list);
     const pluginMenu = flatMenus.find(
       ({ node }) =>
@@ -190,21 +285,19 @@ test.describe('TC-4 Dynamic plugin permission menu tree regression', () => {
 
     await mainLayout.switchLanguage('English');
     await menuPage.goto();
-    await menuPage.expandAll();
 
-    const pluginRow = adminPage
-      .locator('.vxe-body--row:visible', { hasText: 'Dynamic Plugin Demo' })
-      .first();
-    await expect(pluginRow).toBeVisible();
+    const searchInput = adminPage.getByRole('textbox', {
+      name: /菜单名称|Menu Name/i,
+    });
+    await searchInput.fill(
+      'Dynamic Route Permission:linapro-demo-dynamic:record:create',
+    );
+    await adminPage.getByRole('button', { name: /搜索|Search/i }).click();
 
-    const recordCreateRow = adminPage
-      .locator('.vxe-body--row:visible', { hasText: 'Record Create' })
-      .first();
-    if (!(await recordCreateRow.isVisible({ timeout: 1000 }).catch(() => false))) {
-      await pluginRow.locator('.system-menu-name-column .vxe-cell').first().click();
-    }
+    await expect(
+      adminPage.locator('.vxe-body--row:visible', { hasText: 'Record Create' }),
+    ).toBeVisible();
 
-    await expect(recordCreateRow).toBeVisible();
     await expect(
       adminPage.locator('.vxe-body--row:visible', {
         hasText: /Dynamic Route Permission:linapro-demo-dynamic/u,

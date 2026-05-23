@@ -60,6 +60,9 @@ menus:
   # Unique menu key; it must use the `plugin:<plugin-id>:<menu-key>` format.
   # 菜单唯一键，必须使用 `plugin:<plugin-id>:<menu-key>` 格式。
   - key: plugin:linapro-demo-source:sidebar-entry
+    # Parent menu key pointing to the host extension center catalog.
+    # 父级菜单键，指向宿主扩展中心目录。
+    parent_key: extension
     # Menu display name.
     # 菜单显示名称。
     name: 源码插件示例
@@ -80,7 +83,7 @@ menus:
     type: M
     # Menu sort order; lower values appear earlier.
     # 菜单排序值，数值越小越靠前。
-    sort: -1
+    sort: 2
     # Menu remark stored in host menu governance data.
     # 菜单备注，写入宿主菜单治理数据。
     remark: 源码插件示例左侧菜单
