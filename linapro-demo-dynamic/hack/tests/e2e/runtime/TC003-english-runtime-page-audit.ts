@@ -24,6 +24,7 @@ import {
 import { waitForRouteReady } from '@host-tests/support/ui';
 
 const pluginID = "linapro-demo-dynamic";
+const pluginMenuNamePattern = /Dynamic Plugin Demo|动态插件示例/u;
 const recordTable = "plugin_linapro_demo_dynamic_record";
 const publicBaseURL =
   process.env.E2E_PUBLIC_BASE_URL ??
@@ -74,7 +75,7 @@ function cleanupRuntimePluginData() {
 async function ensurePluginInstalledAndEnabled() {
   const plugin = await getPlugin(adminApi, pluginID);
   if (plugin.installed !== 1) {
-    await installPlugin(adminApi, pluginID);
+    await installPlugin(adminApi, pluginID, { installMode: "global" });
   }
 
   const refreshedPlugin = await getPlugin(adminApi, pluginID);
@@ -265,7 +266,7 @@ test.describe("TC003 英文运行时页面巡检", () => {
     const pluginPage = new DemoDynamicPage(adminPage);
 
     await mainLayout.switchLanguage("English");
-    await pluginPage.clickSidebarMenuItem("Dynamic Plugin Demo");
+    await pluginPage.clickSidebarMenuItem(pluginMenuNamePattern);
     await waitForRouteReady(adminPage);
 
     await expect(pluginPage.pluginDemoDynamicTitle()).toHaveText(

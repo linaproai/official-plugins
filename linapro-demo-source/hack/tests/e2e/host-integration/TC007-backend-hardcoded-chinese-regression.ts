@@ -1,7 +1,7 @@
 import type { APIRequestContext } from "@host-tests/support/playwright";
 
 import { test, expect } from '@host-tests/fixtures/auth';
-import { pluginApiPath } from '@host-tests/fixtures/config';
+import { pluginApiPath, workspacePath } from '@host-tests/fixtures/config';
 import {
   createAdminApiContext,
   enablePlugin,
@@ -31,7 +31,7 @@ async function ensureSourcePluginsEnabled(
   for (const pluginID of pluginIDs) {
     let plugin = await getPlugin(api, pluginID);
     if (plugin.installed !== 1) {
-      await installPlugin(api, pluginID);
+      await installPlugin(api, pluginID, { installMode: "global" });
       plugin = await getPlugin(api, pluginID);
     }
     if (plugin.enabled !== 1) {
@@ -95,9 +95,12 @@ test.describe("TC-3 Backend hardcoded Chinese regression", () => {
     mainLayout,
   }) => {
     await mainLayout.switchLanguage("English");
-    await adminPage.goto("/linapro-demo-source-sidebar-entry?lang=en-US", {
-      waitUntil: "domcontentloaded",
-    });
+    await adminPage.goto(
+      `${workspacePath("/extension/linapro-demo-source-sidebar-entry")}?lang=en-US`,
+      {
+        waitUntil: "domcontentloaded",
+      },
+    );
     await waitForRouteReady(adminPage, 15_000);
 
     const bodyText = await adminPage.locator("body").innerText();

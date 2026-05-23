@@ -102,7 +102,7 @@ async function ensurePluginInstalledAndEnabled() {
   plugin = await getPlugin(adminApi, pluginID);
 
   if (sourcePlugin.installed !== 1) {
-    await installPlugin(adminApi, sourcePluginID);
+    await installPlugin(adminApi, sourcePluginID, { installMode: 'global' });
     sourcePlugin = await getPlugin(adminApi, sourcePluginID);
   }
   if (sourcePlugin.enabled !== 1) {
@@ -110,7 +110,7 @@ async function ensurePluginInstalledAndEnabled() {
   }
 
   if (plugin.installed !== 1) {
-    await installPlugin(adminApi, pluginID);
+    await installPlugin(adminApi, pluginID, { installMode: 'global' });
     plugin = await getPlugin(adminApi, pluginID);
   }
   if (plugin.enabled !== 1) {
@@ -131,7 +131,7 @@ async function restorePluginState() {
     }
   } else {
     if (plugin.installed !== 1) {
-      await installPlugin(adminApi, pluginID);
+      await installPlugin(adminApi, pluginID, { installMode: 'global' });
       plugin = await getPlugin(adminApi, pluginID);
     }
     if (originalEnabled === 1 && plugin.enabled !== 1) {
@@ -152,7 +152,7 @@ async function restorePluginState() {
     }
   } else {
     if (sourcePlugin.installed !== 1) {
-      await installPlugin(adminApi, sourcePluginID);
+      await installPlugin(adminApi, sourcePluginID, { installMode: 'global' });
       sourcePlugin = await getPlugin(adminApi, sourcePluginID);
     }
     if (originalSourceEnabled === 1 && sourcePlugin.enabled !== 1) {

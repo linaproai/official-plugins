@@ -208,11 +208,12 @@ test.describe("TC006 英文布局回归", () => {
     await mainLayout.switchLanguage("English");
 
     const dynamicDemoMenu = mainLayout.sidebarMenuItem("Dynamic Plugin Demo");
-    const pluginMenu = (await dynamicDemoMenu
+    const pluginMenuLabel = (await dynamicDemoMenu
       .isVisible({ timeout: 1500 })
       .catch(() => false))
-      ? dynamicDemoMenu
-      : mainLayout.sidebarMenuItem("Source Plugin Demo");
+      ? "Dynamic Plugin Demo"
+      : "Source Plugin Demo";
+    const pluginMenu = await mainLayout.expectSidebarMenuVisible(pluginMenuLabel);
     await pluginMenu.scrollIntoViewIfNeeded();
     await expectNoHorizontalClip(pluginMenu, "Plugin demo sidebar item");
 

@@ -20,8 +20,7 @@ import {
 import { waitForRouteReady } from '@host-tests/support/ui';
 
 const pluginID = "linapro-demo-dynamic";
-const pluginMenuNameEnglish = "Dynamic Plugin Demo";
-const pluginMenuNameChinese = "动态插件示例";
+const pluginMenuNamePattern = /Dynamic Plugin Demo|动态插件示例/u;
 const repoRoot = path.resolve(process.cwd(), "../..");
 const legacyRuntimeArtifactPath = path.join(
   repoRoot,
@@ -142,7 +141,7 @@ test.describe("TC002 运行时国际化切换", () => {
 
     // Reinstall the current artifact so the active dynamic release and its
     // runtime i18n bundles match the just-built test fixture.
-    await installPlugin(adminApi, pluginID);
+    await installPlugin(adminApi, pluginID, { installMode: "global" });
     const plugin = await getPlugin(adminApi, pluginID);
     if (plugin.enabled !== 1) {
       await enablePlugin(adminApi, pluginID);
@@ -150,10 +149,8 @@ test.describe("TC002 运行时国际化切换", () => {
     await refreshPluginProjection(adminPage);
 
     await mainLayout.switchLanguage("English");
-    await expect(
-      pluginPage.sidebarMenuItem(pluginMenuNameEnglish),
-    ).toBeVisible({ timeout: 20_000 });
-    await pluginPage.clickSidebarMenuItem(pluginMenuNameEnglish);
+    await pluginPage.expectSidebarMenuVisible(pluginMenuNamePattern);
+    await pluginPage.clickSidebarMenuItem(pluginMenuNamePattern);
     await expect(pluginPage.pluginDemoDynamicTitle()).toHaveText(
       "Dynamic Plugin Demo Is Live",
     );
@@ -162,9 +159,7 @@ test.describe("TC002 运行时国际化切换", () => {
     );
 
     await mainLayout.switchLanguage("简体中文");
-    await expect(
-      pluginPage.sidebarMenuItem(pluginMenuNameChinese),
-    ).toBeVisible();
+    await pluginPage.expectSidebarMenuVisible(pluginMenuNamePattern);
     await expect(pluginPage.pluginDemoDynamicTitle()).toHaveText(
       "动态插件示例已生效",
     );

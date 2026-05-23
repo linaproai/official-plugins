@@ -108,7 +108,11 @@ async function syncPlugins(adminApi: APIRequestContext) {
 }
 
 async function installPlugin(adminApi: APIRequestContext, id = pluginID) {
-  const response = await adminApi.post(`plugins/${id}/install`);
+  const response = await adminApi.post(`plugins/${id}/install`, {
+    data: {
+      installMode: "global",
+    },
+  });
   assertOk(response, `安装插件失败: ${id}`);
 }
 
