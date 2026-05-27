@@ -1,0 +1,7 @@
+{
+  "menu": {
+    "plugin:linapro-oidc-discord:settings": {
+      "title": "Discord Login Settings"
+    }
+  }
+}

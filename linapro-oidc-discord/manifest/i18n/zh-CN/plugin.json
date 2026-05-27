@@ -1,0 +1,4 @@
+{
+  "plugin.linapro-oidc-discord.name": "Discord 登录",
+  "plugin.linapro-oidc-discord.description": "提供 Discord 账号 OAuth2 登录入口与 OIDC provider 元数据的源码插件。"
+}

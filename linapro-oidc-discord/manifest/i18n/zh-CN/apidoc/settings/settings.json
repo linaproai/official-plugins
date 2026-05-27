@@ -1,0 +1,23 @@
+{
+  "plugins.linapro_oidc_discord.api.settings.v1.GetSettingsReq.meta.tags": "Discord OAuth2",
+  "plugins.linapro_oidc_discord.api.settings.v1.GetSettingsReq.meta.summary": "获取 Discord OAuth2 配置",
+  "plugins.linapro_oidc_discord.api.settings.v1.GetSettingsReq.meta.dc": "获取当前 Discord OAuth2 登录插件配置，包括 Client ID、回调地址和启用状态。Client Secret 在响应中会被掩码处理。",
+  "plugins.linapro_oidc_discord.api.settings.v1.GetSettingsRes.fields.clientId.dc": "Discord 应用客户端 ID",
+  "plugins.linapro_oidc_discord.api.settings.v1.GetSettingsRes.fields.clientSecret.dc": "Discord 应用客户端密钥，首次保存后在响应中以掩码形式展示",
+  "plugins.linapro_oidc_discord.api.settings.v1.GetSettingsRes.fields.redirectUri.dc": "在 Discord Developer Portal 注册的 OAuth2 回调地址",
+  "plugins.linapro_oidc_discord.api.settings.v1.GetSettingsRes.fields.enableBackendRedirect.dc": "是否启用 SSO Token 投递：state 命中规则时直接把 token 投递到外部 URL",
+  "plugins.linapro_oidc_discord.api.settings.v1.GetSettingsRes.fields.defaultBackendRedirect.dc": "登录成功且未命中 SSO 规则时，SPA 内部跳转的落地页",
+  "plugins.linapro_oidc_discord.api.settings.v1.GetSettingsRes.fields.backendRedirects.dc": "state 到外部 URL 的 JSON 映射，命中后由后端直接 302 并附带 accessToken/refreshToken",
+  "plugins.linapro_oidc_discord.api.settings.v1.GetSettingsRes.fields.enabled.dc": "Discord 登录当前是否启用",
+  "plugins.linapro_oidc_discord.api.settings.v1.SaveSettingsReq.meta.tags": "Discord OAuth2",
+  "plugins.linapro_oidc_discord.api.settings.v1.SaveSettingsReq.meta.summary": "保存 Discord OAuth2 配置",
+  "plugins.linapro_oidc_discord.api.settings.v1.SaveSettingsReq.meta.dc": "保存 Discord OAuth2 登录插件配置。Client Secret 留空表示保留已存的密钥不修改。",
+  "plugins.linapro_oidc_discord.api.settings.v1.SaveSettingsReq.schema.dc": "保存 Discord OAuth2 登录插件配置。Client Secret 留空表示保留已存的密钥不修改。",
+  "plugins.linapro_oidc_discord.api.settings.v1.SaveSettingsReq.fields.clientId.dc": "从 Discord Developer Portal 获取的应用客户端 ID",
+  "plugins.linapro_oidc_discord.api.settings.v1.SaveSettingsReq.fields.clientSecret.dc": "从 Discord Developer Portal 获取的应用客户端密钥；留空表示保留已存密钥不修改",
+  "plugins.linapro_oidc_discord.api.settings.v1.SaveSettingsReq.fields.redirectUri.dc": "OAuth2 回调地址，必须与 Discord Developer Portal 中注册的值一致",
+  "plugins.linapro_oidc_discord.api.settings.v1.SaveSettingsReq.fields.enableBackendRedirect.dc": "是否启用 SSO Token 投递：state 命中规则时直接把 token 投递到外部 URL",
+  "plugins.linapro_oidc_discord.api.settings.v1.SaveSettingsReq.fields.defaultBackendRedirect.dc": "登录成功且未命中 SSO 规则时，SPA 内部跳转的落地页",
+  "plugins.linapro_oidc_discord.api.settings.v1.SaveSettingsReq.fields.backendRedirects.dc": "state 到外部 URL 的 JSON 映射，命中后由后端直接 302 并附带 accessToken/refreshToken",
+  "plugins.linapro_oidc_discord.api.settings.v1.SaveSettingsReq.fields.enabled.dc": "是否在工作台登录页启用 Discord 登录入口"
+}

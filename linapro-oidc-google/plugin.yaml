@@ -1,0 +1,34 @@
+id: linapro-oidc-google
+name: Google Login
+version: v0.1.0
+type: source
+scope_nature: platform_only
+supports_multi_tenant: false
+default_install_mode: global
+description: Source-plugin providing Google / Gmail OAuth2 login entry and OIDC provider metadata.
+author: linapro
+license: Apache-2.0
+
+# i18n is enabled so menu titles, plugin display name/description, and API
+# documentation strings are localized via manifest/i18n/<locale>/*.json.
+# Source language is English; non-English resources are maintained alongside
+# the English source under manifest/i18n/<locale>/.
+i18n:
+  enabled: true
+  default: zh-CN
+  locales:
+    - locale: en-US
+      nativeName: English
+    - locale: zh-CN
+      nativeName: 简体中文
+
+menus:
+  - key: plugin:linapro-oidc-google:settings
+    name: Google Login Settings
+    path: linapro-oidc-google-settings
+    component: system/plugin/dynamic-page
+    perms: linapro-oidc-google:settings:view
+    icon: logos:google-icon
+    type: M
+    sort: 10
+    remark: Google OIDC login plugin configuration page

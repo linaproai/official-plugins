@@ -9,6 +9,8 @@ require (
 	lina-plugin-linapro-monitor-online v0.0.0
 	lina-plugin-linapro-monitor-operlog v0.0.0
 	lina-plugin-linapro-monitor-server v0.0.0
+	lina-plugin-linapro-oidc-discord v0.0.0
+	lina-plugin-linapro-oidc-google v0.0.0
 	lina-plugin-linapro-ops-demo-guard v0.0.0
 	lina-plugin-linapro-org-core v0.0.0
 	lina-plugin-linapro-tenant-core v0.0.0
@@ -25,7 +27,6 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/gogf/gf/v2 v2.10.1 // indirect
-	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grokify/html-strip-tags-go v0.1.0 // indirect
@@ -82,3 +83,7 @@ replace lina-plugin-linapro-monitor-server => ./linapro-monitor-server
 replace lina-plugin-linapro-tenant-core => ./linapro-tenant-core
 
 replace lina-plugin-linapro-org-core => ./linapro-org-core
+
+replace lina-plugin-linapro-oidc-google => ./linapro-oidc-google
+
+replace lina-plugin-linapro-oidc-discord => ./linapro-oidc-discord

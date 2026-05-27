@@ -1,0 +1,4 @@
+{
+  "plugin.linapro-oidc-google.name": "Google Login",
+  "plugin.linapro-oidc-google.description": "Source-plugin providing Google / Gmail OAuth2 login entry and OIDC provider metadata."
+}
