@@ -1219,10 +1219,10 @@ export async function scenarioTC0194() {
     try {
       cleanupRowsByPrefix(prefix);
       execPgSQL(`
-        INSERT INTO sys_online_session (tenant_id, token_id, user_id, username, login_time, last_active_time)
+        INSERT INTO sys_online_session (tenant_id, token_id, user_id, username, client_type, login_time, last_active_time)
         VALUES
-          (${tenantA.id}, '${pgEscapeLiteral(prefix)}_a', 1, 'admin', NOW(), NOW()),
-          (${tenantB.id}, '${pgEscapeLiteral(prefix)}_b', 1, 'admin', NOW(), NOW());
+          (${tenantA.id}, '${pgEscapeLiteral(prefix)}_a', 1, 'admin', 'web', NOW(), NOW()),
+          (${tenantB.id}, '${pgEscapeLiteral(prefix)}_b', 1, 'admin', 'web', NOW(), NOW());
       `);
       assertTenantScopedRowCounts(
         "sys_online_session",
