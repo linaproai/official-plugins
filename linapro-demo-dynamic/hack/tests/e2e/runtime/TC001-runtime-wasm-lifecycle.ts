@@ -41,6 +41,7 @@ const iframeMenuName = "运行时 iframe 示例";
 const embeddedMenuName = "运行时内嵌示例";
 const newWindowMenuName = "运行时新标签页示例";
 const bundledRuntimePluginID = "linapro-demo-dynamic";
+const bundledRuntimeDependencyPluginID = "linapro-demo-source";
 const bundledRuntimeRecordTable = "plugin_linapro_demo_dynamic_record";
 const bundledRuntimeAttachmentPath = "demo-record-files/";
 const bundledRuntimeCronHandlerRef = `plugin:${bundledRuntimePluginID}/cron:heartbeat`;
@@ -709,9 +710,34 @@ async function setPluginEnabled(
   assertOk(response, `更新插件状态失败: enabled=${enabled}`);
 }
 
+async function ensureBundledRuntimeDependencyInstalled(
+  adminApi: APIRequestContext,
+) {
+  const dependency = await findPlugin(adminApi, bundledRuntimeDependencyPluginID);
+  if (dependency?.installed === 1) {
+    return;
+  }
+  await installPlugin(adminApi, bundledRuntimeDependencyPluginID);
+  await expect
+    .poll(
+      async () =>
+        (await findPlugin(adminApi, bundledRuntimeDependencyPluginID))
+          ?.installed ?? 0,
+      {
+        message: `${bundledRuntimeDependencyPluginID} should be installed before ${bundledRuntimePluginID}`,
+      },
+    )
+    .toBe(1);
+}
+
 async function installPlugin(adminApi: APIRequestContext, id = pluginID) {
-  const response = await adminApi.post(`plugins/${id}/install`);
-  assertOk(response, "安装动态插件失败");
+  if (id === bundledRuntimePluginID) {
+    await ensureBundledRuntimeDependencyInstalled(adminApi);
+  }
+  await expectApiSuccess(
+    await adminApi.post(`plugins/${id}/install`),
+    `安装动态插件失败: ${id}`,
+  );
 }
 
 async function uninstallPlugin(adminApi: APIRequestContext, id = pluginID) {
@@ -1041,6 +1067,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     await pluginPage.gotoManage();
     await expect(pluginPage.pluginRow(bundledRuntimePluginID)).toBeVisible();
 
+    await ensureBundledRuntimeDependencyInstalled(adminApi!);
     await pluginPage.openInstallAuthorization(bundledRuntimePluginID);
     const hostServiceAuthModal = pluginPage.hostServiceAuthModal();
     await expect(hostServiceAuthModal).toContainText("Cron");
@@ -1240,6 +1267,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     await pluginPage.gotoManage();
     await expect(pluginPage.pluginRow(bundledRuntimePluginID)).toBeVisible();
 
+    await ensureBundledRuntimeDependencyInstalled(adminApi!);
     await pluginPage.openInstallAuthorization(bundledRuntimePluginID);
     await pluginPage.confirmHostServiceAuthorization();
     await expect
@@ -1311,6 +1339,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     await expect(pluginPage.pluginRow(bundledRuntimePluginID)).toBeVisible();
 
     const confirmBundledRuntimeInstall = async () => {
+      await ensureBundledRuntimeDependencyInstalled(adminApi!);
       await pluginPage.openInstallAuthorization(bundledRuntimePluginID);
       await pluginPage.confirmHostServiceAuthorization();
     };
@@ -1457,6 +1486,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     await pluginPage.gotoManage();
     await expect(pluginPage.pluginRow(bundledRuntimePluginID)).toBeVisible();
 
+    await ensureBundledRuntimeDependencyInstalled(adminApi!);
     await pluginPage.openInstallAuthorization(bundledRuntimePluginID);
     await pluginPage.confirmHostServiceAuthorization();
     await expect
