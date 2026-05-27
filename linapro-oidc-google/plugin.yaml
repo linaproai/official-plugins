@@ -24,6 +24,7 @@ i18n:
 
 menus:
   - key: plugin:linapro-oidc-google:settings
+    parent_key: auth-provider
     name: Google Login Settings
     path: linapro-oidc-google-settings
     component: system/plugin/dynamic-page

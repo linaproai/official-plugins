@@ -24,6 +24,7 @@ i18n:
 
 menus:
   - key: plugin:linapro-oidc-discord:settings
+    parent_key: auth-provider
     name: Discord Login Settings
     path: linapro-oidc-discord-settings
     component: system/plugin/dynamic-page
