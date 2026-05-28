@@ -18,6 +18,8 @@ The workspace currently contains source plugins compiled into the host, plus one
 | `linapro-monitor-operlog` | `source` | `tenant_aware` | `tenant_scoped` | Operation log persistence and governance pages |
 | `linapro-monitor-loginlog` | `source` | `tenant_aware` | `tenant_scoped` | Login log persistence and governance pages |
 | `linapro-ops-demo-guard` | `source` | `tenant_aware` | `global` | Demo-environment read-only protection and global write-operation interception |
+| `linapro-oidc-google` | `source` | `platform_only` | `global` | Google / Gmail `OAuth2` login entry and `OIDC` provider metadata |
+| `linapro-oidc-discord` | `source` | `platform_only` | `global` | Discord `OAuth2` login entry and `OIDC` provider metadata |
 | `linapro-demo-source` | `source` | `tenant_aware` | `tenant_scoped` | Source plugin example for menu pages, public routes, and protected routes |
 | `linapro-demo-dynamic` | `dynamic` | `tenant_aware` | `tenant_scoped` | Dynamic `WASM` plugin example for embedded menu pages, plugin-owned `SQL` table `CRUD`, and standalone static pages |
 
