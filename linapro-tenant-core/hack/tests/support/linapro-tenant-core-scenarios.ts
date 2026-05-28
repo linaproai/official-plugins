@@ -854,7 +854,7 @@ export async function scenarioTC0180() {
         );
         await expectBusinessError(
           await api.post("auth/login", {
-            data: { username: user.username, password },
+            data: { username: user.username, password, clientType: "web" },
           }),
         );
         await expectSuccess(
@@ -1455,7 +1455,7 @@ export async function scenarioTC0203() {
     expectBuiltInResolverPolicyRemainsCodeOwned();
     await expectBusinessError(
       await api.post("auth/login", {
-        data: { username: "missing-tenant-user", password },
+        data: { username: "missing-tenant-user", password, clientType: "web" },
       }),
     );
   });

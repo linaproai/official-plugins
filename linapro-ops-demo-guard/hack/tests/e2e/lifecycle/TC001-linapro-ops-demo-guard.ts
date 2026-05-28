@@ -74,6 +74,7 @@ async function loginDemoTenantUser(
     data: {
       password: "admin123",
       username: "tenant_alpha_ops",
+      clientType: "web",
     },
   });
   if (!response.ok()) {

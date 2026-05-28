@@ -48,6 +48,7 @@ async function createAdminSessionContext(): Promise<{
     data: {
       password: config.adminPass,
       username: config.adminUser,
+      clientType: 'web',
     },
   });
   assertOk(loginResponse, '管理员登录 API 失败');

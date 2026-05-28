@@ -14,7 +14,7 @@ async function apiLogin(
   const resp = await fetch(`${HOST_API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, password, clientType: 'web' }),
     redirect: 'manual',
   });
   const data = await resp.json();

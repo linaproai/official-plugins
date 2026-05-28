@@ -82,7 +82,7 @@ export async function loginRaw(
 ) {
   const api = await playwrightRequest.newContext({ baseURL: apiBaseURL });
   const response = await api.post("auth/login", {
-    data: { username, password },
+    data: { username, password, clientType: "web" },
   });
   expect(response.ok()).toBeTruthy();
   const payload = await response.json();
