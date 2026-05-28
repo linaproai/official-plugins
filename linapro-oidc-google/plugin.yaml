@@ -23,6 +23,10 @@ i18n:
       nativeName: 简体中文
 
 menus:
+  # parent_key references the host-owned "auth-provider" catalog. The host owns
+  # that catalog's name/icon/sort and materializes it on demand when a plugin
+  # mounts under it, then removes it once the last child plugin is uninstalled.
+  # Plugins only reference the key; they do not define the parent catalog itself.
   - key: plugin:linapro-oidc-google:settings
     parent_key: auth-provider
     name: Google Login Settings

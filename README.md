@@ -108,7 +108,7 @@ Dynamic plugins must declare `type: dynamic` in `plugin.yaml`, keep `main.go` an
 
 ## Host and Plugin Boundary
 
-The host owns stable framework surfaces and top-level catalogs such as `dashboard`, `platform`, `org`, `content`, `monitor`, `setting`, `scheduler`, `extension`, and `developer`. Plugins choose their own mount points through `plugin.yaml` `parent_key`; the host only resolves declared parents during sync and rejects missing parents to avoid orphaned menu trees.
+The host owns stable framework surfaces and top-level catalogs such as `dashboard`, `platform`, `org`, `content`, `monitor`, `setting`, `scheduler`, `extension`, and `developer`. Plugins choose their own mount points through `plugin.yaml` `parent_key`. When the referenced parent already exists, such as a stable host catalog, the host resolves it during sync. The host also owns a small set of on-demand catalogs, such as `auth-provider`; the host owns their name, icon, and sort, materializes them when a plugin first mounts under them, and removes them once the last child plugin is uninstalled. A `parent_key` that names a parent the host neither has nor owns is still rejected to avoid orphaned menu trees.
 
 Plugin-owned tables, menus, pages, hooks, cron jobs, public assets, and lifecycle resources stay in the plugin directory. Host code should depend on stable plugin service seams and published packages rather than hard-coding plugin-specific page structures or menu composition details.
 
