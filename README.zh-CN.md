@@ -108,7 +108,7 @@ make -C apps/lina-plugins wasm p=linapro-demo-dynamic
 
 ## 宿主与插件边界
 
-宿主拥有稳定的框架表面和一级目录骨架，例如`dashboard`、`platform`、`org`、`content`、`monitor`、`setting`、`scheduler`、`extension`和`developer`。插件通过`plugin.yaml`的`parent_key`自主选择挂载点；宿主只在同步时解析声明的父级，并拒绝缺失父级以避免孤儿菜单树。
+宿主拥有稳定的框架表面和一级目录骨架，例如`dashboard`、`platform`、`org`、`content`、`monitor`、`setting`、`scheduler`、`extension`和`developer`。插件通过`plugin.yaml`的`parent_key`自主选择挂载点。当引用的父级已存在（例如稳定的宿主一级目录）时，宿主在同步时直接解析它。宿主还拥有少量按需目录，例如`auth-provider`：其名称、图标和排序由宿主拥有，宿主在首个插件挂载到该目录时按需创建它，并在最后一个子插件卸载后将其移除。若`parent_key`指向的父级既不存在于宿主、也不归宿主所有，仍会被拒绝，以避免孤儿菜单树。
 
 插件自有的数据表、菜单、页面、Hook、定时任务、公开资产和生命周期资源都保留在插件目录内。宿主代码应依赖稳定的插件服务接缝和公开包，而不是硬编码插件专属页面结构或菜单装配细节。
 
