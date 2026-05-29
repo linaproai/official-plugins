@@ -29,9 +29,10 @@ The root `go.mod` and `lina-plugins.go` wire the source plugins that are compile
 |------|---------|
 | `go.mod` | Local Go workspace module for source plugin compilation checks |
 | `lina-plugins.go` | Explicit source plugin import registry for host compilation |
-| `Makefile` | Dynamic plugin build entry; `make wasm p=<plugin-id>` delegates to `linactl wasm` |
+| `Makefile` | Plugin workspace build and code generation entry; `make wasm p=<plugin-id>`, `make ctrl p=<plugin-id>`, and `make dao p=<plugin-id>` delegate to `linactl` |
 | `package.json` | Frontend workspace metadata for source plugin packages |
 | `<plugin-id>/plugin.yaml` | Plugin manifest, metadata, menus, install mode, `i18n`, assets, dependencies, and host service declarations |
+| `<plugin-id>/Makefile` | Plugin-local code generation wrapper that includes the shared root `hack/makefiles/plugin.codegen.mk` target fragment |
 | `<plugin-id>/README.md` | English plugin-level guide |
 | `<plugin-id>/README.zh-CN.md` | Chinese plugin-level guide |
 
@@ -73,11 +74,20 @@ apps/lina-plugins/<plugin-id>/
     i18n/<locale>/        Plugin i18n resources
   hack/tests/             Optional plugin-owned E2E tests, page objects, and helpers
   go.mod                  Plugin-local Go module
+  Makefile                Plugin-local code generation wrapper
   plugin.yaml             Plugin manifest
   plugin_embed.go         Embedded asset registration entry
   README.md               English guide
   README.zh-CN.md         Chinese guide
 ```
+
+Plugin root `Makefile` files are thin wrappers around the repository-level
+`hack/makefiles/plugin.codegen.mk` fragment. The shared fragment derives the
+target backend from the including plugin directory, so plugin `Makefile` files
+must not hard-code `apps/lina-plugins/<plugin-id>/backend`. Run `make ctrl` or
+`make dao` inside a plugin directory to use that plugin's
+`backend/hack/config.yaml`, or run `make ctrl p=<plugin-id>` and
+`make dao p=<plugin-id>` from `apps/lina-plugins/`.
 
 `backend/internal/service/` is the only valid location for plugin business services. Do not create `backend/service/`. Dynamic plugins keep the same `backend/api/`, `backend/plugin.go`, `backend/internal/controller/`, and `backend/internal/service/` shape; their bridge files only adapt `WASM` and `pluginbridge` protocols. Guest business capability clients must come from `lina-core/pkg/plugin/capability/guest`, not from the `pluginbridge` root package.
 
