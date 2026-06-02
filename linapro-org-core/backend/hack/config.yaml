@@ -5,7 +5,12 @@ gfcli:
     dao:
       - link: "pgsql:postgres:postgres@tcp(127.0.0.1:5432)/linapro?sslmode=disable"
         path: "internal"
-        tables: "plugin_linapro_org_core_dept,plugin_linapro_org_core_post,sys_user,plugin_linapro_org_core_user_dept,plugin_linapro_org_core_user_post"
+        tables: >-
+          plugin_linapro_org_core_dept,
+          plugin_linapro_org_core_post,
+          plugin_linapro_org_core_user_dept,
+          plugin_linapro_org_core_user_post,
+          sys_user,
         removePrefix: "plugin_linapro_org_core_"
         importPrefix: "lina-plugin-linapro-org-core/backend/internal"
         descriptionTag: true

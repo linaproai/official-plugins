@@ -1,0 +1,54 @@
+{
+  "error": {
+    "ai": {
+      "core": {
+        "invocation": {
+          "not": {
+            "found": "AI调用日志不存在"
+          }
+        },
+        "model": {
+          "in": {
+            "use": "AI模型正在被能力档位使用"
+          },
+          "not": {
+            "found": "AI模型不存在"
+          }
+        },
+        "platform": {
+          "required": "智能中心需要平台上下文"
+        },
+        "provider": {
+          "http": {
+            "error": "AI供应商返回 HTTP {status}"
+          },
+          "in": {
+            "use": "AI供应商正在被能力档位使用"
+          },
+          "not": {
+            "found": "AI供应商不存在"
+          },
+          "protocol": {
+            "required": "供应商缺少所选协议的基础地址"
+          }
+        },
+        "request": {
+          "invalid": "AI配置请求无效"
+        },
+        "tier": {
+          "binding": {
+            "unavailable": "AI档位未配置可用的供应商和模型"
+          },
+          "not": {
+            "found": "AI档位不存在"
+          }
+        },
+        "thinking": {
+          "effort": {
+            "unsupported": "所选模型不支持该thinking effort"
+          }
+        }
+      }
+    }
+  }
+}

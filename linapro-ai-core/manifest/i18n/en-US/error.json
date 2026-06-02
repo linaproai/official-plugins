@@ -1,0 +1,54 @@
+{
+  "error": {
+    "ai": {
+      "core": {
+        "invocation": {
+          "not": {
+            "found": "AI invocation log does not exist"
+          }
+        },
+        "model": {
+          "in": {
+            "use": "AI model is used by a capability tier"
+          },
+          "not": {
+            "found": "AI model does not exist"
+          }
+        },
+        "platform": {
+          "required": "Smart Center requires platform context"
+        },
+        "provider": {
+          "http": {
+            "error": "AI provider returned HTTP {status}"
+          },
+          "in": {
+            "use": "AI provider is used by a capability tier"
+          },
+          "not": {
+            "found": "AI provider does not exist"
+          },
+          "protocol": {
+            "required": "Provider requires a base URL for the selected protocol"
+          }
+        },
+        "request": {
+          "invalid": "AI configuration request is invalid"
+        },
+        "tier": {
+          "binding": {
+            "unavailable": "AI tier is not configured with an enabled provider and model"
+          },
+          "not": {
+            "found": "AI tier does not exist"
+          }
+        },
+        "thinking": {
+          "effort": {
+            "unsupported": "The selected model does not support this thinking effort"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,107 @@
+id: linapro-ai-core
+name: Smart Center
+version: v0.1.0
+type: source
+scope_nature: platform_only
+supports_multi_tenant: false
+default_install_mode: global
+description: Official source plugin for AI providers, models, capability tiers, and invocation logs
+author: linapro
+license: Apache-2.0
+
+i18n:
+  enabled: true
+  default: zh-CN
+  locales:
+    - locale: en-US
+      nativeName: English
+    - locale: zh-CN
+      nativeName: 简体中文
+
+menus:
+  - key: plugin:linapro-ai-core:smart-center
+    name: Smart Center
+    path: ai
+    perms: ai:center:view
+    icon: lucide:brain-circuit
+    type: D
+    sort: 60
+    remark: Smart Center top-level directory
+  - key: plugin:linapro-ai-core:providers
+    parent_key: plugin:linapro-ai-core:smart-center
+    name: Provider Management
+    path: /ai/providers
+    component: system/plugin/dynamic-page
+    perms: ai:provider:list
+    icon: lucide:server-cog
+    type: M
+    sort: 1
+    remark: Manage AI providers and supported models
+  - key: plugin:linapro-ai-core:providers:query
+    parent_key: plugin:linapro-ai-core:providers
+    name: Query Providers
+    perms: ai:provider:list
+    type: B
+    sort: 1
+  - key: plugin:linapro-ai-core:providers:create
+    parent_key: plugin:linapro-ai-core:providers
+    name: Create Provider
+    perms: ai:provider:create
+    type: B
+    sort: 2
+  - key: plugin:linapro-ai-core:providers:update
+    parent_key: plugin:linapro-ai-core:providers
+    name: Update Provider
+    perms: ai:provider:update
+    type: B
+    sort: 3
+  - key: plugin:linapro-ai-core:providers:delete
+    parent_key: plugin:linapro-ai-core:providers
+    name: Delete Provider
+    perms: ai:provider:delete
+    type: B
+    sort: 4
+  - key: plugin:linapro-ai-core:tiers
+    parent_key: plugin:linapro-ai-core:smart-center
+    name: Tier Management
+    path: /ai/tiers
+    component: system/plugin/dynamic-page
+    perms: ai:tier:list
+    icon: lucide:sliders-horizontal
+    type: M
+    sort: 2
+    remark: Manage basic, standard, and advanced AI capability tiers
+  - key: plugin:linapro-ai-core:tiers:query
+    parent_key: plugin:linapro-ai-core:tiers
+    name: Query Tiers
+    perms: ai:tier:list
+    type: B
+    sort: 1
+  - key: plugin:linapro-ai-core:tiers:update
+    parent_key: plugin:linapro-ai-core:tiers
+    name: Update Tier
+    perms: ai:tier:update
+    type: B
+    sort: 2
+  - key: plugin:linapro-ai-core:tiers:test
+    parent_key: plugin:linapro-ai-core:tiers
+    name: Test Tier
+    perms: ai:tier:test
+    type: B
+    sort: 3
+  - key: plugin:linapro-ai-core:invocations
+    parent_key: plugin:linapro-ai-core:smart-center
+    name: Invocation Logs
+    path: /ai/invocations
+    component: system/plugin/dynamic-page
+    perms: ai:invocation:list
+    icon: lucide:activity
+    type: M
+    sort: 3
+    remark: View AI capability invocation records and masked summaries
+  - key: plugin:linapro-ai-core:invocations:query
+    parent_key: plugin:linapro-ai-core:invocations
+    name: Query Invocation Logs
+    perms: ai:invocation:list
+    type: B
+    sort: 1

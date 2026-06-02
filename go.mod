@@ -3,6 +3,7 @@ module lina-plugins
 go 1.25.0
 
 require (
+	lina-plugin-linapro-ai-core v0.0.0
 	lina-plugin-linapro-content-notice v0.0.0
 	lina-plugin-linapro-demo-source v0.0.0
 	lina-plugin-linapro-monitor-loginlog v0.0.0
@@ -64,6 +65,8 @@ require (
 )
 
 replace lina-core => ../lina-core
+
+replace lina-plugin-linapro-ai-core => ./linapro-ai-core
 
 replace lina-plugin-linapro-content-notice => ./linapro-content-notice
 

@@ -1,0 +1,40 @@
+{
+  "menu": {
+    "plugin:linapro-ai-core:invocations": {
+      "title": "调用日志"
+    },
+    "plugin:linapro-ai-core:invocations:query": {
+      "title": "调用日志查询"
+    },
+    "plugin:linapro-ai-core:providers": {
+      "title": "供应商管理"
+    },
+    "plugin:linapro-ai-core:providers:create": {
+      "title": "新增供应商"
+    },
+    "plugin:linapro-ai-core:providers:delete": {
+      "title": "删除供应商"
+    },
+    "plugin:linapro-ai-core:providers:query": {
+      "title": "供应商查询"
+    },
+    "plugin:linapro-ai-core:providers:update": {
+      "title": "修改供应商"
+    },
+    "plugin:linapro-ai-core:smart-center": {
+      "title": "智能中心"
+    },
+    "plugin:linapro-ai-core:tiers": {
+      "title": "档位管理"
+    },
+    "plugin:linapro-ai-core:tiers:query": {
+      "title": "档位查询"
+    },
+    "plugin:linapro-ai-core:tiers:test": {
+      "title": "档位测试"
+    },
+    "plugin:linapro-ai-core:tiers:update": {
+      "title": "修改档位"
+    }
+  }
+}

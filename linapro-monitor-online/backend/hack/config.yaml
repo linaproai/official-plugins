@@ -5,7 +5,9 @@ gfcli:
     dao:
       - link: "pgsql:postgres:postgres@tcp(127.0.0.1:5432)/linapro?sslmode=disable"
         path: "internal"
-        tables: "sys_online_session,sys_user"
+        tables: >-
+          sys_online_session,
+          sys_user
         importPrefix: "lina-plugin-linapro-monitor-online/backend/internal"
         descriptionTag: true
         noModelComment: true

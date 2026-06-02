@@ -1,0 +1,112 @@
+{
+  "plugin": {
+    "linapro-ai-core": {
+      "common": {
+        "disabled": "停用",
+        "enabled": "启用",
+        "failed": "失败",
+        "no": "否",
+        "success": "成功",
+        "yes": "是"
+      },
+      "description": "提供供应商、模型、AI能力档位和调用日志治理的官方源码插件",
+      "effort": {
+        "empty": "模型默认"
+      },
+      "invocation": {
+        "drawer": {
+          "detailTitle": "调用详情"
+        },
+        "fields": {
+          "errorCode": "错误码",
+          "errorSummary": "错误摘要",
+          "inputTokens": "输入 Tokens",
+          "latencyMs": "耗时(ms)",
+          "modelName": "模型",
+          "outputTokens": "输出 Tokens",
+          "providerName": "供应商",
+          "purpose": "用途",
+          "requestId": "请求 ID",
+          "sourcePluginId": "来源插件",
+          "status": "状态",
+          "tierCode": "档位",
+          "tokens": "Tokens"
+        },
+        "tableTitle": "调用日志"
+      },
+      "model": {
+        "actions": {
+          "syncAnthropic": "同步 Anthropic 模型",
+          "syncOpenAI": "同步 OpenAI 模型"
+        },
+        "drawer": {
+          "createTitle": "新增模型",
+          "editTitle": "编辑模型"
+        },
+        "fields": {
+          "maxInputTokens": "最大输入 Tokens",
+          "maxOutputTokens": "最大输出 Tokens",
+          "modelName": "模型名称",
+          "protocol": "协议",
+          "supportedEfforts": "支持的 Thinking Effort",
+          "supportsThinking": "支持 Thinking"
+        },
+        "messages": {
+          "syncDone": "模型同步完成：新增 {created} 个，保留 {kept} 个"
+        },
+        "tableTitle": "模型列表"
+      },
+      "name": "智能中心",
+      "provider": {
+        "drawer": {
+          "createTitle": "新增供应商",
+          "editTitle": "编辑供应商"
+        },
+        "fields": {
+          "anthropicBaseUrl": "Anthropic Base URL",
+          "apiKeySecretRef": "API Key 或 Secret 引用",
+          "enabledModelCount": "启用模型数",
+          "keyword": "供应商",
+          "modelCount": "模型数",
+          "name": "供应商名称",
+          "openaiBaseUrl": "OpenAI Base URL",
+          "websiteUrl": "官网地址"
+        },
+        "tableTitle": "供应商列表"
+      },
+      "tier": {
+        "actions": {
+          "testDraft": "测试当前配置",
+          "testSaved": "测试"
+        },
+        "descriptions": {
+          "advanced": "高级AI能力所使用的模型服务，适用于复杂代码生成和跨文件推理。",
+          "basic": "基础AI能力所使用的模型服务，适用于简单文本生成和提交信息生成。",
+          "standard": "标准AI能力所使用的模型服务，适用于常规代码生成和代码优化。"
+        },
+        "drawer": {
+          "editTitle": "配置{name}档位"
+        },
+        "fields": {
+          "defaultEffort": "默认 Thinking Effort",
+          "displayName": "档位",
+          "lastTestStatus": "最近测试",
+          "model": "模型",
+          "provider": "供应商"
+        },
+        "messages": {
+          "bindingRequired": "启用或测试该档位前，请先选择供应商和模型",
+          "testFailed": "档位测试失败",
+          "testSuccess": "档位测试成功",
+          "unsupportedEffort": "所选模型不支持该 thinking effort"
+        },
+        "names": {
+          "advanced": "高级",
+          "basic": "基础",
+          "standard": "标准"
+        },
+        "tableTitle": "档位管理"
+      }
+    }
+  }
+}

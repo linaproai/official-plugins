@@ -1,6 +1,7 @@
 package linaplugins
 
 import (
+	_ "lina-plugin-linapro-ai-core/backend"
 	_ "lina-plugin-linapro-content-notice/backend"
 	_ "lina-plugin-linapro-ops-demo-guard/backend"
 	_ "lina-plugin-linapro-demo-source/backend"

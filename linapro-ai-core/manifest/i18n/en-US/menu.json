@@ -1,0 +1,40 @@
+{
+  "menu": {
+    "plugin:linapro-ai-core:invocations": {
+      "title": "Invocation Logs"
+    },
+    "plugin:linapro-ai-core:invocations:query": {
+      "title": "Query Invocation Logs"
+    },
+    "plugin:linapro-ai-core:providers": {
+      "title": "Provider Management"
+    },
+    "plugin:linapro-ai-core:providers:create": {
+      "title": "Create Provider"
+    },
+    "plugin:linapro-ai-core:providers:delete": {
+      "title": "Delete Provider"
+    },
+    "plugin:linapro-ai-core:providers:query": {
+      "title": "Query Providers"
+    },
+    "plugin:linapro-ai-core:providers:update": {
+      "title": "Update Provider"
+    },
+    "plugin:linapro-ai-core:smart-center": {
+      "title": "Smart Center"
+    },
+    "plugin:linapro-ai-core:tiers": {
+      "title": "Tier Management"
+    },
+    "plugin:linapro-ai-core:tiers:query": {
+      "title": "Query Tiers"
+    },
+    "plugin:linapro-ai-core:tiers:test": {
+      "title": "Test Tier"
+    },
+    "plugin:linapro-ai-core:tiers:update": {
+      "title": "Update Tier"
+    }
+  }
+}

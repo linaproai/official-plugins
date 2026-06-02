@@ -1,0 +1,112 @@
+{
+  "plugin": {
+    "linapro-ai-core": {
+      "common": {
+        "disabled": "Disabled",
+        "enabled": "Enabled",
+        "failed": "Failed",
+        "no": "No",
+        "success": "Success",
+        "yes": "Yes"
+      },
+      "description": "Official source plugin for AI providers, models, capability tiers, and invocation logs",
+      "effort": {
+        "empty": "Model default"
+      },
+      "invocation": {
+        "drawer": {
+          "detailTitle": "Invocation Detail"
+        },
+        "fields": {
+          "errorCode": "Error Code",
+          "errorSummary": "Error Summary",
+          "inputTokens": "Input Tokens",
+          "latencyMs": "Latency(ms)",
+          "modelName": "Model",
+          "outputTokens": "Output Tokens",
+          "providerName": "Provider",
+          "purpose": "Purpose",
+          "requestId": "Request ID",
+          "sourcePluginId": "Source Plugin",
+          "status": "Status",
+          "tierCode": "Tier",
+          "tokens": "Tokens"
+        },
+        "tableTitle": "Invocation Logs"
+      },
+      "model": {
+        "actions": {
+          "syncAnthropic": "Sync Anthropic Models",
+          "syncOpenAI": "Sync OpenAI Models"
+        },
+        "drawer": {
+          "createTitle": "Create Model",
+          "editTitle": "Edit Model"
+        },
+        "fields": {
+          "maxInputTokens": "Max Input Tokens",
+          "maxOutputTokens": "Max Output Tokens",
+          "modelName": "Model Name",
+          "protocol": "Protocol",
+          "supportedEfforts": "Supported Thinking Efforts",
+          "supportsThinking": "Supports Thinking"
+        },
+        "messages": {
+          "syncDone": "Model sync finished: {created} created, {kept} kept"
+        },
+        "tableTitle": "Models"
+      },
+      "name": "Smart Center",
+      "provider": {
+        "drawer": {
+          "createTitle": "Create Provider",
+          "editTitle": "Edit Provider"
+        },
+        "fields": {
+          "anthropicBaseUrl": "Anthropic Base URL",
+          "apiKeySecretRef": "API Key or Secret Ref",
+          "enabledModelCount": "Enabled Models",
+          "keyword": "Provider",
+          "modelCount": "Models",
+          "name": "Provider Name",
+          "openaiBaseUrl": "OpenAI Base URL",
+          "websiteUrl": "Website"
+        },
+        "tableTitle": "Providers"
+      },
+      "tier": {
+        "actions": {
+          "testDraft": "Test Current Config",
+          "testSaved": "Test"
+        },
+        "descriptions": {
+          "advanced": "High-capability AI tier for complex code generation and cross-file reasoning.",
+          "basic": "Low-cost AI capability tier for simple text generation and commit message generation.",
+          "standard": "Default AI capability tier for regular code generation and code optimization."
+        },
+        "drawer": {
+          "editTitle": "Configure {name} Tier"
+        },
+        "fields": {
+          "defaultEffort": "Default Thinking Effort",
+          "displayName": "Tier",
+          "lastTestStatus": "Last Test",
+          "model": "Model",
+          "provider": "Provider"
+        },
+        "messages": {
+          "bindingRequired": "Select a provider and model before enabling or testing this tier",
+          "testFailed": "Tier test failed",
+          "testSuccess": "Tier test succeeded",
+          "unsupportedEffort": "The selected model does not support this thinking effort"
+        },
+        "names": {
+          "advanced": "Advanced",
+          "basic": "Basic",
+          "standard": "Standard"
+        },
+        "tableTitle": "Tier Management"
+      }
+    }
+  }
+}
