@@ -1,0 +1,39 @@
+id: linapro-oidc-discord
+name: Discord Login
+version: v0.1.0
+type: source
+scope_nature: platform_only
+supports_multi_tenant: false
+default_install_mode: global
+description: Source-plugin providing Discord OAuth2 login entry and OIDC provider metadata.
+author: linapro
+license: Apache-2.0
+
+# i18n is enabled so menu titles, plugin display name/description, and API
+# documentation strings are localized via manifest/i18n/<locale>/*.json.
+# Source language is English; non-English resources are maintained alongside
+# the English source under manifest/i18n/<locale>/.
+i18n:
+  enabled: true
+  default: zh-CN
+  locales:
+    - locale: en-US
+      nativeName: English
+    - locale: zh-CN
+      nativeName: 简体中文
+
+menus:
+  # parent_key references the host-owned "auth-provider" catalog. The host owns
+  # that catalog's name/icon/sort and materializes it on demand when a plugin
+  # mounts under it, then removes it once the last child plugin is uninstalled.
+  # Plugins only reference the key; they do not define the parent catalog itself.
+  - key: plugin:linapro-oidc-discord:settings
+    parent_key: auth-provider
+    name: Discord Login Settings
+    path: linapro-oidc-discord-settings
+    component: system/plugin/dynamic-page
+    perms: linapro-oidc-discord:settings:view
+    icon: logos:discord-icon
+    type: M
+    sort: 20
+    remark: Discord OAuth2 login plugin configuration page

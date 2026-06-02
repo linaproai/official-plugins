@@ -1,0 +1,10 @@
+{
+  "menu": {
+    "plugin:linapro-oidc-google:settings": {
+      "title": "Google 登录配置"
+    },
+    "plugin:linapro-oidc-google:loginEntry": {
+      "title": "Google 登录"
+    }
+  }
+}

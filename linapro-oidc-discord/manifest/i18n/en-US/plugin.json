@@ -1,0 +1,4 @@
+{
+  "plugin.linapro-oidc-discord.name": "Discord Login",
+  "plugin.linapro-oidc-discord.description": "Source-plugin providing Discord OAuth2 login entry and OIDC provider metadata."
+}

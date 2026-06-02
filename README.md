@@ -18,6 +18,8 @@ The workspace currently contains source plugins compiled into the host, plus one
 | `linapro-monitor-operlog` | `source` | `tenant_aware` | `tenant_scoped` | Operation log persistence and governance pages |
 | `linapro-monitor-loginlog` | `source` | `tenant_aware` | `tenant_scoped` | Login log persistence and governance pages |
 | `linapro-ops-demo-guard` | `source` | `tenant_aware` | `global` | Demo-environment read-only protection and global write-operation interception |
+| `linapro-oidc-google` | `source` | `platform_only` | `global` | Google / Gmail `OAuth2` login entry and `OIDC` provider metadata |
+| `linapro-oidc-discord` | `source` | `platform_only` | `global` | Discord `OAuth2` login entry and `OIDC` provider metadata |
 | `linapro-demo-source` | `source` | `tenant_aware` | `tenant_scoped` | Source plugin example for menu pages, public routes, and protected routes |
 | `linapro-demo-dynamic` | `dynamic` | `tenant_aware` | `tenant_scoped` | Dynamic `WASM` plugin example for embedded menu pages, plugin-owned `SQL` table `CRUD`, and standalone static pages |
 
@@ -118,7 +120,7 @@ Dynamic plugins must declare `type: dynamic` in `plugin.yaml`, keep `main.go` an
 
 ## Host and Plugin Boundary
 
-The host owns stable framework surfaces and top-level catalogs such as `dashboard`, `platform`, `org`, `content`, `monitor`, `setting`, `scheduler`, `extension`, and `developer`. Plugins choose their own mount points through `plugin.yaml` `parent_key`; the host only resolves declared parents during sync and rejects missing parents to avoid orphaned menu trees.
+The host owns stable framework surfaces and top-level catalogs such as `dashboard`, `platform`, `org`, `content`, `monitor`, `setting`, `scheduler`, `extension`, and `developer`. Plugins choose their own mount points through `plugin.yaml` `parent_key`. When the referenced parent already exists, such as a stable host catalog, the host resolves it during sync. The host also owns a small set of on-demand catalogs, such as `auth-provider`; the host owns their name, icon, and sort, materializes them when a plugin first mounts under them, and removes them once the last child plugin is uninstalled. A `parent_key` that names a parent the host neither has nor owns is still rejected to avoid orphaned menu trees.
 
 Plugin-owned tables, menus, pages, hooks, cron jobs, public assets, and lifecycle resources stay in the plugin directory. Host code should depend on stable plugin service seams and published packages rather than hard-coding plugin-specific page structures or menu composition details.
 
