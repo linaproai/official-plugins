@@ -52,7 +52,7 @@ const form = ref<DiscordOAuthSettings>({
   clientSecret: '',
   redirectUri: '',
   enableBackendRedirect: false,
-  defaultBackendRedirect: '/dashboard',
+  defaultBackendRedirect: '/dashboard/analytics',
   backendRedirects: '',
 });
 
@@ -158,7 +158,7 @@ async function loadSettings() {
       clientSecret: '',
       redirectUri: computedRedirectUri.value,
       enableBackendRedirect: res.enableBackendRedirect ?? false,
-      defaultBackendRedirect: res.defaultBackendRedirect ?? '/dashboard',
+      defaultBackendRedirect: res.defaultBackendRedirect ?? '/dashboard/analytics',
       backendRedirects: res.backendRedirects ?? '',
     };
     redirectRules.value = parseRedirectRules(res.backendRedirects ?? '');
