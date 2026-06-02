@@ -40,7 +40,12 @@ func init() {
 // registerRoutes binds the plugin's HTTP endpoints. It also constructs the
 // settings service from the host's namespaced key-value store and registers
 // the auth provider so the workbench login page can discover the entry.
-func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) error {
+//
+// The ctx parameter is required by the host HTTPRegistrar callback contract
+// but is unused during route registration because all I/O happens per-request
+// later. It is left as a blank identifier so the linter does not need a
+// `_ = ctx` discard at the end of the function body.
+func registerRoutes(_ context.Context, registrar pluginhost.HTTPRegistrar) error {
 	routes := registrar.Routes()
 	middlewares := routes.Middlewares()
 	hostServices := registrar.Services()
@@ -55,9 +60,13 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 	if settingsClient == nil {
 		return gerror.New("linapro-oidc-google routes require host plugin settings service")
 	}
+	pluginState := hostServices.PluginState()
+	if pluginState == nil {
+		return gerror.New("linapro-oidc-google routes require host plugin state service")
+	}
 	settingsSvc := configsvc.New(settingsClient)
 	settingsCtrl := settingsctrl.NewV1(settingsSvc)
-	oauthCtrl := oauthctrl.New(authSvc, settingsSvc)
+	oauthCtrl := oauthctrl.New(authSvc, settingsSvc, pluginState)
 	authprovider.RegisterProvider(googleprovider.New(settingsSvc))
 	routes.Group(routes.APIPrefix(), func(group pluginhost.RouteGroup) {
 		group.Group("/api/v1", func(group pluginhost.RouteGroup) {
@@ -91,6 +100,5 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		group.GET("/google", oauthCtrl.StartLogin)
 		group.GET("/google/callback", oauthCtrl.HandleCallback)
 	})
-	_ = ctx
 	return nil
 }

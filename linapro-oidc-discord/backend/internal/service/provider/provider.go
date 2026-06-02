@@ -1,8 +1,8 @@
 // Package provider implements the Discord OAuth2 auth provider registered
 // with the host so the workbench login page can discover a "Continue with
-// Discord" entry. Runtime metadata is sourced from the host's shared plugin
-// settings store on every login-entry read so operator changes take effect
-// without restarting the plugin.
+// Discord" entry. The public login-entry projection is static by design;
+// redirect rules and token-delivery settings are read only by authenticated
+// settings APIs and OAuth callback handlers.
 package provider
 
 import (
@@ -19,7 +19,8 @@ const providerID = "discord"
 
 // Provider implements authprovider.Provider for Discord login.
 type Provider struct {
-	// settingsSvc reads the typed Discord OAuth2 settings on demand.
+	// settingsSvc is retained for construction compatibility; public discovery
+	// must not read it because /auth/providers is anonymous and high traffic.
 	settingsSvc *configsvc.Service
 }
 
@@ -44,21 +45,12 @@ func (p *Provider) Kind() authprovider.Kind {
 	return authprovider.KindOAuth2
 }
 
-// LoginEntry returns the login entry metadata rendered on the workbench
-// login page.
-func (p *Provider) LoginEntry(ctx context.Context) (*authprovider.LoginEntry, error) {
-	if p == nil || p.settingsSvc == nil {
-		return staticLoginEntry(), nil
-	}
-	settings, err := p.settingsSvc.Get(ctx)
-	if err != nil {
-		return nil, err
-	}
-	entry := staticLoginEntry()
-	entry.BackendRedirectEnabled = settings.EnableBackendRedirect
-	entry.BackendRedirectDefault = settings.DefaultBackendRedirect
-	entry.BackendRedirectRules = settings.BackendRedirects
-	return entry, nil
+// LoginEntry returns only the public login button metadata rendered on the
+// workbench login page. It deliberately avoids reading plugin settings so the
+// anonymous provider list has bounded database access and never exposes SSO
+// redirect-rule state keys or receiver URLs.
+func (p *Provider) LoginEntry(_ context.Context) (*authprovider.LoginEntry, error) {
+	return staticLoginEntry(), nil
 }
 
 // staticLoginEntry builds the immutable parts of the login entry so

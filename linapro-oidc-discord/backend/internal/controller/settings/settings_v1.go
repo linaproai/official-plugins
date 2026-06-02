@@ -38,7 +38,6 @@ func (c *ControllerV1) GetSettings(ctx context.Context, _ *v1.GetSettingsReq) (r
 		EnableBackendRedirect:  settings.EnableBackendRedirect,
 		DefaultBackendRedirect: settings.DefaultBackendRedirect,
 		BackendRedirects:       settings.BackendRedirects,
-		Enabled:                settings.Enabled,
 	}, nil
 }
 
@@ -53,7 +52,6 @@ func (c *ControllerV1) SaveSettings(ctx context.Context, req *v1.SaveSettingsReq
 		EnableBackendRedirect:  req.EnableBackendRedirect,
 		DefaultBackendRedirect: req.DefaultBackendRedirect,
 		BackendRedirects:       req.BackendRedirects,
-		Enabled:                req.Enabled,
 	})
 	if err != nil {
 		return nil, err

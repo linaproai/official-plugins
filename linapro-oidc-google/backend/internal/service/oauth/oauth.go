@@ -2,8 +2,9 @@
 // the linapro-oidc-google source plugin. It owns authorization URL building,
 // HMAC-signed state encoding, token exchange against Google's token endpoint,
 // and user-info retrieval against Google's OpenID Connect userinfo endpoint.
-// The service is stateless and only depends on the runtime plugin settings,
-// so it is safe to construct one instance per route registration.
+// The service is stateless and only depends on OAuth client settings; provider
+// enablement is enforced by the controller through the host PluginState
+// capability before this service is called.
 package oauth
 
 import (
@@ -22,6 +23,8 @@ import (
 	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
+
+	"lina-core/pkg/logger"
 )
 
 // Google OAuth2 endpoint constants used by the authorization-code flow.
@@ -57,9 +60,6 @@ type Settings struct {
 	// RedirectURI is the registered OAuth2 redirect URI. When empty the
 	// caller must supply a default based on the current request.
 	RedirectURI string
-	// Enabled reports whether Google login is enabled. Disabled providers
-	// short-circuit both initiation and callback handling.
-	Enabled bool
 }
 
 // StatePayload holds the decoded contents of an OAuth state token.
@@ -111,9 +111,6 @@ func (s *Service) SetHTTPClient(client *http.Client) {
 // Google's authorization flow. It also returns the signed state token so the
 // caller can include it in audit logs.
 func (s *Service) BuildAuthorizeURL(settings Settings, redirectURI string, stateKey string) (string, string, error) {
-	if !settings.Enabled {
-		return "", "", gerror.New("google login is disabled")
-	}
 	clientID := strings.TrimSpace(settings.ClientID)
 	if clientID == "" {
 		return "", "", gerror.New("google client id is not configured")
@@ -191,9 +188,7 @@ func (s *Service) ExchangeCode(ctx context.Context, settings Settings, redirectU
 	if err != nil {
 		return "", gerror.Wrap(err, "call google token endpoint failed")
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
+	defer closeResponseBody(ctx, resp, "google oauth token endpoint")
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", gerror.Wrap(err, "read google token response failed")
@@ -236,9 +231,7 @@ func (s *Service) FetchUserIdentity(ctx context.Context, accessToken string) (*U
 	if err != nil {
 		return nil, gerror.Wrap(err, "call google userinfo endpoint failed")
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
+	defer closeResponseBody(ctx, resp, "google oauth userinfo endpoint")
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, gerror.Wrap(err, "read google userinfo response failed")
@@ -325,4 +318,18 @@ func truncate(value string, limit int) string {
 		return value
 	}
 	return fmt.Sprintf("%s...(truncated)", value[:limit])
+}
+
+// closeResponseBody closes resp.Body once the caller has finished reading
+// it and logs any close-time error against the supplied context. It exists
+// so the call sites stay compatible with the project rule that forbids
+// discarding error returns via `_ = err`. The endpointLabel parameter
+// disambiguates token vs userinfo log lines without leaking secret values.
+func closeResponseBody(ctx context.Context, resp *http.Response, endpointLabel string) {
+	if resp == nil || resp.Body == nil {
+		return
+	}
+	if err := resp.Body.Close(); err != nil {
+		logger.Warningf(ctx, "%s close response body failed err=%v", endpointLabel, err)
+	}
 }

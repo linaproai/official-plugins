@@ -1,5 +1,7 @@
 // Package config implements typed access to the Google OIDC plugin's runtime
-// configuration. The persistence backend is the host's shared
+// configuration. Provider enablement is intentionally not part of this
+// plugin-private shape; it is controlled by the host plugin enabled state used
+// by the unified provider enablement contract. The persistence backend is the host's shared
 // PluginSettingsService (which stores rows in sys_config keyed by
 // "<pluginID>.<settingKey>"), so this package only owns the typed Settings
 // shape, the per-field setting keys, and the parse/serialize logic.
@@ -47,8 +49,6 @@ type Settings struct {
 	// BackendRedirects is the JSON object mapping state keys to redirect
 	// URLs, stored verbatim because the host treats it as opaque.
 	BackendRedirects string
-	// Enabled reports whether Google login is currently enabled.
-	Enabled bool
 }
 
 // Setting-key constants identify each field inside the plugin's sys_config
@@ -61,12 +61,13 @@ const (
 	keyEnableBackendRedirect  = "enableBackendRedirect"
 	keyDefaultBackendRedirect = "defaultBackendRedirect"
 	keyBackendRedirects       = "backendRedirects"
-	keyEnabled                = "enabled"
 )
 
 // defaultDefaultBackendRedirect is the built-in fallback redirect URL used
-// when no operator value is configured.
-const defaultDefaultBackendRedirect = "/dashboard"
+// when no operator value is configured. It points at the workbench
+// analytics dashboard so users always land on a real page rather than the
+// workbench root after an OAuth login completes.
+const defaultDefaultBackendRedirect = "/dashboard/analytics"
 
 // Service reads and writes Google OIDC plugin settings through the shared
 // host settings store.
@@ -97,7 +98,6 @@ func (s *Service) Get(ctx context.Context) (*Settings, error) {
 		EnableBackendRedirect:  parseBool(values[keyEnableBackendRedirect], false),
 		DefaultBackendRedirect: stringOrDefault(values[keyDefaultBackendRedirect], defaultDefaultBackendRedirect),
 		BackendRedirects:       values[keyBackendRedirects],
-		Enabled:                parseBool(values[keyEnabled], false),
 	}
 	return out, nil
 }
@@ -132,9 +132,6 @@ func (s *Service) Save(ctx context.Context, in *Settings) error {
 		return err
 	}
 	if err := s.settings.SetString(ctx, PluginID, keyBackendRedirects, in.BackendRedirects); err != nil {
-		return err
-	}
-	if err := s.settings.SetString(ctx, PluginID, keyEnabled, formatBool(in.Enabled)); err != nil {
 		return err
 	}
 	return nil

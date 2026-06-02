@@ -1,9 +1,8 @@
 // Package provider implements the Google OIDC auth provider registered with
 // the host so the workbench login page can discover a "Continue with Google"
-// entry. The provider's runtime metadata (backend redirect toggle, default
-// redirect URL, JSON rule map) is sourced from the host's shared plugin
-// settings store on every login-entry read so operator changes take effect
-// without restarting the plugin.
+// entry. The public login-entry projection is static by design; redirect rules
+// and token-delivery settings are read only by authenticated settings APIs and
+// OAuth callback handlers.
 package provider
 
 import (
@@ -20,10 +19,10 @@ import (
 const providerID = "google"
 
 // Provider implements authprovider.Provider for Google login. The provider
-// is intentionally state-less besides the settings dependency so the host
-// can re-read live configuration on every request.
+// is intentionally state-less for public provider discovery.
 type Provider struct {
-	// settingsSvc reads the typed Google OIDC settings on demand.
+	// settingsSvc is retained for construction compatibility; public discovery
+	// must not read it because /auth/providers is anonymous and high traffic.
 	settingsSvc *configsvc.Service
 }
 
@@ -50,22 +49,12 @@ func (p *Provider) Kind() authprovider.Kind {
 	return authprovider.KindOIDC
 }
 
-// LoginEntry returns the login entry metadata rendered on the workbench
-// login page. The metadata reflects the current plugin settings so admin
-// toggles take effect immediately.
-func (p *Provider) LoginEntry(ctx context.Context) (*authprovider.LoginEntry, error) {
-	if p == nil || p.settingsSvc == nil {
-		return staticLoginEntry(), nil
-	}
-	settings, err := p.settingsSvc.Get(ctx)
-	if err != nil {
-		return nil, err
-	}
-	entry := staticLoginEntry()
-	entry.BackendRedirectEnabled = settings.EnableBackendRedirect
-	entry.BackendRedirectDefault = settings.DefaultBackendRedirect
-	entry.BackendRedirectRules = settings.BackendRedirects
-	return entry, nil
+// LoginEntry returns only the public login button metadata rendered on the
+// workbench login page. It deliberately avoids reading plugin settings so the
+// anonymous provider list has bounded database access and never exposes SSO
+// redirect-rule state keys or receiver URLs.
+func (p *Provider) LoginEntry(_ context.Context) (*authprovider.LoginEntry, error) {
+	return staticLoginEntry(), nil
 }
 
 // staticLoginEntry builds the immutable parts of the login entry so

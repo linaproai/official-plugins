@@ -1,7 +1,7 @@
 <script lang="ts">
 export const pluginPageMeta = {
   routePath: 'linapro-oidc-google-settings',
-  title: 'Google 登录配置',
+  title: 'plugin:linapro-oidc-google:settings',
 };
 </script>
 
@@ -39,7 +39,6 @@ interface GoogleOidcSettings {
   enableBackendRedirect: boolean;
   defaultBackendRedirect: string;
   backendRedirects: string;
-  enabled: boolean;
 }
 
 const saving = ref(false);
@@ -55,7 +54,6 @@ const form = ref<GoogleOidcSettings>({
   enableBackendRedirect: false,
   defaultBackendRedirect: '/dashboard',
   backendRedirects: '',
-  enabled: false,
 });
 
 // computedRedirectUri reflects the actual callback URL the deployment is
@@ -108,7 +106,7 @@ async function copyToClipboard(text: string, successMessage: string) {
     }
     message.success(successMessage);
   } catch {
-    message.error('复制失败');
+    message.error($t('plugins.oidc.settings.copyFailed'));
   }
 }
 
@@ -162,11 +160,10 @@ async function loadSettings() {
       enableBackendRedirect: res.enableBackendRedirect ?? false,
       defaultBackendRedirect: res.defaultBackendRedirect ?? '/dashboard',
       backendRedirects: res.backendRedirects ?? '',
-      enabled: res.enabled ?? false,
     };
     redirectRules.value = parseRedirectRules(res.backendRedirects ?? '');
   } catch {
-    message.error('加载配置失败');
+    message.error($t('plugins.oidc.settings.loadFailed'));
   }
 }
 
@@ -180,11 +177,10 @@ async function saveSettings() {
       enableBackendRedirect: form.value.enableBackendRedirect,
       defaultBackendRedirect: form.value.defaultBackendRedirect,
       backendRedirects: serializeRedirectRules(redirectRules.value),
-      enabled: form.value.enabled,
     });
-    message.success('配置已保存');
+    message.success($t('plugins.oidc.settings.saveSuccess'));
   } catch {
-    message.error('保存配置失败');
+    message.error($t('plugins.oidc.settings.saveFailed'));
   } finally {
     saving.value = false;
   }
@@ -209,50 +205,50 @@ onMounted(loadSettings);
       </ol>
     </ACard>
 
-    <ACard title="Google 登录配置">
+    <ACard :title="$t('plugins.oidc.settings.cardTitle', { provider: $t('plugins.oidc.google.displayName') })">
       <AForm class="space-y-5">
         <AFormItem>
-          <div class="mb-2 font-medium">Client ID</div>
-          <AInput v-model:value="form.clientId" placeholder="请输入 Google OAuth2 Client ID" />
-          <div class="mt-1 text-xs text-gray-500">从 Google Cloud Console 获取的 OAuth2 客户端 ID</div>
+          <div class="mb-2 font-medium">{{ $t('plugins.oidc.settings.clientIdLabel') }}</div>
+          <AInput v-model:value="form.clientId" :placeholder="$t('plugins.oidc.settings.clientIdPlaceholder', { provider: $t('plugins.oidc.google.displayName') })" />
+          <div class="mt-1 text-xs text-gray-500">{{ $t('plugins.oidc.settings.clientIdHelp', { console: $t('plugins.oidc.google.consoleName') }) }}</div>
         </AFormItem>
 
         <AFormItem>
-          <div class="mb-2 font-medium">Client Secret</div>
-          <AInputPassword v-model:value="form.clientSecret" placeholder="请输入 Google OAuth2 Client Secret" />
-          <div class="mt-1 text-xs text-gray-500">留空表示不修改当前密钥；如需更新请重新输入完整 Client Secret</div>
+          <div class="mb-2 font-medium">{{ $t('plugins.oidc.settings.clientSecretLabel') }}</div>
+          <AInputPassword v-model:value="form.clientSecret" :placeholder="$t('plugins.oidc.settings.clientSecretPlaceholder', { provider: $t('plugins.oidc.google.displayName') })" />
+          <div class="mt-1 text-xs text-gray-500">{{ $t('plugins.oidc.settings.clientSecretHelp') }}</div>
         </AFormItem>
 
         <AFormItem>
-          <div class="mb-2 font-medium">Redirect URI</div>
+          <div class="mb-2 font-medium">{{ $t('plugins.oidc.settings.redirectUriLabel') }}</div>
           <div class="flex items-center gap-2">
             <AInput :value="computedRedirectUri" readonly class="flex-1" />
-            <AButton @click="copyToClipboard(computedRedirectUri, 'Redirect URI 已复制')">复制</AButton>
+            <AButton @click="copyToClipboard(computedRedirectUri, $t('plugins.oidc.settings.redirectUriCopied'))">{{ $t('plugins.oidc.settings.copy') }}</AButton>
           </div>
-          <div class="mt-1 text-xs text-gray-500">根据当前站点自动生成，不可编辑。请把这个完整地址注册到 Google Cloud Console 的「已获授权的重定向 URI」</div>
+          <div class="mt-1 text-xs text-gray-500">{{ $t('plugins.oidc.settings.redirectUriHelp', { section: $t('plugins.oidc.google.registerSection') }) }}</div>
         </AFormItem>
 
         <AFormItem>
-          <div class="mb-2 font-medium">登录成功后默认跳转</div>
-          <AInput v-model:value="form.defaultBackendRedirect" placeholder="/dashboard" />
-          <div class="mt-1 text-xs text-gray-500">登录成功且未命中下方 SSO 规则时，SPA 内部跳转到这个落地页（默认 /dashboard）</div>
+          <div class="mb-2 font-medium">{{ $t('plugins.oidc.settings.defaultRedirectLabel') }}</div>
+          <AInput v-model:value="form.defaultBackendRedirect" placeholder="/dashboard/analytics" />
+          <div class="mt-1 text-xs text-gray-500">{{ $t('plugins.oidc.settings.defaultRedirectHelp') }}</div>
         </AFormItem>
 
         <AFormItem>
           <div class="flex items-center gap-3">
-            <span class="font-medium">启用 SSO Token 投递</span>
-            <ASwitch v-model:checked="form.enableBackendRedirect" checked-children="启用" un-checked-children="禁用" />
+            <span class="font-medium">{{ $t('plugins.oidc.settings.enableSsoLabel') }}</span>
+            <ASwitch v-model:checked="form.enableBackendRedirect" :checked-children="$t('plugins.oidc.settings.enabledText')" :un-checked-children="$t('plugins.oidc.settings.disabledText')" />
           </div>
-          <div class="mt-1 text-xs text-gray-500">启用后，当 OAuth 入口附带的 state 命中下方规则，会直接把 accessToken/refreshToken 作为 query 投递到规则配置的外部 URL，不再进入 SPA。state 为空或未命中时走"登录成功后默认跳转"</div>
+          <div class="mt-1 text-xs text-gray-500">{{ $t('plugins.oidc.settings.enableSsoHelp') }}</div>
         </AFormItem>
 
         <AFormItem>
           <div class="mb-2 flex items-center justify-between">
-            <span class="font-medium">SSO Token 投递规则（state → 外部 URL）</span>
+            <span class="font-medium">{{ $t('plugins.oidc.settings.rulesTitle') }}</span>
           </div>
           <div class="space-y-3 rounded-lg border border-dashed border-gray-300 p-4">
             <div v-if="redirectRules.length === 0" class="text-xs text-gray-500">
-              当前未配置 SSO 规则。默认登录会走"登录成功后默认跳转"，不会触发 SSO 投递。
+              {{ $t('plugins.oidc.settings.rulesEmpty') }}
             </div>
             <div
               v-for="(rule, index) in redirectRules"
@@ -260,30 +256,23 @@ onMounted(loadSettings);
               class="space-y-2"
             >
               <div class="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-                <AInput v-model:value="rule.state" placeholder="state，例如 partner-a" />
-                <AInput v-model:value="rule.redirectUrl" placeholder="外部 URL，例如 https://app.example.com/sso/receive" />
-                <AButton danger type="text" @click="removeRedirectRule(index)">删除</AButton>
+                <AInput v-model:value="rule.state" :placeholder="$t('plugins.oidc.settings.statePlaceholder')" />
+                <AInput v-model:value="rule.redirectUrl" :placeholder="$t('plugins.oidc.settings.receiverPlaceholder')" />
+                <AButton danger type="text" @click="removeRedirectRule(index)">{{ $t('plugins.oidc.settings.delete') }}</AButton>
               </div>
               <div class="flex items-center gap-2 text-xs text-gray-500">
-                <span>对应登录入口：</span>
+                <span>{{ $t('plugins.oidc.settings.entryLabel') }}</span>
                 <code class="flex-1 truncate rounded bg-gray-100 px-2 py-1">{{ buildStateLoginURL(rule.state) }}</code>
-                <AButton size="small" :disabled="!rule.state.trim()" @click="copyToClipboard(buildStateLoginURL(rule.state), 'state 登录入口 URL 已复制')">复制</AButton>
+                <AButton size="small" :disabled="!rule.state.trim()" @click="copyToClipboard(buildStateLoginURL(rule.state), $t('plugins.oidc.settings.stateEntryCopied'))">{{ $t('plugins.oidc.settings.copy') }}</AButton>
               </div>
             </div>
-            <AButton block type="dashed" @click="addRedirectRule">新增 SSO 规则</AButton>
+            <AButton block type="dashed" @click="addRedirectRule">{{ $t('plugins.oidc.settings.addRule') }}</AButton>
           </div>
-          <div class="mt-1 text-xs text-gray-500">页面自动把多行规则组装成 JSON 存到后端。state 未命中时走"登录成功后默认跳转"</div>
+          <div class="mt-1 text-xs text-gray-500">{{ $t('plugins.oidc.settings.rulesHelp') }}</div>
         </AFormItem>
 
         <AFormItem>
-          <div class="flex items-center gap-3">
-          <span class="font-medium">启用 Google 登录</span>
-          <ASwitch v-model:checked="form.enabled" checked-children="启用" un-checked-children="禁用" />
-          </div>
-        </AFormItem>
-
-        <AFormItem>
-          <AButton type="primary" :loading="saving" @click="saveSettings">保存配置</AButton>
+          <AButton type="primary" :loading="saving" @click="saveSettings">{{ $t('plugins.oidc.settings.save') }}</AButton>
         </AFormItem>
       </AForm>
     </ACard>

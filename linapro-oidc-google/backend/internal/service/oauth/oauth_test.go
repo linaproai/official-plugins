@@ -78,16 +78,19 @@ func TestServiceDecodeStateRejectsExpired(t *testing.T) {
 	}
 }
 
-// TestBuildAuthorizeURLRequiresEnabled verifies the OAuth service refuses to
-// build an authorization URL when the plugin is disabled.
-func TestBuildAuthorizeURLRequiresEnabled(t *testing.T) {
-	_, _, err := New().BuildAuthorizeURL(Settings{
+// TestBuildAuthorizeURLBuildsWhenClientSettingsExist verifies provider
+// enablement is not a plugin-private OAuth setting. The controller checks the
+// host PluginState capability before calling this service.
+func TestBuildAuthorizeURLBuildsWhenClientSettingsExist(t *testing.T) {
+	url, _, err := New().BuildAuthorizeURL(Settings{
 		ClientID:     "client",
 		ClientSecret: "secret",
 		RedirectURI:  "https://example.com/api/v1/auth/google/callback",
-		Enabled:      false,
 	}, "", "google")
-	if err == nil {
-		t.Fatal("expected disabled provider to be rejected")
+	if err != nil {
+		t.Fatalf("build authorize URL: %v", err)
+	}
+	if !strings.Contains(url, "client_id=client") {
+		t.Fatalf("expected client_id in authorize URL, got %s", url)
 	}
 }

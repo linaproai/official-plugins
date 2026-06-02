@@ -8,12 +8,15 @@
 package oauth
 
 import (
+	"context"
 	"errors"
 	"testing"
 
 	"github.com/gogf/gf/v2/errors/gcode"
 
 	"lina-core/pkg/bizerr"
+	plugincontract "lina-core/pkg/plugin/capability/contract"
+	configsvc "lina-plugin-linapro-oidc-discord/backend/internal/service/config"
 )
 
 // testCodeUserNotProvisioned mirrors the host runtime code for
@@ -66,5 +69,104 @@ func TestClassifyHostLoginErrorFallsBack(t *testing.T) {
 func TestClassifyHostLoginErrorIgnoresNil(t *testing.T) {
 	if got := classifyHostLoginError(nil); got != "" {
 		t.Fatalf("classifyHostLoginError(nil) = %q, want empty", got)
+	}
+}
+
+// fakePluginState is an in-memory PluginStateService double whose return
+// values and recorded calls let the tests assert both the value the
+// controller observes and the identifier the controller queries.
+type fakePluginState struct {
+	providerEnabled bool
+	enabled         bool
+	authoritative   bool
+	lastPluginID    string
+}
+
+// IsProviderEnabled records the queried pluginID and returns the configured
+// platform-enabled answer. The controller must call this contract because
+// it is the only one whose semantics match anonymous /auth/providers
+// gating.
+func (f *fakePluginState) IsProviderEnabled(_ context.Context, pluginID string) bool {
+	f.lastPluginID = pluginID
+	return f.providerEnabled
+}
+
+// IsEnabled records the queried pluginID and returns the configured
+// business-entry visibility answer. The controller intentionally must NOT
+// call this contract for OAuth flows.
+func (f *fakePluginState) IsEnabled(_ context.Context, pluginID string) bool {
+	f.lastPluginID = pluginID
+	return f.enabled
+}
+
+// IsEnabledAuthoritative records the queried pluginID and returns the
+// configured authoritative answer; included so the fake satisfies the
+// PluginStateService interface even though the OAuth controller does not
+// rely on it.
+func (f *fakePluginState) IsEnabledAuthoritative(_ context.Context, pluginID string) bool {
+	f.lastPluginID = pluginID
+	return f.authoritative
+}
+
+// compile-time check that fakePluginState satisfies the host contract.
+var _ plugincontract.PluginStateService = (*fakePluginState)(nil)
+
+// TestIsProviderEnabledNilController verifies a nil controller short-circuits
+// to false so even an uninitialized pointer keeps OAuth gated.
+func TestIsProviderEnabledNilController(t *testing.T) {
+	var c *Controller
+	if c.isProviderEnabled(context.Background()) {
+		t.Fatal("nil controller must report provider disabled")
+	}
+}
+
+// TestIsProviderEnabledNilPluginState verifies a missing PluginState
+// dependency keeps the controller fail-closed. This protects against
+// construction errors that would silently leave OAuth open when the host
+// could not publish the unified provider enablement contract.
+func TestIsProviderEnabledNilPluginState(t *testing.T) {
+	c := &Controller{}
+	if c.isProviderEnabled(context.Background()) {
+		t.Fatal("controller without PluginState must report provider disabled")
+	}
+}
+
+// TestIsProviderEnabledTrue verifies the controller forwards the platform
+// enabled snapshot's positive answer and asks for the canonical plugin id
+// owned by configsvc.
+func TestIsProviderEnabledTrue(t *testing.T) {
+	fake := &fakePluginState{providerEnabled: true}
+	c := &Controller{pluginState: fake}
+	if !c.isProviderEnabled(context.Background()) {
+		t.Fatal("expected provider enabled when PluginState returns true")
+	}
+	if fake.lastPluginID != configsvc.PluginID {
+		t.Fatalf("expected PluginState to be queried with %q, got %q", configsvc.PluginID, fake.lastPluginID)
+	}
+}
+
+// TestIsProviderEnabledFalse verifies the controller forwards the platform
+// enabled snapshot's negative answer so disabled plugins cannot
+// accidentally serve OAuth requests.
+func TestIsProviderEnabledFalse(t *testing.T) {
+	fake := &fakePluginState{providerEnabled: false}
+	c := &Controller{pluginState: fake}
+	if c.isProviderEnabled(context.Background()) {
+		t.Fatal("expected provider disabled when PluginState returns false")
+	}
+	if fake.lastPluginID != configsvc.PluginID {
+		t.Fatalf("expected PluginState to be queried with %q, got %q", configsvc.PluginID, fake.lastPluginID)
+	}
+}
+
+// TestIsProviderEnabledIgnoresBusinessEntryVisibility verifies the
+// controller does not fall back to IsEnabled (business-entry visibility),
+// which can return false for tenants without the menu even when the
+// platform snapshot has the provider enabled.
+func TestIsProviderEnabledIgnoresBusinessEntryVisibility(t *testing.T) {
+	fake := &fakePluginState{providerEnabled: true, enabled: false}
+	c := &Controller{pluginState: fake}
+	if !c.isProviderEnabled(context.Background()) {
+		t.Fatal("expected provider enabled answer to come from IsProviderEnabled, not IsEnabled")
 	}
 }

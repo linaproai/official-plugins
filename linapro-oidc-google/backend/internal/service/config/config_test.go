@@ -56,8 +56,8 @@ func TestGetReturnsDefaults(t *testing.T) {
 	if got.EnableBackendRedirect {
 		t.Fatalf("expected default EnableBackendRedirect=false")
 	}
-	if got.DefaultBackendRedirect != "/dashboard" {
-		t.Fatalf("expected default DefaultBackendRedirect=/dashboard, got %q", got.DefaultBackendRedirect)
+	if got.DefaultBackendRedirect != "/dashboard/analytics" {
+		t.Fatalf("expected default DefaultBackendRedirect=/dashboard/analytics, got %q", got.DefaultBackendRedirect)
 	}
 }
 
@@ -70,9 +70,8 @@ func TestSaveAndGetRoundtrip(t *testing.T) {
 		ClientSecret:           "first-secret",
 		RedirectURI:            "https://example.com/api/v1/auth/google/callback",
 		EnableBackendRedirect:  true,
-		DefaultBackendRedirect: "/dashboard",
-		BackendRedirects:       `{"google":"/dashboard"}`,
-		Enabled:                true,
+		DefaultBackendRedirect: "/dashboard/analytics",
+		BackendRedirects:       `{"google":"/dashboard/analytics"}`,
 	}
 	if err := svc.Save(context.Background(), original); err != nil {
 		t.Fatalf("save: %v", err)
@@ -98,9 +97,6 @@ func TestSaveAndGetRoundtrip(t *testing.T) {
 	}
 	if got.BackendRedirects != original.BackendRedirects {
 		t.Fatalf("BackendRedirects mismatch: got %q", got.BackendRedirects)
-	}
-	if !got.Enabled {
-		t.Fatal("Enabled lost across roundtrip")
 	}
 }
 

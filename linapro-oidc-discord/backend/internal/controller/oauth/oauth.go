@@ -15,7 +15,6 @@ import (
 	netUrl "net/url"
 	"strings"
 
-	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 
@@ -41,49 +40,69 @@ type Controller struct {
 	// settingsSvc reads the typed Discord OAuth2 settings on every callback
 	// so admin updates take effect without restarting the plugin.
 	settingsSvc *configsvc.Service
+	// pluginState reads the host-owned provider enablement state. The Discord
+	// plugin no longer owns a private enabled flag in settings.
+	pluginState plugincontract.PluginStateService
 	// oauthSvc encapsulates the Discord authorization-code flow.
 	oauthSvc *oauthsvc.Service
 }
 
-// New constructs a Controller bound to the host auth contract and the
-// shared Discord OAuth2 settings service.
-func New(authSvc plugincontract.AuthService, settingsSvc *configsvc.Service) *Controller {
+// New constructs a Controller bound to the host auth contract, the shared
+// Discord OAuth2 settings service, and the host-owned PluginState capability.
+// Callers must pass a non-nil pluginState; the plugin registrar rejects
+// construction when the host has not published the unified provider
+// enablement contract so the controller never operates without it.
+//
+// pluginState is consulted on every StartLogin and HandleCallback request
+// through isProviderEnabled to decide whether the Discord provider may run.
+// authSvc converts verified external identities into host login outcomes.
+// settingsSvc provides per-request typed access to the masked OAuth client
+// credentials and SSO delivery rules stored under sys_config.
+func New(authSvc plugincontract.AuthService, settingsSvc *configsvc.Service, pluginState plugincontract.PluginStateService) *Controller {
 	return &Controller{
 		authSvc:     authSvc,
 		settingsSvc: settingsSvc,
+		pluginState: pluginState,
 		oauthSvc:    oauthsvc.New(),
 	}
 }
 
-// StartLogin handles GET /api/v1/auth/discord. It loads the current plugin
-// settings, builds Discord's authorization URL with a signed state token,
-// and 302 redirects the browser to Discord.
+// StartLogin handles GET /api/v1/auth/discord. It first asks the host
+// PluginState capability whether the Discord provider is platform-enabled so
+// disabled plugins short-circuit without touching sys_config, then loads the
+// current plugin settings, builds Discord's authorization URL with a signed
+// state token, and 302 redirects the browser to Discord.
 func (c *Controller) StartLogin(req *ghttp.Request) {
 	ctx := req.Context()
-	settings, err := c.settingsSvc.Get(ctx)
-	if err != nil {
-		c.writeError(req, "discord login settings unavailable", err)
+	if !c.isProviderEnabled(ctx) {
+		c.writeError(req, CodeOAuthProviderDisabled, bizerr.NewCode(CodeOAuthProviderDisabled))
 		return
 	}
-	if settings == nil || !settings.Enabled {
-		c.writeError(req, "discord login is disabled", gerror.New("plugin disabled"))
+	settings, err := c.settingsSvc.Get(ctx)
+	if err != nil {
+		c.writeError(req, CodeOAuthSettingsUnavailable, bizerr.WrapCode(err, CodeOAuthSettingsUnavailable))
+		return
+	}
+	if settings == nil {
+		c.writeError(req, CodeOAuthSettingsUnavailable, bizerr.NewCode(CodeOAuthSettingsUnavailable))
 		return
 	}
 	stateKey := strings.TrimSpace(req.Get("state").String())
 	redirectURI := c.resolveRedirectURI(req, settings.RedirectURI)
 	authorizeURL, _, err := c.oauthSvc.BuildAuthorizeURL(toOAuthSettings(settings), redirectURI, stateKey)
 	if err != nil {
-		c.writeError(req, "build discord authorize url failed", err)
+		c.writeError(req, CodeOAuthAuthorizeURLFailed, bizerr.WrapCode(err, CodeOAuthAuthorizeURLFailed))
 		return
 	}
 	req.Response.RedirectTo(authorizeURL, 302)
 }
 
-// HandleCallback handles GET /api/v1/auth/discord/callback. It validates
-// the state, exchanges the authorization code for a Discord access token,
-// fetches the verified userinfo, hands the identity off to the host
-// login flow, and redirects to the frontend OAuth handoff page with the
-// host login outcome.
+// HandleCallback handles GET /api/v1/auth/discord/callback. It first checks
+// the unified provider enablement state so disabled plugins fail fast before
+// touching sys_config, then validates the state, exchanges the authorization
+// code for a Discord access token, fetches the verified userinfo, hands the
+// identity off to the host login flow, and redirects to the frontend OAuth
+// handoff page with the host login outcome.
 func (c *Controller) HandleCallback(req *ghttp.Request) {
 	ctx := req.Context()
 	if errParam := strings.TrimSpace(req.Get("error").String()); errParam != "" {
@@ -93,39 +112,43 @@ func (c *Controller) HandleCallback(req *ghttp.Request) {
 	code := strings.TrimSpace(req.Get("code").String())
 	rawState := strings.TrimSpace(req.Get("state").String())
 	if code == "" || rawState == "" {
-		c.redirectWithError(req, "/", "missing_code_or_state")
+		c.redirectWithCode(req, "/", CodeOAuthMissingCodeOrState)
+		return
+	}
+	if !c.isProviderEnabled(ctx) {
+		c.redirectWithCode(req, "/", CodeOAuthProviderDisabled)
 		return
 	}
 	settings, err := c.settingsSvc.Get(ctx)
 	if err != nil {
-		c.writeError(req, "discord login settings unavailable", err)
+		c.writeError(req, CodeOAuthSettingsUnavailable, bizerr.WrapCode(err, CodeOAuthSettingsUnavailable))
 		return
 	}
-	if settings == nil || !settings.Enabled {
-		c.redirectWithError(req, "/", "provider_disabled")
+	if settings == nil {
+		c.redirectWithCode(req, "/", CodeOAuthProviderDisabled)
 		return
 	}
 	statePayload, err := c.oauthSvc.DecodeState(rawState, settings.ClientSecret)
 	if err != nil {
 		logger.Warningf(ctx, "discord oauth state validation failed err=%v", err)
-		c.redirectWithError(req, "/", "invalid_state")
+		c.redirectWithCode(req, "/", CodeOAuthInvalidState)
 		return
 	}
 	redirectURI := c.resolveRedirectURI(req, settings.RedirectURI)
 	discordAccessToken, err := c.oauthSvc.ExchangeCode(ctx, toOAuthSettings(settings), redirectURI, code)
 	if err != nil {
 		logger.Warningf(ctx, "discord oauth code exchange failed err=%v", err)
-		c.redirectWithError(req, "/", "code_exchange_failed")
+		c.redirectWithCode(req, "/", CodeOAuthCodeExchangeFailed)
 		return
 	}
 	identity, err := c.oauthSvc.FetchUserIdentity(ctx, discordAccessToken)
 	if err != nil {
 		logger.Warningf(ctx, "discord oauth userinfo failed err=%v", err)
-		c.redirectWithError(req, "/", "userinfo_failed")
+		c.redirectWithCode(req, "/", CodeOAuthUserinfoFailed)
 		return
 	}
 	if !identity.EmailVerified {
-		c.redirectWithError(req, "/", "email_not_verified")
+		c.redirectWithCode(req, "/", CodeOAuthEmailNotVerified)
 		return
 	}
 	hostOutput, err := c.authSvc.LoginByExternal(ctx, plugincontract.ExternalLoginInput{
@@ -183,12 +206,12 @@ func (c *Controller) resolveRedirectURI(req *ghttp.Request, configured string) s
 // the OAuth handoff page consumes the host login outcome. It is
 // intentionally independent of the SSO token delivery rules: the operator
 // uses this value to control "after a normal login, where does the user
-// land inside the workbench". It falls back to /dashboard when the
+// land inside the workbench". It falls back to /dashboard/analytics when the
 // operator did not configure a custom landing page.
 func (c *Controller) resolveSPALanding(defaultRedirect string) string {
 	landing := strings.TrimSpace(defaultRedirect)
 	if landing == "" {
-		return "/dashboard"
+		return "/dashboard/analytics"
 	}
 	return landing
 }
@@ -280,7 +303,7 @@ func (c *Controller) redirectToSPAHandoff(
 			values["tenants"] = encodedTenants
 		}
 	default:
-		c.redirectWithError(req, spaLanding, "empty_login_result")
+		c.redirectWithCode(req, spaLanding, CodeOAuthEmptyLoginResult)
 		return
 	}
 	req.Response.RedirectTo(c.authSvc.OAuthHandoffURL(req.Context(), values), 302)
@@ -299,15 +322,28 @@ func (c *Controller) redirectWithError(req *ghttp.Request, target string, reason
 	req.Response.RedirectTo(c.authSvc.OAuthHandoffURL(req.Context(), values), 302)
 }
 
+// redirectWithCode sends the browser to the frontend OAuth handoff page with
+// the runtime code from one local bizerr definition. This keeps local plugin
+// OAuth failures centralized in oauth_code.go while preserving the query-code
+// handoff contract consumed by the SPA.
+func (c *Controller) redirectWithCode(req *ghttp.Request, target string, code *bizerr.Code) {
+	c.redirectWithError(req, target, code.RuntimeCode())
+}
+
 // writeError logs and returns a non-redirecting 4xx response. It is reserved
 // for unrecoverable misconfigurations (missing settings, disabled provider)
 // where redirecting back to the handoff page would mask the root cause.
-func (c *Controller) writeError(req *ghttp.Request, message string, cause error) {
-	logger.Warningf(req.Context(), "discord oauth request rejected reason=%s err=%v", message, cause)
+func (c *Controller) writeError(req *ghttp.Request, code *bizerr.Code, cause error) {
+	logger.Warningf(req.Context(), "discord oauth request rejected code=%s err=%v", code.RuntimeCode(), cause)
 	req.Response.WriteHeader(400)
 	req.Response.WriteJsonExit(g.Map{
-		"providerId": oauthsvc.ProviderID,
-		"error":      message,
+		"providerId":    oauthsvc.ProviderID,
+		"error":         code.RuntimeCode(),
+		"errorCode":     code.RuntimeCode(),
+		"fallback":      code.Fallback(),
+		"messageKey":    code.MessageKey(),
+		"message":       code.Fallback(),
+		"messageParams": g.Map{},
 	})
 }
 
@@ -320,8 +356,26 @@ func toOAuthSettings(settings *configsvc.Settings) oauthsvc.Settings {
 		ClientID:     settings.ClientID,
 		ClientSecret: settings.ClientSecret,
 		RedirectURI:  settings.RedirectURI,
-		Enabled:      settings.Enabled,
 	}
+}
+
+// isProviderEnabled reports whether the Discord provider may currently
+// serve OAuth requests by consulting the host-owned PluginState capability
+// through IsProviderEnabled, which reads the platform plugin enabled
+// snapshot.
+//
+// The check is fail-closed: a nil controller or a missing PluginState
+// dependency returns false so disabled or misconstructed plugins cannot
+// silently keep serving OAuth. Callers must use this single seam instead of
+// any plugin-private "enabled" toggle so the workbench login button, OAuth
+// initiation, and OAuth callback share one authoritative source of truth.
+//
+// The snapshot is owned by the host plugin lifecycle service; freshness and
+// recovery semantics are documented in the OpenSpec tasks record. The check
+// is cheap (in-memory map lookup) and is intentionally performed before
+// reading sys_config so disabled plugins do not incur a settings round-trip.
+func (c *Controller) isProviderEnabled(ctx context.Context) bool {
+	return c != nil && c.pluginState != nil && c.pluginState.IsProviderEnabled(ctx, configsvc.PluginID)
 }
 
 // classifyHostLoginError extracts the stable runtime error code from a host
