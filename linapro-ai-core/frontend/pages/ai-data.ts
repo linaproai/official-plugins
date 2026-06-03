@@ -51,14 +51,35 @@ function protocolLabel(value: string) {
   );
 }
 
-function protocolColor(value: string) {
+function protocolBadgeMeta(value: string) {
   if (value === "anthropic" || value === "anthropic-compatible") {
-    return "purple";
+    return {
+      iconClass:
+        "rounded-[3px] border border-orange-300 bg-orange-100 font-serif text-[9px] text-orange-700 dark:border-orange-300/40 dark:bg-orange-300/15 dark:text-orange-100",
+      iconLabel: "A",
+      styleClass:
+        "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-400/30 dark:bg-orange-500/15 dark:text-orange-200",
+      type: "anthropic",
+    };
   }
   if (value === "voyage") {
-    return "cyan";
+    return {
+      iconClass:
+        "rounded-full border border-cyan-300 bg-cyan-100 text-[9px] text-cyan-700 dark:border-cyan-300/40 dark:bg-cyan-300/15 dark:text-cyan-100",
+      iconLabel: "V",
+      styleClass:
+        "border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-400/30 dark:bg-cyan-500/15 dark:text-cyan-200",
+      type: "voyage",
+    };
   }
-  return value === "openai-compatible" ? "geekblue" : "blue";
+  return {
+    iconClass:
+      "rounded-full border border-emerald-300 bg-emerald-100 text-[9px] text-emerald-700 dark:border-emerald-300/40 dark:bg-emerald-300/15 dark:text-emerald-100",
+    iconLabel: "O",
+    styleClass:
+      "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200",
+    type: "openai",
+  };
 }
 
 function formatOptionalTimestamp(value: null | number | string | undefined) {
@@ -126,28 +147,50 @@ function endpointCell(row: Provider) {
   }
   return h(
     "div",
-    { class: "flex min-w-0 flex-col gap-1 py-1" },
-    endpoints.map((endpoint) =>
-      h(
+    { class: "flex min-w-0 flex-col gap-1.5 py-1" },
+    endpoints.map((endpoint) => {
+      const badgeMeta = protocolBadgeMeta(endpoint.type);
+      return h(
         "div",
         {
           class:
-            "flex min-w-0 items-start gap-2 rounded border border-border bg-muted/30 px-1.5 py-1",
+            "ai-provider-endpoint-item relative min-w-0 rounded border border-border bg-muted/30 px-2 py-1.5 text-left",
         },
         [
           h(
-            Tag,
+            "span",
             {
               class:
-                "!m-0 !inline-flex !w-[88px] shrink-0 justify-end text-right",
-              color: protocolColor(endpoint.type),
+                "ai-provider-endpoint-url block min-w-0 break-all pr-[140px] text-left font-mono text-[11px] leading-4",
+              title: endpoint.url,
             },
-            () => endpoint.label,
+            endpoint.url,
           ),
           h(
             "span",
-            { class: "min-w-0 break-all font-mono text-[11px] leading-4" },
-            endpoint.url,
+            {
+              class: [
+                "ai-provider-endpoint-badge absolute right-4 top-1.5 inline-flex h-5 max-w-[118px] items-center gap-1 rounded border px-1.5 text-[10px] font-medium leading-none shadow-sm",
+                badgeMeta.styleClass,
+              ].join(" "),
+              "data-protocol": endpoint.type,
+              "data-provider-icon": badgeMeta.type,
+            },
+            [
+              h(
+                "span",
+                {
+                  "aria-hidden": true,
+                  class: [
+                    "ai-provider-endpoint-icon-mark inline-flex size-3 shrink-0 items-center justify-center font-semibold leading-none",
+                    badgeMeta.iconClass,
+                  ].join(" "),
+                  "data-provider-icon": badgeMeta.type,
+                },
+                badgeMeta.iconLabel,
+              ),
+              h("span", { class: "truncate" }, endpoint.label),
+            ],
           ),
           endpoint.enabled === 0
             ? h(Tag, { class: "!m-0 shrink-0", color: "default" }, () =>
@@ -155,8 +198,8 @@ function endpointCell(row: Provider) {
               )
             : undefined,
         ],
-      ),
-    ),
+      );
+    }),
   );
 }
 
@@ -437,14 +480,14 @@ export function buildProviderColumns(
     {
       field: "name",
       title: $t("plugin.linapro-ai-core.provider.fields.name"),
-      minWidth: 220,
+      minWidth: 200,
       showOverflow: false,
       slots: { default: ({ row }) => providerNameCell(row as Provider) },
     },
     {
       field: "models",
       title: $t("plugin.linapro-ai-core.provider.fields.models"),
-      minWidth: 440,
+      minWidth: 360,
       showOverflow: false,
       slots: {
         default: ({ row }) =>
@@ -452,17 +495,17 @@ export function buildProviderColumns(
       },
     },
     {
+      field: "endpoint",
+      title: $t("plugin.linapro-ai-core.provider.fields.endpoint"),
+      minWidth: 360,
+      showOverflow: false,
+      slots: { default: ({ row }) => endpointCell(row as Provider) },
+    },
+    {
       field: "enabled",
       title: $t("pages.common.status"),
       minWidth: 100,
       slots: { default: ({ row }) => statusTag(row.enabled) },
-    },
-    {
-      field: "endpoint",
-      title: $t("plugin.linapro-ai-core.provider.fields.endpoint"),
-      minWidth: 420,
-      showOverflow: false,
-      slots: { default: ({ row }) => endpointCell(row as Provider) },
     },
     {
       field: "endpointSecrets",
@@ -478,11 +521,13 @@ export function buildProviderColumns(
     },
     {
       field: "action",
+      className: "ai-provider-action-column",
       fixed: "right",
+      showOverflow: false,
       resizable: false,
       slots: { default: "action" },
       title: $t("pages.common.actions"),
-      width: 220,
+      width: 260,
     },
   ];
 }
@@ -517,6 +562,9 @@ export function buildProviderFormSchema(): VbenFormSchema[] {
       label: $t("plugin.linapro-ai-core.endpoint.fields.secretRef"),
       componentProps: {
         autocomplete: "new-password",
+        placeholder: $t(
+          "plugin.linapro-ai-core.provider.placeholders.apiKeyCreate",
+        ),
       },
     },
     {
@@ -708,11 +756,6 @@ export function buildTierColumns(): VxeGridProps["columns"] {
       field: "binding.protocol",
       title: $t("plugin.linapro-ai-core.model.fields.protocol"),
       minWidth: 100,
-    },
-    {
-      field: "defaultEffort",
-      title: $t("plugin.linapro-ai-core.tier.fields.defaultEffort"),
-      minWidth: 120,
     },
     {
       field: "lastTestStatus",

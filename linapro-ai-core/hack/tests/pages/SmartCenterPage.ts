@@ -101,8 +101,8 @@ export class SmartCenterPage {
 
   async assertTierThinkingEffortLabel() {
     await expect(
-      this.page.getByText("Thinking Effort", { exact: true }).first(),
-    ).toBeVisible();
+      this.page.getByText("Thinking Effort", { exact: true }),
+    ).toHaveCount(0);
     await expect(this.page.getByText("默认 Thinking Effort")).toHaveCount(0);
     await expect(this.page.getByText("Default Thinking Effort")).toHaveCount(0);
   }
@@ -136,6 +136,10 @@ export class SmartCenterPage {
     await expect(this.dialog.getByText("供应商名称")).toHaveCount(0);
     await expect(this.dialog.getByText("API 密钥")).toBeVisible();
     await expect(this.providerApiKeyInput()).toBeVisible();
+    await expect(this.providerApiKeyInput()).toHaveAttribute(
+      "placeholder",
+      /输入 API 密钥|Enter an API key/i,
+    );
     await expect(
       this.dialog.getByText(/OpenAI\s*(接入地址|基础地址)/),
     ).toBeVisible();
@@ -211,6 +215,10 @@ export class SmartCenterPage {
     await expect(
       this.page.getByText("密钥", { exact: true }).first(),
     ).toBeVisible();
+    const modelHeaderIndex = await this.providerHeaderIndex(/模型|Models/i);
+    const endpointHeaderIndex =
+      await this.providerHeaderIndex(/端点|Endpoint/i);
+    expect(endpointHeaderIndex).toBe(modelHeaderIndex + 1);
     await expect(this.page.getByText("模型数", { exact: true })).toHaveCount(0);
     await expect(
       this.page.getByText("启用模型数", { exact: true }),
@@ -267,40 +275,100 @@ export class SmartCenterPage {
       .poll(async () => (await deleteModelButton.textContent())?.trim() || "")
       .toBe("");
     await expect(row.first()).toContainText(input.openaiEndpointUrl);
-    const openaiEndpointTag = row.first().locator(".ant-tag", {
-      hasText: "OpenAI",
-    });
+    const openaiEndpointItem = row
+      .first()
+      .locator(".ai-provider-endpoint-item", {
+        hasText: input.openaiEndpointUrl,
+      });
+    const openaiEndpointTag = openaiEndpointItem.locator(
+      ".ai-provider-endpoint-badge",
+      {
+        hasText: "OpenAI",
+      },
+    );
     await expect(openaiEndpointTag).toBeVisible();
     if (input.anthropicEndpointUrl) {
       await expect(row.first()).toContainText("Anthropic");
       await expect(row.first()).toContainText(input.anthropicEndpointUrl);
-      const anthropicEndpointTag = row.first().locator(".ant-tag", {
-        hasText: "Anthropic",
-      });
+      const anthropicEndpointItem = row
+        .first()
+        .locator(".ai-provider-endpoint-item", {
+          hasText: input.anthropicEndpointUrl,
+        });
+      const anthropicEndpointTag = anthropicEndpointItem.locator(
+        ".ai-provider-endpoint-badge",
+        {
+          hasText: "Anthropic",
+        },
+      );
       await expect(anthropicEndpointTag).toBeVisible();
-      const [openaiWidth, anthropicWidth] = await Promise.all([
-        openaiEndpointTag.evaluate(
-          (node) => node.getBoundingClientRect().width,
-        ),
-        anthropicEndpointTag.evaluate(
-          (node) => node.getBoundingClientRect().width,
-        ),
+      const [
+        openaiUrlLeft,
+        anthropicUrlLeft,
+        openaiTextAlign,
+        anthropicTextAlign,
+      ] = await Promise.all([
+        openaiEndpointItem
+          .locator(".ai-provider-endpoint-url")
+          .evaluate((node) => node.getBoundingClientRect().left),
+        anthropicEndpointItem
+          .locator(".ai-provider-endpoint-url")
+          .evaluate((node) => node.getBoundingClientRect().left),
+        openaiEndpointItem
+          .locator(".ai-provider-endpoint-url")
+          .evaluate((node) => window.getComputedStyle(node).textAlign),
+        anthropicEndpointItem
+          .locator(".ai-provider-endpoint-url")
+          .evaluate((node) => window.getComputedStyle(node).textAlign),
       ]);
-      expect(Math.abs(openaiWidth - anthropicWidth)).toBeLessThan(1);
-      await expect
-        .poll(() =>
-          openaiEndpointTag.evaluate(
-            (node) => window.getComputedStyle(node).justifyContent,
-          ),
-        )
-        .toBe("flex-end");
-      await expect
-        .poll(() =>
-          anthropicEndpointTag.evaluate(
-            (node) => window.getComputedStyle(node).justifyContent,
-          ),
-        )
-        .toBe("flex-end");
+      expect(Math.abs(openaiUrlLeft - anthropicUrlLeft)).toBeLessThan(1);
+      expect(openaiTextAlign).toBe("left");
+      expect(anthropicTextAlign).toBe("left");
+      await expect(
+        openaiEndpointTag.locator(".ai-provider-endpoint-icon-mark"),
+      ).toHaveAttribute("data-provider-icon", "openai");
+      await expect(
+        anthropicEndpointTag.locator(".ai-provider-endpoint-icon-mark"),
+      ).toHaveAttribute("data-provider-icon", "anthropic");
+      const [openaiBadgeStyle, anthropicBadgeStyle] = await Promise.all([
+        openaiEndpointTag.evaluate((node) => {
+          const style = window.getComputedStyle(node);
+          return {
+            backgroundColor: style.backgroundColor,
+            borderColor: style.borderColor,
+            color: style.color,
+          };
+        }),
+        anthropicEndpointTag.evaluate((node) => {
+          const style = window.getComputedStyle(node);
+          return {
+            backgroundColor: style.backgroundColor,
+            borderColor: style.borderColor,
+            color: style.color,
+          };
+        }),
+      ]);
+      expect(openaiBadgeStyle).not.toEqual(anthropicBadgeStyle);
+      for (const [item, tag] of [
+        [openaiEndpointItem, openaiEndpointTag],
+        [anthropicEndpointItem, anthropicEndpointTag],
+      ] as const) {
+        const [itemBox, tagBox, position] = await Promise.all([
+          item.evaluate((node) => {
+            const box = node.getBoundingClientRect();
+            return { right: box.right, top: box.top };
+          }),
+          tag.evaluate((node) => {
+            const box = node.getBoundingClientRect();
+            return { right: box.right, top: box.top };
+          }),
+          tag.evaluate((node) => window.getComputedStyle(node).position),
+        ]);
+        expect(position).toBe("absolute");
+        expect(tagBox.right).toBeLessThanOrEqual(itemBox.right + 1);
+        expect(tagBox.top).toBeGreaterThanOrEqual(itemBox.top - 1);
+        expect(tagBox.top - itemBox.top).toBeLessThan(12);
+      }
     }
     await expect(row.first()).toContainText(input.maskedApiKey);
   }
@@ -320,57 +388,6 @@ export class SmartCenterPage {
       path: pathName,
     });
     await this.resetHorizontalScroll();
-  }
-
-  async openProviderEndpoints(providerName: string) {
-    await this.resetHorizontalScroll();
-    const actionRow = await this.providerActionRow(providerName);
-    const endpointButton = actionRow.getByRole("button", {
-      name: /端\s*点|Endpoints/i,
-    });
-    await expect(endpointButton).toBeVisible();
-    await this.clickFixedActionButton(endpointButton);
-    await waitForDialogReady(this.dialog);
-    await this.resetHorizontalScroll();
-  }
-
-  async assertEndpointDrawerChineseTranslations(providerName: string) {
-    await expect(
-      this.dialog.getByText(`供应商端点 - ${providerName}`),
-    ).toBeVisible();
-    await expect(this.dialog.getByText("协议")).toBeVisible();
-    await expect(this.dialog.getByText(/基础地址|接入地址/)).toBeVisible();
-    await expect(this.dialog.getByText(/API 密钥|API Key/i)).toBeVisible();
-    await expect(this.dialog.getByText("元数据 JSON")).toBeVisible();
-    await expect(
-      this.dialog.getByRole("button", { name: /新增端点|Add Endpoint/i }),
-    ).toBeVisible();
-    const protocolCombobox = this.dialog.getByLabel(/协议|Protocol/i).first();
-    const protocolSelect = protocolCombobox.locator(
-      'xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ant-select ")][1]',
-    );
-    await expect(
-      protocolSelect.locator(".ant-select-selection-item"),
-    ).toHaveText("OpenAI");
-    await expect(this.dialog.getByText("Voyage")).toHaveCount(0);
-    await expect(this.dialog.getByText(/Compatible/i)).toHaveCount(0);
-    await expect(this.dialog.getByText(/plugin\.linapro-ai-core/)).toHaveCount(
-      0,
-    );
-  }
-
-  async assertEndpointVisible(input: {
-    baseUrl: string;
-    protocolLabel: string;
-    secretText?: string;
-  }) {
-    await expect(
-      this.dialog.locator(".ant-tag", { hasText: input.protocolLabel }).first(),
-    ).toBeVisible();
-    await expect(this.dialog.getByText(input.baseUrl)).toBeVisible();
-    if (input.secretText) {
-      await expect(this.dialog.getByText(input.secretText)).toBeVisible();
-    }
   }
 
   async assertProviderRowEndpoint(
@@ -409,6 +426,12 @@ export class SmartCenterPage {
     const actionRow = await this.providerActionRow(input.providerName);
     await expect(
       actionRow.getByRole("button", { name: /端\s*点|Endpoints/i }),
+    ).toHaveCount(0);
+    await expect(
+      actionRow.getByRole("button", { name: /编\s*辑|Edit/i }),
+    ).toBeVisible();
+    await expect(
+      actionRow.getByRole("button", { name: /删\s*除|Delete/i }),
     ).toBeVisible();
     const openaiSync = actionRow.getByRole("button", {
       name: /同步 openai 模型|Sync openai Models/i,
@@ -422,6 +445,17 @@ export class SmartCenterPage {
     if (input.syncAnthropic) {
       await expect(anthropicSync).toBeVisible();
     }
+    const actionList = actionRow.locator(".ai-provider-action-list");
+    await expect(actionList).toBeVisible();
+    await expect
+      .poll(async () =>
+        actionList.evaluate((node) => {
+          const listBox = node.getBoundingClientRect();
+          const cellBox = node.closest(".vxe-cell")?.getBoundingClientRect();
+          return Boolean(cellBox && listBox.height <= cellBox.height + 1);
+        }),
+      )
+      .toBe(true);
   }
 
   async cancelDrawer() {
@@ -483,10 +517,14 @@ export class SmartCenterPage {
     await expect(this.dialog.getByText("端点配置")).toHaveCount(0);
     await expect(this.dialog.getByText("供应商名称")).toHaveCount(0);
     await expect(this.providerApiKeyInput()).toBeVisible();
+    await expect(this.providerApiKeyInput()).toHaveValue("");
     await expect(this.providerApiKeyInput()).toHaveAttribute(
       "placeholder",
-      /留空则保持原(端点)?密钥|Leave blank to keep the existing (endpoint )?secret/i,
+      /留空则保持原密钥|Leave blank to keep the existing secret/i,
     );
+    expect(
+      await this.providerApiKeyInput().getAttribute("placeholder"),
+    ).not.toMatch(/端点|endpoint/i);
     await expect(this.providerOpenAIBaseUrlInput()).toBeVisible();
     await expect(this.providerAnthropicBaseUrlInput()).toBeVisible();
     await expect(this.dialog.getByText(/plugin\.linapro-ai-core/)).toHaveCount(
@@ -750,20 +788,11 @@ export class SmartCenterPage {
   }
 
   async assertTierTypePage(capabilityType: string, defaultParams: string) {
-    const labels = this.tierCapabilityTypeLabel(capabilityType);
     await expect(this.tierCapabilityTypeTab(capabilityType)).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    await expect(
-      this.page.getByText(
-        new RegExp(
-          `${escapeRegExp(labels.zh)}默认参数|Defaults for ${escapeRegExp(labels.en)}`,
-          "i",
-        ),
-      ),
-    ).toBeVisible();
-    await expect(this.page.getByText(defaultParams)).toBeVisible();
+    await expect(this.page.getByText(defaultParams)).toHaveCount(0);
     await expect(this.page.getByText(/基础|Basic/i)).toBeVisible();
     await expect(this.page.getByText(/标准|Standard/i)).toBeVisible();
     await expect(this.page.getByText(/高级|Advanced/i)).toBeVisible();
@@ -793,6 +822,125 @@ export class SmartCenterPage {
     await expect(this.dialog.getByText("模型", { exact: true })).toBeVisible();
     await expect(this.dialog.getByText("Thinking Effort")).toHaveCount(0);
     await this.cancelDrawer();
+  }
+
+  async assertTierDrawerDefaultConfig(
+    tierName: RegExp,
+    expectedParamsFragment: string,
+  ) {
+    await this.editTier(tierName);
+    await expect(
+      this.dialog.getByText("Thinking Effort", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      this.dialog.getByText(/模型默认|Model default/i).first(),
+    ).toBeVisible();
+    await expect(
+      this.dialog.getByText(/默认参数 JSON|Default Params JSON/i),
+    ).toBeVisible();
+    const editorInput = this.dialog.getByTestId(
+      "ai-tier-default-params-editor-input",
+    );
+    await expect(editorInput).toBeVisible();
+    await expect(editorInput).toHaveValue(
+      new RegExp(escapeRegExp(expectedParamsFragment)),
+    );
+    await expect(
+      this.dialog
+        .getByTestId("ai-tier-default-params-editor")
+        .locator(".json-token-key")
+        .first(),
+    ).toBeVisible();
+  }
+
+  async assertTierDefaultParamsFormLayout() {
+    const defaultParamsLabel = this.dialog
+      .locator("label", {
+        hasText: /默认参数 JSON|Default Params JSON/i,
+      })
+      .first();
+    const providerLabel = this.dialog
+      .locator("label", { hasText: /供应商|Provider/i })
+      .first();
+    const editor = this.dialog.getByTestId("ai-tier-default-params-editor");
+
+    await expect(defaultParamsLabel).toBeVisible();
+    await expect(providerLabel).toBeVisible();
+    await expect(editor).toBeVisible();
+
+    const [defaultParamsMetrics, providerMetrics, editorMetrics] =
+      await Promise.all([
+        defaultParamsLabel.evaluate((node) => {
+          const formItem = node.closest(".relative.flex");
+          const control = formItem?.querySelector(".flex-auto");
+          const labelBox = node.getBoundingClientRect();
+          const controlBox = control?.getBoundingClientRect();
+          if (!controlBox) {
+            throw new Error("default params form control was not found");
+          }
+          return {
+            controlLeft: controlBox.left,
+            controlRight: controlBox.right,
+            labelLeft: labelBox.left,
+          };
+        }),
+        providerLabel.evaluate((node) => {
+          const formItem = node.closest(".relative.flex");
+          const control = formItem?.querySelector(".flex-auto");
+          const labelBox = node.getBoundingClientRect();
+          const controlBox = control?.getBoundingClientRect();
+          if (!controlBox) {
+            throw new Error("provider form control was not found");
+          }
+          return {
+            controlLeft: controlBox.left,
+            controlRight: controlBox.right,
+            labelLeft: labelBox.left,
+          };
+        }),
+        editor.evaluate((node) => {
+          const box = node.getBoundingClientRect();
+          return {
+            left: box.left,
+            right: box.right,
+          };
+        }),
+      ]);
+
+    expect(
+      Math.abs(defaultParamsMetrics.labelLeft - providerMetrics.labelLeft),
+    ).toBeLessThan(1);
+    expect(
+      Math.abs(defaultParamsMetrics.controlLeft - providerMetrics.controlLeft),
+    ).toBeLessThan(2);
+    expect(
+      Math.abs(
+        defaultParamsMetrics.controlRight - providerMetrics.controlRight,
+      ),
+    ).toBeLessThan(2);
+    expect(
+      Math.abs(editorMetrics.left - defaultParamsMetrics.controlLeft),
+    ).toBeLessThan(2);
+    expect(
+      Math.abs(editorMetrics.right - defaultParamsMetrics.controlRight),
+    ).toBeLessThan(2);
+  }
+
+  async fillTierDefaultParams(defaultParamsJson: string) {
+    const editorInput = this.dialog.getByTestId(
+      "ai-tier-default-params-editor-input",
+    );
+    await editorInput.fill(defaultParamsJson);
+    await expect(
+      this.dialog
+        .getByTestId("ai-tier-default-params-editor")
+        .locator(".json-token-key")
+        .first(),
+    ).toBeVisible();
+  }
+
+  async saveTierDrawer() {
+    await this.confirmDrawer();
   }
 
   async openInvocationDetail() {
@@ -981,6 +1129,20 @@ export class SmartCenterPage {
       }
     }
     throw new Error("未找到档位表更新时间列");
+  }
+
+  private async providerHeaderIndex(header: RegExp) {
+    const headers = this.page.locator(
+      ".vxe-table--main-wrapper .vxe-header--column:visible",
+    );
+    const count = await headers.count();
+    for (let index = 0; index < count; index += 1) {
+      const text = (await headers.nth(index).innerText()).trim();
+      if (header.test(text)) {
+        return index;
+      }
+    }
+    throw new Error(`未找到供应商表列: ${header}`);
   }
 
   private async tierRowIndex(tierName: RegExp) {

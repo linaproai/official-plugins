@@ -395,7 +395,7 @@ INSERT INTO plugin_linapro_ai_method_default_param (
     "default_params_json",
     "enabled"
 ) VALUES
-    ('text', 'generate', '{"maxOutputTokens":1024,"thinkingEffort":"medium"}', 1),
+    ('text', 'generate', '{"maxOutputTokens":1024}', 1),
     ('image', 'generate', '{"count":1,"size":"1024x1024"}', 1),
     ('image', 'edit', '{"count":1,"size":"1024x1024"}', 1),
     ('embedding', 'create', '{"dimensions":0}', 1),
@@ -422,9 +422,9 @@ INSERT INTO plugin_linapro_ai_tier (
     "enabled",
     "sort_order"
 ) VALUES
-    ('text', 'generate', 'basic', 'Basic', 'Low-cost AI capability tier for simple text generation and commit message generation.', 'low', 1, 1),
-    ('text', 'generate', 'standard', 'Standard', 'Default AI capability tier for regular code generation and code optimization.', 'medium', 1, 2),
-    ('text', 'generate', 'advanced', 'Advanced', 'High-capability AI tier for complex code generation and cross-file reasoning.', 'high', 1, 3)
+    ('text', 'generate', 'basic', 'Basic', 'Low-cost AI capability tier for simple text generation and commit message generation.', '', 1, 1),
+    ('text', 'generate', 'standard', 'Standard', 'Default AI capability tier for regular code generation and code optimization.', '', 1, 2),
+    ('text', 'generate', 'advanced', 'Advanced', 'High-capability AI tier for complex code generation and cross-file reasoning.', '', 1, 3)
 ON CONFLICT ("capability_type", "capability_method", "code") DO NOTHING;
 
 INSERT INTO plugin_linapro_ai_tier (

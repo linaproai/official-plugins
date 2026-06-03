@@ -6,18 +6,18 @@ export const pluginPageMeta = {
 </script>
 
 <script setup lang="ts">
-import type { MethodDefaultParam, Tier } from "./ai-client";
+import type { Tier } from "./ai-client";
 
 import { computed, nextTick, ref } from "vue";
 
 import { Page, useVbenDrawer } from "@vben/common-ui";
 import { IconifyIcon } from "@vben/icons";
 
-import { message, Space, Tabs, Tag } from "ant-design-vue";
+import { message, Space, Tabs } from "ant-design-vue";
 
 import { useVbenVxeGrid } from "#/adapter/vxe-table";
 import { $t } from "#/locales";
-import { methodDefaults, tierList, tierTest } from "./ai-client";
+import { tierList, tierTest } from "./ai-client";
 import {
   buildTierColumns,
   capabilityTypeLabel,
@@ -37,18 +37,6 @@ const selectedCapabilityType = ref("text");
 const selectedCapabilityKey = computed(() =>
   defaultTierCapabilityMethod(selectedCapabilityType.value),
 );
-const selectedCapabilityLabel = computed(() =>
-  capabilityTypeLabel(selectedCapabilityType.value),
-);
-const methodDefaultRows = ref<MethodDefaultParam[]>([]);
-const currentMethodDefault = computed(() => {
-  const capability = splitCapabilityMethod(selectedCapabilityKey.value);
-  return methodDefaultRows.value.find(
-    (item) =>
-      item.capabilityType === capability.capabilityType &&
-      item.capabilityMethod === capability.capabilityMethod,
-  );
-});
 const capabilityTypeIcons: Record<string, string> = {
   audio: "lucide:audio-lines",
   document: "lucide:file-search",
@@ -70,11 +58,10 @@ const [Grid, gridApi] = useVbenVxeGrid({
       ajax: {
         query: async () => {
           const capability = splitCapabilityMethod(selectedCapabilityKey.value);
-          const [tiers, defaults] = await Promise.all([
-            tierList(capability.capabilityType, capability.capabilityMethod),
-            methodDefaults(),
-          ]);
-          methodDefaultRows.value = defaults;
+          const tiers = await tierList(
+            capability.capabilityType,
+            capability.capabilityMethod,
+          );
           return { items: tiers, total: tiers.length };
         },
       },
@@ -172,18 +159,6 @@ async function handleTest(row: Tier) {
           data-testid="ai-tier-capability-content"
         >
           <Grid :table-title="$t('plugin.linapro-ai-core.tier.tableTitle')">
-            <template #toolbar-tools>
-              <Tag color="blue">
-                {{
-                  $t("plugin.linapro-ai-core.methodDefault.current", {
-                    capability: selectedCapabilityLabel,
-                  })
-                }}
-              </Tag>
-              <span class="ml-2 font-mono text-xs text-muted-foreground">
-                {{ currentMethodDefault?.defaultParamsJson || "{}" }}
-              </span>
-            </template>
             <template #action="{ row }">
               <Space>
                 <ghost-button @click.stop="handleEdit(row)">

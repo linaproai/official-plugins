@@ -108,7 +108,16 @@
       },
       "name": "Smart Center",
       "methodDefault": {
-        "current": "Defaults for {capability}"
+        "current": "Defaults for {capability}",
+        "fields": {
+          "defaultParamsJson": "Default Params JSON"
+        },
+        "messages": {
+          "invalidJson": "Default params must be a valid JSON object"
+        },
+        "placeholders": {
+          "json": "{\n  \"maxOutputTokens\": 1024\n}"
+        }
       },
       "provider": {
         "actions": {

@@ -22,9 +22,8 @@ import {
   providerList,
 } from "./ai-client";
 import { buildProviderColumns, buildProviderQuerySchema } from "./ai-data";
-import ModelDrawer from "./model-drawer.vue";
-import EndpointDrawer from "./endpoint-drawer.vue";
 import ProviderDrawer from "./provider-drawer.vue";
+import ModelDrawer from "./model-drawer.vue";
 
 const [ProviderDrawerRef, providerDrawerApi] = useVbenDrawer({
   connectedComponent: ProviderDrawer,
@@ -32,10 +31,6 @@ const [ProviderDrawerRef, providerDrawerApi] = useVbenDrawer({
 
 const [ModelDrawerRef, modelDrawerApi] = useVbenDrawer({
   connectedComponent: ModelDrawer,
-});
-
-const [EndpointDrawerRef, endpointDrawerApi] = useVbenDrawer({
-  connectedComponent: EndpointDrawer,
 });
 
 const [Grid, gridApi] = useVbenVxeGrid({
@@ -82,11 +77,6 @@ function handleAddProvider() {
 function handleAddModel() {
   modelDrawerApi.setData({});
   modelDrawerApi.open();
-}
-
-function handleEndpoints(row: Provider) {
-  endpointDrawerApi.setData({ providerId: row.id, providerName: row.name });
-  endpointDrawerApi.open();
 }
 
 function handleEdit(row: Provider) {
@@ -150,24 +140,19 @@ function syncableProtocols(row: Provider) {
       </template>
 
       <template #action="{ row }">
-        <div class="flex flex-col items-start gap-1">
-          <Space>
-            <ghost-button @click.stop="handleEdit(row)">
-              {{ $t("pages.common.edit") }}
+        <div class="ai-provider-action-list">
+          <ghost-button @click.stop="handleEdit(row)">
+            {{ $t("pages.common.edit") }}
+          </ghost-button>
+          <Popconfirm
+            :title="$t('pages.common.deleteConfirm')"
+            placement="left"
+            @confirm="handleDelete(row)"
+          >
+            <ghost-button danger @click.stop="">
+              {{ $t("pages.common.delete") }}
             </ghost-button>
-            <ghost-button @click.stop="handleEndpoints(row)">
-              {{ $t("plugin.linapro-ai-core.endpoint.actions.manage") }}
-            </ghost-button>
-            <Popconfirm
-              :title="$t('pages.common.deleteConfirm')"
-              placement="left"
-              @confirm="handleDelete(row)"
-            >
-              <ghost-button danger @click.stop="">
-                {{ $t("pages.common.delete") }}
-              </ghost-button>
-            </Popconfirm>
-          </Space>
+          </Popconfirm>
           <ghost-button
             v-for="protocol in syncableProtocols(row)"
             :key="protocol"
@@ -185,11 +170,31 @@ function syncableProtocols(row: Provider) {
 
     <ProviderDrawerRef @reload="() => gridApi.query()" />
     <ModelDrawerRef @reload="() => gridApi.query()" />
-    <EndpointDrawerRef @reload="() => gridApi.query()" />
   </Page>
 </template>
 
 <style scoped>
+.ai-provider-action-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  max-width: 100%;
+  padding: 2px 0;
+}
+
+:deep(.ai-provider-action-list .ant-btn) {
+  min-height: 24px;
+  padding-inline: 4px;
+  white-space: nowrap;
+}
+
+:deep(.ai-provider-action-column .vxe-cell) {
+  max-height: none !important;
+  overflow: visible !important;
+  line-height: 1.4;
+}
+
 :deep(.ai-model-delete-icon) {
   display: block;
   width: 0.875rem;

@@ -1,4 +1,4 @@
-import type { APIRequestContext } from "@playwright/test";
+import type { APIRequestContext } from "@host-tests/support/playwright";
 
 import { pluginApiPath } from "@host-tests/fixtures/config";
 import { createAdminApiContext } from "@host-tests/fixtures/plugin";
@@ -287,7 +287,7 @@ export async function bindTier(
   api: APIRequestContext,
   code: "advanced" | "basic" | "standard",
   fixture: AiProviderModelFixture,
-  defaultEffort = "low",
+  defaultEffort = "",
 ) {
   const response = await api.put(pluginApiPath(pluginId, `ai/tiers/${code}`), {
     data: {
@@ -340,6 +340,50 @@ export function updateTierRaw(
   });
 }
 
+export async function listTiers(
+  api: APIRequestContext,
+  capabilityType = "text",
+  capabilityMethod = "generate",
+) {
+  const response = await api.get(pluginApiPath(pluginId, "ai/tiers"), {
+    params: {
+      capabilityMethod,
+      capabilityType,
+    },
+  });
+  await assertOk(response, "查询 AI 档位失败");
+  const out = unwrapApiData(await response.json());
+  return out?.list ?? [];
+}
+
+export async function listMethodDefaults(api: APIRequestContext) {
+  const response = await api.get(pluginApiPath(pluginId, "ai/method-defaults"));
+  await assertOk(response, "查询 AI 方法默认参数失败");
+  const out = unwrapApiData(await response.json());
+  return out?.list ?? [];
+}
+
+export async function updateMethodDefault(
+  api: APIRequestContext,
+  capabilityType: string,
+  capabilityMethod: string,
+  defaultParamsJson: string,
+) {
+  const response = await api.put(
+    pluginApiPath(
+      pluginId,
+      `ai/method-defaults/${capabilityType}/${capabilityMethod}`,
+    ),
+    {
+      data: {
+        defaultParamsJson,
+        enabled: 1,
+      },
+    },
+  );
+  await assertOk(response, "更新 AI 方法默认参数失败");
+}
+
 export function deleteProviderRaw(api: APIRequestContext, providerId: number) {
   return api.delete(pluginApiPath(pluginId, `ai/providers/${providerId}`));
 }
@@ -385,14 +429,7 @@ export async function clearTier(
   capabilityType = "text",
   capabilityMethod = "generate",
 ) {
-  const defaultEffort =
-    capabilityType === "text" && capabilityMethod === "generate"
-      ? code === "basic"
-        ? "low"
-        : code === "standard"
-          ? "medium"
-          : "high"
-      : "";
+  const defaultEffort = "";
   const escapedCode = pgEscapeLiteral(code);
   const escapedEffort = pgEscapeLiteral(defaultEffort);
   const escapedType = pgEscapeLiteral(capabilityType);
@@ -565,7 +602,7 @@ export function deleteProviderOperation(operationRef: string) {
 
 export async function listProviderOperations(
   api: APIRequestContext,
-  params: Record<string, unknown>,
+  params: Record<string, boolean | number | string>,
 ) {
   const response = await api.get(
     pluginApiPath(pluginId, "ai/provider-operations"),

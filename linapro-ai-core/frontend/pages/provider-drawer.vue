@@ -101,8 +101,8 @@ function updateSecretPlaceholder() {
       componentProps: {
         autocomplete: "new-password",
         placeholder: providerId.value
-          ? $t("plugin.linapro-ai-core.endpoint.placeholders.keepSecret")
-          : "",
+          ? $t("plugin.linapro-ai-core.provider.placeholders.keepSecret")
+          : $t("plugin.linapro-ai-core.provider.placeholders.apiKeyCreate"),
       },
     },
   ]);

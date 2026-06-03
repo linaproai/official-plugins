@@ -86,19 +86,12 @@ test.describe("TC-4 智能中心供应商端点", () => {
           endpointBaseUrl,
           "Anthropic",
         );
-        await smartCenter.captureEvidence("TC004-provider-endpoint-list");
-
-        await smartCenter.openProviderEndpoints(fixture.providerName);
-        await smartCenter.assertEndpointDrawerChineseTranslations(
-          fixture.providerName,
-        );
-        await smartCenter.assertEndpointVisible({
-          baseUrl: endpointBaseUrl,
-          protocolLabel: "Anthropic",
-          secretText: "sk-**********90",
+        await smartCenter.assertProviderSyncActions({
+          providerName: fixture.providerName,
+          syncAnthropic: true,
+          syncOpenAI: true,
         });
-        await smartCenter.captureEvidence("TC004-provider-endpoint-drawer");
-        await smartCenter.cancelDrawer();
+        await smartCenter.captureEvidence("TC004-provider-endpoint-list");
 
         const deleteResponse = await deleteProviderEndpointRaw(
           api,

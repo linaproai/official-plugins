@@ -108,7 +108,16 @@
       },
       "name": "智能中心",
       "methodDefault": {
-        "current": "{capability}默认参数"
+        "current": "{capability}默认参数",
+        "fields": {
+          "defaultParamsJson": "默认参数 JSON"
+        },
+        "messages": {
+          "invalidJson": "默认参数必须是有效 JSON 对象"
+        },
+        "placeholders": {
+          "json": "{\n  \"maxOutputTokens\": 1024\n}"
+        }
       },
       "provider": {
         "actions": {
