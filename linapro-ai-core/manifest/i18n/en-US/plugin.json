@@ -11,7 +11,17 @@
       },
       "description": "Official source plugin for AI providers, models, capability tiers, and invocation logs",
       "capability": {
-        "method": "Capability Method"
+        "method": "Capability Method",
+        "types": {
+          "audio": "Audio",
+          "document": "Document",
+          "embedding": "Embedding",
+          "image": "Image",
+          "safety": "Safety",
+          "text": "Text",
+          "video": "Video",
+          "vision": "Vision"
+        }
       },
       "endpoint": {
         "actions": {
@@ -23,14 +33,25 @@
         },
         "empty": "No endpoints configured",
         "fields": {
-          "baseUrl": "Base URL",
+          "baseUrl": "Access URL",
           "metadataJson": "Metadata JSON",
           "protocol": "Protocol",
-          "secretRef": "Secret"
+          "secretRef": "API Key"
+        },
+        "hints": {
+          "maskedSecret": "Current key: {secret}"
+        },
+        "messages": {
+          "baseUrlRequired": "Enter a base URL for the {protocol} endpoint"
+        },
+        "names": {
+          "anthropic": "Anthropic",
+          "openai": "OpenAI"
         },
         "placeholders": {
           "keepSecret": "Leave blank to keep the existing endpoint secret"
-        }
+        },
+        "sectionTitle": "Endpoint Configuration"
       },
       "effort": {
         "empty": "Model default"
@@ -87,7 +108,7 @@
       },
       "name": "Smart Center",
       "methodDefault": {
-        "current": "Defaults for {method}"
+        "current": "Defaults for {capability}"
       },
       "provider": {
         "actions": {
@@ -103,14 +124,28 @@
           "noModels": "No models"
         },
         "fields": {
+          "anthropicAccessUrl": "Anthropic Access URL",
+          "anthropicBaseUrl": "Anthropic Access URL",
+          "apiKeySecretRef": "API Key",
           "endpoint": "Endpoint",
           "enabledModelCount": "Enabled Models",
           "keyword": "Provider",
           "modelCount": "Models",
           "models": "Models",
           "name": "Name",
+          "openaiAccessUrl": "OpenAI Access URL",
+          "openaiBaseUrl": "OpenAI Access URL",
           "secret": "Key",
           "websiteUrl": "Website"
+        },
+        "placeholders": {
+          "anthropicAccessUrl": "https://api.anthropic.com/v1",
+          "anthropicBaseUrl": "https://api.anthropic.com/v1",
+          "apiKeyCreate": "Enter an API key",
+          "apiKeyKeep": "Leave blank to keep the existing secret",
+          "keepSecret": "Leave blank to keep the existing secret",
+          "openaiAccessUrl": "https://api.openai.com/v1",
+          "openaiBaseUrl": "https://api.openai.com/v1"
         },
         "tableTitle": "Providers"
       },

@@ -80,7 +80,8 @@ export async function createProviderWithModel(
     websiteUrl?: string;
   },
 ): Promise<AiProviderModelFixture> {
-  const openaiEndpointUrl = input.openaiEndpointUrl ?? "http://127.0.0.1:65535/v1";
+  const openaiEndpointUrl =
+    input.openaiEndpointUrl ?? "http://127.0.0.1:65535/v1";
   const secretRef = input.secretRef ?? "sk-e2e-placeholder";
   const websiteUrl =
     input.websiteUrl ??
@@ -194,7 +195,10 @@ export function deleteProviderEndpointRaw(
   endpointId: number,
 ) {
   return api.delete(
-    pluginApiPath(pluginId, `ai/providers/${providerId}/endpoints/${endpointId}`),
+    pluginApiPath(
+      pluginId,
+      `ai/providers/${providerId}/endpoints/${endpointId}`,
+    ),
   );
 }
 
@@ -340,6 +344,19 @@ export function deleteProviderRaw(api: APIRequestContext, providerId: number) {
   return api.delete(pluginApiPath(pluginId, `ai/providers/${providerId}`));
 }
 
+export async function findProviderByName(api: APIRequestContext, name: string) {
+  const response = await api.get(pluginApiPath(pluginId, "ai/providers"), {
+    params: {
+      keyword: name,
+      pageNum: 1,
+      pageSize: 10,
+    },
+  });
+  await assertOk(response, "查询 AI 供应商失败");
+  const out = unwrapApiData(await response.json());
+  return (out?.list || []).find((item: any) => item?.name === name);
+}
+
 export async function listProviderModels(
   api: APIRequestContext,
   providerId: number,
@@ -383,6 +400,19 @@ export async function clearTier(
   execPgSQLStatements([
     `DELETE FROM plugin_linapro_ai_tier_binding WHERE tier_id IN (SELECT id FROM plugin_linapro_ai_tier WHERE capability_type = '${escapedType}' AND capability_method = '${escapedMethod}' AND code = '${escapedCode}') AND priority = 0;`,
     `UPDATE plugin_linapro_ai_tier SET enabled = 1, default_effort = '${escapedEffort}', last_test_status = '', last_test_latency_ms = 0, last_test_error_summary = '', last_test_at = NULL WHERE capability_type = '${escapedType}' AND capability_method = '${escapedMethod}' AND code = '${escapedCode}';`,
+  ]);
+}
+
+export function clearTierUpdatedAt(
+  code: "advanced" | "basic" | "standard",
+  capabilityType = "text",
+  capabilityMethod = "generate",
+) {
+  const escapedCode = pgEscapeLiteral(code);
+  const escapedType = pgEscapeLiteral(capabilityType);
+  const escapedMethod = pgEscapeLiteral(capabilityMethod);
+  execPgSQLStatements([
+    `UPDATE plugin_linapro_ai_tier SET updated_at = NULL WHERE capability_type = '${escapedType}' AND capability_method = '${escapedMethod}' AND code = '${escapedCode}';`,
   ]);
 }
 
@@ -537,9 +567,12 @@ export async function listProviderOperations(
   api: APIRequestContext,
   params: Record<string, unknown>,
 ) {
-  const response = await api.get(pluginApiPath(pluginId, "ai/provider-operations"), {
-    params,
-  });
+  const response = await api.get(
+    pluginApiPath(pluginId, "ai/provider-operations"),
+    {
+      params,
+    },
+  );
   await assertOk(response, "查询 AI provider operation 失败");
   const out = unwrapApiData(await response.json());
   return out;

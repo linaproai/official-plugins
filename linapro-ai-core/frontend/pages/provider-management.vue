@@ -121,15 +121,9 @@ function syncableProtocols(row: Provider) {
   return [
     ...new Set(
       (row.endpoints || [])
+        .filter((item) => item.enabled === 1)
         .map((item) => item.protocol)
-        .filter((protocol) =>
-          [
-            "openai",
-            "openai-compatible",
-            "anthropic",
-            "anthropic-compatible",
-          ].includes(protocol),
-        ),
+        .filter((protocol) => ["openai", "anthropic"].includes(protocol)),
     ),
   ];
 }
@@ -179,7 +173,11 @@ function syncableProtocols(row: Provider) {
             :key="protocol"
             @click.stop="handleSync(row, protocol)"
           >
-            {{ $t("plugin.linapro-ai-core.model.actions.syncProtocol", { protocol }) }}
+            {{
+              $t("plugin.linapro-ai-core.model.actions.syncProtocol", {
+                protocol,
+              })
+            }}
           </ghost-button>
         </div>
       </template>

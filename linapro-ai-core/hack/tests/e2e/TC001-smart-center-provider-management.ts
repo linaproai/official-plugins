@@ -49,27 +49,54 @@ test.describe("TC-1 智能中心供应商管理", () => {
     });
   });
 
-  test("TC-1b: 编辑供应商名称", async ({ adminPage }) => {
+  test("TC-1b: 编辑供应商名称和接入配置", async ({ adminPage }) => {
     await withAdminApi(async (api) => {
       const suffix = Date.now();
       const fixture = await createProviderWithModel(api, {
+        anthropicEndpointUrl: `http://127.0.0.1:65535/anthropic-${suffix}`,
         modelName: `e2e-model-${suffix}`,
         providerName: `E2E Provider ${suffix}`,
       });
       const renamedProviderName = `E2E Provider Renamed ${suffix}`;
+      const updatedOpenaiUrl = `https://example.com/e2e-openai-${suffix}/v1`;
+      const updatedAnthropicUrl = `https://example.com/e2e-anthropic-${suffix}/v1`;
+      const updatedSecret = "sk-updated-1234567890";
       try {
         const smartCenter = new SmartCenterPage(adminPage);
         await smartCenter.gotoProviders();
         await smartCenter.searchProvider(fixture.providerName);
         await smartCenter.openProvider(fixture.providerName);
-        await smartCenter.assertEditProviderMetadataForm();
+        await smartCenter.assertEditProviderMetadataForm({
+          anthropicEndpointUrl: fixture.anthropicEndpointUrl,
+          openaiEndpointUrl: fixture.openaiEndpointUrl,
+        });
+        await smartCenter.captureEvidence(
+          "TC001-provider-edit-agent-box-fields",
+        );
         await smartCenter.fillProvider({
+          anthropicBaseUrl: updatedAnthropicUrl,
           name: renamedProviderName,
+          openaiBaseUrl: updatedOpenaiUrl,
+          secretRef: updatedSecret,
         });
         await smartCenter.confirmDrawer();
 
         await smartCenter.searchProvider(renamedProviderName);
         await smartCenter.assertProviderVisible(renamedProviderName);
+        await smartCenter.assertProviderRowEndpoint(
+          renamedProviderName,
+          updatedOpenaiUrl,
+          "OpenAI",
+        );
+        await smartCenter.assertProviderRowEndpoint(
+          renamedProviderName,
+          updatedAnthropicUrl,
+          "Anthropic",
+        );
+        await smartCenter.assertProviderRowSecret(
+          renamedProviderName,
+          "sk-**********90",
+        );
       } finally {
         await deleteProvider(api, fixture.providerId).catch(() => {});
       }

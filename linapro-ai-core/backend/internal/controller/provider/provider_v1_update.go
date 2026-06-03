@@ -17,6 +17,7 @@ func (c *ControllerV1) Update(ctx context.Context, req *v1.UpdateReq) (res *v1.U
 		WebsiteUrl: req.WebsiteUrl,
 		Remark:     req.Remark,
 		Enabled:    req.Enabled,
+		Endpoints:  toServiceProviderEndpointSaveInputs(req.Endpoints, req.Id),
 	})
 	if err != nil {
 		return nil, err

@@ -71,6 +71,29 @@ func toAPIProviderEndpointItem(item *aisvc.ProviderEndpointItem) *v1.ProviderEnd
 	}
 }
 
+// toServiceProviderEndpointSaveInputs converts provider form endpoint payloads into service inputs.
+func toServiceProviderEndpointSaveInputs(items []*v1.ProviderEndpointSaveItem, providerID int64) []aisvc.ProviderEndpointSaveInput {
+	if items == nil {
+		return nil
+	}
+	list := make([]aisvc.ProviderEndpointSaveInput, 0, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		list = append(list, aisvc.ProviderEndpointSaveInput{
+			Id:           item.Id,
+			ProviderId:   providerID,
+			Protocol:     item.Protocol,
+			BaseUrl:      item.BaseUrl,
+			SecretRef:    item.SecretRef,
+			Enabled:      item.Enabled,
+			MetadataJson: item.MetadataJson,
+		})
+	}
+	return list
+}
+
 // toAPIProviderModelSummaryItems converts service model summaries into API DTOs.
 func toAPIProviderModelSummaryItems(items []*aisvc.ProviderModelSummaryItem) []*v1.ProviderModelSummaryItem {
 	list := make([]*v1.ProviderModelSummaryItem, 0, len(items))

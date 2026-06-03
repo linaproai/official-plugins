@@ -124,6 +124,119 @@ func (s *serviceImpl) DeleteProviderEndpoint(ctx context.Context, providerID int
 	return s.InvalidateTierCache(ctx, "", "", "")
 }
 
+// syncProviderFormEndpoints applies the provider drawer's fixed OpenAI and
+// Anthropic endpoint payload inside the caller's provider transaction.
+func (s *serviceImpl) syncProviderFormEndpoints(ctx context.Context, providerID int64, inputs []ProviderEndpointSaveInput) error {
+	if len(inputs) == 0 {
+		return nil
+	}
+	seenProtocols := make(map[string]struct{}, len(inputs))
+	seenIDs := make(map[int64]struct{}, len(inputs))
+	for _, input := range inputs {
+		protocol := normalizeProviderFormProtocol(input.Protocol)
+		if protocol == "" {
+			return bizerr.NewCode(CodeRequestInvalid)
+		}
+		if _, ok := seenProtocols[protocol]; ok {
+			return bizerr.NewCode(CodeRequestInvalid)
+		}
+		seenProtocols[protocol] = struct{}{}
+		if input.Id > 0 {
+			if _, ok := seenIDs[input.Id]; ok {
+				return bizerr.NewCode(CodeRequestInvalid)
+			}
+			seenIDs[input.Id] = struct{}{}
+		}
+		if err := s.saveProviderFormEndpoint(ctx, providerID, protocol, input); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *serviceImpl) saveProviderFormEndpoint(ctx context.Context, providerID int64, protocol string, in ProviderEndpointSaveInput) error {
+	baseURL := strings.TrimSpace(in.BaseUrl)
+	if in.Id <= 0 && baseURL == "" && strings.TrimSpace(in.SecretRef) == "" && endpointMetadataEmpty(in.MetadataJson) {
+		return nil
+	}
+	if in.Id <= 0 {
+		if baseURL == "" {
+			return bizerr.NewCode(CodeRequestInvalid)
+		}
+		_, err := dao.ProviderEndpoint.Ctx(ctx).Data(do.ProviderEndpoint{
+			ProviderId:   providerID,
+			Protocol:     protocol,
+			BaseUrl:      baseURL,
+			SecretRef:    strings.TrimSpace(in.SecretRef),
+			Enabled:      normalizeEnabled(in.Enabled),
+			MetadataJson: normalizeJSONText(in.MetadataJson),
+		}).Insert()
+		return err
+	}
+	row, err := s.getProviderEndpoint(ctx, providerID, in.Id)
+	if err != nil {
+		return err
+	}
+	if normalizeProviderFormProtocol(row.Protocol) == "" {
+		return bizerr.NewCode(CodeRequestInvalid)
+	}
+	if baseURL == "" {
+		return s.deleteProviderEndpointInTransaction(ctx, providerID, in.Id)
+	}
+	if row.Protocol != protocol {
+		inUse, err := s.providerEndpointReferenced(ctx, in.Id)
+		if err != nil {
+			return err
+		}
+		if inUse {
+			return bizerr.NewCode(CodeProviderEndpointInUse)
+		}
+	}
+	secretRef := strings.TrimSpace(in.SecretRef)
+	if shouldKeepExistingSecret(secretRef) {
+		secretRef = row.SecretRef
+	}
+	_, err = dao.ProviderEndpoint.Ctx(ctx).
+		Where(do.ProviderEndpoint{Id: in.Id, ProviderId: providerID}).
+		Data(do.ProviderEndpoint{
+			Protocol:     protocol,
+			BaseUrl:      baseURL,
+			SecretRef:    secretRef,
+			Enabled:      normalizeEnabled(in.Enabled),
+			MetadataJson: normalizeJSONText(in.MetadataJson),
+		}).
+		Update()
+	return err
+}
+
+func (s *serviceImpl) deleteProviderEndpointInTransaction(ctx context.Context, providerID int64, id int64) error {
+	inUse, err := s.providerEndpointReferenced(ctx, id)
+	if err != nil {
+		return err
+	}
+	if inUse {
+		return bizerr.NewCode(CodeProviderEndpointInUse)
+	}
+	_, err = dao.ProviderEndpoint.Ctx(ctx).Where(do.ProviderEndpoint{Id: id, ProviderId: providerID}).Delete()
+	return err
+}
+
+func normalizeProviderFormProtocol(value string) string {
+	switch normalizeProtocol(value) {
+	case ProtocolOpenAI:
+		return ProtocolOpenAI
+	case ProtocolAnthropic:
+		return ProtocolAnthropic
+	default:
+		return ""
+	}
+}
+
+func endpointMetadataEmpty(value string) bool {
+	trimmed := strings.TrimSpace(value)
+	return trimmed == "" || trimmed == "{}"
+}
+
 // ListModelCapabilities returns explicit method capability declarations for one model.
 func (s *serviceImpl) ListModelCapabilities(ctx context.Context, modelID int64) ([]*ModelCapabilityItem, error) {
 	if err := s.ensurePlatform(ctx); err != nil {

@@ -361,6 +361,119 @@ func TestTierCacheSharedRevisionInvalidatesPeerService(t *testing.T) {
 	}
 }
 
+// TestProviderSaveSynchronizesFormEndpointsTransactionally verifies provider
+// metadata and fixed provider-form endpoints are committed or rolled back together.
+func TestProviderSaveSynchronizesFormEndpointsTransactionally(t *testing.T) {
+	ctx := context.Background()
+	prepareDatabase(t, ctx)
+	svc := New(testBizCtx{}, newMemoryCacheService(), nil).(*serviceImpl)
+
+	providerID, err := svc.CreateProvider(ctx, ProviderSaveInput{
+		Name:    "form-endpoints",
+		Enabled: enabledYes,
+		Endpoints: []ProviderEndpointSaveInput{
+			{
+				Protocol:     ProtocolOpenAI,
+				BaseUrl:      "https://unit.example/openai/v1",
+				SecretRef:    "sk-unit-openai",
+				Enabled:      enabledYes,
+				MetadataJson: "{}",
+			},
+			{
+				Protocol:     ProtocolAnthropic,
+				BaseUrl:      "https://unit.example/anthropic/v1",
+				SecretRef:    "sk-unit-anthropic",
+				Enabled:      enabledYes,
+				MetadataJson: "{}",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("create provider with endpoints: %v", err)
+	}
+	t.Cleanup(func() { deleteProviderFixture(t, ctx, providerID) })
+
+	endpoints, err := svc.ListProviderEndpoints(ctx, ProviderEndpointListInput{ProviderId: providerID})
+	if err != nil {
+		t.Fatalf("list created endpoints: %v", err)
+	}
+	endpointsByProtocol := providerEndpointsByProtocol(endpoints)
+	openaiEndpoint := endpointsByProtocol[ProtocolOpenAI]
+	anthropicEndpoint := endpointsByProtocol[ProtocolAnthropic]
+	if len(endpoints) != 2 || openaiEndpoint == nil || anthropicEndpoint == nil {
+		t.Fatalf("expected two fixed endpoints, got %#v", endpoints)
+	}
+	if openaiEndpoint.SecretRef != "sk-**********ai" {
+		t.Fatalf("expected masked OpenAI secret, got %#v", openaiEndpoint)
+	}
+
+	if err = svc.UpdateProvider(ctx, ProviderSaveInput{
+		Id:      providerID,
+		Name:    "form-endpoints-updated",
+		Enabled: enabledYes,
+		Endpoints: []ProviderEndpointSaveInput{
+			{
+				Id:           openaiEndpoint.Id,
+				Protocol:     ProtocolOpenAI,
+				BaseUrl:      "https://unit.example/openai/v2",
+				SecretRef:    openaiEndpoint.SecretRef,
+				Enabled:      enabledYes,
+				MetadataJson: "{}",
+			},
+			{
+				Id:       anthropicEndpoint.Id,
+				Protocol: ProtocolAnthropic,
+				BaseUrl:  "",
+				Enabled:  enabledYes,
+			},
+		},
+	}); err != nil {
+		t.Fatalf("update provider endpoints: %v", err)
+	}
+	endpoints, err = svc.ListProviderEndpoints(ctx, ProviderEndpointListInput{ProviderId: providerID})
+	if err != nil {
+		t.Fatalf("list updated endpoints: %v", err)
+	}
+	endpointsByProtocol = providerEndpointsByProtocol(endpoints)
+	openaiEndpoint = endpointsByProtocol[ProtocolOpenAI]
+	if len(endpoints) != 1 || openaiEndpoint == nil || openaiEndpoint.BaseUrl != "https://unit.example/openai/v2" {
+		t.Fatalf("expected one updated OpenAI endpoint, got %#v", endpoints)
+	}
+
+	if _, err = svc.CreateModel(ctx, ModelSaveInput{
+		ProviderId:       providerID,
+		EndpointId:       openaiEndpoint.Id,
+		CapabilityType:   CapabilityTypeText,
+		CapabilityMethod: CapabilityMethodGenerate,
+		ModelName:        "form-endpoint-model",
+		Protocol:         ProtocolOpenAI,
+		Enabled:          enabledYes,
+	}); err != nil {
+		t.Fatalf("create model referencing endpoint: %v", err)
+	}
+	err = svc.UpdateProvider(ctx, ProviderSaveInput{
+		Id:      providerID,
+		Name:    "form-endpoints-rollback",
+		Enabled: enabledNo,
+		Endpoints: []ProviderEndpointSaveInput{{
+			Id:       openaiEndpoint.Id,
+			Protocol: ProtocolOpenAI,
+			BaseUrl:  "",
+			Enabled:  enabledYes,
+		}},
+	})
+	if !bizerr.Is(err, CodeProviderEndpointInUse) {
+		t.Fatalf("expected endpoint in-use rollback, got %v", err)
+	}
+	provider, err := svc.GetProvider(ctx, providerID)
+	if err != nil {
+		t.Fatalf("get provider after rollback: %v", err)
+	}
+	if provider.Name != "form-endpoints-updated" || provider.Enabled != enabledYes {
+		t.Fatalf("expected provider metadata rollback, got %#v", provider)
+	}
+}
+
 // TestMultimodalMetadataManagementFlow verifies endpoint CRUD, explicit model
 // capability declarations, method defaults, method-scoped tier binding, and
 // provider operation projection masking.
@@ -557,6 +670,17 @@ type testBizCtx struct{}
 
 func (testBizCtx) Current(context.Context) plugincontract.CurrentContext {
 	return plugincontract.CurrentContext{UserID: 1, TenantID: 0, PlatformBypass: true}
+}
+
+func providerEndpointsByProtocol(items []*ProviderEndpointItem) map[string]*ProviderEndpointItem {
+	out := make(map[string]*ProviderEndpointItem, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		out[item.Protocol] = item
+	}
+	return out
 }
 
 type memoryCacheService struct {

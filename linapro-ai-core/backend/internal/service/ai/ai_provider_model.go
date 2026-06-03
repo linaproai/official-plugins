@@ -105,7 +105,7 @@ func (s *serviceImpl) GetProvider(ctx context.Context, id int64) (*ProviderItem,
 	), nil
 }
 
-// CreateProvider creates one provider.
+// CreateProvider creates one provider and optional provider-form endpoints.
 func (s *serviceImpl) CreateProvider(ctx context.Context, in ProviderSaveInput) (int64, error) {
 	if err := s.ensurePlatform(ctx); err != nil {
 		return 0, err
@@ -113,12 +113,20 @@ func (s *serviceImpl) CreateProvider(ctx context.Context, in ProviderSaveInput) 
 	if strings.TrimSpace(in.Name) == "" {
 		return 0, bizerr.NewCode(CodeRequestInvalid)
 	}
-	id, err := dao.Provider.Ctx(ctx).Data(do.Provider{
-		Name:       strings.TrimSpace(in.Name),
-		WebsiteUrl: strings.TrimSpace(in.WebsiteUrl),
-		Remark:     strings.TrimSpace(in.Remark),
-		Enabled:    normalizeEnabled(in.Enabled),
-	}).InsertAndGetId()
+	var id int64
+	err := dao.Provider.Transaction(ctx, func(ctx context.Context, _ gdb.TX) error {
+		var insertErr error
+		id, insertErr = dao.Provider.Ctx(ctx).Data(do.Provider{
+			Name:       strings.TrimSpace(in.Name),
+			WebsiteUrl: strings.TrimSpace(in.WebsiteUrl),
+			Remark:     strings.TrimSpace(in.Remark),
+			Enabled:    normalizeEnabled(in.Enabled),
+		}).InsertAndGetId()
+		if insertErr != nil {
+			return insertErr
+		}
+		return s.syncProviderFormEndpoints(ctx, id, in.Endpoints)
+	})
 	if err != nil {
 		return 0, err
 	}
@@ -128,7 +136,7 @@ func (s *serviceImpl) CreateProvider(ctx context.Context, in ProviderSaveInput) 
 	return id, nil
 }
 
-// UpdateProvider updates one provider.
+// UpdateProvider updates one provider and optional provider-form endpoints.
 func (s *serviceImpl) UpdateProvider(ctx context.Context, in ProviderSaveInput) error {
 	if err := s.ensurePlatform(ctx); err != nil {
 		return err
@@ -140,15 +148,20 @@ func (s *serviceImpl) UpdateProvider(ctx context.Context, in ProviderSaveInput) 
 	if strings.TrimSpace(in.Name) == "" {
 		return bizerr.NewCode(CodeRequestInvalid)
 	}
-	_, err = dao.Provider.Ctx(ctx).
-		Where(do.Provider{Id: in.Id}).
-		Data(do.Provider{
-			Name:       strings.TrimSpace(in.Name),
-			WebsiteUrl: strings.TrimSpace(in.WebsiteUrl),
-			Remark:     strings.TrimSpace(in.Remark),
-			Enabled:    normalizeEnabled(in.Enabled),
-		}).
-		Update()
+	err = dao.Provider.Transaction(ctx, func(ctx context.Context, _ gdb.TX) error {
+		if _, err = dao.Provider.Ctx(ctx).
+			Where(do.Provider{Id: in.Id}).
+			Data(do.Provider{
+				Name:       strings.TrimSpace(in.Name),
+				WebsiteUrl: strings.TrimSpace(in.WebsiteUrl),
+				Remark:     strings.TrimSpace(in.Remark),
+				Enabled:    normalizeEnabled(in.Enabled),
+			}).
+			Update(); err != nil {
+			return err
+		}
+		return s.syncProviderFormEndpoints(ctx, in.Id, in.Endpoints)
+	})
 	if err != nil {
 		return err
 	}

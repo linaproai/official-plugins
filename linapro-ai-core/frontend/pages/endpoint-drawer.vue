@@ -51,7 +51,7 @@ function resetForm() {
   endpointFormApi.setValues({
     enabled: 1,
     metadataJson: "{}",
-    protocol: "openai-compatible",
+    protocol: "openai",
   });
 }
 
@@ -72,7 +72,9 @@ async function editEndpoint(endpoint: ProviderEndpoint) {
       fieldName: "secretRef",
       componentProps: {
         autocomplete: "new-password",
-        placeholder: $t("plugin.linapro-ai-core.endpoint.placeholders.keepSecret"),
+        placeholder: $t(
+          "plugin.linapro-ai-core.endpoint.placeholders.keepSecret",
+        ),
       },
     },
   ]);
@@ -110,7 +112,10 @@ const [Drawer, drawerApi] = useVbenDrawer({
       return;
     }
     drawerApi.setState({ loading: true });
-    const data = drawerApi.getData<{ providerId?: number; providerName?: string }>();
+    const data = drawerApi.getData<{
+      providerId?: number;
+      providerName?: string;
+    }>();
     providerId.value = Number(data?.providerId || 0);
     providerName.value = data?.providerName || "";
     resetForm();
@@ -141,7 +146,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
                 {{ protocolLabel(endpoint.protocol) }}
               </Tag>
               <span class="font-mono text-xs text-muted-foreground">
-                {{ endpoint.secretRef || '-' }}
+                {{ endpoint.secretRef || "-" }}
               </span>
             </div>
             <div class="mt-1 break-all font-mono text-xs">
@@ -150,7 +155,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
           </div>
           <Space class="shrink-0">
             <ghost-button @click.stop="editEndpoint(endpoint)">
-              {{ $t('pages.common.edit') }}
+              {{ $t("pages.common.edit") }}
             </ghost-button>
             <Popconfirm
               :title="$t('pages.common.deleteConfirm')"
@@ -158,7 +163,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
               @confirm="removeEndpoint(endpoint)"
             >
               <ghost-button danger @click.stop="">
-                {{ $t('pages.common.delete') }}
+                {{ $t("pages.common.delete") }}
               </ghost-button>
             </Popconfirm>
           </Space>
@@ -167,7 +172,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
           v-if="endpoints.length === 0"
           class="px-3 py-4 text-sm text-muted-foreground"
         >
-          {{ $t('plugin.linapro-ai-core.endpoint.empty') }}
+          {{ $t("plugin.linapro-ai-core.endpoint.empty") }}
         </div>
       </div>
 
@@ -176,7 +181,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
       <div class="flex justify-end">
         <Space>
           <a-button @click="resetForm">
-            {{ $t('pages.common.reset') }}
+            {{ $t("pages.common.reset") }}
           </a-button>
           <a-button type="primary" @click="saveEndpoint">
             <template #icon>
@@ -184,8 +189,8 @@ const [Drawer, drawerApi] = useVbenDrawer({
             </template>
             {{
               editingId
-                ? $t('pages.common.save')
-                : $t('plugin.linapro-ai-core.endpoint.actions.add')
+                ? $t("pages.common.save")
+                : $t("plugin.linapro-ai-core.endpoint.actions.add")
             }}
           </a-button>
         </Space>

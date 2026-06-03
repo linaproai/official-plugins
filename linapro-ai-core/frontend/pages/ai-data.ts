@@ -1,10 +1,6 @@
 import type { VbenFormSchema } from "#/adapter/form";
 import type { VxeGridProps } from "#/adapter/vxe-table";
-import type {
-  Provider,
-  ProviderModelSummary,
-  Tier,
-} from "./ai-client";
+import type { Provider, ProviderModelSummary, Tier } from "./ai-client";
 
 import { h } from "vue";
 
@@ -43,6 +39,10 @@ export const protocolOptions = [
   { label: "Anthropic Compatible", value: "anthropic-compatible" },
 ];
 
+export const endpointProtocolOptions = protocolOptions.filter((item) =>
+  ["openai", "anthropic"].includes(item.value),
+);
+
 function protocolLabel(value: string) {
   return (
     protocolOptions.find((item) => item.value === value)?.label ||
@@ -59,6 +59,13 @@ function protocolColor(value: string) {
     return "cyan";
   }
   return value === "openai-compatible" ? "geekblue" : "blue";
+}
+
+function formatOptionalTimestamp(value: null | number | string | undefined) {
+  if (value === 0 || value === "0") {
+    return "";
+  }
+  return formatTimestamp(value, "");
 }
 
 function externalHref(url: string) {
@@ -143,10 +150,8 @@ function endpointCell(row: Provider) {
             endpoint.url,
           ),
           endpoint.enabled === 0
-            ? h(
-                Tag,
-                { class: "!m-0 shrink-0", color: "default" },
-                () => $t("plugin.linapro-ai-core.common.disabled"),
+            ? h(Tag, { class: "!m-0 shrink-0", color: "default" }, () =>
+                $t("plugin.linapro-ai-core.common.disabled"),
               )
             : undefined,
         ],
@@ -159,15 +164,17 @@ function secretCell(row: Provider) {
   const secrets = (row.endpoints || [])
     .map((endpoint) => endpoint.secretRef)
     .filter(Boolean);
-  const text = secrets.length > 0
-    ? [...new Set(secrets)].join("\n")
-    : $t("plugin.linapro-ai-core.provider.empty.noKey");
+  const text =
+    secrets.length > 0
+      ? [...new Set(secrets)].join("\n")
+      : $t("plugin.linapro-ai-core.provider.empty.noKey");
   return h(
     "span",
     {
-      class: secrets.length > 0
-        ? "font-mono text-xs text-foreground"
-        : "text-muted-foreground text-xs",
+      class:
+        secrets.length > 0
+          ? "font-mono text-xs text-foreground"
+          : "text-muted-foreground text-xs",
       style: "white-space: pre-line",
     },
     text,
@@ -311,6 +318,45 @@ export function buildCapabilityMethodOptions() {
     { label: "video.operation.get", value: "video.operation.get" },
     { label: "video.operation.cancel", value: "video.operation.cancel" },
   ];
+}
+
+export const tierCapabilityTypeKeys = [
+  "text",
+  "image",
+  "embedding",
+  "audio",
+  "vision",
+  "document",
+  "safety",
+  "video",
+] as const;
+
+const tierCapabilityDefaultMethods: Record<string, string> = {
+  audio: "audio.transcribe",
+  document: "document.analyze",
+  embedding: "embedding.create",
+  image: "image.generate",
+  safety: "safety.moderate",
+  text: "text.generate",
+  video: "video.generate",
+  vision: "vision.analyze",
+};
+
+function titleCaseCapabilityType(type: string) {
+  return type ? `${type.charAt(0).toUpperCase()}${type.slice(1)}` : "Text";
+}
+
+export function capabilityTypeLabel(type = "text") {
+  const normalized = type || "text";
+  const key = `plugin.linapro-ai-core.capability.types.${normalized}`;
+  const label = $t(key);
+  return label && label !== key ? label : titleCaseCapabilityType(normalized);
+}
+
+export function defaultTierCapabilityMethod(type = "text") {
+  return (
+    tierCapabilityDefaultMethods[type] || tierCapabilityDefaultMethods.text
+  );
 }
 
 export function splitCapabilityMethod(value = "text.generate") {
@@ -466,6 +512,31 @@ export function buildProviderFormSchema(): VbenFormSchema[] {
       label: $t("plugin.linapro-ai-core.provider.fields.websiteUrl"),
     },
     {
+      component: "InputPassword",
+      fieldName: "secretRef",
+      label: $t("plugin.linapro-ai-core.endpoint.fields.secretRef"),
+      componentProps: {
+        autocomplete: "new-password",
+      },
+    },
+    {
+      component: "Input",
+      fieldName: "openaiBaseUrl",
+      label: `${$t("plugin.linapro-ai-core.endpoint.names.openai")} ${$t("plugin.linapro-ai-core.endpoint.fields.baseUrl")}`,
+      componentProps: {
+        placeholder: "https://api.openai.com/v1",
+      },
+    },
+    {
+      component: "Input",
+      fieldName: "anthropicBaseUrl",
+      label: `${$t("plugin.linapro-ai-core.endpoint.names.anthropic")} ${$t("plugin.linapro-ai-core.endpoint.fields.baseUrl")}`,
+      defaultValue: "https://api.anthropic.com/v1",
+      componentProps: {
+        placeholder: "https://api.anthropic.com/v1",
+      },
+    },
+    {
       component: "Textarea",
       fieldName: "remark",
       label: $t("pages.common.remark"),
@@ -481,7 +552,7 @@ export function buildEndpointFormSchema(): VbenFormSchema[] {
       fieldName: "protocol",
       label: $t("plugin.linapro-ai-core.endpoint.fields.protocol"),
       rules: "selectRequired",
-      componentProps: { options: protocolOptions },
+      componentProps: { options: endpointProtocolOptions },
     },
     {
       component: "Input",
@@ -655,7 +726,7 @@ export function buildTierColumns(): VxeGridProps["columns"] {
     {
       field: "updatedAt",
       title: $t("pages.common.updatedAt"),
-      formatter: ({ cellValue }) => formatTimestamp(cellValue),
+      formatter: ({ cellValue }) => formatOptionalTimestamp(cellValue),
       minWidth: 180,
     },
     {

@@ -16,6 +16,7 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 		WebsiteUrl: req.WebsiteUrl,
 		Remark:     req.Remark,
 		Enabled:    req.Enabled,
+		Endpoints:  toServiceProviderEndpointSaveInputs(req.Endpoints, 0),
 	})
 	if err != nil {
 		return nil, err

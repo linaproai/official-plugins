@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { workspacePath } from "@host-tests/fixtures/config";
 import {
+  closeDialogWithEscape,
   waitForBusyIndicatorsToClear,
   waitForDialogReady,
   waitForRouteReady,
@@ -29,6 +30,16 @@ const capabilityMethodOptionOrder = [
   "video.operation.get",
   "video.operation.cancel",
 ];
+const tierCapabilityTypeLabels: Record<string, { en: string; zh: string }> = {
+  audio: { en: "Audio", zh: "音频" },
+  document: { en: "Document", zh: "文档理解" },
+  embedding: { en: "Embedding", zh: "向量嵌入" },
+  image: { en: "Image", zh: "图像" },
+  safety: { en: "Safety", zh: "安全审核" },
+  text: { en: "Text", zh: "文本" },
+  video: { en: "Video", zh: "视频" },
+  vision: { en: "Vision", zh: "视觉理解" },
+};
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -40,7 +51,10 @@ function cssAttributeValue(value: string) {
 
 function screenshotName(name: string) {
   const timestamp = new Date().toISOString().replace(/\D/g, "").slice(0, 14);
-  const safeName = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const safeName = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
   return `${timestamp}-${safeName || "screenshot"}.png`;
 }
 
@@ -53,6 +67,26 @@ export class SmartCenterPage {
 
   private providerNameInput() {
     return this.dialog.getByRole("textbox", { name: /名称|Name/i });
+  }
+
+  private providerApiKeyInput() {
+    return this.dialog.getByLabel(/API 密钥|API Key/i).first();
+  }
+
+  private providerOpenAIBaseUrlInput() {
+    return this.dialog
+      .getByRole("textbox", {
+        name: /OpenAI\s*(接入地址|基础地址|Access URL|Base URL)/i,
+      })
+      .first();
+  }
+
+  private providerAnthropicBaseUrlInput() {
+    return this.dialog
+      .getByRole("textbox", {
+        name: /Anthropic\s*(接入地址|基础地址|Access URL|Base URL)/i,
+      })
+      .first();
   }
 
   async gotoProviders() {
@@ -98,12 +132,26 @@ export class SmartCenterPage {
     await this.openCreateProvider();
     await expect(this.dialog.getByText("新增供应商")).toBeVisible();
     await expect(this.providerNameInput()).toBeVisible();
+    await expect(this.dialog.getByText("端点配置")).toHaveCount(0);
     await expect(this.dialog.getByText("供应商名称")).toHaveCount(0);
-    await expect(this.dialog.getByText("OpenAI 接入地址")).toHaveCount(0);
-    await expect(this.dialog.getByText("Anthropic 接入地址")).toHaveCount(0);
-    await expect(this.dialog.getByText("OpenAI Base URL")).toHaveCount(0);
-    await expect(this.dialog.getByText("Anthropic Base URL")).toHaveCount(0);
-    await expect(this.dialog.getByText("API 密钥")).toHaveCount(0);
+    await expect(this.dialog.getByText("API 密钥")).toBeVisible();
+    await expect(this.providerApiKeyInput()).toBeVisible();
+    await expect(
+      this.dialog.getByText(/OpenAI\s*(接入地址|基础地址)/),
+    ).toBeVisible();
+    await expect(this.providerOpenAIBaseUrlInput()).toBeVisible();
+    await expect(
+      this.dialog.getByText(/Anthropic\s*(接入地址|基础地址)/),
+    ).toBeVisible();
+    await expect(this.providerAnthropicBaseUrlInput()).toHaveValue(
+      "https://api.anthropic.com/v1",
+    );
+    await expect(
+      this.dialog.getByPlaceholder("https://api.openai.com/v1"),
+    ).toBeVisible();
+    await expect(
+      this.dialog.getByPlaceholder("https://api.anthropic.com/v1"),
+    ).toBeVisible();
     await expect(
       this.dialog.getByText("启用", { exact: true }).first(),
     ).toBeVisible();
@@ -121,6 +169,9 @@ export class SmartCenterPage {
     await expect(
       this.dialog.getByText("plugin.linapro-ai-core.effort.empty"),
     ).toHaveCount(0);
+    await expect(this.dialog.getByText(/plugin\.linapro-ai-core/)).toHaveCount(
+      0,
+    );
     await this.cancelDrawer();
   }
 
@@ -257,13 +308,22 @@ export class SmartCenterPage {
   async captureEvidence(name: string) {
     const dir = path.join(repoRoot, "temp");
     mkdirSync(dir, { recursive: true });
+    const hasOpenDrawer = await this.dialog.isVisible().catch(() => false);
+    const pathName = path.join(dir, screenshotName(name));
+    if (hasOpenDrawer) {
+      await this.dialog.screenshot({ path: pathName });
+      return;
+    }
+    await this.resetHorizontalScroll();
     await this.page.screenshot({
       fullPage: true,
-      path: path.join(dir, screenshotName(name)),
+      path: pathName,
     });
+    await this.resetHorizontalScroll();
   }
 
   async openProviderEndpoints(providerName: string) {
+    await this.resetHorizontalScroll();
     const actionRow = await this.providerActionRow(providerName);
     const endpointButton = actionRow.getByRole("button", {
       name: /端\s*点|Endpoints/i,
@@ -271,6 +331,7 @@ export class SmartCenterPage {
     await expect(endpointButton).toBeVisible();
     await this.clickFixedActionButton(endpointButton);
     await waitForDialogReady(this.dialog);
+    await this.resetHorizontalScroll();
   }
 
   async assertEndpointDrawerChineseTranslations(providerName: string) {
@@ -278,13 +339,24 @@ export class SmartCenterPage {
       this.dialog.getByText(`供应商端点 - ${providerName}`),
     ).toBeVisible();
     await expect(this.dialog.getByText("协议")).toBeVisible();
-    await expect(this.dialog.getByText("基础地址")).toBeVisible();
-    await expect(this.dialog.getByText("密钥", { exact: true })).toBeVisible();
+    await expect(this.dialog.getByText(/基础地址|接入地址/)).toBeVisible();
+    await expect(this.dialog.getByText(/API 密钥|API Key/i)).toBeVisible();
     await expect(this.dialog.getByText("元数据 JSON")).toBeVisible();
     await expect(
       this.dialog.getByRole("button", { name: /新增端点|Add Endpoint/i }),
     ).toBeVisible();
-    await expect(this.dialog.getByText(/plugin\.linapro-ai-core/)).toHaveCount(0);
+    const protocolCombobox = this.dialog.getByLabel(/协议|Protocol/i).first();
+    const protocolSelect = protocolCombobox.locator(
+      'xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ant-select ")][1]',
+    );
+    await expect(
+      protocolSelect.locator(".ant-select-selection-item"),
+    ).toHaveText("OpenAI");
+    await expect(this.dialog.getByText("Voyage")).toHaveCount(0);
+    await expect(this.dialog.getByText(/Compatible/i)).toHaveCount(0);
+    await expect(this.dialog.getByText(/plugin\.linapro-ai-core/)).toHaveCount(
+      0,
+    );
   }
 
   async assertEndpointVisible(input: {
@@ -301,13 +373,25 @@ export class SmartCenterPage {
     }
   }
 
-  async assertProviderRowEndpoint(providerName: string, baseUrl: string, protocolLabel: string) {
+  async assertProviderRowEndpoint(
+    providerName: string,
+    baseUrl: string,
+    protocolLabel: string,
+  ) {
     const row = this.page.locator(".vxe-body--row:visible", {
       hasText: providerName,
     });
     await row.first().waitFor({ state: "visible", timeout: 10_000 });
     await expect(row.first()).toContainText(protocolLabel);
     await expect(row.first()).toContainText(baseUrl);
+  }
+
+  async assertProviderRowSecret(providerName: string, secretText: string) {
+    const row = this.page.locator(".vxe-body--row:visible", {
+      hasText: providerName,
+    });
+    await row.first().waitFor({ state: "visible", timeout: 10_000 });
+    await expect(row.first()).toContainText(secretText);
   }
 
   async assertProviderVisible(providerName: string) {
@@ -324,13 +408,13 @@ export class SmartCenterPage {
   }) {
     const actionRow = await this.providerActionRow(input.providerName);
     await expect(
-      this.page.getByRole("button", { name: /更多|More/i }),
-    ).toHaveCount(0);
+      actionRow.getByRole("button", { name: /端\s*点|Endpoints/i }),
+    ).toBeVisible();
     const openaiSync = actionRow.getByRole("button", {
-      name: /同步 openai 模型|Sync OpenAI Models/i,
+      name: /同步 openai 模型|Sync openai Models/i,
     });
     const anthropicSync = actionRow.getByRole("button", {
-      name: /同步 anthropic 模型|Sync Anthropic Models/i,
+      name: /同步 anthropic 模型|Sync anthropic Models/i,
     });
     if (input.syncOpenAI) {
       await expect(openaiSync).toBeVisible();
@@ -341,34 +425,83 @@ export class SmartCenterPage {
   }
 
   async cancelDrawer() {
+    await closeDialogWithEscape(this.page, this.dialog, 2_000);
+    if (await this.dialog.isHidden().catch(() => false)) {
+      return;
+    }
     await this.dialog
-      .getByRole("button", { name: /取\s*消|Cancel/i })
-      .last()
-      .click();
+      .locator(".ant-drawer-close, .ant-modal-close")
+      .first()
+      .click({ force: true, timeout: 5_000 });
+    await expect(this.dialog).toBeHidden({ timeout: 10_000 });
     await waitForBusyIndicatorsToClear(this.page);
   }
 
   async openProvider(name: string) {
     const actionRow = await this.providerActionRow(name);
-    await actionRow
-      .getByRole("button", { name: /编\s*辑|Edit/i })
-      .click();
+    await this.clickFixedActionButton(
+      actionRow.getByRole("button", { name: /编\s*辑|Edit/i }),
+    );
     await waitForDialogReady(this.dialog);
   }
 
-  async fillProvider(data: { name: string }) {
-    await this.providerNameInput().fill(data.name);
+  async fillProvider(data: {
+    anthropicBaseUrl?: string;
+    name?: string;
+    openaiBaseUrl?: string;
+    remark?: string;
+    secretRef?: string;
+    websiteUrl?: string;
+  }) {
+    if (data.name !== undefined) {
+      await this.providerNameInput().fill(data.name);
+    }
+    if (data.websiteUrl !== undefined) {
+      await this.dialog
+        .getByRole("textbox", { name: /官网地址|Website/i })
+        .fill(data.websiteUrl);
+    }
+    if (data.secretRef !== undefined) {
+      await this.providerApiKeyInput().fill(data.secretRef);
+    }
+    if (data.openaiBaseUrl !== undefined) {
+      await this.providerOpenAIBaseUrlInput().fill(data.openaiBaseUrl);
+    }
+    if (data.anthropicBaseUrl !== undefined) {
+      await this.providerAnthropicBaseUrlInput().fill(data.anthropicBaseUrl);
+    }
+    if (data.remark !== undefined) {
+      await this.dialog.getByLabel(/备注|Remark/i).fill(data.remark);
+    }
   }
 
-  async assertEditProviderMetadataForm() {
+  async assertEditProviderMetadataForm(input?: {
+    anthropicEndpointUrl?: string;
+    openaiEndpointUrl?: string;
+  }) {
     await expect(this.providerNameInput()).toBeVisible();
+    await expect(this.dialog.getByText("端点配置")).toHaveCount(0);
     await expect(this.dialog.getByText("供应商名称")).toHaveCount(0);
-    await expect(this.dialog.getByLabel(/API 密钥|API Key/i)).toHaveCount(0);
-    await expect(
-      this.dialog.getByRole("textbox", {
-        name: /OpenAI 接入地址|OpenAI Access URL/i,
-      }),
-    ).toHaveCount(0);
+    await expect(this.providerApiKeyInput()).toBeVisible();
+    await expect(this.providerApiKeyInput()).toHaveAttribute(
+      "placeholder",
+      /留空则保持原(端点)?密钥|Leave blank to keep the existing (endpoint )?secret/i,
+    );
+    await expect(this.providerOpenAIBaseUrlInput()).toBeVisible();
+    await expect(this.providerAnthropicBaseUrlInput()).toBeVisible();
+    await expect(this.dialog.getByText(/plugin\.linapro-ai-core/)).toHaveCount(
+      0,
+    );
+    if (input?.openaiEndpointUrl) {
+      await expect(this.providerOpenAIBaseUrlInput()).toHaveValue(
+        input.openaiEndpointUrl,
+      );
+    }
+    if (input?.anthropicEndpointUrl) {
+      await expect(this.providerAnthropicBaseUrlInput()).toHaveValue(
+        input.anthropicEndpointUrl,
+      );
+    }
   }
 
   async deleteModelFromProviderRow(providerName: string, modelName: string) {
@@ -376,6 +509,12 @@ export class SmartCenterPage {
       hasText: providerName,
     });
     await row.first().waitFor({ state: "visible", timeout: 10_000 });
+    const deleteResponse = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === "DELETE" &&
+        /\/x\/linapro-ai-core\/api\/v1\/ai\/models\/\d+$/.test(response.url()),
+      { timeout: 20_000 },
+    );
     await row
       .first()
       .getByRole("button", {
@@ -389,7 +528,10 @@ export class SmartCenterPage {
       .locator(".ant-popover")
       .getByRole("button", { name: /确\s*定|OK/i })
       .click();
+    const response = await deleteResponse;
+    expect(response.ok()).toBeTruthy();
     await waitForBusyIndicatorsToClear(this.page);
+    await this.searchProvider(providerName);
     await expect(row.first()).not.toContainText(modelName, { timeout: 10_000 });
   }
 
@@ -433,9 +575,7 @@ export class SmartCenterPage {
 
   async deleteProvider(name: string) {
     const actionRow = await this.providerActionRow(name);
-    await actionRow
-      .getByRole("button", { name: /删\s*除|Delete/i })
-      .click();
+    await actionRow.getByRole("button", { name: /删\s*除|Delete/i }).click();
     await this.page
       .locator(".ant-popover")
       .getByRole("button", { name: /确\s*定|OK/i })
@@ -496,30 +636,160 @@ export class SmartCenterPage {
     ).toBeVisible();
   }
 
-  async selectTierCapabilityMethod(capabilityKey: string) {
-    const currentCapabilityKey = await this.openCapabilityMethodSelect();
-    await this.selectCapabilityDropdownOption(
-      capabilityKey,
-      currentCapabilityKey,
-    );
-    await this.page
-      .getByRole("button", { name: /搜\s*索|Search/i })
-      .first()
-      .click();
+  async selectTierCapabilityType(capabilityType: string) {
+    const tab = this.tierCapabilityTypeTab(capabilityType);
+    await tab.click();
+    await expect(tab).toHaveAttribute("aria-selected", "true");
     await waitForTableReady(this.page);
   }
 
-  async assertTierMethodPage(capabilityKey: string, defaultParams: string) {
-    await expect(this.page.getByText(`${capabilityKey} 默认参数`)).toBeVisible();
+  async assertTierCapabilityTypeTabs() {
+    for (const [capabilityType, label] of Object.entries(
+      tierCapabilityTypeLabels,
+    )) {
+      await expect
+        .poll(async () => this.tierCapabilityTypeTabByLabel(label).count())
+        .toBeGreaterThan(0);
+      await expect(
+        this.page.getByTestId(`ai-tier-capability-tab-icon-${capabilityType}`),
+      ).toBeVisible();
+    }
+    await expect(
+      this.page.getByLabel(/能力方法|Capability Method/i),
+    ).toHaveCount(0);
+    await expect(
+      this.page.getByText(/plugin\.linapro-ai-core\.capability\.types/),
+    ).toHaveCount(0);
+    await expect(this.page.getByText("document.analyze")).toHaveCount(0);
+  }
+
+  async assertTierTabsVisualStyle() {
+    const tabs = this.page.getByTestId("ai-tier-capability-tabs");
+    await expect(tabs).not.toHaveClass(/ant-tabs-card/);
+    const nav = tabs.locator(".ant-tabs-nav").first();
+    const contentHolder = tabs.locator(".ant-tabs-content-holder").first();
+    const content = this.page.getByTestId("ai-tier-capability-content");
+    const firstTab = tabs.locator('[role="tab"]').first();
+    const activeTab = tabs.locator(".ant-tabs-tab-active").first();
+    const activeButton = activeTab.locator(".ant-tabs-tab-btn").first();
+    const activeIcon = activeTab.locator(".tier-capability-tab-icon").first();
+    const inactiveTab = tabs
+      .locator(".ant-tabs-tab:not(.ant-tabs-tab-active)")
+      .first();
+    const inactiveButton = inactiveTab.locator(".ant-tabs-tab-btn").first();
+    const inkBar = tabs.locator(".ant-tabs-ink-bar").first();
+    await expect(nav).toBeVisible();
+    await expect(contentHolder).toBeVisible();
+    await expect(content).toBeVisible();
+    await expect(activeTab).toBeVisible();
+    await expect(inactiveTab).toBeVisible();
+    await expect(inkBar).toBeVisible();
+
+    const [
+      activeBg,
+      inactiveBg,
+      activeColor,
+      inactiveColor,
+      activeIconColor,
+      contentBg,
+      contentBorderWidth,
+      inkBg,
+      inkBox,
+      navDividerWidth,
+      tabsBox,
+      firstTabBox,
+      navBox,
+      contentHolderBox,
+    ] = await Promise.all([
+      activeTab.evaluate(
+        (node) => window.getComputedStyle(node).backgroundColor,
+      ),
+      inactiveTab.evaluate(
+        (node) => window.getComputedStyle(node).backgroundColor,
+      ),
+      activeButton.evaluate((node) => window.getComputedStyle(node).color),
+      inactiveButton.evaluate((node) => window.getComputedStyle(node).color),
+      activeIcon.evaluate((node) => window.getComputedStyle(node).color),
+      contentHolder.evaluate(
+        (node) => window.getComputedStyle(node).backgroundColor,
+      ),
+      contentHolder.evaluate((node) =>
+        Number.parseFloat(window.getComputedStyle(node).borderTopWidth),
+      ),
+      inkBar.evaluate((node) => window.getComputedStyle(node).backgroundColor),
+      inkBar.boundingBox(),
+      nav.evaluate((node) =>
+        Number.parseFloat(
+          window.getComputedStyle(node, "::before").borderBottomWidth,
+        ),
+      ),
+      tabs.boundingBox(),
+      firstTab.boundingBox(),
+      nav.boundingBox(),
+      contentHolder.boundingBox(),
+    ]);
+    expect(activeBg).toBe("rgba(0, 0, 0, 0)");
+    expect(inactiveBg).toBe("rgba(0, 0, 0, 0)");
+    expect(activeColor).not.toBe(inactiveColor);
+    expect(activeIconColor).toBe(activeColor);
+    expect(contentBg).not.toBe("rgba(0, 0, 0, 0)");
+    expect(contentBorderWidth).toBe(0);
+    expect(inkBg).toBe(activeColor);
+    expect(inkBox).not.toBeNull();
+    expect(inkBox!.height).toBeGreaterThanOrEqual(2);
+    expect(inkBox!.width).toBeGreaterThan(0);
+    expect(navDividerWidth).toBeGreaterThanOrEqual(1);
+    expect(tabsBox).not.toBeNull();
+    expect(firstTabBox).not.toBeNull();
+    expect(firstTabBox!.x - tabsBox!.x).toBeGreaterThanOrEqual(16);
+    expect(navBox).not.toBeNull();
+    expect(contentHolderBox).not.toBeNull();
+    expect(
+      Math.round(contentHolderBox!.y - (navBox!.y + navBox!.height)),
+    ).toBeLessThanOrEqual(1);
+  }
+
+  async assertTierTypePage(capabilityType: string, defaultParams: string) {
+    const labels = this.tierCapabilityTypeLabel(capabilityType);
+    await expect(this.tierCapabilityTypeTab(capabilityType)).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(
+      this.page.getByText(
+        new RegExp(
+          `${escapeRegExp(labels.zh)}默认参数|Defaults for ${escapeRegExp(labels.en)}`,
+          "i",
+        ),
+      ),
+    ).toBeVisible();
     await expect(this.page.getByText(defaultParams)).toBeVisible();
     await expect(this.page.getByText(/基础|Basic/i)).toBeVisible();
     await expect(this.page.getByText(/标准|Standard/i)).toBeVisible();
     await expect(this.page.getByText(/高级|Advanced/i)).toBeVisible();
   }
 
+  async assertTierUpdatedAtHidden(tierName: RegExp) {
+    const headerIndex = await this.tierUpdatedAtColumnIndex();
+    const row = this.page
+      .locator(".vxe-table--main-wrapper .vxe-body--row:visible", {
+        hasText: tierName,
+      })
+      .first();
+    await row.waitFor({ state: "visible", timeout: 10_000 });
+    const updatedAtCell = row
+      .locator(".vxe-body--column:visible")
+      .nth(headerIndex);
+    await expect
+      .poll(async () => (await updatedAtCell.innerText()).trim())
+      .toBe("");
+  }
+
   async assertTierDrawerWithoutThinkingEffort(tierName: RegExp) {
     await this.editTier(tierName);
-    await expect(this.dialog.getByText("供应商", { exact: true })).toBeVisible();
+    await expect(
+      this.dialog.getByText("供应商", { exact: true }),
+    ).toBeVisible();
     await expect(this.dialog.getByText("模型", { exact: true })).toBeVisible();
     await expect(this.dialog.getByText("Thinking Effort")).toHaveCount(0);
     await this.cancelDrawer();
@@ -542,7 +812,10 @@ export class SmartCenterPage {
     await waitForTableReady(this.page);
   }
 
-  async filterInvocationsByCapabilityAndPurpose(capabilityKey: string, purpose: string) {
+  async filterInvocationsByCapabilityAndPurpose(
+    capabilityKey: string,
+    purpose: string,
+  ) {
     const currentCapabilityKey = await this.openCapabilityMethodSelect();
     await this.selectCapabilityDropdownOption(
       capabilityKey,
@@ -564,8 +837,10 @@ export class SmartCenterPage {
       'xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ant-select ")][1]',
     );
     const currentCapabilityKey =
-      (await select.locator(".ant-select-selection-item").first().textContent()) ||
-      "text.generate";
+      (await select
+        .locator(".ant-select-selection-item")
+        .first()
+        .textContent()) || "text.generate";
     await select.locator(".ant-select-selector").click();
     await this.visibleCapabilityDropdown().waitFor({
       state: "visible",
@@ -662,11 +937,50 @@ export class SmartCenterPage {
           'xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ant-select ")][1]',
         );
         return (
-          (await select.locator(".ant-select-selection-item").first().textContent()) ||
-          ""
+          (await select
+            .locator(".ant-select-selection-item")
+            .first()
+            .textContent()) || ""
         ).trim();
       })
       .toBe(label);
+  }
+
+  private tierCapabilityTypeLabel(capabilityType: string) {
+    const labels = tierCapabilityTypeLabels[capabilityType];
+    if (!labels) {
+      throw new Error(`未知能力类型 Tab: ${capabilityType}`);
+    }
+    return labels;
+  }
+
+  private tierCapabilityTypeTab(capabilityType: string) {
+    return this.tierCapabilityTypeTabByLabel(
+      this.tierCapabilityTypeLabel(capabilityType),
+    ).first();
+  }
+
+  private tierCapabilityTypeTabByLabel(label: { en: string; zh: string }) {
+    return this.page.getByRole("tab", {
+      name: new RegExp(
+        `${escapeRegExp(label.zh)}|${escapeRegExp(label.en)}`,
+        "i",
+      ),
+    });
+  }
+
+  private async tierUpdatedAtColumnIndex() {
+    const headers = this.page.locator(
+      ".vxe-table--main-wrapper .vxe-header--column:visible",
+    );
+    const count = await headers.count();
+    for (let index = 0; index < count; index += 1) {
+      const text = (await headers.nth(index).innerText()).trim();
+      if (/更新时间|Updated At/i.test(text)) {
+        return index;
+      }
+    }
+    throw new Error("未找到档位表更新时间列");
   }
 
   private async tierRowIndex(tierName: RegExp) {
@@ -679,6 +993,14 @@ export class SmartCenterPage {
       }
     }
     throw new Error(`未找到档位行: ${tierName}`);
+  }
+
+  private async resetHorizontalScroll() {
+    await this.page.evaluate(() => {
+      window.scrollTo({ left: 0, top: window.scrollY });
+      document.documentElement.scrollLeft = 0;
+      document.body.scrollLeft = 0;
+    });
   }
 
   private providerMainRow(providerName: string) {

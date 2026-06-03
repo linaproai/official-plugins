@@ -4,6 +4,7 @@ import { SmartCenterPage } from "../pages/SmartCenterPage";
 import {
   bindCapabilityTier,
   clearTier,
+  clearTierUpdatedAt,
   createProviderEndpoint,
   createProviderModel,
   createProviderWithModel,
@@ -26,7 +27,9 @@ test.describe("TC-5 智能中心多模态档位", () => {
     await prepareSourcePluginsBaseline(["linapro-ai-core"]);
   });
 
-  test("TC-5a: 能力方法筛选、三档绑定、默认参数和错误路径", async ({ adminPage }) => {
+  test("TC-5a: 能力类型 Tab、三档绑定、默认参数和错误路径", async ({
+    adminPage,
+  }) => {
     await withAdminApi(async (api) => {
       const suffix = Date.now();
       const fixture = await createProviderWithModel(api, {
@@ -37,15 +40,19 @@ test.describe("TC-5 智能中心多模态档位", () => {
         baseUrl: `https://example.com/e2e-document-${suffix}/v1`,
         protocol: "openai-compatible",
       });
-      const documentModelId = await createProviderModel(api, fixture.providerId, {
-        capabilityMethod: "analyze",
-        capabilityType: "document",
-        endpointId,
-        maxInputTokens: 8192,
-        maxOutputTokens: 2048,
-        modelName: `e2e-document-model-${suffix}`,
-        protocol: "openai-compatible",
-      });
+      const documentModelId = await createProviderModel(
+        api,
+        fixture.providerId,
+        {
+          capabilityMethod: "analyze",
+          capabilityType: "document",
+          endpointId,
+          maxInputTokens: 8192,
+          maxOutputTokens: 2048,
+          modelName: `e2e-document-model-${suffix}`,
+          protocol: "openai-compatible",
+        },
+      );
       await saveModelCapabilities(api, documentModelId, [
         {
           capabilityMethod: "analyze",
@@ -66,6 +73,7 @@ test.describe("TC-5 智能中心多模态档位", () => {
           capabilityType: "document",
         },
       );
+      clearTierUpdatedAt("basic", "document", "analyze");
 
       const routePattern = "**/x/linapro-ai-core/api/v1/ai/tiers/basic/test";
       const gate = createGate();
@@ -96,12 +104,15 @@ test.describe("TC-5 智能中心多模态档位", () => {
       try {
         const smartCenter = new SmartCenterPage(adminPage);
         await smartCenter.gotoTiers();
-        await smartCenter.selectTierCapabilityMethod("document.analyze");
-        await smartCenter.assertTierMethodPage(
-          "document.analyze",
+        await smartCenter.assertTierCapabilityTypeTabs();
+        await smartCenter.assertTierTabsVisualStyle();
+        await smartCenter.selectTierCapabilityType("document");
+        await smartCenter.assertTierTypePage(
+          "document",
           '{"maxOutputTokens":2048}',
         );
-        await smartCenter.captureEvidence("TC005-document-tier-list");
+        await smartCenter.assertTierUpdatedAtHidden(/基础|Basic/i);
+        await smartCenter.captureEvidence("TC005-document-tier-tab-list");
         await smartCenter.assertTierDrawerWithoutThinkingEffort(/基础|Basic/i);
 
         await smartCenter.clickSavedTierTestAndAssertLoading(/基础|Basic/i);

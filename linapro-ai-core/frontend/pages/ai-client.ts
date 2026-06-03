@@ -1,9 +1,9 @@
-import { pluginApiPath, requestClient } from '#/api/request';
+import { pluginApiPath, requestClient } from "#/api/request";
 
-const pluginID = 'linapro-ai-core';
+const pluginID = "linapro-ai-core";
 const tierTestRequestTimeout = 65_000;
-export const defaultCapabilityType = 'text';
-export const defaultCapabilityMethod = 'generate';
+export const defaultCapabilityType = "text";
+export const defaultCapabilityMethod = "generate";
 
 function aiApi(pathName: string) {
   return pluginApiPath(pluginID, pathName);
@@ -35,6 +35,30 @@ export interface ProviderEndpoint {
   metadataJson: string;
   createdAt: number;
   updatedAt: number;
+}
+
+export type ProviderProtocol =
+  | "anthropic"
+  | "anthropic-compatible"
+  | "openai"
+  | "openai-compatible"
+  | "voyage";
+
+export interface ProviderEndpointSaveInput {
+  id?: number;
+  protocol: ProviderProtocol;
+  baseUrl: string;
+  secretRef?: string;
+  enabled?: number;
+  metadataJson?: string;
+}
+
+export interface ProviderSaveInput {
+  name: string;
+  websiteUrl?: string;
+  remark?: string;
+  enabled?: number;
+  endpoints?: ProviderEndpointSaveInput[];
 }
 
 export interface ProviderModelSummary {
@@ -178,7 +202,7 @@ export interface InvocationListParams {
 
 export async function providerList(params?: ProviderListParams) {
   const res = await requestClient.get<{ list: Provider[]; total: number }>(
-    aiApi('ai/providers'),
+    aiApi("ai/providers"),
     { params },
   );
   return { items: res.list, total: res.total };
@@ -188,11 +212,11 @@ export function providerInfo(id: number) {
   return requestClient.get<Provider>(aiApi(`ai/providers/${id}`));
 }
 
-export function providerAdd(data: Partial<Provider>) {
-  return requestClient.post(aiApi('ai/providers'), data);
+export function providerAdd(data: ProviderSaveInput) {
+  return requestClient.post(aiApi("ai/providers"), data);
 }
 
-export function providerUpdate(id: number, data: Partial<Provider>) {
+export function providerUpdate(id: number, data: ProviderSaveInput) {
   return requestClient.put(aiApi(`ai/providers/${id}`), data);
 }
 
@@ -213,21 +237,29 @@ export async function providerEndpoints(
 
 export function providerEndpointAdd(
   providerId: number,
-  data: Partial<ProviderEndpoint>,
+  data: ProviderEndpointSaveInput,
 ) {
-  return requestClient.post(aiApi(`ai/providers/${providerId}/endpoints`), data);
+  return requestClient.post(
+    aiApi(`ai/providers/${providerId}/endpoints`),
+    data,
+  );
 }
 
 export function providerEndpointUpdate(
   providerId: number,
   id: number,
-  data: Partial<ProviderEndpoint>,
+  data: ProviderEndpointSaveInput,
 ) {
-  return requestClient.put(aiApi(`ai/providers/${providerId}/endpoints/${id}`), data);
+  return requestClient.put(
+    aiApi(`ai/providers/${providerId}/endpoints/${id}`),
+    data,
+  );
 }
 
 export function providerEndpointDelete(providerId: number, id: number) {
-  return requestClient.delete(aiApi(`ai/providers/${providerId}/endpoints/${id}`));
+  return requestClient.delete(
+    aiApi(`ai/providers/${providerId}/endpoints/${id}`),
+  );
 }
 
 export async function providerModels(
@@ -312,7 +344,10 @@ export async function modelCapabilities(id: number) {
   return res.list;
 }
 
-export function modelCapabilitiesSave(id: number, items: ModelCapabilityInput[]) {
+export function modelCapabilitiesSave(
+  id: number,
+  items: ModelCapabilityInput[],
+) {
   return requestClient.put(aiApi(`ai/models/${id}/capabilities`), { items });
 }
 
@@ -335,7 +370,7 @@ export interface MethodDefaultParam {
 
 export async function methodDefaults() {
   const res = await requestClient.get<{ list: MethodDefaultParam[] }>(
-    aiApi('ai/method-defaults'),
+    aiApi("ai/method-defaults"),
   );
   return res.list;
 }
@@ -355,7 +390,7 @@ export async function tierList(
   capabilityType = defaultCapabilityType,
   capabilityMethod = defaultCapabilityMethod,
 ) {
-  const res = await requestClient.get<{ list: Tier[] }>(aiApi('ai/tiers'), {
+  const res = await requestClient.get<{ list: Tier[] }>(aiApi("ai/tiers"), {
     params: {
       capabilityMethod,
       capabilityType,
@@ -386,16 +421,16 @@ export function tierTest(code: string, data: Record<string, any>) {
 
 export async function invocationList(params?: InvocationListParams) {
   const res = await requestClient.get<{ list: Invocation[]; total: number }>(
-    aiApi('ai/invocations'),
+    aiApi("ai/invocations"),
     { params },
   );
   return { items: res.list, total: res.total };
 }
 
 export async function providerOperationList(params?: InvocationListParams) {
-  const res = await requestClient.get<{ list: ProviderOperation[]; total: number }>(
-    aiApi('ai/provider-operations'),
-    { params },
-  );
+  const res = await requestClient.get<{
+    list: ProviderOperation[];
+    total: number;
+  }>(aiApi("ai/provider-operations"), { params });
   return { items: res.list, total: res.total };
 }

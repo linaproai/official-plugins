@@ -227,16 +227,17 @@
             "CreateReq": {
               "fields": {
                 "enabled": { "dc": "启用标记：0=停用 1=启用" },
+                "endpoints": { "dc": "随供应商一起保存的 OpenAI 和 Anthropic 端点配置" },
                 "name": { "dc": "供应商显示名称" },
                 "remark": { "dc": "供应商备注" },
                 "websiteUrl": { "dc": "供应商官网地址" }
               },
               "meta": {
-                "dc": "创建一个 AI 供应商元数据记录；协议端点和密钥由供应商端点接口维护",
+                "dc": "在一个数据库事务中创建 AI 供应商元数据记录及其 OpenAI 或 Anthropic 端点配置；不会返回明文端点密钥",
                 "summary": "创建 AI 供应商",
                 "tags": "AI 供应商"
               },
-              "schema": { "dc": "创建一个 AI 供应商元数据记录；协议端点和密钥由供应商端点接口维护" }
+              "schema": { "dc": "在一个数据库事务中创建 AI 供应商元数据记录及其 OpenAI 或 Anthropic 端点配置；不会返回明文端点密钥" }
             },
             "CreateRes": { "fields": { "id": { "dc": "新创建的供应商ID" } } },
             "DeleteReq": {
@@ -363,6 +364,16 @@
                 "updatedAt": { "dc": "更新时间，Unix 毫秒时间戳" }
               }
             },
+            "ProviderEndpointSaveItem": {
+              "fields": {
+                "baseUrl": { "dc": "协议端点基础地址；已有端点传空时会在引用检查通过后删除该端点" },
+                "enabled": { "dc": "启用标记：0=停用 1=启用" },
+                "id": { "dc": "已有供应商端点ID；为 0 时新建端点" },
+                "metadataJson": { "dc": "不包含供应商密钥的端点元数据 JSON" },
+                "protocol": { "dc": "供应商表单端点协议：openai 或 anthropic" },
+                "secretRef": { "dc": "端点密钥引用；为空或脱敏值时保留已有引用" }
+              }
+            },
             "ListProviderEndpointsReq": {
               "fields": {
                 "enabled": { "dc": "启用状态筛选：0=停用 1=启用" },
@@ -463,17 +474,18 @@
             "UpdateReq": {
               "fields": {
                 "enabled": { "dc": "启用标记：0=停用 1=启用" },
+                "endpoints": { "dc": "随供应商一起保存的 OpenAI 和 Anthropic 端点配置" },
                 "id": { "dc": "供应商ID" },
                 "name": { "dc": "供应商显示名称" },
                 "remark": { "dc": "供应商备注" },
                 "websiteUrl": { "dc": "供应商官网地址" }
               },
               "meta": {
-                "dc": "更新一个 AI 供应商元数据记录；协议端点和密钥由供应商端点接口维护",
+                "dc": "在一个数据库事务中更新 AI 供应商元数据记录及其 OpenAI 或 Anthropic 端点配置；空或脱敏端点密钥会保留已有引用",
                 "summary": "更新 AI 供应商",
                 "tags": "AI 供应商"
               },
-              "schema": { "dc": "更新一个 AI 供应商元数据记录；协议端点和密钥由供应商端点接口维护" }
+              "schema": { "dc": "在一个数据库事务中更新 AI 供应商元数据记录及其 OpenAI 或 Anthropic 端点配置；空或脱敏端点密钥会保留已有引用" }
             }
           }
         },

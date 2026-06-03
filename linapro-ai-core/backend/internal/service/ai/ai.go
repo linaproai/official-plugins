@@ -80,10 +80,11 @@ type ProviderService interface {
 	// GetProvider returns one provider projection with model counts, or a not-found
 	// business error when the provider is absent or soft-deleted.
 	GetProvider(ctx context.Context, id int64) (*ProviderItem, error)
-	// CreateProvider creates one provider metadata row and returns its generated identifier.
-	// Protocol endpoints and secrets are managed through provider endpoint methods.
+	// CreateProvider creates one provider metadata row and optional OpenAI or
+	// Anthropic endpoint rows in one transaction, then returns the generated ID.
 	CreateProvider(ctx context.Context, in ProviderSaveInput) (int64, error)
-	// UpdateProvider updates one provider metadata row without changing endpoint secrets.
+	// UpdateProvider updates one provider metadata row and, when endpoint inputs
+	// are present, saves OpenAI or Anthropic endpoint rows in the same transaction.
 	UpdateProvider(ctx context.Context, in ProviderSaveInput) error
 	// DeleteProvider soft-deletes one provider and its unreferenced models after
 	// verifying no active tier binding references that provider.
@@ -192,6 +193,7 @@ type ProviderSaveInput struct {
 	WebsiteUrl string
 	Remark     string
 	Enabled    int
+	Endpoints  []ProviderEndpointSaveInput
 }
 
 // ProviderItem defines one provider projection.

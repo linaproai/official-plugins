@@ -32,6 +32,16 @@ type ProviderEndpointItem struct {
 	UpdatedAt    int64  `json:"updatedAt" dc:"Update time, Unix timestamp in milliseconds" eg:"1717200000000"`
 }
 
+// ProviderEndpointSaveItem is the fixed provider-form endpoint payload.
+type ProviderEndpointSaveItem struct {
+	Id           int64  `json:"id" dc:"Existing provider endpoint ID; zero creates a new endpoint" eg:"1"`
+	Protocol     string `json:"protocol" v:"required|in:openai,anthropic" dc:"Provider form endpoint protocol: openai or anthropic" eg:"openai"`
+	BaseUrl      string `json:"baseUrl" v:"max-length:512" dc:"Protocol endpoint base URL; empty with an existing ID removes that endpoint after reference checks" eg:"https://api.openai.com/v1"`
+	SecretRef    string `json:"secretRef" v:"max-length:512" dc:"Endpoint secret reference; empty or masked values keep the existing reference" eg:"sk-live-secret"`
+	Enabled      int    `json:"enabled" dc:"Enabled flag: 0=disabled 1=enabled" eg:"1"`
+	MetadataJson string `json:"metadataJson" v:"max-length:2048" dc:"Endpoint metadata JSON without provider secrets" eg:"{}"`
+}
+
 // ProviderModelSummaryItem is the compact model projection embedded in provider lists.
 type ProviderModelSummaryItem struct {
 	Id               int64  `json:"id" dc:"Model ID" eg:"1"`

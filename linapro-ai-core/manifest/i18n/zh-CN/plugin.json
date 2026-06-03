@@ -11,7 +11,17 @@
       },
       "description": "提供供应商、模型、AI能力档位和调用日志治理的官方源码插件",
       "capability": {
-        "method": "能力方法"
+        "method": "能力方法",
+        "types": {
+          "audio": "音频",
+          "document": "文档理解",
+          "embedding": "向量嵌入",
+          "image": "图像",
+          "safety": "安全审核",
+          "text": "文本",
+          "video": "视频",
+          "vision": "视觉理解"
+        }
       },
       "endpoint": {
         "actions": {
@@ -23,14 +33,25 @@
         },
         "empty": "暂无端点配置",
         "fields": {
-          "baseUrl": "基础地址",
+          "baseUrl": "接入地址",
           "metadataJson": "元数据 JSON",
           "protocol": "协议",
-          "secretRef": "密钥"
+          "secretRef": "API 密钥"
+        },
+        "hints": {
+          "maskedSecret": "当前密钥：{secret}"
+        },
+        "messages": {
+          "baseUrlRequired": "{protocol} 端点请填写基础地址"
+        },
+        "names": {
+          "anthropic": "Anthropic",
+          "openai": "OpenAI"
         },
         "placeholders": {
           "keepSecret": "留空则保持原端点密钥"
-        }
+        },
+        "sectionTitle": "端点配置"
       },
       "effort": {
         "empty": "模型默认"
@@ -87,7 +108,7 @@
       },
       "name": "智能中心",
       "methodDefault": {
-        "current": "{method} 默认参数"
+        "current": "{capability}默认参数"
       },
       "provider": {
         "actions": {
@@ -103,14 +124,28 @@
           "noModels": "暂无模型"
         },
         "fields": {
+          "anthropicAccessUrl": "Anthropic 接入地址",
+          "anthropicBaseUrl": "Anthropic 接入地址",
+          "apiKeySecretRef": "API 密钥",
           "endpoint": "端点",
           "enabledModelCount": "启用模型数",
           "keyword": "供应商",
           "modelCount": "模型数",
           "models": "模型",
           "name": "名称",
+          "openaiAccessUrl": "OpenAI 接入地址",
+          "openaiBaseUrl": "OpenAI 接入地址",
           "secret": "密钥",
           "websiteUrl": "官网地址"
+        },
+        "placeholders": {
+          "anthropicAccessUrl": "https://api.anthropic.com/v1",
+          "anthropicBaseUrl": "https://api.anthropic.com/v1",
+          "apiKeyCreate": "输入 API 密钥",
+          "apiKeyKeep": "留空则保持原密钥",
+          "keepSecret": "留空则保持原密钥",
+          "openaiAccessUrl": "https://api.openai.com/v1",
+          "openaiBaseUrl": "https://api.openai.com/v1"
         },
         "tableTitle": "供应商列表"
       },

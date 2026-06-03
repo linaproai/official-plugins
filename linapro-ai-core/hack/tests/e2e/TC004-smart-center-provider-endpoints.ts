@@ -25,15 +25,19 @@ test.describe("TC-4 智能中心供应商端点", () => {
         modelName: `e2e-text-model-${suffix}`,
         providerName: `E2E Endpoint Provider ${suffix}`,
       });
-      const endpointBaseUrl = `https://example.com/e2e-openai-compatible-${suffix}/v1`;
+      const endpointBaseUrl = `https://example.com/e2e-anthropic-${suffix}/v1`;
       const imageModelName = `e2e-image-model-${suffix}`;
       try {
-        const endpointId = await createProviderEndpoint(api, fixture.providerId, {
-          baseUrl: endpointBaseUrl,
-          metadataJson: '{"region":"e2e"}',
-          protocol: "openai-compatible",
-          secretRef: "sk-endpoint-1234567890",
-        });
+        const endpointId = await createProviderEndpoint(
+          api,
+          fixture.providerId,
+          {
+            baseUrl: endpointBaseUrl,
+            metadataJson: '{"region":"e2e"}',
+            protocol: "anthropic",
+            secretRef: "sk-endpoint-1234567890",
+          },
+        );
         const modelId = await createProviderModel(api, fixture.providerId, {
           capabilityMethod: "generate",
           capabilityType: "image",
@@ -41,7 +45,7 @@ test.describe("TC-4 智能中心供应商端点", () => {
           maxInputTokens: 2048,
           maxOutputTokens: 4096,
           modelName: imageModelName,
-          protocol: "openai-compatible",
+          protocol: "anthropic",
         });
         await saveModelCapabilities(api, modelId, [
           {
@@ -58,7 +62,7 @@ test.describe("TC-4 智能中心供应商端点", () => {
         ]);
 
         const endpoints = await listProviderEndpoints(api, fixture.providerId, {
-          protocol: "openai-compatible",
+          protocol: "anthropic",
         });
         expect(endpoints).toHaveLength(1);
         expect(endpoints[0].secretRef).toMatch(/\*\*\*\*\*\*\*\*\*\*/);
@@ -80,15 +84,17 @@ test.describe("TC-4 智能中心供应商端点", () => {
         await smartCenter.assertProviderRowEndpoint(
           fixture.providerName,
           endpointBaseUrl,
-          "OpenAI Compatible",
+          "Anthropic",
         );
         await smartCenter.captureEvidence("TC004-provider-endpoint-list");
 
         await smartCenter.openProviderEndpoints(fixture.providerName);
-        await smartCenter.assertEndpointDrawerChineseTranslations(fixture.providerName);
+        await smartCenter.assertEndpointDrawerChineseTranslations(
+          fixture.providerName,
+        );
         await smartCenter.assertEndpointVisible({
           baseUrl: endpointBaseUrl,
-          protocolLabel: "OpenAI Compatible",
+          protocolLabel: "Anthropic",
           secretText: "sk-**********90",
         });
         await smartCenter.captureEvidence("TC004-provider-endpoint-drawer");
