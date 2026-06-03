@@ -12,4 +12,6 @@ import (
 
 type IInvocationV1 interface {
 	List(ctx context.Context, req *v1.ListReq) (res *v1.ListRes, err error)
+	ListProviderOperations(ctx context.Context, req *v1.ListProviderOperationsReq) (res *v1.ListProviderOperationsRes, err error)
+	GetProviderOperation(ctx context.Context, req *v1.GetProviderOperationReq) (res *v1.GetProviderOperationRes, err error)
 }

@@ -10,7 +10,7 @@ import (
 
 // List returns the fixed AI capability tiers.
 func (c *ControllerV1) List(ctx context.Context, req *v1.ListReq) (res *v1.ListRes, err error) {
-	items, err := c.aiSvc.ListTiers(ctx, req.CapabilityType)
+	items, err := c.aiSvc.ListTiers(ctx, req.CapabilityType, req.CapabilityMethod)
 	if err != nil {
 		return nil, err
 	}

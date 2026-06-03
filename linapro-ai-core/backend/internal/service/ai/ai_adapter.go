@@ -28,13 +28,16 @@ type adapterResult struct {
 	ThinkingEffort string
 }
 
-// listRemoteModels returns public model names from the selected protocol.
-func (s *serviceImpl) listRemoteModels(ctx context.Context, provider *entity.Provider, protocol string) ([]string, error) {
-	switch protocol {
-	case ProtocolOpenAI:
-		return s.listOpenAIModels(ctx, provider)
-	case ProtocolAnthropic:
-		return s.listAnthropicModels(ctx, provider)
+// listRemoteModels returns public model names from one selected provider endpoint.
+func (s *serviceImpl) listRemoteModels(ctx context.Context, endpoint *entity.ProviderEndpoint) ([]string, error) {
+	if endpoint == nil {
+		return nil, bizerr.NewCode(CodeProviderProtocolRequired)
+	}
+	switch endpoint.Protocol {
+	case ProtocolOpenAI, ProtocolOpenAICompatible:
+		return s.listOpenAIModels(ctx, endpoint)
+	case ProtocolAnthropic, ProtocolAnthropicCompatible:
+		return s.listAnthropicModels(ctx, endpoint)
 	default:
 		return nil, bizerr.NewCode(CodeRequestInvalid)
 	}
@@ -50,9 +53,9 @@ func (s *serviceImpl) callProvider(
 	effort string,
 ) (*adapterResult, error) {
 	switch binding.Protocol {
-	case ProtocolOpenAI:
+	case ProtocolOpenAI, ProtocolOpenAICompatible:
 		return s.callOpenAI(ctx, binding, messages, maxOutputTokens, temperature, effort)
-	case ProtocolAnthropic:
+	case ProtocolAnthropic, ProtocolAnthropicCompatible:
 		return s.callAnthropic(ctx, binding, messages, maxOutputTokens, temperature, effort)
 	default:
 		return nil, bizerr.NewCode(CodeRequestInvalid)
@@ -60,8 +63,8 @@ func (s *serviceImpl) callProvider(
 }
 
 // listOpenAIModels reads OpenAI-compatible /models data.
-func (s *serviceImpl) listOpenAIModels(ctx context.Context, provider *entity.Provider) ([]string, error) {
-	endpoint, err := normalizeBaseURL(provider.OpenaiBaseUrl, "/models")
+func (s *serviceImpl) listOpenAIModels(ctx context.Context, endpointRow *entity.ProviderEndpoint) ([]string, error) {
+	endpoint, err := normalizeBaseURL(endpointRow.BaseUrl, "/models")
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +72,7 @@ func (s *serviceImpl) listOpenAIModels(ctx context.Context, provider *entity.Pro
 	if err != nil {
 		return nil, err
 	}
-	addBearerAuth(req, provider.ApiKeySecretRef)
+	addBearerAuth(req, endpointRow.SecretRef)
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -96,8 +99,8 @@ func (s *serviceImpl) listOpenAIModels(ctx context.Context, provider *entity.Pro
 }
 
 // listAnthropicModels reads Anthropic-compatible /models data.
-func (s *serviceImpl) listAnthropicModels(ctx context.Context, provider *entity.Provider) ([]string, error) {
-	endpoint, err := normalizeBaseURL(provider.AnthropicBaseUrl, "/models")
+func (s *serviceImpl) listAnthropicModels(ctx context.Context, endpointRow *entity.ProviderEndpoint) ([]string, error) {
+	endpoint, err := normalizeBaseURL(endpointRow.BaseUrl, "/models")
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +108,7 @@ func (s *serviceImpl) listAnthropicModels(ctx context.Context, provider *entity.
 	if err != nil {
 		return nil, err
 	}
-	addAnthropicHeaders(req, provider.ApiKeySecretRef)
+	addAnthropicHeaders(req, endpointRow.SecretRef)
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -143,7 +146,7 @@ func (s *serviceImpl) callOpenAI(
 	if effort == string(aitext.ThinkingEffortXHigh) || effort == string(aitext.ThinkingEffortMax) {
 		return nil, bizerr.NewCode(CodeThinkingEffortUnsupported)
 	}
-	endpoint, err := normalizeBaseURL(binding.OpenaiBaseUrl, "/chat/completions")
+	endpoint, err := normalizeBaseURL(binding.EndpointBaseUrl, "/chat/completions")
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +172,7 @@ func (s *serviceImpl) callOpenAI(
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	addBearerAuth(req, binding.ApiKeySecretRef)
+	addBearerAuth(req, binding.EndpointSecretRef)
 	start := time.Now()
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
@@ -224,7 +227,7 @@ func (s *serviceImpl) callAnthropic(
 	temperature *float64,
 	effort string,
 ) (*adapterResult, error) {
-	endpoint, err := normalizeBaseURL(binding.AnthropicBaseUrl, "/messages")
+	endpoint, err := normalizeBaseURL(binding.EndpointBaseUrl, "/messages")
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +261,7 @@ func (s *serviceImpl) callAnthropic(
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	addAnthropicHeaders(req, binding.ApiKeySecretRef)
+	addAnthropicHeaders(req, binding.EndpointSecretRef)
 	start := time.Now()
 	resp, err := s.httpClient.Do(req)
 	if err != nil {

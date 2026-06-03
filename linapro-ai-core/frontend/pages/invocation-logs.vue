@@ -15,7 +15,11 @@ import { Space } from 'ant-design-vue';
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { $t } from '#/locales';
 import { invocationList } from './ai-client';
-import { buildInvocationColumns, buildInvocationQuerySchema } from './ai-data';
+import {
+  buildInvocationColumns,
+  buildInvocationQuerySchema,
+  splitCapabilityMethod,
+} from './ai-data';
 import InvocationDetailDrawer from './invocation-detail-drawer.vue';
 
 const [DetailDrawerRef, detailDrawerApi] = useVbenDrawer({
@@ -41,13 +45,17 @@ const [Grid] = useVbenVxeGrid({
         query: async (
           { page }: { page: { currentPage: number; pageSize: number } },
           formValues: Record<string, any> = {},
-        ) =>
-          await invocationList({
+        ) => {
+          const capability = splitCapabilityMethod(formValues.capabilityKey || '');
+          const { capabilityKey: _capabilityKey, ...filters } = formValues;
+          return await invocationList({
             pageNum: page.currentPage,
             pageSize: page.pageSize,
-            capabilityType: 'text',
-            ...formValues,
-          }),
+            capabilityMethod: capability.capabilityMethod,
+            capabilityType: capability.capabilityType,
+            ...filters,
+          });
+        },
       },
     },
     rowConfig: { keyField: 'id' },

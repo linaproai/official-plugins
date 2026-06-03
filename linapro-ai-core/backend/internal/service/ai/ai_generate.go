@@ -13,7 +13,12 @@ import (
 // GenerateText executes one framework text AI request.
 func (s *serviceImpl) GenerateText(ctx context.Context, request aitext.ProviderRequest) (*aitext.GenerateResponse, error) {
 	requestID := requestIDFromMetadata(request.Metadata)
-	binding, err := s.resolveTierBinding(ctx, CapabilityTypeText, string(request.Tier))
+	binding, err := s.resolveTierBinding(
+		ctx,
+		string(request.CapabilityType()),
+		string(request.CapabilityMethod()),
+		string(request.Tier),
+	)
 	if err != nil {
 		s.writeInvocation(ctx, requestID, request, nil, InvocationStatusFailed, aitext.Usage{}, 0, err)
 		return nil, err

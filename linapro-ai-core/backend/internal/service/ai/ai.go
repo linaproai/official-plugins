@@ -17,10 +17,18 @@ import (
 const (
 	// CapabilityTypeText identifies the first supported AI capability family.
 	CapabilityTypeText = string(aitext.CapabilityTypeText)
+	// CapabilityMethodGenerate identifies synchronous text generation.
+	CapabilityMethodGenerate = string(aitext.CapabilityMethodGenerate)
 	// ProtocolOpenAI identifies the OpenAI-compatible adapter.
 	ProtocolOpenAI = "openai"
 	// ProtocolAnthropic identifies the Anthropic-compatible adapter.
 	ProtocolAnthropic = "anthropic"
+	// ProtocolVoyage identifies the Voyage-compatible adapter.
+	ProtocolVoyage = "voyage"
+	// ProtocolOpenAICompatible identifies a generic OpenAI-compatible adapter.
+	ProtocolOpenAICompatible = "openai-compatible"
+	// ProtocolAnthropicCompatible identifies a generic Anthropic-compatible adapter.
+	ProtocolAnthropicCompatible = "anthropic-compatible"
 	// ModelSourceManual identifies a manually maintained model row.
 	ModelSourceManual = "manual"
 	// ModelSourceAPI identifies a model row imported from a provider API.
@@ -47,54 +55,497 @@ const (
 	tierCacheTTL           = 30 * time.Second
 	tierCacheNamespace     = "tier-binding"
 	tierCacheRevisionKey   = "revision"
+	tierTestTimeout        = 60 * time.Second
 )
 
-// Service defines Smart Center management and text-generation operations.
+// Service aggregates Smart Center management, text-generation, and tier-cache
+// operations while keeping each functional contract separately named.
 type Service interface {
+	ProviderService
+	ProviderEndpointService
+	ModelService
+	ModelCapabilityService
+	MethodDefaultService
+	TierService
+	InvocationService
+	TextGenerationService
+	TierCacheService
+}
+
+// ProviderService defines provider metadata management operations.
+type ProviderService interface {
 	// ListProviders returns a platform-only paged provider list with model counts
 	// assembled in one batch query. It returns business errors for non-platform contexts.
 	ListProviders(ctx context.Context, in ProviderListInput) (*ProviderListOutput, error)
 	// GetProvider returns one provider projection with model counts, or a not-found
 	// business error when the provider is absent or soft-deleted.
 	GetProvider(ctx context.Context, id int64) (*ProviderItem, error)
-	// CreateProvider creates one provider and returns its generated identifier.
-	// Plaintext API keys are not returned by any response projection.
+	// CreateProvider creates one provider metadata row and returns its generated identifier.
+	// Protocol endpoints and secrets are managed through provider endpoint methods.
 	CreateProvider(ctx context.Context, in ProviderSaveInput) (int64, error)
-	// UpdateProvider updates one provider and keeps the existing secret reference
-	// when the input secret reference is empty.
+	// UpdateProvider updates one provider metadata row without changing endpoint secrets.
 	UpdateProvider(ctx context.Context, in ProviderSaveInput) error
 	// DeleteProvider soft-deletes one provider and its unreferenced models after
 	// verifying no active tier binding references that provider.
 	DeleteProvider(ctx context.Context, id int64) error
+}
+
+// ProviderEndpointService defines provider protocol endpoint management operations.
+type ProviderEndpointService interface {
+	// ListProviderEndpoints returns provider protocol endpoints using bounded provider-scoped queries.
+	ListProviderEndpoints(ctx context.Context, in ProviderEndpointListInput) ([]*ProviderEndpointItem, error)
+	// CreateProviderEndpoint creates one provider protocol endpoint without returning secret plaintext.
+	CreateProviderEndpoint(ctx context.Context, in ProviderEndpointSaveInput) (int64, error)
+	// UpdateProviderEndpoint updates one provider protocol endpoint and keeps the stored secret when masked input is supplied.
+	UpdateProviderEndpoint(ctx context.Context, in ProviderEndpointSaveInput) error
+	// DeleteProviderEndpoint soft-deletes one endpoint after verifying model capability references.
+	DeleteProviderEndpoint(ctx context.Context, providerID int64, id int64) error
+}
+
+// ModelService defines provider-owned model identity and synchronization operations.
+type ModelService interface {
 	// ListModels returns one bounded provider-owned model page using database-side filters.
 	ListModels(ctx context.Context, in ModelListInput) (*ModelListOutput, error)
-	// CreateModel creates one provider-owned AI model row.
+	// CreateModel creates one provider-owned AI model identity row and its initial capability declaration.
 	CreateModel(ctx context.Context, in ModelSaveInput) (int64, error)
-	// UpdateModel updates one provider-owned AI model row.
+	// UpdateModel updates one provider-owned AI model identity row. Capability declarations are maintained separately.
 	UpdateModel(ctx context.Context, in ModelSaveInput) error
 	// DeleteModel soft-deletes one model after verifying no active tier binding references it.
 	DeleteModel(ctx context.Context, id int64) error
 	// SyncModels imports public model metadata from the selected provider protocol
 	// while preserving existing manual and referenced models on failure.
 	SyncModels(ctx context.Context, in ModelSyncInput) (*ModelSyncOutput, error)
-	// ListTiers returns the fixed text AI tier list with primary binding
+}
+
+// ModelCapabilityService defines explicit model method capability metadata operations.
+type ModelCapabilityService interface {
+	// ListModelCapabilities returns explicit method capability declarations for one model.
+	ListModelCapabilities(ctx context.Context, modelID int64) ([]*ModelCapabilityItem, error)
+	// UpsertModelCapabilities replaces or inserts explicit method capability declarations for one model.
+	UpsertModelCapabilities(ctx context.Context, modelID int64, items []ModelCapabilitySaveInput) error
+}
+
+// MethodDefaultService defines default parameter metadata operations for capability methods.
+type MethodDefaultService interface {
+	// ListMethodDefaults returns method-specific default parameter projections.
+	ListMethodDefaults(ctx context.Context) ([]*MethodDefaultParamItem, error)
+	// UpdateMethodDefault updates one method-specific default parameter projection.
+	UpdateMethodDefault(ctx context.Context, in MethodDefaultParamSaveInput) error
+}
+
+// TierService defines fixed AI tier management and saved or draft tier test operations.
+type TierService interface {
+	// ListTiers returns the fixed AI tier list for one capability method with primary binding
 	// projections assembled through batch queries.
-	ListTiers(ctx context.Context, capabilityType string) ([]*TierItem, error)
+	ListTiers(ctx context.Context, capabilityType string, capabilityMethod string) ([]*TierItem, error)
 	// UpdateTier updates one fixed text AI tier and invalidates the tier cache
 	// after the database transaction commits.
 	UpdateTier(ctx context.Context, in TierUpdateInput) error
 	// TestTier executes a lightweight test against a saved or draft tier binding
 	// without persisting draft binding changes.
 	TestTier(ctx context.Context, in TierTestInput) (*TierTestOutput, error)
+}
+
+// InvocationService defines invocation and provider-operation observation operations.
+type InvocationService interface {
 	// ListInvocations returns masked AI invocation logs with database-side
 	// filtering, sorting, and pagination.
 	ListInvocations(ctx context.Context, in InvocationListInput) (*InvocationListOutput, error)
+	// ListProviderOperations returns masked provider operation projections with database-side filters.
+	ListProviderOperations(ctx context.Context, in ProviderOperationListInput) (*ProviderOperationListOutput, error)
+	// GetProviderOperation returns one provider operation projection by opaque reference.
+	GetProviderOperation(ctx context.Context, operationRef string) (*ProviderOperationItem, error)
+}
+
+// TextGenerationService defines the framework-facing text AI provider operation.
+type TextGenerationService interface {
 	// GenerateText executes one framework text AI request through the resolved
 	// tier binding, provider protocol adapter, and masked invocation logging.
 	GenerateText(ctx context.Context, request aitext.ProviderRequest) (*aitext.GenerateResponse, error)
+}
+
+// TierCacheService defines explicit tier cache invalidation operations.
+type TierCacheService interface {
 	// InvalidateTierCache publishes a shared tier-cache revision and removes
 	// local tier bindings after successful provider, model, tier, or binding mutations.
-	InvalidateTierCache(ctx context.Context, capabilityType string, tierCode string) error
+	InvalidateTierCache(ctx context.Context, capabilityType string, capabilityMethod string, tierCode string) error
+}
+
+// ProviderListInput defines provider list filters.
+type ProviderListInput struct {
+	PageNum  int
+	PageSize int
+	Keyword  string
+	Enabled  *int
+}
+
+// ProviderListOutput defines a paged provider list.
+type ProviderListOutput struct {
+	List  []*ProviderItem
+	Total int
+}
+
+// ProviderSaveInput defines provider create/update fields.
+type ProviderSaveInput struct {
+	Id         int64
+	Name       string
+	WebsiteUrl string
+	Remark     string
+	Enabled    int
+}
+
+// ProviderItem defines one provider projection.
+type ProviderItem struct {
+	Id                   int64
+	Name                 string
+	WebsiteUrl           string
+	Remark               string
+	Enabled              int
+	ModelCount           int
+	EnabledModelCount    int
+	Models               []*ProviderModelSummaryItem
+	EndpointCount        int
+	EnabledEndpointCount int
+	Endpoints            []*ProviderEndpointItem
+	CreatedAt            *time.Time
+	UpdatedAt            *time.Time
+}
+
+// ProviderEndpointListInput defines provider endpoint list filters.
+type ProviderEndpointListInput struct {
+	ProviderId int64
+	Protocol   string
+	Enabled    *int
+}
+
+// ProviderEndpointSaveInput defines provider endpoint create/update fields.
+type ProviderEndpointSaveInput struct {
+	Id           int64
+	ProviderId   int64
+	Protocol     string
+	BaseUrl      string
+	SecretRef    string
+	Enabled      int
+	MetadataJson string
+}
+
+// ProviderEndpointItem defines one provider endpoint projection.
+type ProviderEndpointItem struct {
+	Id           int64
+	ProviderId   int64
+	Protocol     string
+	BaseUrl      string
+	SecretRef    string
+	Enabled      int
+	MetadataJson string
+	CreatedAt    *time.Time
+	UpdatedAt    *time.Time
+}
+
+// ProviderModelSummaryItem defines the compact provider-list model projection.
+type ProviderModelSummaryItem struct {
+	Id               int64
+	CapabilityType   string
+	CapabilityMethod string
+	ModelName        string
+	Protocol         string
+	Enabled          int
+}
+
+// ModelListInput defines model list filters.
+type ModelListInput struct {
+	ProviderId       int64
+	PageNum          int
+	PageSize         int
+	CapabilityType   string
+	CapabilityMethod string
+	Enabled          *int
+}
+
+// ModelListOutput defines a bounded provider model list.
+type ModelListOutput struct {
+	List  []*ModelItem
+	Total int
+}
+
+// ModelSaveInput defines model identity fields plus create-time initial capability fields.
+type ModelSaveInput struct {
+	Id               int64
+	ProviderId       int64
+	EndpointId       int64
+	CapabilityType   string
+	CapabilityMethod string
+	ModelName        string
+	Protocol         string
+	Source           string
+	SupportsThinking int
+	SupportedEfforts []string
+	MaxInputTokens   int
+	MaxOutputTokens  int
+	Enabled          int
+}
+
+// ModelItem defines one model projection.
+type ModelItem struct {
+	Id               int64
+	ProviderId       int64
+	EndpointId       int64
+	CapabilityType   string
+	CapabilityMethod string
+	ModelName        string
+	Protocol         string
+	Source           string
+	SupportsThinking int
+	SupportedEfforts []string
+	MaxInputTokens   int
+	MaxOutputTokens  int
+	Enabled          int
+	CreatedAt        *time.Time
+	UpdatedAt        *time.Time
+}
+
+// ModelCapabilitySaveInput defines one explicit model method capability declaration.
+type ModelCapabilitySaveInput struct {
+	Id                int64
+	EndpointId        int64
+	CapabilityType    string
+	CapabilityMethod  string
+	InputModalities   []string
+	OutputModalities  []string
+	MaxInputTokens    int
+	MaxOutputTokens   int
+	MaxInputAssets    int
+	MaxOutputAssets   int
+	MaxAssetBytes     int64
+	SupportsStreaming int
+	SupportsOperation int
+	SupportsThinking  int
+	SupportedEfforts  []string
+	DefaultParamsJson string
+	Enabled           int
+}
+
+// ModelCapabilityItem defines one explicit model method capability projection.
+type ModelCapabilityItem struct {
+	Id                int64
+	ModelId           int64
+	EndpointId        int64
+	CapabilityType    string
+	CapabilityMethod  string
+	InputModalities   []string
+	OutputModalities  []string
+	MaxInputTokens    int
+	MaxOutputTokens   int
+	MaxInputAssets    int
+	MaxOutputAssets   int
+	MaxAssetBytes     int64
+	SupportsStreaming int
+	SupportsOperation int
+	SupportsThinking  int
+	SupportedEfforts  []string
+	DefaultParamsJson string
+	Enabled           int
+	CreatedAt         *time.Time
+	UpdatedAt         *time.Time
+}
+
+// MethodDefaultParamSaveInput defines one method default params update.
+type MethodDefaultParamSaveInput struct {
+	CapabilityType    string
+	CapabilityMethod  string
+	DefaultParamsJson string
+	Enabled           int
+}
+
+// MethodDefaultParamItem defines one method default params projection.
+type MethodDefaultParamItem struct {
+	Id                int64
+	CapabilityType    string
+	CapabilityMethod  string
+	DefaultParamsJson string
+	Enabled           int
+	CreatedAt         *time.Time
+	UpdatedAt         *time.Time
+}
+
+// ModelSyncInput defines model synchronization inputs.
+type ModelSyncInput struct {
+	ProviderId int64
+	Protocol   string
+}
+
+// ModelSyncOutput defines model synchronization counts.
+type ModelSyncOutput struct {
+	Created int
+	Kept    int
+}
+
+// TierItem defines one fixed AI tier projection.
+type TierItem struct {
+	Id                   int64
+	CapabilityType       string
+	CapabilityMethod     string
+	Code                 string
+	DisplayName          string
+	Description          string
+	DefaultEffort        string
+	Enabled              int
+	SortOrder            int
+	Binding              *TierBindingItem
+	LastTestStatus       string
+	LastTestLatencyMs    int
+	LastTestErrorSummary string
+	LastTestAt           *time.Time
+	UpdatedAt            *time.Time
+}
+
+// TierBindingItem defines one primary binding projection.
+type TierBindingItem struct {
+	ProviderId       int64
+	ProviderName     string
+	ModelId          int64
+	ModelName        string
+	Protocol         string
+	SupportsThinking int
+	SupportedEfforts []string
+	Enabled          int
+}
+
+// TierUpdateInput defines tier update fields.
+type TierUpdateInput struct {
+	CapabilityType   string
+	CapabilityMethod string
+	Code             string
+	ProviderId       int64
+	ModelId          int64
+	DefaultEffort    string
+	Enabled          int
+}
+
+// TierTestInput defines a saved or draft tier test request.
+type TierTestInput struct {
+	CapabilityType   string
+	CapabilityMethod string
+	Code             string
+	ProviderId       int64
+	ModelId          int64
+	ThinkingEffort   string
+	MaxOutputTokens  int
+	Messages         []aitext.Message
+	timeout          time.Duration
+}
+
+// TierTestOutput defines the tier test result projection.
+type TierTestOutput struct {
+	Status         string
+	LatencyMs      int
+	ProviderName   string
+	ModelName      string
+	Protocol       string
+	ThinkingEffort string
+	ErrorSummary   string
+	TestedAt       *time.Time
+}
+
+// InvocationListInput defines invocation log filters.
+type InvocationListInput struct {
+	PageNum          int
+	PageSize         int
+	CapabilityType   string
+	CapabilityMethod string
+	Purpose          string
+	TierCode         string
+	Status           string
+	ProviderId       int64
+	ModelId          int64
+	SourcePluginId   string
+	StartedAt        int64
+	EndedAt          int64
+}
+
+// InvocationListOutput defines a paged masked invocation log list.
+type InvocationListOutput struct {
+	List  []*InvocationItem
+	Total int
+}
+
+// ProviderOperationListInput defines provider operation list filters.
+type ProviderOperationListInput struct {
+	PageNum          int
+	PageSize         int
+	CapabilityType   string
+	CapabilityMethod string
+	Purpose          string
+	Status           string
+	ProviderId       int64
+	ModelId          int64
+	SourcePluginId   string
+	StartedAt        int64
+	EndedAt          int64
+}
+
+// ProviderOperationListOutput defines a bounded provider operation list.
+type ProviderOperationListOutput struct {
+	List  []*ProviderOperationItem
+	Total int
+}
+
+// ProviderOperationItem defines one provider operation projection.
+type ProviderOperationItem struct {
+	Id               int64
+	OperationRef     string
+	CapabilityType   string
+	CapabilityMethod string
+	Purpose          string
+	SourcePluginId   string
+	ProviderId       int64
+	ModelId          int64
+	ProviderName     string
+	ModelName        string
+	Protocol         string
+	Status           string
+	NextPollAfterMs  int64
+	ExpiresAt        *time.Time
+	AssetSummaryJson string
+	ErrorCode        string
+	ErrorSummary     string
+	CreatedAt        *time.Time
+	UpdatedAt        *time.Time
+}
+
+// InvocationItem defines one masked invocation log projection.
+type InvocationItem struct {
+	Id                   int64
+	RequestId            string
+	CapabilityType       string
+	CapabilityMethod     string
+	Purpose              string
+	TierCode             string
+	SourcePluginId       string
+	TenantId             int
+	UserId               int
+	ProviderId           int64
+	ModelId              int64
+	ProviderName         string
+	ModelName            string
+	Protocol             string
+	ThinkingEffort       string
+	Status               string
+	InputTokens          int
+	OutputTokens         int
+	LatencyMs            int
+	AssetSummaryJson     string
+	OperationSummaryJson string
+	MetadataSummaryJson  string
+	ErrorCode            string
+	ErrorSummary         string
+	CreatedAt            *time.Time
+}
+
+// tierCacheEntry stores one cached resolved tier binding.
+type tierCacheEntry struct {
+	value     *resolvedTierBinding
+	expiresAt time.Time
 }
 
 // Ensure serviceImpl implements Service.
@@ -125,218 +576,4 @@ func New(
 		httpClient: httpClient,
 		tierCache:  make(map[string]tierCacheEntry),
 	}
-}
-
-// ProviderListInput defines provider list filters.
-type ProviderListInput struct {
-	PageNum  int
-	PageSize int
-	Keyword  string
-	Enabled  *int
-}
-
-// ProviderListOutput defines a paged provider list.
-type ProviderListOutput struct {
-	List  []*ProviderItem
-	Total int
-}
-
-// ProviderSaveInput defines provider create/update fields.
-type ProviderSaveInput struct {
-	Id               int64
-	Name             string
-	WebsiteUrl       string
-	Remark           string
-	OpenaiBaseUrl    string
-	AnthropicBaseUrl string
-	ApiKeySecretRef  string
-	Enabled          int
-}
-
-// ProviderItem defines one provider projection.
-type ProviderItem struct {
-	Id                int64
-	Name              string
-	WebsiteUrl        string
-	Remark            string
-	OpenaiBaseUrl     string
-	AnthropicBaseUrl  string
-	ApiKeySecretRef   string
-	Enabled           int
-	ModelCount        int
-	EnabledModelCount int
-	CreatedAt         *time.Time
-	UpdatedAt         *time.Time
-}
-
-// ModelListInput defines model list filters.
-type ModelListInput struct {
-	ProviderId     int64
-	PageNum        int
-	PageSize       int
-	CapabilityType string
-	Enabled        *int
-}
-
-// ModelListOutput defines a bounded provider model list.
-type ModelListOutput struct {
-	List  []*ModelItem
-	Total int
-}
-
-// ModelSaveInput defines model create/update fields.
-type ModelSaveInput struct {
-	Id               int64
-	ProviderId       int64
-	CapabilityType   string
-	ModelName        string
-	Protocol         string
-	Source           string
-	SupportsThinking int
-	SupportedEfforts []string
-	MaxInputTokens   int
-	MaxOutputTokens  int
-	Enabled          int
-}
-
-// ModelItem defines one model projection.
-type ModelItem struct {
-	Id               int64
-	ProviderId       int64
-	CapabilityType   string
-	ModelName        string
-	Protocol         string
-	Source           string
-	SupportsThinking int
-	SupportedEfforts []string
-	MaxInputTokens   int
-	MaxOutputTokens  int
-	Enabled          int
-	CreatedAt        *time.Time
-	UpdatedAt        *time.Time
-}
-
-// ModelSyncInput defines model synchronization inputs.
-type ModelSyncInput struct {
-	ProviderId int64
-	Protocol   string
-}
-
-// ModelSyncOutput defines model synchronization counts.
-type ModelSyncOutput struct {
-	Created int
-	Kept    int
-}
-
-// TierItem defines one fixed AI tier projection.
-type TierItem struct {
-	Id                   int64
-	CapabilityType       string
-	Code                 string
-	DisplayName          string
-	Description          string
-	DefaultEffort        string
-	Enabled              int
-	SortOrder            int
-	Binding              *TierBindingItem
-	LastTestStatus       string
-	LastTestLatencyMs    int
-	LastTestErrorSummary string
-	LastTestAt           *time.Time
-	UpdatedAt            *time.Time
-}
-
-// TierBindingItem defines one primary binding projection.
-type TierBindingItem struct {
-	ProviderId       int64
-	ProviderName     string
-	ModelId          int64
-	ModelName        string
-	Protocol         string
-	SupportsThinking int
-	SupportedEfforts []string
-	Enabled          int
-}
-
-// TierUpdateInput defines tier update fields.
-type TierUpdateInput struct {
-	Code          string
-	ProviderId    int64
-	ModelId       int64
-	DefaultEffort string
-	Enabled       int
-}
-
-// TierTestInput defines a saved or draft tier test request.
-type TierTestInput struct {
-	Code            string
-	ProviderId      int64
-	ModelId         int64
-	ThinkingEffort  string
-	MaxOutputTokens int
-	Messages        []aitext.Message
-}
-
-// TierTestOutput defines the tier test result projection.
-type TierTestOutput struct {
-	Status         string
-	LatencyMs      int
-	ProviderName   string
-	ModelName      string
-	Protocol       string
-	ThinkingEffort string
-	ErrorSummary   string
-	TestedAt       *time.Time
-}
-
-// InvocationListInput defines invocation log filters.
-type InvocationListInput struct {
-	PageNum        int
-	PageSize       int
-	CapabilityType string
-	Purpose        string
-	TierCode       string
-	Status         string
-	ProviderId     int64
-	ModelId        int64
-	SourcePluginId string
-	StartedAt      int64
-	EndedAt        int64
-}
-
-// InvocationListOutput defines a paged masked invocation log list.
-type InvocationListOutput struct {
-	List  []*InvocationItem
-	Total int
-}
-
-// InvocationItem defines one masked invocation log projection.
-type InvocationItem struct {
-	Id             int64
-	RequestId      string
-	CapabilityType string
-	Purpose        string
-	TierCode       string
-	SourcePluginId string
-	TenantId       int
-	UserId         int
-	ProviderId     int64
-	ModelId        int64
-	ProviderName   string
-	ModelName      string
-	Protocol       string
-	ThinkingEffort string
-	Status         string
-	InputTokens    int
-	OutputTokens   int
-	LatencyMs      int
-	ErrorCode      string
-	ErrorSummary   string
-	CreatedAt      *time.Time
-}
-
-// tierCacheEntry stores one cached resolved tier binding.
-type tierCacheEntry struct {
-	value     *resolvedTierBinding
-	expiresAt time.Time
 }

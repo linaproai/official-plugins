@@ -1,5 +1,5 @@
 import { expect, test } from "@host-tests/fixtures/auth";
-import { ensureSourcePluginEnabled } from "@host-tests/fixtures/plugin";
+import { prepareSourcePluginsBaseline } from "@host-tests/fixtures/plugin";
 import {
   closeDialogWithEscape,
   waitForDialogReady,
@@ -8,16 +8,18 @@ import {
   waitForTableReady,
 } from "@host-tests/support/ui";
 
+const DEPT_TABLE_READY_TIMEOUT = 90_000;
+
 test.describe("TC002 部门负责人选择", () => {
-  test.beforeEach(async ({ adminPage }) => {
-    await ensureSourcePluginEnabled(adminPage, "linapro-org-core");
+  test.beforeAll(async () => {
+    await prepareSourcePluginsBaseline(["linapro-org-core"]);
   });
 
   test('TC002a: 新增部门按钮文本为"新增"而非"新增部门"', async ({
     adminPage,
   }) => {
     await adminPage.goto("/system/dept");
-    await waitForTableReady(adminPage);
+    await waitForTableReady(adminPage, ".vxe-table", DEPT_TABLE_READY_TIMEOUT);
 
     // The primary button should say "新增" not "新增部门"
     const addBtn = adminPage
@@ -31,7 +33,7 @@ test.describe("TC002 部门负责人选择", () => {
 
   test("TC002b: 新增部门时负责人下拉可用且支持搜索", async ({ adminPage }) => {
     await adminPage.goto("/system/dept");
-    await waitForTableReady(adminPage);
+    await waitForTableReady(adminPage, ".vxe-table", DEPT_TABLE_READY_TIMEOUT);
 
     // Click the toolbar "新增" primary button (first match, the non-ghost one)
     await adminPage
@@ -67,7 +69,7 @@ test.describe("TC002 部门负责人选择", () => {
 
   test("TC002c: 编辑部门时未设置负责人显示为空白", async ({ adminPage }) => {
     await adminPage.goto("/system/dept");
-    await waitForTableReady(adminPage);
+    await waitForTableReady(adminPage, ".vxe-table", DEPT_TABLE_READY_TIMEOUT);
 
     // Click edit on the first dept row
     const firstRow = adminPage.locator(".vxe-body--row").first();
@@ -100,7 +102,7 @@ test.describe("TC002 部门负责人选择", () => {
 
   test("TC002d: 编辑部门时负责人下拉支持搜索", async ({ adminPage }) => {
     await adminPage.goto("/system/dept");
-    await waitForTableReady(adminPage);
+    await waitForTableReady(adminPage, ".vxe-table", DEPT_TABLE_READY_TIMEOUT);
 
     // Click edit on the first dept row
     const firstRow = adminPage.locator(".vxe-body--row").first();

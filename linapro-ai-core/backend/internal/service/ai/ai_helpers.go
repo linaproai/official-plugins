@@ -5,8 +5,6 @@ package ai
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"strconv"
 	"strings"
 	"time"
@@ -59,6 +57,15 @@ func normalizeCapabilityType(value string) string {
 	return trimmed
 }
 
+// normalizeCapabilityMethod returns the default supported capability method.
+func normalizeCapabilityMethod(value string) string {
+	trimmed := strings.TrimSpace(strings.ToLower(value))
+	if trimmed == "" {
+		return CapabilityMethodGenerate
+	}
+	return trimmed
+}
+
 // normalizeProtocol returns a supported provider protocol or an empty string.
 func normalizeProtocol(value string) string {
 	switch strings.TrimSpace(strings.ToLower(value)) {
@@ -66,6 +73,12 @@ func normalizeProtocol(value string) string {
 		return ProtocolOpenAI
 	case ProtocolAnthropic:
 		return ProtocolAnthropic
+	case ProtocolVoyage:
+		return ProtocolVoyage
+	case ProtocolOpenAICompatible:
+		return ProtocolOpenAICompatible
+	case ProtocolAnthropicCompatible:
+		return ProtocolAnthropicCompatible
 	default:
 		return ""
 	}
@@ -138,16 +151,16 @@ func splitEfforts(value string) []string {
 	return out
 }
 
-// effortSupported reports whether effort is supported by the model declaration.
-func effortSupported(model *entity.Model, effort string) bool {
+// effortSupported reports whether effort is supported by the model method capability declaration.
+func effortSupported(capability *entity.ModelCapability, effort string) bool {
 	normalized, err := normalizeEffort(effort)
 	if err != nil || normalized == "" {
 		return err == nil
 	}
-	if model == nil || model.SupportsThinking != enabledYes {
+	if capability == nil || capability.SupportsThinking != enabledYes {
 		return false
 	}
-	for _, supported := range splitEfforts(model.SupportedEfforts) {
+	for _, supported := range splitEfforts(capability.SupportedEfforts) {
 		if supported == normalized {
 			return true
 		}
@@ -164,9 +177,16 @@ func maskSecretRef(value string) string {
 	if strings.Contains(trimmed, "***") {
 		return trimmed
 	}
-	sum := sha256.Sum256([]byte(trimmed))
-	suffix := hex.EncodeToString(sum[:])[:8]
-	return "secret-***" + suffix
+	runes := []rune(trimmed)
+	if len(runes) <= 2 {
+		return strings.Repeat("*", len(runes))
+	}
+	prefix := ""
+	if separator := strings.Index(trimmed, "-"); separator >= 0 && separator < len(trimmed)-2 {
+		prefix = trimmed[:separator+1]
+	}
+	suffix := string(runes[len(runes)-2:])
+	return prefix + "**********" + suffix
 }
 
 // shouldKeepExistingSecret reports whether an update input should retain the stored secret reference.
@@ -209,45 +229,86 @@ func requestIDFromMetadata(metadata map[string]string) string {
 }
 
 // providerToItem converts one provider entity into a service projection.
-func providerToItem(row *entity.Provider, modelCount int, enabledModelCount int) *ProviderItem {
+func providerToItem(
+	row *entity.Provider,
+	modelCount int,
+	enabledModelCount int,
+	models []*ProviderModelSummaryItem,
+	endpointCount int,
+	enabledEndpointCount int,
+	endpoints []*ProviderEndpointItem,
+) *ProviderItem {
 	if row == nil {
 		return nil
 	}
 	return &ProviderItem{
-		Id:                row.Id,
-		Name:              row.Name,
-		WebsiteUrl:        row.WebsiteUrl,
-		Remark:            row.Remark,
-		OpenaiBaseUrl:     row.OpenaiBaseUrl,
-		AnthropicBaseUrl:  row.AnthropicBaseUrl,
-		ApiKeySecretRef:   maskSecretRef(row.ApiKeySecretRef),
-		Enabled:           row.Enabled,
-		ModelCount:        modelCount,
-		EnabledModelCount: enabledModelCount,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
+		Id:                   row.Id,
+		Name:                 row.Name,
+		WebsiteUrl:           row.WebsiteUrl,
+		Remark:               row.Remark,
+		Enabled:              row.Enabled,
+		ModelCount:           modelCount,
+		EnabledModelCount:    enabledModelCount,
+		Models:               models,
+		EndpointCount:        endpointCount,
+		EnabledEndpointCount: enabledEndpointCount,
+		Endpoints:            endpoints,
+		CreatedAt:            row.CreatedAt,
+		UpdatedAt:            row.UpdatedAt,
 	}
 }
 
-// modelToItem converts one model entity into a service projection.
-func modelToItem(row *entity.Model) *ModelItem {
+// modelToItem converts one model entity and an optional method capability into a service projection.
+func modelToItem(row *entity.Model, capability *entity.ModelCapability) *ModelItem {
 	if row == nil {
 		return nil
 	}
-	return &ModelItem{
-		Id:               row.Id,
-		ProviderId:       row.ProviderId,
-		CapabilityType:   row.CapabilityType,
-		ModelName:        row.ModelName,
-		Protocol:         row.Protocol,
-		Source:           row.Source,
-		SupportsThinking: row.SupportsThinking,
-		SupportedEfforts: splitEfforts(row.SupportedEfforts),
-		MaxInputTokens:   row.MaxInputTokens,
-		MaxOutputTokens:  row.MaxOutputTokens,
-		Enabled:          row.Enabled,
-		CreatedAt:        row.CreatedAt,
-		UpdatedAt:        row.UpdatedAt,
+	endpointID := row.EndpointId
+	item := &ModelItem{
+		Id:         row.Id,
+		ProviderId: row.ProviderId,
+		EndpointId: endpointID,
+		ModelName:  row.ModelName,
+		Protocol:   row.Protocol,
+		Source:     row.Source,
+		Enabled:    row.Enabled,
+		CreatedAt:  row.CreatedAt,
+		UpdatedAt:  row.UpdatedAt,
+	}
+	if capability == nil {
+		return item
+	}
+	if capability.EndpointId > 0 {
+		item.EndpointId = capability.EndpointId
+	}
+	item.CapabilityType = capability.CapabilityType
+	item.CapabilityMethod = capability.CapabilityMethod
+	item.SupportsThinking = capability.SupportsThinking
+	item.SupportedEfforts = splitEfforts(capability.SupportedEfforts)
+	item.MaxInputTokens = capability.MaxInputTokens
+	item.MaxOutputTokens = capability.MaxOutputTokens
+	return item
+}
+
+// modelCapabilityKey builds an in-memory lookup key for one model capability method.
+func modelCapabilityKey(modelID int64, capabilityType string, capabilityMethod string) string {
+	return strconv.FormatInt(modelID, 10) + ":" +
+		normalizeCapabilityType(capabilityType) + ":" +
+		normalizeCapabilityMethod(capabilityMethod)
+}
+
+// providerModelSummaryFromRows projects one model and method capability into provider summary shape.
+func providerModelSummaryFromRows(model *entity.Model, capability *entity.ModelCapability) *ProviderModelSummaryItem {
+	if model == nil || capability == nil {
+		return nil
+	}
+	return &ProviderModelSummaryItem{
+		Id:               model.Id,
+		CapabilityType:   capability.CapabilityType,
+		CapabilityMethod: capability.CapabilityMethod,
+		ModelName:        model.ModelName,
+		Protocol:         model.Protocol,
+		Enabled:          model.Enabled,
 	}
 }
 

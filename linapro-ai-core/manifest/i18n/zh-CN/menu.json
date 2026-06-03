@@ -7,7 +7,7 @@
       "title": "调用日志查询"
     },
     "plugin:linapro-ai-core:providers": {
-      "title": "供应商管理"
+      "title": "供应商"
     },
     "plugin:linapro-ai-core:providers:create": {
       "title": "新增供应商"

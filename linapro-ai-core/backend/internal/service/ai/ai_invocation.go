@@ -24,6 +24,9 @@ func (s *serviceImpl) ListInvocations(ctx context.Context, in InvocationListInpu
 	if in.CapabilityType != "" {
 		model = model.Where(cols.CapabilityType, normalizeCapabilityType(in.CapabilityType))
 	}
+	if in.CapabilityMethod != "" {
+		model = model.Where(cols.CapabilityMethod, normalizeCapabilityMethod(in.CapabilityMethod))
+	}
 	if in.Purpose != "" {
 		model = model.Where(cols.Purpose, in.Purpose)
 	}
@@ -98,25 +101,29 @@ func (s *serviceImpl) writeInvocation(
 		effort = binding.DefaultEffort
 	}
 	if _, insertErr := dao.Invocation.Ctx(ctx).Data(do.Invocation{
-		RequestId:      requestID,
-		CapabilityType: CapabilityTypeText,
-		Purpose:        request.Purpose,
-		TierCode:       string(request.Tier),
-		SourcePluginId: request.SourcePluginID,
-		TenantId:       current.TenantID,
-		UserId:         current.UserID,
-		ProviderId:     providerID,
-		ModelId:        modelID,
-		ProviderName:   providerName,
-		ModelName:      modelName,
-		Protocol:       protocol,
-		ThinkingEffort: effort,
-		Status:         status,
-		InputTokens:    usage.InputTokens,
-		OutputTokens:   usage.OutputTokens,
-		LatencyMs:      latencyMs,
-		ErrorCode:      invocationErrorCode(err),
-		ErrorSummary:   sanitizeErrorSummary(err),
+		RequestId:            requestID,
+		CapabilityType:       string(request.CapabilityType()),
+		CapabilityMethod:     string(request.CapabilityMethod()),
+		Purpose:              request.Purpose,
+		TierCode:             string(request.Tier),
+		SourcePluginId:       request.SourcePluginID,
+		TenantId:             current.TenantID,
+		UserId:               current.UserID,
+		ProviderId:           providerID,
+		ModelId:              modelID,
+		ProviderName:         providerName,
+		ModelName:            modelName,
+		Protocol:             protocol,
+		ThinkingEffort:       effort,
+		Status:               status,
+		InputTokens:          usage.InputTokens,
+		OutputTokens:         usage.OutputTokens,
+		LatencyMs:            latencyMs,
+		AssetSummaryJson:     "{}",
+		OperationSummaryJson: "{}",
+		MetadataSummaryJson:  "{}",
+		ErrorCode:            invocationErrorCode(err),
+		ErrorSummary:         sanitizeErrorSummary(err),
 	}).Insert(); insertErr != nil {
 		// Invocation logging is diagnostic and must not replace the provider error.
 		return
@@ -129,26 +136,30 @@ func invocationToItem(row *entity.Invocation) *InvocationItem {
 		return nil
 	}
 	return &InvocationItem{
-		Id:             row.Id,
-		RequestId:      row.RequestId,
-		CapabilityType: row.CapabilityType,
-		Purpose:        row.Purpose,
-		TierCode:       row.TierCode,
-		SourcePluginId: row.SourcePluginId,
-		TenantId:       row.TenantId,
-		UserId:         row.UserId,
-		ProviderId:     row.ProviderId,
-		ModelId:        row.ModelId,
-		ProviderName:   row.ProviderName,
-		ModelName:      row.ModelName,
-		Protocol:       row.Protocol,
-		ThinkingEffort: row.ThinkingEffort,
-		Status:         row.Status,
-		InputTokens:    row.InputTokens,
-		OutputTokens:   row.OutputTokens,
-		LatencyMs:      row.LatencyMs,
-		ErrorCode:      row.ErrorCode,
-		ErrorSummary:   row.ErrorSummary,
-		CreatedAt:      row.CreatedAt,
+		Id:                   row.Id,
+		RequestId:            row.RequestId,
+		CapabilityType:       row.CapabilityType,
+		CapabilityMethod:     row.CapabilityMethod,
+		Purpose:              row.Purpose,
+		TierCode:             row.TierCode,
+		SourcePluginId:       row.SourcePluginId,
+		TenantId:             row.TenantId,
+		UserId:               row.UserId,
+		ProviderId:           row.ProviderId,
+		ModelId:              row.ModelId,
+		ProviderName:         row.ProviderName,
+		ModelName:            row.ModelName,
+		Protocol:             row.Protocol,
+		ThinkingEffort:       row.ThinkingEffort,
+		Status:               row.Status,
+		InputTokens:          row.InputTokens,
+		OutputTokens:         row.OutputTokens,
+		LatencyMs:            row.LatencyMs,
+		AssetSummaryJson:     row.AssetSummaryJson,
+		OperationSummaryJson: row.OperationSummaryJson,
+		MetadataSummaryJson:  row.MetadataSummaryJson,
+		ErrorCode:            row.ErrorCode,
+		ErrorSummary:         row.ErrorSummary,
+		CreatedAt:            row.CreatedAt,
 	}
 }

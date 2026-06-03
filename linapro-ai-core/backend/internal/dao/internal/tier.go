@@ -23,6 +23,7 @@ type TierDao struct {
 type TierColumns struct {
 	Id                   string // Tier ID
 	CapabilityType       string // Capability type: text
+	CapabilityMethod     string // Capability method: generate
 	Code                 string // Tier code: basic, standard, advanced
 	DisplayName          string // Tier display name
 	Description          string // Tier description
@@ -41,6 +42,7 @@ type TierColumns struct {
 var tierColumns = TierColumns{
 	Id:                   "id",
 	CapabilityType:       "capability_type",
+	CapabilityMethod:     "capability_method",
 	Code:                 "code",
 	DisplayName:          "display_name",
 	Description:          "description",

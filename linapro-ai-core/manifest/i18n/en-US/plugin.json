@@ -10,6 +10,28 @@
         "yes": "Yes"
       },
       "description": "Official source plugin for AI providers, models, capability tiers, and invocation logs",
+      "capability": {
+        "method": "Capability Method"
+      },
+      "endpoint": {
+        "actions": {
+          "add": "Add Endpoint",
+          "manage": "Endpoints"
+        },
+        "drawer": {
+          "title": "Provider Endpoints - {name}"
+        },
+        "empty": "No endpoints configured",
+        "fields": {
+          "baseUrl": "Base URL",
+          "metadataJson": "Metadata JSON",
+          "protocol": "Protocol",
+          "secretRef": "Secret"
+        },
+        "placeholders": {
+          "keepSecret": "Leave blank to keep the existing endpoint secret"
+        }
+      },
       "effort": {
         "empty": "Model default"
       },
@@ -20,9 +42,12 @@
         "fields": {
           "errorCode": "Error Code",
           "errorSummary": "Error Summary",
+          "assetSummaryJson": "Asset Summary",
           "inputTokens": "Input Tokens",
           "latencyMs": "Latency(ms)",
+          "metadataSummaryJson": "Metadata Summary",
           "modelName": "Model",
+          "operationSummaryJson": "Operation Summary",
           "outputTokens": "Output Tokens",
           "providerName": "Provider",
           "purpose": "Purpose",
@@ -36,8 +61,10 @@
       },
       "model": {
         "actions": {
+          "addModel": "Add Model",
           "syncAnthropic": "Sync Anthropic Models",
-          "syncOpenAI": "Sync OpenAI Models"
+          "syncOpenAI": "Sync OpenAI Models",
+          "syncProtocol": "Sync {protocol} Models"
         },
         "drawer": {
           "createTitle": "Create Model",
@@ -47,7 +74,9 @@
           "maxInputTokens": "Max Input Tokens",
           "maxOutputTokens": "Max Output Tokens",
           "modelName": "Model Name",
+          "endpoint": "Endpoint",
           "protocol": "Protocol",
+          "provider": "Provider",
           "supportedEfforts": "Supported Thinking Efforts",
           "supportsThinking": "Supports Thinking"
         },
@@ -57,19 +86,30 @@
         "tableTitle": "Models"
       },
       "name": "Smart Center",
+      "methodDefault": {
+        "current": "Defaults for {method}"
+      },
       "provider": {
+        "actions": {
+          "addProvider": "Add Provider"
+        },
         "drawer": {
           "createTitle": "Create Provider",
           "editTitle": "Edit Provider"
         },
+        "empty": {
+          "noEndpoint": "No endpoint",
+          "noKey": "Not configured",
+          "noModels": "No models"
+        },
         "fields": {
-          "anthropicBaseUrl": "Anthropic Base URL",
-          "apiKeySecretRef": "API Key or Secret Ref",
+          "endpoint": "Endpoint",
           "enabledModelCount": "Enabled Models",
           "keyword": "Provider",
           "modelCount": "Models",
-          "name": "Provider Name",
-          "openaiBaseUrl": "OpenAI Base URL",
+          "models": "Models",
+          "name": "Name",
+          "secret": "Key",
           "websiteUrl": "Website"
         },
         "tableTitle": "Providers"
@@ -88,7 +128,7 @@
           "editTitle": "Configure {name} Tier"
         },
         "fields": {
-          "defaultEffort": "Default Thinking Effort",
+          "defaultEffort": "Thinking Effort",
           "displayName": "Tier",
           "lastTestStatus": "Last Test",
           "model": "Model",

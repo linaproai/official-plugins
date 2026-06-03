@@ -6,15 +6,19 @@
           "v1": {
             "InvocationItem": {
               "fields": {
+                "capabilityMethod": { "dc": "能力类型下的方法" },
                 "capabilityType": { "dc": "能力类型" },
                 "createdAt": { "dc": "创建时间，Unix 毫秒时间戳" },
                 "errorCode": { "dc": "失败调用的稳定错误码" },
                 "errorSummary": { "dc": "脱敏错误摘要，不包含完整提示词、响应正文或密钥" },
+                "assetSummaryJson": { "dc": "资产引用摘要 JSON，不包含文件内容、供应商 URL 或密钥" },
                 "id": { "dc": "调用日志ID" },
                 "inputTokens": { "dc": "输入 token 数" },
                 "latencyMs": { "dc": "供应商调用耗时，单位毫秒" },
+                "metadataSummaryJson": { "dc": "非敏感调用元数据摘要 JSON" },
                 "modelId": { "dc": "模型ID快照" },
                 "modelName": { "dc": "模型名称快照" },
+                "operationSummaryJson": { "dc": "供应商 operation 摘要 JSON，不包含供应商密钥" },
                 "outputTokens": { "dc": "输出 token 数" },
                 "protocol": { "dc": "供应商协议快照" },
                 "providerId": { "dc": "供应商ID快照" },
@@ -31,6 +35,7 @@
             },
             "ListReq": {
               "fields": {
+                "capabilityMethod": { "dc": "能力方法筛选" },
                 "capabilityType": { "dc": "能力类型筛选" },
                 "endedAt": { "dc": "结束时间筛选，Unix 毫秒时间戳" },
                 "modelId": { "dc": "模型ID筛选" },
@@ -44,12 +49,12 @@
                 "tierCode": { "dc": "档位筛选：basic、standard、advanced" }
               },
               "meta": {
-                "dc": "按页查询脱敏 AI 调用日志，支持能力、用途、档位、状态、供应商、模型、来源插件和时间范围过滤，不返回完整提示词或响应正文",
+                "dc": "按页查询脱敏 AI 调用日志，支持能力类型、能力方法、用途、档位、状态、供应商、模型、来源插件和时间范围过滤，不返回完整提示词或响应正文",
                 "summary": "查询 AI 调用日志",
                 "tags": "AI 调用日志"
               },
               "schema": {
-                "dc": "按页查询脱敏 AI 调用日志，支持能力、用途、档位、状态、供应商、模型、来源插件和时间范围过滤，不返回完整提示词或响应正文"
+                "dc": "按页查询脱敏 AI 调用日志，支持能力类型、能力方法、用途、档位、状态、供应商、模型、来源插件和时间范围过滤，不返回完整提示词或响应正文"
               }
             },
             "ListRes": {
@@ -57,6 +62,67 @@
                 "list": { "dc": "脱敏 AI 调用日志列表" },
                 "total": { "dc": "符合筛选条件的日志总数" }
               }
+            },
+            "ProviderOperationItem": {
+              "fields": {
+                "assetSummaryJson": { "dc": "资产引用摘要 JSON，不包含文件内容、供应商 URL 或密钥" },
+                "capabilityMethod": { "dc": "能力方法，例如 generate、edit、extend、operation.get 或 operation.cancel" },
+                "capabilityType": { "dc": "能力类型，例如 image、audio 或 video" },
+                "createdAt": { "dc": "创建时间，Unix 毫秒时间戳" },
+                "errorCode": { "dc": "失败 operation 的稳定错误码" },
+                "errorSummary": { "dc": "脱敏错误摘要，不返回供应商响应正文或密钥" },
+                "expiresAt": { "dc": "operation 过期时间，Unix 毫秒时间戳" },
+                "id": { "dc": "供应商 operation ID" },
+                "modelId": { "dc": "模型ID快照" },
+                "modelName": { "dc": "模型名称快照" },
+                "nextPollAfterMs": { "dc": "建议下次轮询延迟，单位毫秒" },
+                "operationRef": { "dc": "不透明供应商 operation 引用" },
+                "protocol": { "dc": "供应商协议快照" },
+                "providerId": { "dc": "供应商ID快照" },
+                "providerName": { "dc": "供应商名称快照" },
+                "purpose": { "dc": "受治理的 AI 调用用途" },
+                "sourcePluginId": { "dc": "发起 operation 的插件ID" },
+                "status": { "dc": "供应商 operation 状态" },
+                "updatedAt": { "dc": "更新时间，Unix 毫秒时间戳" }
+              }
+            },
+            "ListProviderOperationsReq": {
+              "fields": {
+                "capabilityMethod": { "dc": "能力方法筛选" },
+                "capabilityType": { "dc": "能力类型筛选" },
+                "endedAt": { "dc": "结束时间筛选，Unix 毫秒时间戳" },
+                "modelId": { "dc": "模型ID筛选" },
+                "pageNum": { "dc": "页码" },
+                "pageSize": { "dc": "每页数量" },
+                "providerId": { "dc": "供应商ID筛选" },
+                "purpose": { "dc": "用途精确匹配筛选" },
+                "sourcePluginId": { "dc": "来源插件ID筛选" },
+                "startedAt": { "dc": "开始时间筛选，Unix 毫秒时间戳" },
+                "status": { "dc": "状态筛选" }
+              },
+              "meta": {
+                "dc": "按页查询脱敏供应商 operation 投影，支持能力方法、用途、状态、供应商、模型、来源插件和时间范围过滤，不返回业务任务状态或供应商密钥数据",
+                "summary": "查询 AI 供应商 operation",
+                "tags": "AI 供应商 operation"
+              },
+              "schema": {
+                "dc": "按页查询脱敏供应商 operation 投影，支持能力方法、用途、状态、供应商、模型、来源插件和时间范围过滤，不返回业务任务状态或供应商密钥数据"
+              }
+            },
+            "ListProviderOperationsRes": {
+              "fields": {
+                "list": { "dc": "脱敏供应商 operation 列表" },
+                "total": { "dc": "符合筛选条件的供应商 operation 总数" }
+              }
+            },
+            "GetProviderOperationReq": {
+              "fields": { "operationRef": { "dc": "不透明供应商 operation 引用" } },
+              "meta": {
+                "dc": "通过不透明 operation 引用获取一个脱敏供应商 operation 投影，不返回业务任务状态或供应商密钥数据",
+                "summary": "获取 AI 供应商 operation",
+                "tags": "AI 供应商 operation"
+              },
+              "schema": { "dc": "通过不透明 operation 引用获取一个脱敏供应商 operation 投影，不返回业务任务状态或供应商密钥数据" }
             }
           }
         },
@@ -73,22 +139,86 @@
             },
             "UpdateReq": {
               "fields": {
-                "capabilityType": { "dc": "能力类型，首期支持 text" },
+                "endpointId": { "dc": "默认供应商端点ID；能力声明没有端点覆盖时使用该端点" },
                 "enabled": { "dc": "启用标记：0=停用 1=启用" },
                 "id": { "dc": "模型ID" },
-                "maxInputTokens": { "dc": "最大输入 token 数，0 表示未指定" },
-                "maxOutputTokens": { "dc": "最大输出 token 数，0 表示未指定" },
                 "modelName": { "dc": "供应商模型名称" },
-                "protocol": { "dc": "供应商协议：openai 或 anthropic" },
-                "supportedEfforts": { "dc": "支持的 thinking effort：low、medium、high、xhigh、max" },
-                "supportsThinking": { "dc": "是否支持 thinking effort：0=不支持 1=支持" }
+                "protocol": { "dc": "供应商协议：openai、anthropic、voyage、openai-compatible 或 anthropic-compatible" }
               },
               "meta": {
-                "dc": "更新一个 AI 模型，并校验其仍声明可用的文本能力元数据",
+                "dc": "更新一个 AI 模型身份记录，并校验默认端点仍属于该供应商和协议；能力方法声明通过模型能力接口维护",
                 "summary": "更新 AI 模型",
                 "tags": "AI 模型"
               },
-              "schema": { "dc": "更新一个 AI 模型，并校验其仍声明可用的文本能力元数据" }
+              "schema": { "dc": "更新一个 AI 模型身份记录，并校验默认端点仍属于该供应商和协议；能力方法声明通过模型能力接口维护" }
+            },
+            "ModelCapabilityItem": {
+              "fields": {
+                "capabilityMethod": { "dc": "能力类型下的方法，例如 generate、create、transcribe、analyze、moderate 或 operation.get" },
+                "capabilityType": { "dc": "能力类型，例如 text、image、embedding、audio、vision、document、safety 或 video" },
+                "createdAt": { "dc": "创建时间，Unix 毫秒时间戳" },
+                "defaultParamsJson": { "dc": "不包含供应商密钥的方法默认参数 JSON" },
+                "enabled": { "dc": "启用标记：0=停用 1=启用" },
+                "endpointId": { "dc": "首选供应商端点ID；0 表示模型默认" },
+                "id": { "dc": "模型能力ID" },
+                "inputModalities": { "dc": "该模型方法接受的输入模态" },
+                "maxAssetBytes": { "dc": "每个引用资产的最大字节数；0 表示未指定" },
+                "maxInputAssets": { "dc": "最大输入资产引用数量；0 表示未指定" },
+                "maxInputTokens": { "dc": "最大输入 token 数；0 表示未指定" },
+                "maxOutputAssets": { "dc": "最大输出资产引用数量；0 表示未指定" },
+                "maxOutputTokens": { "dc": "最大输出 token 数；0 表示未指定" },
+                "modelId": { "dc": "所属模型ID" },
+                "outputModalities": { "dc": "该模型方法产生的输出模态" },
+                "supportsOperation": { "dc": "是否支持供应商 operation：0=不支持 1=支持" },
+                "supportedEfforts": { "dc": "该模型方法支持的 thinking effort：low、medium、high、xhigh、max" },
+                "supportsThinking": { "dc": "该模型方法是否支持 thinking effort：0=不支持 1=支持" },
+                "supportsStreaming": { "dc": "是否支持流式输出：0=不支持 1=支持" },
+                "updatedAt": { "dc": "更新时间，Unix 毫秒时间戳" }
+              }
+            },
+            "ModelCapabilityInput": {
+              "fields": {
+                "capabilityMethod": { "dc": "能力类型下的方法，例如 generate、create、transcribe、analyze、moderate 或 operation.get" },
+                "capabilityType": { "dc": "能力类型，例如 text、image、embedding、audio、vision、document、safety 或 video" },
+                "defaultParamsJson": { "dc": "不包含供应商密钥的方法默认参数 JSON" },
+                "enabled": { "dc": "启用标记：0=停用 1=启用" },
+                "endpointId": { "dc": "首选供应商端点ID；0 表示模型默认" },
+                "inputModalities": { "dc": "该模型方法接受的输入模态" },
+                "maxAssetBytes": { "dc": "每个引用资产的最大字节数；0 表示未指定" },
+                "maxInputAssets": { "dc": "最大输入资产引用数量；0 表示未指定" },
+                "maxInputTokens": { "dc": "最大输入 token 数；0 表示未指定" },
+                "maxOutputAssets": { "dc": "最大输出资产引用数量；0 表示未指定" },
+                "maxOutputTokens": { "dc": "最大输出 token 数；0 表示未指定" },
+                "outputModalities": { "dc": "该模型方法产生的输出模态" },
+                "supportsOperation": { "dc": "是否支持供应商 operation：0=不支持 1=支持" },
+                "supportedEfforts": { "dc": "该模型方法支持的 thinking effort：low、medium、high、xhigh、max" },
+                "supportsThinking": { "dc": "该模型方法是否支持 thinking effort：0=不支持 1=支持" },
+                "supportsStreaming": { "dc": "是否支持流式输出：0=不支持 1=支持" }
+              }
+            },
+            "ListCapabilitiesReq": {
+              "fields": { "id": { "dc": "模型ID" } },
+              "meta": {
+                "dc": "查询一个 AI 模型显式声明的能力方法，包括模态、资产、token、thinking effort、流式和供应商 operation 限制",
+                "summary": "查询模型能力",
+                "tags": "AI 模型能力"
+              },
+              "schema": { "dc": "查询一个 AI 模型显式声明的能力方法，包括模态、资产、token、thinking effort、流式和供应商 operation 限制" }
+            },
+            "ListCapabilitiesRes": {
+              "fields": { "list": { "dc": "模型能力方法列表" } }
+            },
+            "UpsertCapabilitiesReq": {
+              "fields": {
+                "id": { "dc": "模型ID" },
+                "items": { "dc": "能力方法保存项" }
+              },
+              "meta": {
+                "dc": "替换或插入一个 AI 模型的显式能力方法声明；端点引用必须属于该模型同一供应商",
+                "summary": "保存模型能力",
+                "tags": "AI 模型能力"
+              },
+              "schema": { "dc": "替换或插入一个 AI 模型的显式能力方法声明；端点引用必须属于该模型同一供应商" }
             }
           }
         },
@@ -96,20 +226,17 @@
           "v1": {
             "CreateReq": {
               "fields": {
-                "anthropicBaseUrl": { "dc": "Anthropic-compatible 基础地址" },
-                "apiKeySecretRef": { "dc": "API key secret 引用或脱敏占位符" },
                 "enabled": { "dc": "启用标记：0=停用 1=启用" },
                 "name": { "dc": "供应商显示名称" },
-                "openaiBaseUrl": { "dc": "OpenAI-compatible 基础地址" },
                 "remark": { "dc": "供应商备注" },
                 "websiteUrl": { "dc": "供应商官网地址" }
               },
               "meta": {
-                "dc": "创建一个 AI 供应商并配置协议基础地址和密钥引用，接口不会返回 API key 明文",
+                "dc": "创建一个 AI 供应商元数据记录；协议端点和密钥由供应商端点接口维护",
                 "summary": "创建 AI 供应商",
                 "tags": "AI 供应商"
               },
-              "schema": { "dc": "创建一个 AI 供应商并配置协议基础地址和密钥引用，接口不会返回 API key 明文" }
+              "schema": { "dc": "创建一个 AI 供应商元数据记录；协议端点和密钥由供应商端点接口维护" }
             },
             "CreateRes": { "fields": { "id": { "dc": "新创建的供应商ID" } } },
             "DeleteReq": {
@@ -123,32 +250,34 @@
             },
             "CreateModelReq": {
               "fields": {
-                "capabilityType": { "dc": "能力类型，首期支持 text" },
+                "capabilityMethod": { "dc": "能力类型下的方法，例如 generate、create、transcribe、analyze、moderate 或 operation.get" },
+                "capabilityType": { "dc": "能力类型，例如 text、image、embedding、audio、vision、document、safety 或 video" },
                 "enabled": { "dc": "启用标记：0=停用 1=启用" },
+                "endpointId": { "dc": "该模型使用的供应商端点ID" },
                 "maxInputTokens": { "dc": "最大输入 token 数，0 表示未指定" },
                 "maxOutputTokens": { "dc": "最大输出 token 数，0 表示未指定" },
                 "modelName": { "dc": "供应商模型名称" },
-                "protocol": { "dc": "供应商协议：openai 或 anthropic" },
+                "protocol": { "dc": "供应商协议：openai、anthropic、voyage、openai-compatible 或 anthropic-compatible" },
                 "providerId": { "dc": "供应商ID" },
                 "supportedEfforts": { "dc": "支持的 thinking effort：low、medium、high、xhigh、max" },
                 "supportsThinking": { "dc": "是否支持 thinking effort：0=不支持 1=支持" }
               },
               "meta": {
-                "dc": "在 AI 供应商下创建一个模型，并声明文本能力元数据、token 边界和 thinking effort 支持范围",
+                "dc": "在 AI 供应商下创建一个模型身份记录，并创建初始显式能力声明，包括端点偏好、token 边界和 thinking effort 支持范围",
                 "summary": "创建供应商模型",
                 "tags": "AI 供应商模型"
               },
-              "schema": { "dc": "在 AI 供应商下创建一个模型，并声明文本能力元数据、token 边界和 thinking effort 支持范围" }
+              "schema": { "dc": "在 AI 供应商下创建一个模型身份记录，并创建初始显式能力声明，包括端点偏好、token 边界和 thinking effort 支持范围" }
             },
             "CreateModelRes": { "fields": { "id": { "dc": "新创建的模型ID" } } },
             "GetReq": {
               "fields": { "id": { "dc": "供应商ID" } },
               "meta": {
-                "dc": "根据供应商ID获取供应商详情和模型数量聚合",
+                "dc": "根据供应商ID获取供应商详情、模型数量聚合和模型摘要",
                 "summary": "获取 AI 供应商",
                 "tags": "AI 供应商"
               },
-              "schema": { "dc": "根据供应商ID获取供应商详情和模型数量聚合" }
+              "schema": { "dc": "根据供应商ID获取供应商详情、模型数量聚合和模型摘要" }
             },
             "ListReq": {
               "fields": {
@@ -158,11 +287,11 @@
                 "pageSize": { "dc": "每页数量" }
               },
               "meta": {
-                "dc": "按页查询 AI 供应商，每行包含模型总数和启用模型数，避免前端逐行补查",
+                "dc": "按页查询 AI 供应商，每行包含批量装配的模型摘要和脱敏密钥，避免前端逐行补查",
                 "summary": "查询 AI 供应商",
                 "tags": "AI 供应商"
               },
-              "schema": { "dc": "按页查询 AI 供应商，每行包含模型总数和启用模型数，避免前端逐行补查" }
+              "schema": { "dc": "按页查询 AI 供应商，每行包含批量装配的模型摘要和脱敏密钥，避免前端逐行补查" }
             },
             "ListRes": {
               "fields": {
@@ -171,54 +300,143 @@
               }
             },
             "ListModelsReq": {
-	              "fields": {
-	                "capabilityType": { "dc": "能力类型筛选，首期支持 text" },
-	                "enabled": { "dc": "启用状态筛选：0=停用 1=启用" },
-	                "pageNum": { "dc": "页码" },
-	                "pageSize": { "dc": "每页数量，最多 100 条" },
-	                "providerId": { "dc": "供应商ID" }
-	              },
-	              "meta": {
-	                "dc": "按页查询一个 AI 供应商下的模型，支持能力类型和启用状态过滤",
-	                "summary": "查询供应商模型",
-	                "tags": "AI 供应商模型"
-	              },
-	              "schema": { "dc": "按页查询一个 AI 供应商下的模型，支持能力类型和启用状态过滤" }
-	            },
-	            "ListModelsRes": {
-	              "fields": {
-	                "list": { "dc": "供应商模型列表" },
-	                "total": { "dc": "符合筛选条件的模型总数" }
-	              }
-	            },
+              "fields": {
+                "capabilityMethod": { "dc": "能力方法筛选，例如 generate、create、transcribe、analyze、moderate 或 operation.get" },
+                "capabilityType": { "dc": "能力类型筛选，例如 text、image、embedding、audio、vision、document、safety 或 video" },
+                "enabled": { "dc": "启用状态筛选：0=停用 1=启用" },
+                "pageNum": { "dc": "页码" },
+                "pageSize": { "dc": "每页数量，最多 100 条" },
+                "providerId": { "dc": "供应商ID" }
+              },
+              "meta": {
+                "dc": "按显式模型能力声明筛选并分页查询一个 AI 供应商下的模型身份投影",
+                "summary": "查询供应商模型",
+                "tags": "AI 供应商模型"
+              },
+              "schema": { "dc": "按显式模型能力声明筛选并分页查询一个 AI 供应商下的模型身份投影" }
+            },
+            "ListModelsRes": {
+              "fields": {
+                "list": { "dc": "供应商模型列表" },
+                "total": { "dc": "符合筛选条件的模型总数" }
+              }
+            },
             "ModelItem": {
               "fields": {
-                "capabilityType": { "dc": "能力类型，首期支持 text" },
+                "capabilityMethod": { "dc": "投影的模型能力声明中的能力方法，例如 generate、create、transcribe、analyze、moderate 或 operation.get" },
+                "capabilityType": { "dc": "投影的模型能力声明中的能力类型，例如 text、image、embedding、audio、vision、document、safety 或 video" },
                 "createdAt": { "dc": "创建时间，Unix 毫秒时间戳" },
                 "enabled": { "dc": "启用标记：0=停用 1=启用" },
+                "endpointId": { "dc": "该能力投影解析出的供应商端点ID；未覆盖时为模型默认端点" },
                 "id": { "dc": "模型ID" },
-                "maxInputTokens": { "dc": "最大输入 token 数，0 表示未指定" },
-                "maxOutputTokens": { "dc": "最大输出 token 数，0 表示未指定" },
+                "maxInputTokens": { "dc": "投影能力声明的最大输入 token 数，0 表示未指定" },
+                "maxOutputTokens": { "dc": "投影能力声明的最大输出 token 数，0 表示未指定" },
                 "modelName": { "dc": "供应商模型名称" },
-                "protocol": { "dc": "供应商协议：openai 或 anthropic" },
+                "protocol": { "dc": "供应商协议：openai、anthropic、voyage、openai-compatible 或 anthropic-compatible" },
                 "providerId": { "dc": "所属供应商ID" },
                 "source": { "dc": "模型来源：manual 或 api" },
-                "supportedEfforts": { "dc": "支持的 thinking effort：low、medium、high、xhigh、max" },
-                "supportsThinking": { "dc": "是否支持 thinking effort：0=不支持 1=支持" },
+                "supportedEfforts": { "dc": "投影能力声明支持的 thinking effort：low、medium、high、xhigh、max" },
+                "supportsThinking": { "dc": "投影能力声明是否支持 thinking effort：0=不支持 1=支持" },
                 "updatedAt": { "dc": "更新时间，Unix 毫秒时间戳" }
               }
             },
-            "ProviderItem": {
+            "ProviderModelSummaryItem": {
               "fields": {
-                "anthropicBaseUrl": { "dc": "Anthropic-compatible 基础地址" },
-                "apiKeySecretRef": { "dc": "脱敏 API key secret 引用；不会返回明文 API key" },
+                "capabilityMethod": { "dc": "模型能力声明中的能力方法，例如 generate、create、transcribe、analyze、moderate 或 operation.get" },
+                "capabilityType": { "dc": "模型能力声明中的能力类型，例如 text、image、embedding、audio、vision、document、safety 或 video" },
+                "enabled": { "dc": "启用标记：0=停用 1=启用" },
+                "id": { "dc": "模型ID" },
+                "modelName": { "dc": "供应商模型名称" },
+                "protocol": { "dc": "供应商协议：openai、anthropic、voyage、openai-compatible 或 anthropic-compatible" }
+              }
+            },
+            "ProviderEndpointItem": {
+              "fields": {
+                "baseUrl": { "dc": "协议端点基础地址" },
                 "createdAt": { "dc": "创建时间，Unix 毫秒时间戳" },
                 "enabled": { "dc": "启用标记：0=停用 1=启用" },
+                "id": { "dc": "供应商端点ID" },
+                "metadataJson": { "dc": "不包含供应商密钥的端点元数据 JSON" },
+                "protocol": { "dc": "供应商协议：openai、anthropic、voyage、openai-compatible 或 anthropic-compatible" },
+                "providerId": { "dc": "所属供应商ID" },
+                "secretRef": { "dc": "脱敏端点密钥引用；不会返回明文 API key" },
+                "updatedAt": { "dc": "更新时间，Unix 毫秒时间戳" }
+              }
+            },
+            "ListProviderEndpointsReq": {
+              "fields": {
+                "enabled": { "dc": "启用状态筛选：0=停用 1=启用" },
+                "protocol": { "dc": "协议筛选：openai、anthropic、voyage、openai-compatible 或 anthropic-compatible" },
+                "providerId": { "dc": "供应商ID" }
+              },
+              "meta": {
+                "dc": "查询一个 AI 供应商下的协议端点，可按协议和启用状态过滤，不返回 API key 明文",
+                "summary": "查询供应商端点",
+                "tags": "AI 供应商端点"
+              },
+              "schema": { "dc": "查询一个 AI 供应商下的协议端点，可按协议和启用状态过滤，不返回 API key 明文" }
+            },
+            "ListProviderEndpointsRes": {
+              "fields": { "list": { "dc": "供应商端点列表" } }
+            },
+            "CreateProviderEndpointReq": {
+              "fields": {
+                "baseUrl": { "dc": "协议端点基础地址" },
+                "enabled": { "dc": "启用标记：0=停用 1=启用" },
+                "metadataJson": { "dc": "不包含供应商密钥的端点元数据 JSON" },
+                "protocol": { "dc": "供应商协议：openai、anthropic、voyage、openai-compatible 或 anthropic-compatible" },
+                "providerId": { "dc": "供应商ID" },
+                "secretRef": { "dc": "端点密钥引用或通过受控密钥处理路径保存的密钥值" }
+              },
+              "meta": {
+                "dc": "在 AI 供应商下创建一个协议端点，响应只返回新端点ID，不返回明文密钥",
+                "summary": "创建供应商端点",
+                "tags": "AI 供应商端点"
+              },
+              "schema": { "dc": "在 AI 供应商下创建一个协议端点，响应只返回新端点ID，不返回明文密钥" }
+            },
+            "CreateProviderEndpointRes": { "fields": { "id": { "dc": "新创建的供应商端点ID" } } },
+            "UpdateProviderEndpointReq": {
+              "fields": {
+                "baseUrl": { "dc": "协议端点基础地址" },
+                "enabled": { "dc": "启用标记：0=停用 1=启用" },
+                "id": { "dc": "供应商端点ID" },
+                "metadataJson": { "dc": "不包含供应商密钥的端点元数据 JSON" },
+                "protocol": { "dc": "供应商协议：openai、anthropic、voyage、openai-compatible 或 anthropic-compatible" },
+                "providerId": { "dc": "供应商ID" },
+                "secretRef": { "dc": "端点密钥引用；为空或脱敏值时保留已有引用" }
+              },
+              "meta": {
+                "dc": "更新一个 AI 供应商下的协议端点；空或脱敏密钥引用会保留已有密钥引用",
+                "summary": "更新供应商端点",
+                "tags": "AI 供应商端点"
+              },
+              "schema": { "dc": "更新一个 AI 供应商下的协议端点；空或脱敏密钥引用会保留已有密钥引用" }
+            },
+            "DeleteProviderEndpointReq": {
+              "fields": {
+                "id": { "dc": "供应商端点ID" },
+                "providerId": { "dc": "供应商ID" }
+              },
+              "meta": {
+                "dc": "删除一个未被模型或模型能力引用的供应商端点",
+                "summary": "删除供应商端点",
+                "tags": "AI 供应商端点"
+              },
+              "schema": { "dc": "删除一个未被模型或模型能力引用的供应商端点" }
+            },
+            "ProviderItem": {
+              "fields": {
+                "createdAt": { "dc": "创建时间，Unix 毫秒时间戳" },
+                "enabled": { "dc": "启用标记：0=停用 1=启用" },
+                "endpointCount": { "dc": "该供应商下协议端点总数" },
+                "enabledEndpointCount": { "dc": "该供应商下启用协议端点数量" },
+                "endpoints": { "dc": "供应商下端点摘要列表，用于供应商列表端点列展示" },
                 "enabledModelCount": { "dc": "该供应商下启用模型数量" },
                 "id": { "dc": "供应商ID" },
                 "modelCount": { "dc": "该供应商下模型总数" },
+                "models": { "dc": "供应商下模型摘要列表，用于供应商列表模型列展示" },
                 "name": { "dc": "供应商显示名称" },
-                "openaiBaseUrl": { "dc": "OpenAI-compatible 基础地址" },
                 "remark": { "dc": "供应商备注" },
                 "updatedAt": { "dc": "更新时间，Unix 毫秒时间戳" },
                 "websiteUrl": { "dc": "供应商官网地址" }
@@ -226,7 +444,7 @@
             },
             "SyncModelsReq": {
               "fields": {
-                "protocol": { "dc": "用于模型同步的协议：openai 或 anthropic" },
+                "protocol": { "dc": "用于模型同步的协议：openai、anthropic、voyage、openai-compatible 或 anthropic-compatible" },
                 "providerId": { "dc": "供应商ID" }
               },
               "meta": {
@@ -244,38 +462,40 @@
             },
             "UpdateReq": {
               "fields": {
-                "anthropicBaseUrl": { "dc": "Anthropic-compatible 基础地址" },
-                "apiKeySecretRef": { "dc": "API key secret 引用；为空或脱敏占位符时保留已有密钥引用" },
                 "enabled": { "dc": "启用标记：0=停用 1=启用" },
                 "id": { "dc": "供应商ID" },
                 "name": { "dc": "供应商显示名称" },
-                "openaiBaseUrl": { "dc": "OpenAI-compatible 基础地址" },
                 "remark": { "dc": "供应商备注" },
                 "websiteUrl": { "dc": "供应商官网地址" }
               },
               "meta": {
-                "dc": "更新一个 AI 供应商；空密钥引用会保留已有密钥引用",
+                "dc": "更新一个 AI 供应商元数据记录；协议端点和密钥由供应商端点接口维护",
                 "summary": "更新 AI 供应商",
                 "tags": "AI 供应商"
               },
-              "schema": { "dc": "更新一个 AI 供应商；空密钥引用会保留已有密钥引用" }
+              "schema": { "dc": "更新一个 AI 供应商元数据记录；协议端点和密钥由供应商端点接口维护" }
             }
           }
         },
         "tier": {
           "v1": {
             "ListReq": {
-              "fields": { "capabilityType": { "dc": "能力类型，首期支持 text" } },
+              "fields": {
+                "capabilityMethod": { "dc": "能力类型下的方法，例如 generate、create、transcribe、analyze、moderate 或 operation.get" },
+                "capabilityType": { "dc": "能力类型，例如 text、image、embedding、audio、vision、document、safety 或 video" }
+              },
               "meta": {
-                "dc": "返回 basic、standard、advanced 三个固定文本 AI 档位及其主绑定和最近测试摘要",
+                "dc": "返回一个能力方法下的 basic、standard、advanced 三个固定 AI 档位及其主绑定和最近测试摘要",
                 "summary": "查询 AI 能力档位",
                 "tags": "AI 档位"
               },
-              "schema": { "dc": "返回 basic、standard、advanced 三个固定文本 AI 档位及其主绑定和最近测试摘要" }
+              "schema": { "dc": "返回一个能力方法下的 basic、standard、advanced 三个固定 AI 档位及其主绑定和最近测试摘要" }
             },
             "ListRes": { "fields": { "list": { "dc": "AI 能力档位列表" } } },
             "TestReq": {
               "fields": {
+                "capabilityMethod": { "dc": "能力类型下的方法，例如 generate、create、transcribe、analyze、moderate 或 operation.get" },
+                "capabilityType": { "dc": "能力类型，例如 text、image、embedding、audio、vision、document、safety 或 video" },
                 "code": { "dc": "档位代码：basic、standard、advanced" },
                 "maxOutputTokens": { "dc": "轻量测试最大输出 token 数" },
                 "messages": { "dc": "可选测试消息；为空时使用短健康检查提示词" },
@@ -284,11 +504,11 @@
                 "thinkingEffort": { "dc": "可选草稿 thinking effort：low、medium、high、xhigh、max 或空" }
               },
               "meta": {
-                "dc": "对已保存或草稿档位绑定执行轻量文本生成测试，不持久化草稿绑定",
+                "dc": "在一个能力方法下对已保存或草稿档位绑定执行轻量供应商测试，不持久化草稿绑定；文本方法使用消息，其他方法在 adapter 支持前可返回 provider-unavailable",
                 "summary": "测试 AI 能力档位",
                 "tags": "AI 档位"
               },
-              "schema": { "dc": "对已保存或草稿档位绑定执行轻量文本生成测试，不持久化草稿绑定" }
+              "schema": { "dc": "在一个能力方法下对已保存或草稿档位绑定执行轻量供应商测试，不持久化草稿绑定；文本方法使用消息，其他方法在 adapter 支持前可返回 provider-unavailable" }
             },
             "TestRes": {
               "fields": {
@@ -313,7 +533,7 @@
                 "enabled": { "dc": "绑定启用标记：0=停用 1=启用" },
                 "modelId": { "dc": "绑定模型ID" },
                 "modelName": { "dc": "绑定模型名称" },
-                "protocol": { "dc": "供应商协议：openai 或 anthropic" },
+                "protocol": { "dc": "供应商协议：openai、anthropic、voyage、openai-compatible 或 anthropic-compatible" },
                 "providerId": { "dc": "绑定供应商ID" },
                 "providerName": { "dc": "绑定供应商名称" },
                 "supportedEfforts": { "dc": "支持的 thinking effort：low、medium、high、xhigh、max" },
@@ -323,7 +543,8 @@
             "TierItem": {
               "fields": {
                 "binding": { "dc": "主供应商模型绑定投影" },
-                "capabilityType": { "dc": "能力类型，首期支持 text" },
+                "capabilityMethod": { "dc": "能力类型下的方法，例如 generate、create、transcribe、analyze、moderate 或 operation.get" },
+                "capabilityType": { "dc": "能力类型，例如 text、image、embedding、audio、vision、document、safety 或 video" },
                 "code": { "dc": "档位代码：basic、standard、advanced" },
                 "defaultEffort": { "dc": "默认 thinking effort：low、medium、high、xhigh、max 或空" },
                 "description": { "dc": "档位说明" },
@@ -340,6 +561,8 @@
             },
             "UpdateReq": {
               "fields": {
+                "capabilityMethod": { "dc": "能力类型下的方法，例如 generate、create、transcribe、analyze、moderate 或 operation.get" },
+                "capabilityType": { "dc": "能力类型，例如 text、image、embedding、audio、vision、document、safety 或 video" },
                 "code": { "dc": "档位代码：basic、standard、advanced" },
                 "defaultEffort": { "dc": "默认 thinking effort：low、medium、high、xhigh、max 或空" },
                 "enabled": { "dc": "启用标记：0=停用 1=启用" },
@@ -347,11 +570,47 @@
                 "providerId": { "dc": "主绑定供应商ID；0 表示保留已有绑定" }
               },
               "meta": {
-                "dc": "更新一个文本 AI 能力档位，包括启用状态、默认 thinking effort 和主供应商模型绑定",
+                "dc": "更新一个能力方法下的 AI 能力档位，包括启用状态、默认 thinking effort 和主供应商模型绑定",
                 "summary": "更新 AI 能力档位",
                 "tags": "AI 档位"
               },
-              "schema": { "dc": "更新一个文本 AI 能力档位，包括启用状态、默认 thinking effort 和主供应商模型绑定" }
+              "schema": { "dc": "更新一个能力方法下的 AI 能力档位，包括启用状态、默认 thinking effort 和主供应商模型绑定" }
+            },
+            "MethodDefaultParamItem": {
+              "fields": {
+                "capabilityMethod": { "dc": "能力类型下的方法，例如 generate、create、transcribe、analyze、moderate 或 operation.get" },
+                "capabilityType": { "dc": "能力类型，例如 text、image、embedding、audio、vision、document、safety 或 video" },
+                "createdAt": { "dc": "创建时间，Unix 毫秒时间戳" },
+                "defaultParamsJson": { "dc": "不包含供应商密钥的方法默认参数 JSON" },
+                "enabled": { "dc": "启用标记：0=停用 1=启用" },
+                "id": { "dc": "方法默认参数ID" },
+                "updatedAt": { "dc": "更新时间，Unix 毫秒时间戳" }
+              }
+            },
+            "ListMethodDefaultsReq": {
+              "meta": {
+                "dc": "查询所有受治理 AI 能力方法的方法级默认参数投影",
+                "summary": "查询 AI 方法默认参数",
+                "tags": "AI 方法默认参数"
+              },
+              "schema": { "dc": "查询所有受治理 AI 能力方法的方法级默认参数投影" }
+            },
+            "ListMethodDefaultsRes": {
+              "fields": { "list": { "dc": "能力方法默认参数列表" } }
+            },
+            "UpdateMethodDefaultReq": {
+              "fields": {
+                "capabilityMethod": { "dc": "能力类型下的方法，例如 generate、create、transcribe、analyze、moderate 或 operation.get" },
+                "capabilityType": { "dc": "能力类型，例如 text、image、embedding、audio、vision、document、safety 或 video" },
+                "defaultParamsJson": { "dc": "不包含供应商密钥的方法默认参数 JSON" },
+                "enabled": { "dc": "启用标记：0=停用 1=启用" }
+              },
+              "meta": {
+                "dc": "更新一个受治理 AI 能力方法的方法级默认参数，并在持久化成功后失效能力方法解析缓存",
+                "summary": "更新 AI 方法默认参数",
+                "tags": "AI 方法默认参数"
+              },
+              "schema": { "dc": "更新一个受治理 AI 能力方法的方法级默认参数，并在持久化成功后失效能力方法解析缓存" }
             }
           }
         }

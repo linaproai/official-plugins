@@ -13,7 +13,9 @@ import (
 func (c *ControllerV1) CreateModel(ctx context.Context, req *v1.CreateModelReq) (res *v1.CreateModelRes, err error) {
 	id, err := c.aiSvc.CreateModel(ctx, aisvc.ModelSaveInput{
 		ProviderId:       req.ProviderId,
+		EndpointId:       req.EndpointId,
 		CapabilityType:   req.CapabilityType,
+		CapabilityMethod: req.CapabilityMethod,
 		ModelName:        req.ModelName,
 		Protocol:         req.Protocol,
 		Source:           aisvc.ModelSourceManual,

@@ -1,14 +1,23 @@
 import { test, expect } from "@host-tests/fixtures/auth";
-import { ensureSourcePluginEnabled } from "@host-tests/fixtures/plugin";
+import {
+  createAdminApiContext,
+  ensureSourcePluginEnabledViaAPI,
+} from "@host-tests/fixtures/plugin";
 
 test.describe("TC-3 Server monitor visibility-aware polling", () => {
-  test.beforeEach(async ({ adminPage }) => {
-    await ensureSourcePluginEnabled(adminPage, "linapro-monitor-server");
+  test.beforeEach(async () => {
+    const adminApi = await createAdminApiContext();
+    try {
+      await ensureSourcePluginEnabledViaAPI(adminApi, "linapro-monitor-server");
+    } finally {
+      await adminApi.dispose();
+    }
   });
 
   test("TC-3a: hidden tab pauses polling and visible tab refreshes immediately", async ({
-    adminPage,
+    authenticatedPage,
   }) => {
+    const page = authenticatedPage;
     const installVisibilityMock = () => {
       let state: DocumentVisibilityState = "visible";
       Object.defineProperty(document, "visibilityState", {
@@ -27,11 +36,11 @@ test.describe("TC-3 Server monitor visibility-aware polling", () => {
       };
     };
 
-    await adminPage.addInitScript(installVisibilityMock);
-    await adminPage.evaluate(installVisibilityMock);
+    await page.addInitScript(installVisibilityMock);
+    await page.evaluate(installVisibilityMock);
 
     const monitorRequests: string[] = [];
-    adminPage.on("request", (request) => {
+    page.on("request", (request) => {
       if (
         request.method() === "GET" &&
         request.url().includes("/x/linapro-monitor-server/api/v1/monitor/server")
@@ -40,31 +49,31 @@ test.describe("TC-3 Server monitor visibility-aware polling", () => {
       }
     });
 
-    await adminPage.clock.install();
-    const initialMonitorResponse = adminPage.waitForResponse(
+    await page.clock.install();
+    const initialMonitorResponse = page.waitForResponse(
       (response) =>
         response.request().method() === "GET" &&
         response.url().includes("/x/linapro-monitor-server/api/v1/monitor/server") &&
         response.status() === 200,
     );
-    await adminPage.goto("/monitor/server", { waitUntil: "domcontentloaded" });
+    await page.goto("/monitor/server", { waitUntil: "domcontentloaded" });
     await initialMonitorResponse;
 
-    await adminPage.evaluate(() => {
+    await page.evaluate(() => {
       (window as any).__setE2EVisibility("hidden");
     });
     const requestsAfterHidden = monitorRequests.length;
-    await adminPage.clock.runFor(31_000);
+    await page.clock.runFor(31_000);
     expect(monitorRequests).toHaveLength(requestsAfterHidden);
-    await adminPage.clock.resume();
+    await page.clock.resume();
 
-    const visibleResponse = adminPage.waitForResponse(
+    const visibleResponse = page.waitForResponse(
       (response) =>
         response.request().method() === "GET" &&
         response.url().includes("/x/linapro-monitor-server/api/v1/monitor/server") &&
         response.status() === 200,
     );
-    await adminPage.evaluate(() => {
+    await page.evaluate(() => {
       (window as any).__setE2EVisibility("visible");
     });
     await visibleResponse;

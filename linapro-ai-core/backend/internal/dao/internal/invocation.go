@@ -21,52 +21,60 @@ type InvocationDao struct {
 
 // InvocationColumns defines and stores column names for the table plugin_linapro_ai_invocation.
 type InvocationColumns struct {
-	Id             string // Invocation ID
-	RequestId      string // Request correlation ID
-	CapabilityType string // Capability type
-	Purpose        string // Governed AI purpose
-	TierCode       string // Tier code
-	SourcePluginId string // Source plugin ID
-	TenantId       string // Tenant ID
-	UserId         string // User ID
-	ProviderId     string // Provider ID
-	ModelId        string // Model ID
-	ProviderName   string // Provider display name snapshot
-	ModelName      string // Model name snapshot
-	Protocol       string // Protocol snapshot
-	ThinkingEffort string // Requested or applied thinking effort
-	Status         string // Invocation status: success or failed
-	InputTokens    string // Input token count
-	OutputTokens   string // Output token count
-	LatencyMs      string // Provider call latency in milliseconds
-	ErrorCode      string // Stable error code
-	ErrorSummary   string // Masked error summary
-	CreatedAt      string // Creation time
+	Id                   string // Invocation ID
+	RequestId            string // Request correlation ID
+	CapabilityType       string // Capability type
+	CapabilityMethod     string // Capability method
+	Purpose              string // Governed AI purpose
+	TierCode             string // Tier code
+	SourcePluginId       string // Source plugin ID
+	TenantId             string // Tenant ID
+	UserId               string // User ID
+	ProviderId           string // Provider ID
+	ModelId              string // Model ID
+	ProviderName         string // Provider display name snapshot
+	ModelName            string // Model name snapshot
+	Protocol             string // Protocol snapshot
+	ThinkingEffort       string // Requested or applied thinking effort
+	Status               string // Invocation status: success or failed
+	InputTokens          string // Input token count
+	OutputTokens         string // Output token count
+	LatencyMs            string // Provider call latency in milliseconds
+	ErrorCode            string // Stable error code
+	ErrorSummary         string // Masked error summary
+	CreatedAt            string // Creation time
+	AssetSummaryJson     string // Asset reference summary JSON without file contents
+	OperationSummaryJson string // Provider operation summary JSON without provider secrets
+	MetadataSummaryJson  string // Bounded metadata summary JSON without request or response bodies
 }
 
 // invocationColumns holds the columns for the table plugin_linapro_ai_invocation.
 var invocationColumns = InvocationColumns{
-	Id:             "id",
-	RequestId:      "request_id",
-	CapabilityType: "capability_type",
-	Purpose:        "purpose",
-	TierCode:       "tier_code",
-	SourcePluginId: "source_plugin_id",
-	TenantId:       "tenant_id",
-	UserId:         "user_id",
-	ProviderId:     "provider_id",
-	ModelId:        "model_id",
-	ProviderName:   "provider_name",
-	ModelName:      "model_name",
-	Protocol:       "protocol",
-	ThinkingEffort: "thinking_effort",
-	Status:         "status",
-	InputTokens:    "input_tokens",
-	OutputTokens:   "output_tokens",
-	LatencyMs:      "latency_ms",
-	ErrorCode:      "error_code",
-	ErrorSummary:   "error_summary",
-	CreatedAt:      "created_at",
+	Id:                   "id",
+	RequestId:            "request_id",
+	CapabilityType:       "capability_type",
+	CapabilityMethod:     "capability_method",
+	Purpose:              "purpose",
+	TierCode:             "tier_code",
+	SourcePluginId:       "source_plugin_id",
+	TenantId:             "tenant_id",
+	UserId:               "user_id",
+	ProviderId:           "provider_id",
+	ModelId:              "model_id",
+	ProviderName:         "provider_name",
+	ModelName:            "model_name",
+	Protocol:             "protocol",
+	ThinkingEffort:       "thinking_effort",
+	Status:               "status",
+	InputTokens:          "input_tokens",
+	OutputTokens:         "output_tokens",
+	LatencyMs:            "latency_ms",
+	ErrorCode:            "error_code",
+	ErrorSummary:         "error_summary",
+	CreatedAt:            "created_at",
+	AssetSummaryJson:     "asset_summary_json",
+	OperationSummaryJson: "operation_summary_json",
+	MetadataSummaryJson:  "metadata_summary_json",
 }
 
 // NewInvocationDao creates and returns a new DAO object for table data access.

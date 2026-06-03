@@ -21,32 +21,26 @@ type ProviderDao struct {
 
 // ProviderColumns defines and stores column names for the table plugin_linapro_ai_provider.
 type ProviderColumns struct {
-	Id               string // Provider ID
-	Name             string // Provider display name
-	WebsiteUrl       string // Provider website URL
-	Remark           string // Provider remark
-	OpenaiBaseUrl    string // OpenAI-compatible base URL
-	AnthropicBaseUrl string // Anthropic-compatible base URL
-	ApiKeySecretRef  string // API key secret reference or masked secret reference
-	Enabled          string // Enabled flag: 0=disabled 1=enabled
-	CreatedAt        string // Creation time
-	UpdatedAt        string // Update time
-	DeletedAt        string // Deletion time
+	Id         string // Provider ID
+	Name       string // Provider display name
+	WebsiteUrl string // Provider website URL
+	Remark     string // Provider remark
+	Enabled    string // Enabled flag: 0=disabled 1=enabled
+	CreatedAt  string // Creation time
+	UpdatedAt  string // Update time
+	DeletedAt  string // Deletion time
 }
 
 // providerColumns holds the columns for the table plugin_linapro_ai_provider.
 var providerColumns = ProviderColumns{
-	Id:               "id",
-	Name:             "name",
-	WebsiteUrl:       "website_url",
-	Remark:           "remark",
-	OpenaiBaseUrl:    "openai_base_url",
-	AnthropicBaseUrl: "anthropic_base_url",
-	ApiKeySecretRef:  "api_key_secret_ref",
-	Enabled:          "enabled",
-	CreatedAt:        "created_at",
-	UpdatedAt:        "updated_at",
-	DeletedAt:        "deleted_at",
+	Id:         "id",
+	Name:       "name",
+	WebsiteUrl: "website_url",
+	Remark:     "remark",
+	Enabled:    "enabled",
+	CreatedAt:  "created_at",
+	UpdatedAt:  "updated_at",
+	DeletedAt:  "deleted_at",
 }
 
 // NewProviderDao creates and returns a new DAO object for table data access.

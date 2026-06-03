@@ -43,6 +43,35 @@ const legacyRuntimeArtifactPath = path.join(
   "runtime",
   `${pluginID}.wasm`,
 );
+const dynamicHostServiceAuthorization = {
+  services: [
+    {
+      service: "storage",
+      methods: ["put", "get", "delete", "list", "stat"],
+      paths: ["host-call-demo/", "demo-record-files/"],
+    },
+    {
+      service: "network",
+      methods: ["request"],
+      resourceRefs: ["https://example.com"],
+    },
+    {
+      service: "data",
+      methods: ["list", "get", "create", "update", "delete", "transaction"],
+      tables: ["sys_plugin_node_state", "plugin_linapro_demo_dynamic_record"],
+    },
+    {
+      service: "manifest",
+      methods: ["get"],
+      paths: ["config/config.yaml", "config/profile.yaml"],
+    },
+    {
+      service: "hostConfig",
+      methods: ["get"],
+      keys: ["workspace.basePath", "i18n.default", "i18n.enabled"],
+    },
+  ],
+};
 
 let adminApi: APIRequestContext;
 let originalInstalled = 0;
@@ -82,6 +111,27 @@ function cleanupIgnoredManifestConfigFixture() {
   createdManifestConfigFixture = false;
 }
 
+async function installDynamicPluginWithAuthorization() {
+  return expectSuccess<{ id: string; installed: number; enabled: number }>(
+    await adminApi.post(`plugins/${pluginID}/install`, {
+      data: {
+        installMode: "global",
+        authorization: dynamicHostServiceAuthorization,
+      },
+    }),
+  );
+}
+
+async function enableDynamicPluginWithAuthorization() {
+  return expectSuccess<{ id: string; enabled: number }>(
+    await adminApi.put(`plugins/${pluginID}/enable`, {
+      data: {
+        authorization: dynamicHostServiceAuthorization,
+      },
+    }),
+  );
+}
+
 async function ensurePluginInstalledAndEnabled() {
   await syncPlugins(adminApi);
   let sourcePlugin = await getPlugin(adminApi, sourcePluginID);
@@ -104,10 +154,10 @@ async function ensurePluginInstalledAndEnabled() {
     await syncPlugins(adminApi);
     plugin = await getPlugin(adminApi, pluginID);
   }
-  await installPlugin(adminApi, pluginID, { installMode: "global" });
+  await installDynamicPluginWithAuthorization();
   plugin = await getPlugin(adminApi, pluginID);
   if (plugin.enabled !== 1) {
-    await enablePlugin(adminApi, pluginID);
+    await enableDynamicPluginWithAuthorization();
   }
 }
 
@@ -128,11 +178,11 @@ async function restorePluginState() {
     plugin = await getPlugin(adminApi, pluginID);
   }
   if (plugin.installed !== 1) {
-    await installPlugin(adminApi, pluginID, { installMode: "global" });
+    await installDynamicPluginWithAuthorization();
     plugin = await getPlugin(adminApi, pluginID);
   }
   if (originalEnabled === 1 && plugin.enabled !== 1) {
-    await enablePlugin(adminApi, pluginID);
+    await enableDynamicPluginWithAuthorization();
   }
 
   await restoreSourcePluginState();

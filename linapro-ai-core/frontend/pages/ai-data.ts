@@ -1,56 +1,363 @@
-import type { VbenFormSchema } from '#/adapter/form';
-import type { VxeGridProps } from '#/adapter/vxe-table';
-import type { Tier } from './ai-client';
+import type { VbenFormSchema } from "#/adapter/form";
+import type { VxeGridProps } from "#/adapter/vxe-table";
+import type {
+  Provider,
+  ProviderModelSummary,
+  Tier,
+} from "./ai-client";
 
-import { h } from 'vue';
+import { h } from "vue";
 
-import { Tag } from 'ant-design-vue';
+import { Popconfirm, Tag } from "ant-design-vue";
 
-import { $t } from '#/locales';
-import { formatTimestamp } from '#/utils/time';
+import { $t } from "#/locales";
+import { formatTimestamp } from "#/utils/time";
 
 function statusTag(value: number | string) {
-  const enabled = Number(value) === 1 || value === 'success';
-  const failed = value === 'failed';
-  const color = failed ? 'error' : enabled ? 'success' : 'default';
+  const enabled = Number(value) === 1 || value === "success";
+  const failed = value === "failed";
+  const color = failed ? "error" : enabled ? "success" : "default";
   const label =
-    value === 'success'
-      ? $t('plugin.linapro-ai-core.common.success')
-      : value === 'failed'
-        ? $t('plugin.linapro-ai-core.common.failed')
+    value === "success"
+      ? $t("plugin.linapro-ai-core.common.success")
+      : value === "failed"
+        ? $t("plugin.linapro-ai-core.common.failed")
         : Number(value) === 1
-          ? $t('plugin.linapro-ai-core.common.enabled')
-          : $t('plugin.linapro-ai-core.common.disabled');
+          ? $t("plugin.linapro-ai-core.common.enabled")
+          : $t("plugin.linapro-ai-core.common.disabled");
   return h(Tag, { color }, () => label);
 }
 
 export function buildEnabledOptions() {
   return [
-    { label: $t('plugin.linapro-ai-core.common.enabled'), value: 1 },
-    { label: $t('plugin.linapro-ai-core.common.disabled'), value: 0 },
+    { label: $t("plugin.linapro-ai-core.common.enabled"), value: 1 },
+    { label: $t("plugin.linapro-ai-core.common.disabled"), value: 0 },
   ];
 }
 
 export const protocolOptions = [
-  { label: 'OpenAI', value: 'openai' },
-  { label: 'Anthropic', value: 'anthropic' },
+  { label: "OpenAI", value: "openai" },
+  { label: "Anthropic", value: "anthropic" },
+  { label: "Voyage", value: "voyage" },
+  { label: "OpenAI Compatible", value: "openai-compatible" },
+  { label: "Anthropic Compatible", value: "anthropic-compatible" },
 ];
 
-export function buildEffortOptions() {
+function protocolLabel(value: string) {
+  return (
+    protocolOptions.find((item) => item.value === value)?.label ||
+    value ||
+    "OpenAI"
+  );
+}
+
+function protocolColor(value: string) {
+  if (value === "anthropic" || value === "anthropic-compatible") {
+    return "purple";
+  }
+  if (value === "voyage") {
+    return "cyan";
+  }
+  return value === "openai-compatible" ? "geekblue" : "blue";
+}
+
+function externalHref(url: string) {
+  const trimmed = url.trim();
+  if (!trimmed) {
+    return "";
+  }
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+function providerNameCell(row: Provider) {
+  const websiteUrl = row.websiteUrl?.trim();
+  const children = [
+    h(
+      "span",
+      { class: "truncate font-medium text-foreground" },
+      row.name || "-",
+    ),
+  ];
+  if (websiteUrl) {
+    children.push(
+      h(
+        "a",
+        {
+          class:
+            "min-w-0 break-all text-xs leading-4 text-primary hover:underline",
+          href: externalHref(websiteUrl),
+          onClick: (event: MouseEvent) => event.stopPropagation(),
+          rel: "noopener noreferrer",
+          target: "_blank",
+        },
+        websiteUrl,
+      ),
+    );
+  }
+  return h("div", { class: "flex min-w-0 flex-col gap-0.5 py-1" }, children);
+}
+
+function endpointRows(row: Provider) {
+  const endpoints = (row.endpoints || []).filter((item) => item.baseUrl);
+  return endpoints.map((endpoint) => ({
+    enabled: endpoint.enabled,
+    label: protocolLabel(endpoint.protocol),
+    secretRef: endpoint.secretRef,
+    type: endpoint.protocol,
+    url: endpoint.baseUrl,
+  }));
+}
+
+function endpointCell(row: Provider) {
+  const endpoints = endpointRows(row);
+  if (endpoints.length === 0) {
+    return h(
+      "span",
+      { class: "text-muted-foreground text-xs" },
+      $t("plugin.linapro-ai-core.provider.empty.noEndpoint"),
+    );
+  }
+  return h(
+    "div",
+    { class: "flex min-w-0 flex-col gap-1 py-1" },
+    endpoints.map((endpoint) =>
+      h(
+        "div",
+        {
+          class:
+            "flex min-w-0 items-start gap-2 rounded border border-border bg-muted/30 px-1.5 py-1",
+        },
+        [
+          h(
+            Tag,
+            {
+              class:
+                "!m-0 !inline-flex !w-[88px] shrink-0 justify-end text-right",
+              color: protocolColor(endpoint.type),
+            },
+            () => endpoint.label,
+          ),
+          h(
+            "span",
+            { class: "min-w-0 break-all font-mono text-[11px] leading-4" },
+            endpoint.url,
+          ),
+          endpoint.enabled === 0
+            ? h(
+                Tag,
+                { class: "!m-0 shrink-0", color: "default" },
+                () => $t("plugin.linapro-ai-core.common.disabled"),
+              )
+            : undefined,
+        ],
+      ),
+    ),
+  );
+}
+
+function secretCell(row: Provider) {
+  const secrets = (row.endpoints || [])
+    .map((endpoint) => endpoint.secretRef)
+    .filter(Boolean);
+  const text = secrets.length > 0
+    ? [...new Set(secrets)].join("\n")
+    : $t("plugin.linapro-ai-core.provider.empty.noKey");
+  return h(
+    "span",
+    {
+      class: secrets.length > 0
+        ? "font-mono text-xs text-foreground"
+        : "text-muted-foreground text-xs",
+      style: "white-space: pre-line",
+    },
+    text,
+  );
+}
+
+type ProviderColumnOptions = {
+  onDeleteModel?: (model: ProviderModelSummary) => Promise<void> | void;
+};
+
+function modelDeleteButton(
+  model: ProviderModelSummary,
+  onDeleteModel?: ProviderColumnOptions["onDeleteModel"],
+) {
+  if (!onDeleteModel) {
+    return undefined;
+  }
+  const label = `${$t("pages.common.delete")} ${model.modelName}`;
+  return h(
+    Popconfirm,
+    {
+      onConfirm: () => onDeleteModel(model),
+      placement: "top",
+      title: $t("pages.common.deleteConfirm"),
+    },
+    {
+      default: () =>
+        h(
+          "button",
+          {
+            "aria-label": label,
+            class:
+              "inline-flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+            onClick: (event: MouseEvent) => event.stopPropagation(),
+            title: label,
+            type: "button",
+          },
+          h("span", {
+            "aria-hidden": true,
+            class: "ai-model-delete-icon",
+          }),
+        ),
+    },
+  );
+}
+
+function modelTag(
+  model: ProviderModelSummary,
+  onDeleteModel?: ProviderColumnOptions["onDeleteModel"],
+) {
+  return h(
+    "span",
+    {
+      class:
+        "inline-flex h-8 max-w-full items-center gap-1.5 rounded-full border border-border bg-background px-2.5 text-sm shadow-sm",
+    },
+    [
+      h("span", { class: "min-w-0 truncate text-foreground" }, model.modelName),
+      h(
+        "span",
+        { class: "shrink-0 text-xs text-muted-foreground" },
+        protocolLabel(model.protocol),
+      ),
+      modelDeleteButton(model, onDeleteModel),
+    ].filter(Boolean),
+  );
+}
+
+function groupModels(models: ProviderModelSummary[]) {
+  const order = [
+    "openai",
+    "openai-compatible",
+    "anthropic",
+    "anthropic-compatible",
+    "voyage",
+  ];
+  const groups = new Map<string, ProviderModelSummary[]>();
+  for (const model of models) {
+    const key = model.protocol || "openai";
+    const current = groups.get(key) || [];
+    current.push(model);
+    groups.set(key, current);
+  }
   return [
-    { label: $t('plugin.linapro-ai-core.effort.empty'), value: '' },
-    { label: 'low', value: 'low' },
-    { label: 'medium', value: 'medium' },
-    { label: 'high', value: 'high' },
-    { label: 'xhigh', value: 'xhigh' },
-    { label: 'max', value: 'max' },
+    ...order.filter((key) => groups.has(key)),
+    ...[...groups.keys()].filter((key) => !order.includes(key)),
+  ].map((key) => ({ key, models: groups.get(key) || [] }));
+}
+
+function modelsCell(
+  row: Provider,
+  onDeleteModel?: ProviderColumnOptions["onDeleteModel"],
+) {
+  const models = row.models || [];
+  if (models.length === 0) {
+    return h(
+      "span",
+      { class: "text-muted-foreground text-xs" },
+      $t("plugin.linapro-ai-core.provider.empty.noModels"),
+    );
+  }
+  const groups = groupModels(models);
+  return h(
+    "div",
+    {
+      class:
+        "flex min-h-[104px] min-w-[420px] max-w-[620px] flex-col justify-center gap-2 py-2",
+    },
+    groups.map((group, index) =>
+      h(
+        "div",
+        {
+          class: [
+            "flex flex-wrap gap-2",
+            index > 0 ? "border-t border-border pt-2" : "",
+          ]
+            .filter(Boolean)
+            .join(" "),
+        },
+        group.models.map((model) => modelTag(model, onDeleteModel)),
+      ),
+    ),
+  );
+}
+
+export function buildCapabilityMethodOptions() {
+  return [
+    { label: "text.generate", value: "text.generate" },
+    { label: "image.generate", value: "image.generate" },
+    { label: "image.edit", value: "image.edit" },
+    { label: "embedding.create", value: "embedding.create" },
+    { label: "audio.transcribe", value: "audio.transcribe" },
+    { label: "audio.synthesize", value: "audio.synthesize" },
+    { label: "vision.analyze", value: "vision.analyze" },
+    { label: "document.analyze", value: "document.analyze" },
+    { label: "document.cite", value: "document.cite" },
+    { label: "safety.moderate", value: "safety.moderate" },
+    { label: "video.generate", value: "video.generate" },
+    { label: "video.edit", value: "video.edit" },
+    { label: "video.extend", value: "video.extend" },
+    { label: "video.operation.get", value: "video.operation.get" },
+    { label: "video.operation.cancel", value: "video.operation.cancel" },
   ];
 }
 
-export function tierDisplayName(tier: Pick<Tier, 'code' | 'displayName'> | undefined) {
+export function splitCapabilityMethod(value = "text.generate") {
+  const [capabilityType = "text", ...methodParts] = String(
+    value || "text.generate",
+  ).split(".");
+  return {
+    capabilityMethod: methodParts.join(".") || "generate",
+    capabilityType: capabilityType || "text",
+  };
+}
+
+export function joinCapabilityMethod(type = "text", method = "generate") {
+  return `${type || "text"}.${method || "generate"}`;
+}
+
+export function buildCapabilityQuerySchema(): VbenFormSchema[] {
+  return [
+    {
+      component: "Select",
+      fieldName: "capabilityKey",
+      label: $t("plugin.linapro-ai-core.capability.method"),
+      defaultValue: "text.generate",
+      componentProps: {
+        options: buildCapabilityMethodOptions(),
+      },
+    },
+  ];
+}
+
+export function buildEffortOptions() {
+  return [
+    { label: $t("plugin.linapro-ai-core.effort.empty"), value: "" },
+    { label: "low", value: "low" },
+    { label: "medium", value: "medium" },
+    { label: "high", value: "high" },
+    { label: "xhigh", value: "xhigh" },
+    { label: "max", value: "max" },
+  ];
+}
+
+export function tierDisplayName(
+  tier: Pick<Tier, "code" | "displayName"> | undefined,
+) {
   const code = tier?.code?.trim();
   if (!code) {
-    return tier?.displayName || '';
+    return tier?.displayName || "";
   }
   const key = `plugin.linapro-ai-core.tier.names.${code}`;
   const label = $t(key);
@@ -64,65 +371,72 @@ export function tierCodeLabel(code: string) {
 export function buildProviderQuerySchema(): VbenFormSchema[] {
   return [
     {
-      component: 'Input',
-      fieldName: 'keyword',
-      label: $t('plugin.linapro-ai-core.provider.fields.keyword'),
+      component: "Input",
+      fieldName: "keyword",
+      label: $t("plugin.linapro-ai-core.provider.fields.keyword"),
     },
     {
-      component: 'Select',
-      fieldName: 'enabled',
-      label: $t('pages.common.status'),
+      component: "Select",
+      fieldName: "enabled",
+      label: $t("pages.common.status"),
       componentProps: { options: buildEnabledOptions() },
     },
   ];
 }
 
-export function buildProviderColumns(): VxeGridProps['columns'] {
+export function buildProviderColumns(
+  options: ProviderColumnOptions = {},
+): VxeGridProps["columns"] {
   return [
     {
-      field: 'name',
-      title: $t('plugin.linapro-ai-core.provider.fields.name'),
-      minWidth: 160,
+      field: "name",
+      title: $t("plugin.linapro-ai-core.provider.fields.name"),
+      minWidth: 220,
+      showOverflow: false,
+      slots: { default: ({ row }) => providerNameCell(row as Provider) },
     },
     {
-      field: 'enabled',
-      title: $t('pages.common.status'),
+      field: "models",
+      title: $t("plugin.linapro-ai-core.provider.fields.models"),
+      minWidth: 440,
+      showOverflow: false,
+      slots: {
+        default: ({ row }) =>
+          modelsCell(row as Provider, options.onDeleteModel),
+      },
+    },
+    {
+      field: "enabled",
+      title: $t("pages.common.status"),
       minWidth: 100,
       slots: { default: ({ row }) => statusTag(row.enabled) },
     },
     {
-      field: 'modelCount',
-      title: $t('plugin.linapro-ai-core.provider.fields.modelCount'),
-      minWidth: 120,
+      field: "endpoint",
+      title: $t("plugin.linapro-ai-core.provider.fields.endpoint"),
+      minWidth: 420,
+      showOverflow: false,
+      slots: { default: ({ row }) => endpointCell(row as Provider) },
     },
     {
-      field: 'enabledModelCount',
-      title: $t('plugin.linapro-ai-core.provider.fields.enabledModelCount'),
-      minWidth: 140,
+      field: "endpointSecrets",
+      title: $t("plugin.linapro-ai-core.provider.fields.secret"),
+      minWidth: 160,
+      slots: { default: ({ row }) => secretCell(row as Provider) },
     },
     {
-      field: 'openaiBaseUrl',
-      title: $t('plugin.linapro-ai-core.provider.fields.openaiBaseUrl'),
-      minWidth: 220,
-    },
-    {
-      field: 'anthropicBaseUrl',
-      title: $t('plugin.linapro-ai-core.provider.fields.anthropicBaseUrl'),
-      minWidth: 220,
-    },
-    {
-      field: 'updatedAt',
-      title: $t('pages.common.updatedAt'),
+      field: "updatedAt",
+      title: $t("pages.common.updatedAt"),
       formatter: ({ cellValue }) => formatTimestamp(cellValue),
       minWidth: 180,
     },
     {
-      field: 'action',
-      fixed: 'right',
+      field: "action",
+      fixed: "right",
       resizable: false,
-      slots: { default: 'action' },
-      title: $t('pages.common.actions'),
-      width: 180,
+      slots: { default: "action" },
+      title: $t("pages.common.actions"),
+      width: 220,
     },
   ];
 }
@@ -130,266 +444,348 @@ export function buildProviderColumns(): VxeGridProps['columns'] {
 export function buildProviderFormSchema(): VbenFormSchema[] {
   return [
     {
-      component: 'Input',
-      fieldName: 'name',
-      label: $t('plugin.linapro-ai-core.provider.fields.name'),
-      rules: 'required',
+      component: "Input",
+      fieldName: "name",
+      label: $t("plugin.linapro-ai-core.provider.fields.name"),
+      rules: "required",
     },
     {
-      component: 'RadioGroup',
-      fieldName: 'enabled',
-      label: $t('pages.common.status'),
+      component: "RadioGroup",
+      fieldName: "enabled",
+      label: $t("pages.common.status"),
       defaultValue: 1,
       componentProps: {
-        buttonStyle: 'solid',
-        optionType: 'button',
+        buttonStyle: "solid",
+        optionType: "button",
         options: buildEnabledOptions(),
       },
     },
     {
-      component: 'Input',
-      fieldName: 'websiteUrl',
-      label: $t('plugin.linapro-ai-core.provider.fields.websiteUrl'),
-      formItemClass: 'col-span-2',
+      component: "Input",
+      fieldName: "websiteUrl",
+      label: $t("plugin.linapro-ai-core.provider.fields.websiteUrl"),
     },
     {
-      component: 'Input',
-      fieldName: 'openaiBaseUrl',
-      label: $t('plugin.linapro-ai-core.provider.fields.openaiBaseUrl'),
-      formItemClass: 'col-span-2',
-    },
-    {
-      component: 'Input',
-      fieldName: 'anthropicBaseUrl',
-      label: $t('plugin.linapro-ai-core.provider.fields.anthropicBaseUrl'),
-      formItemClass: 'col-span-2',
-    },
-    {
-      component: 'InputPassword',
-      fieldName: 'apiKeySecretRef',
-      label: $t('plugin.linapro-ai-core.provider.fields.apiKeySecretRef'),
-      formItemClass: 'col-span-2',
-    },
-    {
-      component: 'Textarea',
-      fieldName: 'remark',
-      label: $t('pages.common.remark'),
-      formItemClass: 'col-span-2',
+      component: "Textarea",
+      fieldName: "remark",
+      label: $t("pages.common.remark"),
       componentProps: { rows: 3 },
     },
   ];
 }
 
-export function buildModelFormSchema(): VbenFormSchema[] {
+export function buildEndpointFormSchema(): VbenFormSchema[] {
   return [
     {
-      component: 'Input',
-      fieldName: 'modelName',
-      label: $t('plugin.linapro-ai-core.model.fields.modelName'),
-      rules: 'required',
-    },
-    {
-      component: 'Select',
-      fieldName: 'protocol',
-      label: $t('plugin.linapro-ai-core.model.fields.protocol'),
-      rules: 'selectRequired',
+      component: "Select",
+      fieldName: "protocol",
+      label: $t("plugin.linapro-ai-core.endpoint.fields.protocol"),
+      rules: "selectRequired",
       componentProps: { options: protocolOptions },
     },
     {
-      component: 'RadioGroup',
-      fieldName: 'enabled',
-      label: $t('pages.common.status'),
+      component: "Input",
+      fieldName: "baseUrl",
+      label: $t("plugin.linapro-ai-core.endpoint.fields.baseUrl"),
+      rules: "required",
+    },
+    {
+      component: "InputPassword",
+      fieldName: "secretRef",
+      label: $t("plugin.linapro-ai-core.endpoint.fields.secretRef"),
+      componentProps: {
+        autocomplete: "new-password",
+      },
+    },
+    {
+      component: "RadioGroup",
+      fieldName: "enabled",
+      label: $t("pages.common.status"),
       defaultValue: 1,
       componentProps: {
-        buttonStyle: 'solid',
-        optionType: 'button',
+        buttonStyle: "solid",
+        optionType: "button",
         options: buildEnabledOptions(),
       },
     },
     {
-      component: 'RadioGroup',
-      fieldName: 'supportsThinking',
-      label: $t('plugin.linapro-ai-core.model.fields.supportsThinking'),
-      defaultValue: 0,
-      componentProps: {
-        buttonStyle: 'solid',
-        optionType: 'button',
-        options: buildEnabledOptions(),
-      },
-    },
-    {
-      component: 'Select',
-      fieldName: 'supportedEfforts',
-      label: $t('plugin.linapro-ai-core.model.fields.supportedEfforts'),
-      formItemClass: 'col-span-2',
-      componentProps: {
-        mode: 'multiple',
-        options: buildEffortOptions().filter((item) => item.value),
-      },
-    },
-    {
-      component: 'InputNumber',
-      fieldName: 'maxInputTokens',
-      label: $t('plugin.linapro-ai-core.model.fields.maxInputTokens'),
-    },
-    {
-      component: 'InputNumber',
-      fieldName: 'maxOutputTokens',
-      label: $t('plugin.linapro-ai-core.model.fields.maxOutputTokens'),
+      component: "Textarea",
+      fieldName: "metadataJson",
+      label: $t("plugin.linapro-ai-core.endpoint.fields.metadataJson"),
+      componentProps: { rows: 3 },
     },
   ];
 }
 
-export function buildTierColumns(): VxeGridProps['columns'] {
+export function buildModelFormSchema(
+  providerOptions: Array<{ label: string; value: number }> = [],
+  endpointOptions: Array<{ label: string; value: number }> = [],
+): VbenFormSchema[] {
   return [
     {
-      field: 'displayName',
-      title: $t('plugin.linapro-ai-core.tier.fields.displayName'),
+      component: "Select",
+      fieldName: "providerId",
+      label: $t("plugin.linapro-ai-core.model.fields.provider"),
+      rules: "selectRequired",
+      componentProps: {
+        options: providerOptions,
+        showSearch: true,
+      },
+    },
+    {
+      component: "Select",
+      fieldName: "endpointId",
+      label: $t("plugin.linapro-ai-core.model.fields.endpoint"),
+      rules: "selectRequired",
+      componentProps: {
+        allowClear: false,
+        options: endpointOptions,
+        showSearch: true,
+      },
+    },
+    {
+      component: "Select",
+      fieldName: "capabilityKey",
+      label: $t("plugin.linapro-ai-core.capability.method"),
+      rules: "selectRequired",
+      componentProps: {
+        options: buildCapabilityMethodOptions(),
+      },
+    },
+    {
+      component: "Input",
+      fieldName: "modelName",
+      label: $t("plugin.linapro-ai-core.model.fields.modelName"),
+      rules: "required",
+    },
+    {
+      component: "Select",
+      fieldName: "protocol",
+      label: $t("plugin.linapro-ai-core.model.fields.protocol"),
+      rules: "selectRequired",
+      componentProps: { options: protocolOptions },
+    },
+    {
+      component: "RadioGroup",
+      fieldName: "enabled",
+      label: $t("pages.common.status"),
+      defaultValue: 1,
+      componentProps: {
+        buttonStyle: "solid",
+        optionType: "button",
+        options: buildEnabledOptions(),
+      },
+    },
+    {
+      component: "RadioGroup",
+      fieldName: "supportsThinking",
+      label: $t("plugin.linapro-ai-core.model.fields.supportsThinking"),
+      defaultValue: 0,
+      componentProps: {
+        buttonStyle: "solid",
+        optionType: "button",
+        options: buildEnabledOptions(),
+      },
+    },
+    {
+      component: "Select",
+      fieldName: "supportedEfforts",
+      label: $t("plugin.linapro-ai-core.model.fields.supportedEfforts"),
+      componentProps: {
+        mode: "multiple",
+        options: buildEffortOptions().filter((item) => item.value),
+      },
+    },
+    {
+      component: "InputNumber",
+      fieldName: "maxInputTokens",
+      label: $t("plugin.linapro-ai-core.model.fields.maxInputTokens"),
+    },
+    {
+      component: "InputNumber",
+      fieldName: "maxOutputTokens",
+      label: $t("plugin.linapro-ai-core.model.fields.maxOutputTokens"),
+    },
+  ];
+}
+
+export function buildTierColumns(): VxeGridProps["columns"] {
+  return [
+    {
+      field: "displayName",
+      title: $t("plugin.linapro-ai-core.tier.fields.displayName"),
       formatter: ({ row }) => tierDisplayName(row),
       minWidth: 130,
     },
     {
-      field: 'enabled',
-      title: $t('pages.common.status'),
+      field: "enabled",
+      title: $t("pages.common.status"),
       minWidth: 100,
       slots: { default: ({ row }) => statusTag(row.enabled) },
     },
     {
-      field: 'binding.providerName',
-      title: $t('plugin.linapro-ai-core.tier.fields.provider'),
+      field: "binding.providerName",
+      title: $t("plugin.linapro-ai-core.tier.fields.provider"),
       minWidth: 150,
     },
     {
-      field: 'binding.modelName',
-      title: $t('plugin.linapro-ai-core.tier.fields.model'),
+      field: "binding.modelName",
+      title: $t("plugin.linapro-ai-core.tier.fields.model"),
       minWidth: 180,
     },
     {
-      field: 'binding.protocol',
-      title: $t('plugin.linapro-ai-core.model.fields.protocol'),
+      field: "binding.protocol",
+      title: $t("plugin.linapro-ai-core.model.fields.protocol"),
       minWidth: 100,
     },
     {
-      field: 'defaultEffort',
-      title: $t('plugin.linapro-ai-core.tier.fields.defaultEffort'),
+      field: "defaultEffort",
+      title: $t("plugin.linapro-ai-core.tier.fields.defaultEffort"),
       minWidth: 120,
     },
     {
-      field: 'lastTestStatus',
-      title: $t('plugin.linapro-ai-core.tier.fields.lastTestStatus'),
+      field: "lastTestStatus",
+      title: $t("plugin.linapro-ai-core.tier.fields.lastTestStatus"),
       minWidth: 120,
-      slots: { default: ({ row }) => row.lastTestStatus ? statusTag(row.lastTestStatus) : '-' },
+      slots: {
+        default: ({ row }) =>
+          row.lastTestStatus ? statusTag(row.lastTestStatus) : "-",
+      },
     },
     {
-      field: 'updatedAt',
-      title: $t('pages.common.updatedAt'),
+      field: "updatedAt",
+      title: $t("pages.common.updatedAt"),
       formatter: ({ cellValue }) => formatTimestamp(cellValue),
       minWidth: 180,
     },
     {
-      field: 'action',
-      fixed: 'right',
+      field: "action",
+      fixed: "right",
       resizable: false,
-      slots: { default: 'action' },
-      title: $t('pages.common.actions'),
+      slots: { default: "action" },
+      title: $t("pages.common.actions"),
       width: 190,
     },
   ];
 }
 
+export function buildTierQuerySchema(): VbenFormSchema[] {
+  return buildCapabilityQuerySchema();
+}
+
 export function buildInvocationQuerySchema(): VbenFormSchema[] {
   return [
+    ...buildCapabilityQuerySchema(),
     {
-      component: 'Input',
-      fieldName: 'purpose',
-      label: $t('plugin.linapro-ai-core.invocation.fields.purpose'),
+      component: "Input",
+      fieldName: "purpose",
+      label: $t("plugin.linapro-ai-core.invocation.fields.purpose"),
     },
     {
-      component: 'Select',
-      fieldName: 'tierCode',
-      label: $t('plugin.linapro-ai-core.invocation.fields.tierCode'),
+      component: "Select",
+      fieldName: "tierCode",
+      label: $t("plugin.linapro-ai-core.invocation.fields.tierCode"),
       componentProps: {
-        options: ['basic', 'standard', 'advanced'].map((value) => ({
+        options: ["basic", "standard", "advanced"].map((value) => ({
           label: tierCodeLabel(value),
           value,
         })),
       },
     },
     {
-      component: 'Select',
-      fieldName: 'status',
-      label: $t('plugin.linapro-ai-core.invocation.fields.status'),
+      component: "Select",
+      fieldName: "status",
+      label: $t("plugin.linapro-ai-core.invocation.fields.status"),
       componentProps: {
         options: [
-          { label: $t('plugin.linapro-ai-core.common.success'), value: 'success' },
-          { label: $t('plugin.linapro-ai-core.common.failed'), value: 'failed' },
+          {
+            label: $t("plugin.linapro-ai-core.common.success"),
+            value: "success",
+          },
+          {
+            label: $t("plugin.linapro-ai-core.common.failed"),
+            value: "failed",
+          },
         ],
       },
     },
     {
-      component: 'Input',
-      fieldName: 'sourcePluginId',
-      label: $t('plugin.linapro-ai-core.invocation.fields.sourcePluginId'),
+      component: "Input",
+      fieldName: "sourcePluginId",
+      label: $t("plugin.linapro-ai-core.invocation.fields.sourcePluginId"),
     },
   ];
 }
 
-export function buildInvocationColumns(): VxeGridProps['columns'] {
+export function buildInvocationColumns(): VxeGridProps["columns"] {
   return [
     {
-      field: 'createdAt',
-      title: $t('pages.common.createdAt'),
+      field: "createdAt",
+      title: $t("pages.common.createdAt"),
       formatter: ({ cellValue }) => formatTimestamp(cellValue),
       minWidth: 180,
     },
     {
-      field: 'purpose',
-      title: $t('plugin.linapro-ai-core.invocation.fields.purpose'),
+      field: "purpose",
+      title: $t("plugin.linapro-ai-core.invocation.fields.purpose"),
       minWidth: 180,
     },
     {
-      field: 'tierCode',
-      title: $t('plugin.linapro-ai-core.invocation.fields.tierCode'),
-      formatter: ({ cellValue }) => tierCodeLabel(String(cellValue || '')),
+      field: "capabilityType",
+      title: $t("plugin.linapro-ai-core.capability.method"),
+      formatter: ({ row }) =>
+        joinCapabilityMethod(row.capabilityType, row.capabilityMethod),
+      minWidth: 150,
+    },
+    {
+      field: "tierCode",
+      title: $t("plugin.linapro-ai-core.invocation.fields.tierCode"),
+      formatter: ({ cellValue }) => tierCodeLabel(String(cellValue || "")),
       minWidth: 100,
     },
     {
-      field: 'status',
-      title: $t('plugin.linapro-ai-core.invocation.fields.status'),
+      field: "status",
+      title: $t("plugin.linapro-ai-core.invocation.fields.status"),
       minWidth: 100,
       slots: { default: ({ row }) => statusTag(row.status) },
     },
     {
-      field: 'providerName',
-      title: $t('plugin.linapro-ai-core.invocation.fields.providerName'),
+      field: "providerName",
+      title: $t("plugin.linapro-ai-core.invocation.fields.providerName"),
       minWidth: 150,
     },
     {
-      field: 'modelName',
-      title: $t('plugin.linapro-ai-core.invocation.fields.modelName'),
+      field: "modelName",
+      title: $t("plugin.linapro-ai-core.invocation.fields.modelName"),
       minWidth: 180,
     },
     {
-      field: 'latencyMs',
-      title: $t('plugin.linapro-ai-core.invocation.fields.latencyMs'),
+      field: "latencyMs",
+      title: $t("plugin.linapro-ai-core.invocation.fields.latencyMs"),
       minWidth: 110,
     },
     {
-      field: 'inputTokens',
-      title: $t('plugin.linapro-ai-core.invocation.fields.inputTokens'),
+      field: "assetSummaryJson",
+      title: $t("plugin.linapro-ai-core.invocation.fields.assetSummaryJson"),
+      minWidth: 180,
+      showOverflow: true,
+    },
+    {
+      field: "inputTokens",
+      title: $t("plugin.linapro-ai-core.invocation.fields.inputTokens"),
       minWidth: 110,
     },
     {
-      field: 'outputTokens',
-      title: $t('plugin.linapro-ai-core.invocation.fields.outputTokens'),
+      field: "outputTokens",
+      title: $t("plugin.linapro-ai-core.invocation.fields.outputTokens"),
       minWidth: 120,
     },
     {
-      field: 'action',
-      fixed: 'right',
+      field: "action",
+      fixed: "right",
       resizable: false,
-      slots: { default: 'action' },
-      title: $t('pages.common.actions'),
+      slots: { default: "action" },
+      title: $t("pages.common.actions"),
       width: 100,
     },
   ];

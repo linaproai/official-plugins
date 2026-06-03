@@ -19,6 +19,14 @@
           "required": "Smart Center requires platform context"
         },
         "provider": {
+          "endpoint": {
+            "in": {
+              "use": "AI provider endpoint is used by a model capability"
+            },
+            "not": {
+              "found": "AI provider endpoint does not exist"
+            }
+          },
           "http": {
             "error": "AI provider returned HTTP {status}"
           },
@@ -29,7 +37,12 @@
             "found": "AI provider does not exist"
           },
           "protocol": {
-            "required": "Provider requires a base URL for the selected protocol"
+            "required": "Provider requires an enabled endpoint for the selected protocol"
+          }
+        },
+        "providerOperation": {
+          "not": {
+            "found": "AI provider operation does not exist"
           }
         },
         "request": {

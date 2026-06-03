@@ -22,6 +22,22 @@ func NewV1(aiSvc aisvc.Service) tier.ITierV1 {
 	return &ControllerV1{aiSvc: aiSvc}
 }
 
+// toAPIMethodDefaultParamItem converts service method defaults into API DTO shape.
+func toAPIMethodDefaultParamItem(item *aisvc.MethodDefaultParamItem) *v1.MethodDefaultParamItem {
+	if item == nil {
+		return nil
+	}
+	return &v1.MethodDefaultParamItem{
+		Id:                item.Id,
+		CapabilityType:    item.CapabilityType,
+		CapabilityMethod:  item.CapabilityMethod,
+		DefaultParamsJson: item.DefaultParamsJson,
+		Enabled:           item.Enabled,
+		CreatedAt:         milliValue(apitime.Milli(item.CreatedAt)),
+		UpdatedAt:         milliValue(apitime.Milli(item.UpdatedAt)),
+	}
+}
+
 // toAPITierItem converts a service tier projection into API DTO shape.
 func toAPITierItem(item *aisvc.TierItem) *v1.TierItem {
 	if item == nil {
@@ -30,6 +46,7 @@ func toAPITierItem(item *aisvc.TierItem) *v1.TierItem {
 	dto := &v1.TierItem{
 		Id:                   item.Id,
 		CapabilityType:       item.CapabilityType,
+		CapabilityMethod:     item.CapabilityMethod,
 		Code:                 item.Code,
 		DisplayName:          item.DisplayName,
 		Description:          item.Description,

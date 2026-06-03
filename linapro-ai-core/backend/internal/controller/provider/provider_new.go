@@ -28,19 +28,66 @@ func toAPIProviderItem(item *aisvc.ProviderItem) *v1.ProviderItem {
 		return nil
 	}
 	return &v1.ProviderItem{
-		Id:                item.Id,
-		Name:              item.Name,
-		WebsiteUrl:        item.WebsiteUrl,
-		Remark:            item.Remark,
-		OpenaiBaseUrl:     item.OpenaiBaseUrl,
-		AnthropicBaseUrl:  item.AnthropicBaseUrl,
-		ApiKeySecretRef:   item.ApiKeySecretRef,
-		Enabled:           item.Enabled,
-		ModelCount:        item.ModelCount,
-		EnabledModelCount: item.EnabledModelCount,
-		CreatedAt:         milliValue(apitime.Milli(item.CreatedAt)),
-		UpdatedAt:         milliValue(apitime.Milli(item.UpdatedAt)),
+		Id:                   item.Id,
+		Name:                 item.Name,
+		WebsiteUrl:           item.WebsiteUrl,
+		Remark:               item.Remark,
+		Enabled:              item.Enabled,
+		ModelCount:           item.ModelCount,
+		EnabledModelCount:    item.EnabledModelCount,
+		EndpointCount:        item.EndpointCount,
+		EnabledEndpointCount: item.EnabledEndpointCount,
+		Models:               toAPIProviderModelSummaryItems(item.Models),
+		Endpoints:            toAPIProviderEndpointItems(item.Endpoints),
+		CreatedAt:            milliValue(apitime.Milli(item.CreatedAt)),
+		UpdatedAt:            milliValue(apitime.Milli(item.UpdatedAt)),
 	}
+}
+
+// toAPIProviderEndpointItems converts service endpoint summaries into API DTOs.
+func toAPIProviderEndpointItems(items []*aisvc.ProviderEndpointItem) []*v1.ProviderEndpointItem {
+	list := make([]*v1.ProviderEndpointItem, 0, len(items))
+	for _, item := range items {
+		list = append(list, toAPIProviderEndpointItem(item))
+	}
+	return list
+}
+
+// toAPIProviderEndpointItem converts one service endpoint projection into API DTO shape.
+func toAPIProviderEndpointItem(item *aisvc.ProviderEndpointItem) *v1.ProviderEndpointItem {
+	if item == nil {
+		return nil
+	}
+	return &v1.ProviderEndpointItem{
+		Id:           item.Id,
+		ProviderId:   item.ProviderId,
+		Protocol:     item.Protocol,
+		BaseUrl:      item.BaseUrl,
+		SecretRef:    item.SecretRef,
+		Enabled:      item.Enabled,
+		MetadataJson: item.MetadataJson,
+		CreatedAt:    milliValue(apitime.Milli(item.CreatedAt)),
+		UpdatedAt:    milliValue(apitime.Milli(item.UpdatedAt)),
+	}
+}
+
+// toAPIProviderModelSummaryItems converts service model summaries into API DTOs.
+func toAPIProviderModelSummaryItems(items []*aisvc.ProviderModelSummaryItem) []*v1.ProviderModelSummaryItem {
+	list := make([]*v1.ProviderModelSummaryItem, 0, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		list = append(list, &v1.ProviderModelSummaryItem{
+			Id:               item.Id,
+			CapabilityType:   item.CapabilityType,
+			CapabilityMethod: item.CapabilityMethod,
+			ModelName:        item.ModelName,
+			Protocol:         item.Protocol,
+			Enabled:          item.Enabled,
+		})
+	}
+	return list
 }
 
 // toAPIModelItem converts a service model projection into API DTO shape.
@@ -51,7 +98,9 @@ func toAPIModelItem(item *aisvc.ModelItem) *v1.ModelItem {
 	return &v1.ModelItem{
 		Id:               item.Id,
 		ProviderId:       item.ProviderId,
+		EndpointId:       item.EndpointId,
 		CapabilityType:   item.CapabilityType,
+		CapabilityMethod: item.CapabilityMethod,
 		ModelName:        item.ModelName,
 		Protocol:         item.Protocol,
 		Source:           item.Source,

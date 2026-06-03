@@ -12,13 +12,10 @@ import (
 // Create creates one AI provider.
 func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.CreateRes, err error) {
 	id, err := c.aiSvc.CreateProvider(ctx, aisvc.ProviderSaveInput{
-		Name:             req.Name,
-		WebsiteUrl:       req.WebsiteUrl,
-		Remark:           req.Remark,
-		OpenaiBaseUrl:    req.OpenaiBaseUrl,
-		AnthropicBaseUrl: req.AnthropicBaseUrl,
-		ApiKeySecretRef:  req.ApiKeySecretRef,
-		Enabled:          req.Enabled,
+		Name:       req.Name,
+		WebsiteUrl: req.WebsiteUrl,
+		Remark:     req.Remark,
+		Enabled:    req.Enabled,
 	})
 	if err != nil {
 		return nil, err

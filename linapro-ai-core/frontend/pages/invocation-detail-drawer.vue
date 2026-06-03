@@ -5,11 +5,11 @@ import { ref } from 'vue';
 
 import { useVbenDrawer } from '@vben/common-ui';
 
-import { Tag } from 'ant-design-vue';
+import { Descriptions, DescriptionsItem, Tag } from 'ant-design-vue';
 
 import { $t } from '#/locales';
 import { formatTimestamp } from '#/utils/time';
-import { tierCodeLabel } from './ai-data';
+import { joinCapabilityMethod, tierCodeLabel } from './ai-data';
 
 const record = ref<Invocation>();
 
@@ -32,14 +32,17 @@ const [Drawer, drawerApi] = useVbenDrawer({
     :title="$t('plugin.linapro-ai-core.invocation.drawer.detailTitle')"
     class="w-[640px] max-w-[calc(100vw-32px)]"
   >
-    <a-descriptions v-if="record" :column="1" bordered size="small">
-      <a-descriptions-item :label="$t('plugin.linapro-ai-core.invocation.fields.requestId')">
+    <Descriptions v-if="record" :column="1" bordered size="small">
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.requestId')">
         {{ record.requestId || '-' }}
-      </a-descriptions-item>
-      <a-descriptions-item :label="$t('plugin.linapro-ai-core.invocation.fields.purpose')">
+      </DescriptionsItem>
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.purpose')">
         {{ record.purpose || '-' }}
-      </a-descriptions-item>
-      <a-descriptions-item :label="$t('plugin.linapro-ai-core.invocation.fields.status')">
+      </DescriptionsItem>
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.capability.method')">
+        {{ joinCapabilityMethod(record.capabilityType, record.capabilityMethod) }}
+      </DescriptionsItem>
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.status')">
         <Tag :color="record.status === 'success' ? 'success' : 'error'">
           {{
             record.status === 'success'
@@ -47,37 +50,46 @@ const [Drawer, drawerApi] = useVbenDrawer({
               : $t('plugin.linapro-ai-core.common.failed')
           }}
         </Tag>
-      </a-descriptions-item>
-      <a-descriptions-item :label="$t('plugin.linapro-ai-core.invocation.fields.tierCode')">
+      </DescriptionsItem>
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.tierCode')">
         {{ record.tierCode ? tierCodeLabel(record.tierCode) : '-' }}
-      </a-descriptions-item>
-      <a-descriptions-item :label="$t('plugin.linapro-ai-core.invocation.fields.providerName')">
+      </DescriptionsItem>
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.providerName')">
         {{ record.providerName || '-' }}
-      </a-descriptions-item>
-      <a-descriptions-item :label="$t('plugin.linapro-ai-core.invocation.fields.modelName')">
+      </DescriptionsItem>
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.modelName')">
         {{ record.modelName || '-' }}
-      </a-descriptions-item>
-      <a-descriptions-item :label="$t('plugin.linapro-ai-core.model.fields.protocol')">
+      </DescriptionsItem>
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.model.fields.protocol')">
         {{ record.protocol || '-' }}
-      </a-descriptions-item>
-      <a-descriptions-item :label="$t('plugin.linapro-ai-core.tier.fields.defaultEffort')">
+      </DescriptionsItem>
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.tier.fields.defaultEffort')">
         {{ record.thinkingEffort || '-' }}
-      </a-descriptions-item>
-      <a-descriptions-item :label="$t('plugin.linapro-ai-core.invocation.fields.tokens')">
+      </DescriptionsItem>
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.tokens')">
         {{ record.inputTokens }} / {{ record.outputTokens }}
-      </a-descriptions-item>
-      <a-descriptions-item :label="$t('plugin.linapro-ai-core.invocation.fields.latencyMs')">
+      </DescriptionsItem>
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.latencyMs')">
         {{ record.latencyMs }}
-      </a-descriptions-item>
-      <a-descriptions-item :label="$t('plugin.linapro-ai-core.invocation.fields.errorCode')">
+      </DescriptionsItem>
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.assetSummaryJson')">
+        <pre class="m-0 whitespace-pre-wrap break-all text-xs">{{ record.assetSummaryJson || '{}' }}</pre>
+      </DescriptionsItem>
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.operationSummaryJson')">
+        <pre class="m-0 whitespace-pre-wrap break-all text-xs">{{ record.operationSummaryJson || '{}' }}</pre>
+      </DescriptionsItem>
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.metadataSummaryJson')">
+        <pre class="m-0 whitespace-pre-wrap break-all text-xs">{{ record.metadataSummaryJson || '{}' }}</pre>
+      </DescriptionsItem>
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.errorCode')">
         {{ record.errorCode || '-' }}
-      </a-descriptions-item>
-      <a-descriptions-item :label="$t('plugin.linapro-ai-core.invocation.fields.errorSummary')">
+      </DescriptionsItem>
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.errorSummary')">
         {{ record.errorSummary || '-' }}
-      </a-descriptions-item>
-      <a-descriptions-item :label="$t('pages.common.createdAt')">
+      </DescriptionsItem>
+      <DescriptionsItem :label="$t('pages.common.createdAt')">
         {{ formatTimestamp(record.createdAt) }}
-      </a-descriptions-item>
-    </a-descriptions>
+      </DescriptionsItem>
+    </Descriptions>
   </Drawer>
 </template>

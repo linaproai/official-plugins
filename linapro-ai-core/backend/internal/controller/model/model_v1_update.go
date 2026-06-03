@@ -12,15 +12,11 @@ import (
 // Update updates one AI model.
 func (c *ControllerV1) Update(ctx context.Context, req *v1.UpdateReq) (res *v1.UpdateRes, err error) {
 	err = c.aiSvc.UpdateModel(ctx, aisvc.ModelSaveInput{
-		Id:               req.Id,
-		CapabilityType:   req.CapabilityType,
-		ModelName:        req.ModelName,
-		Protocol:         req.Protocol,
-		SupportsThinking: req.SupportsThinking,
-		SupportedEfforts: req.SupportedEfforts,
-		MaxInputTokens:   req.MaxInputTokens,
-		MaxOutputTokens:  req.MaxOutputTokens,
-		Enabled:          req.Enabled,
+		Id:         req.Id,
+		EndpointId: req.EndpointId,
+		ModelName:  req.ModelName,
+		Protocol:   req.Protocol,
+		Enabled:    req.Enabled,
 	})
 	if err != nil {
 		return nil, err

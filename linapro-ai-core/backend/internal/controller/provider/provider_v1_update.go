@@ -12,14 +12,11 @@ import (
 // Update updates one AI provider.
 func (c *ControllerV1) Update(ctx context.Context, req *v1.UpdateReq) (res *v1.UpdateRes, err error) {
 	err = c.aiSvc.UpdateProvider(ctx, aisvc.ProviderSaveInput{
-		Id:               req.Id,
-		Name:             req.Name,
-		WebsiteUrl:       req.WebsiteUrl,
-		Remark:           req.Remark,
-		OpenaiBaseUrl:    req.OpenaiBaseUrl,
-		AnthropicBaseUrl: req.AnthropicBaseUrl,
-		ApiKeySecretRef:  req.ApiKeySecretRef,
-		Enabled:          req.Enabled,
+		Id:         req.Id,
+		Name:       req.Name,
+		WebsiteUrl: req.WebsiteUrl,
+		Remark:     req.Remark,
+		Enabled:    req.Enabled,
 	})
 	if err != nil {
 		return nil, err

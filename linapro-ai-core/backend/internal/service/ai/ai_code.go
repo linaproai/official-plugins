@@ -27,10 +27,22 @@ var (
 		"AI provider is used by a capability tier",
 		gcode.CodeInvalidOperation,
 	)
+	// CodeProviderEndpointNotFound reports that the requested provider endpoint is absent.
+	CodeProviderEndpointNotFound = bizerr.MustDefine(
+		"AI_CORE_PROVIDER_ENDPOINT_NOT_FOUND",
+		"AI provider endpoint does not exist",
+		gcode.CodeNotFound,
+	)
+	// CodeProviderEndpointInUse reports that a provider endpoint is referenced by a model or capability.
+	CodeProviderEndpointInUse = bizerr.MustDefine(
+		"AI_CORE_PROVIDER_ENDPOINT_IN_USE",
+		"AI provider endpoint is used by a model capability",
+		gcode.CodeInvalidOperation,
+	)
 	// CodeProviderProtocolRequired reports missing provider protocol endpoint configuration.
 	CodeProviderProtocolRequired = bizerr.MustDefine(
 		"AI_CORE_PROVIDER_PROTOCOL_REQUIRED",
-		"Provider requires a base URL for the selected protocol",
+		"Provider requires an enabled endpoint for the selected protocol",
 		gcode.CodeInvalidParameter,
 	)
 	// CodeProviderHTTPError reports a provider-side HTTP failure without exposing response bodies.
@@ -73,6 +85,12 @@ var (
 	CodeInvocationNotFound = bizerr.MustDefine(
 		"AI_CORE_INVOCATION_NOT_FOUND",
 		"AI invocation log does not exist",
+		gcode.CodeNotFound,
+	)
+	// CodeProviderOperationNotFound reports that the requested provider operation is absent.
+	CodeProviderOperationNotFound = bizerr.MustDefine(
+		"AI_CORE_PROVIDER_OPERATION_NOT_FOUND",
+		"AI provider operation does not exist",
 		gcode.CodeNotFound,
 	)
 	// CodeRequestInvalid reports invalid Smart Center configuration input.

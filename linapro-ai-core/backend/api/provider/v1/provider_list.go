@@ -6,7 +6,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // ListReq defines the request for paged AI provider listing.
 type ListReq struct {
-	g.Meta   `path:"/ai/providers" method:"get" tags:"AI Providers" summary:"List AI providers" dc:"Query AI providers by page with keyword and enabled-state filters. Each row includes aggregated model counts to avoid per-row follow-up requests." permission:"ai:provider:list"`
+	g.Meta   `path:"/ai/providers" method:"get" tags:"AI Providers" summary:"List AI providers" dc:"Query AI providers by page with keyword and enabled-state filters. Each row includes batched model summaries and masked secrets to avoid per-row follow-up requests." permission:"ai:provider:list"`
 	PageNum  int    `json:"pageNum" d:"1" v:"min:1" dc:"Page number" eg:"1"`
 	PageSize int    `json:"pageSize" d:"10" v:"min:1|max:100" dc:"Number of items per page" eg:"10"`
 	Keyword  string `json:"keyword" dc:"Provider name keyword for fuzzy search" eg:"openai"`

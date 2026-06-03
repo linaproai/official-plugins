@@ -22,9 +22,9 @@ func TestOpenAIAdapterNormalizesURLAndMapsUsage(t *testing.T) {
 	server := testOpenAIServer(t)
 	svc := New(nil, nil, server.Client()).(*serviceImpl)
 	result, err := svc.callOpenAI(context.Background(), &resolvedTierBinding{
-		ModelName:       "unit-openai",
-		OpenaiBaseUrl:   server.URL + "/v1",
-		ApiKeySecretRef: "unit-secret",
+		ModelName:         "unit-openai",
+		EndpointBaseUrl:   server.URL + "/v1",
+		EndpointSecretRef: "unit-secret",
 	}, []aitext.Message{{Role: aitext.MessageRoleUser, Content: "hello"}}, 32, nil, string(aitext.ThinkingEffortHigh))
 	if err != nil {
 		t.Fatalf("call openai adapter: %v", err)
@@ -58,15 +58,15 @@ func TestAnthropicAdapterMapsThinkingEffort(t *testing.T) {
 
 	svc := New(nil, nil, server.Client()).(*serviceImpl)
 	result, err := svc.callAnthropic(context.Background(), &resolvedTierBinding{
-		ModelName:        "unit-anthropic",
-		AnthropicBaseUrl: server.URL,
-		ApiKeySecretRef:  "unit-secret",
-		SupportedEfforts: "max",
-		SupportsThinking: enabledYes,
-		MaxOutputTokens:  128,
-		ProviderName:     "Anthropic",
-		CapabilityType:   CapabilityTypeText,
-		DefaultEffort:    string(aitext.ThinkingEffortMax),
+		ModelName:         "unit-anthropic",
+		EndpointBaseUrl:   server.URL,
+		EndpointSecretRef: "unit-secret",
+		SupportedEfforts:  "max",
+		SupportsThinking:  enabledYes,
+		MaxOutputTokens:   128,
+		ProviderName:      "Anthropic",
+		CapabilityType:    CapabilityTypeText,
+		DefaultEffort:     string(aitext.ThinkingEffortMax),
 	}, []aitext.Message{{Role: aitext.MessageRoleSystem, Content: "sys"}}, 128, nil, string(aitext.ThinkingEffortMax))
 	if err != nil {
 		t.Fatalf("call anthropic adapter: %v", err)
@@ -85,9 +85,9 @@ func TestAdapterErrorsAreRedacted(t *testing.T) {
 
 	svc := New(nil, nil, server.Client()).(*serviceImpl)
 	_, err := svc.callOpenAI(context.Background(), &resolvedTierBinding{
-		ModelName:       "unit-openai",
-		OpenaiBaseUrl:   server.URL,
-		ApiKeySecretRef: "sk-secret-token",
+		ModelName:         "unit-openai",
+		EndpointBaseUrl:   server.URL,
+		EndpointSecretRef: "sk-secret-token",
 	}, []aitext.Message{{Role: aitext.MessageRoleUser, Content: "hello"}}, 32, nil, "")
 	if !bizerr.Is(err, CodeProviderHTTPError) {
 		t.Fatalf("expected structured provider HTTP error, got %v", err)
@@ -113,8 +113,8 @@ func TestOpenAIAdapterRejectsUnsupportedExtendedEffort(t *testing.T) {
 
 	svc := New(nil, nil, server.Client()).(*serviceImpl)
 	_, err := svc.callOpenAI(context.Background(), &resolvedTierBinding{
-		ModelName:     "unit-openai",
-		OpenaiBaseUrl: server.URL,
+		ModelName:       "unit-openai",
+		EndpointBaseUrl: server.URL,
 	}, []aitext.Message{{Role: aitext.MessageRoleUser, Content: "hello"}}, 32, nil, string(aitext.ThinkingEffortMax))
 	if !bizerr.Is(err, CodeThinkingEffortUnsupported) || called {
 		t.Fatalf("expected unsupported effort before HTTP call, err=%v called=%v", err, called)

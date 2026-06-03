@@ -7,7 +7,7 @@
       "title": "Query Invocation Logs"
     },
     "plugin:linapro-ai-core:providers": {
-      "title": "Provider Management"
+      "title": "Providers"
     },
     "plugin:linapro-ai-core:providers:create": {
       "title": "Create Provider"

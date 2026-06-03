@@ -19,6 +19,14 @@
           "required": "智能中心需要平台上下文"
         },
         "provider": {
+          "endpoint": {
+            "in": {
+              "use": "AI供应商端点正在被模型能力使用"
+            },
+            "not": {
+              "found": "AI供应商端点不存在"
+            }
+          },
           "http": {
             "error": "AI供应商返回 HTTP {status}"
           },
@@ -29,7 +37,12 @@
             "found": "AI供应商不存在"
           },
           "protocol": {
-            "required": "供应商缺少所选协议的基础地址"
+            "required": "供应商缺少所选协议的启用端点"
+          }
+        },
+        "providerOperation": {
+          "not": {
+            "found": "AI供应商 Operation 不存在"
           }
         },
         "request": {

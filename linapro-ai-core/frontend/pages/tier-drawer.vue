@@ -23,6 +23,7 @@ const emit = defineEmits<{ reload: [] }>();
 const tier = ref<Tier>();
 const providers = ref<Provider[]>([]);
 const models = ref<Model[]>([]);
+const testing = ref(false);
 const title = computed(tierDrawerTitle);
 
 function tierDrawerTitle() {
@@ -36,6 +37,13 @@ function modelLabel(model: Model) {
     ? model.supportedEfforts.join(',')
     : $t('plugin.linapro-ai-core.effort.empty');
   return `${model.modelName} / ${model.protocol} / ${efforts}`;
+}
+
+function supportsThinkingEffort() {
+  return (
+    tier.value?.capabilityType === 'text' &&
+    tier.value?.capabilityMethod === 'generate'
+  );
 }
 
 function buildSchema(): VbenFormSchema[] {
@@ -84,7 +92,14 @@ const [Form, formApi] = useVbenForm({
 });
 
 async function refreshModelOptions(providerId: number, resetModel = false) {
-  models.value = providerId ? await providerModels(providerId, 1) : [];
+  models.value = providerId
+    ? await providerModels(
+        providerId,
+        1,
+        tier.value?.capabilityType || 'text',
+        tier.value?.capabilityMethod || 'generate',
+      )
+    : [];
   formApi.updateSchema([
     {
       fieldName: 'modelId',
@@ -121,8 +136,10 @@ async function refreshProviderOptions() {
 async function currentValues() {
   const values = await formApi.getValues();
   return {
+    capabilityMethod: tier.value?.capabilityMethod || 'generate',
+    capabilityType: tier.value?.capabilityType || 'text',
     enabled: Number(values.enabled ?? 0),
-    defaultEffort: values.defaultEffort || '',
+    defaultEffort: supportsThinkingEffort() ? values.defaultEffort || '' : '',
     providerId: Number(values.providerId || 0),
     modelId: Number(values.modelId || 0),
   };
@@ -148,7 +165,7 @@ function validateBindingValues(
   }
   if (hasModel) {
     const model = models.value.find((item) => item.id === values.modelId);
-    if (!effortSupported(model, values.defaultEffort)) {
+    if (supportsThinkingEffort() && !effortSupported(model, values.defaultEffort)) {
       message.error($t('plugin.linapro-ai-core.tier.messages.unsupportedEffort'));
       return false;
     }
@@ -157,21 +174,29 @@ function validateBindingValues(
 }
 
 async function handleTest() {
+  if (testing.value) {
+    return;
+  }
   const values = await currentValues();
   if (!validateBindingValues(values, true)) {
     return;
   }
-  const result = await tierTest(tier.value?.code || '', {
-    ...values,
-    thinkingEffort: values.defaultEffort,
-    maxOutputTokens: 128,
-  });
-  if (result.status === 'success') {
-    message.success($t('plugin.linapro-ai-core.tier.messages.testSuccess'));
-  } else {
-    message.error(result.errorSummary || $t('plugin.linapro-ai-core.tier.messages.testFailed'));
+  testing.value = true;
+  try {
+    const result = await tierTest(tier.value?.code || '', {
+      ...values,
+      thinkingEffort: values.defaultEffort,
+      maxOutputTokens: 128,
+    });
+    if (result.status === 'success') {
+      message.success($t('plugin.linapro-ai-core.tier.messages.testSuccess'));
+    } else {
+      message.error(result.errorSummary || $t('plugin.linapro-ai-core.tier.messages.testFailed'));
+    }
+    emit('reload');
+  } finally {
+    testing.value = false;
   }
-  emit('reload');
 }
 
 const [Drawer, drawerApi] = useVbenDrawer({
@@ -182,6 +207,12 @@ const [Drawer, drawerApi] = useVbenDrawer({
     drawerApi.setState({ loading: true });
     const data = drawerApi.getData<{ tier?: Tier }>();
     tier.value = data?.tier;
+    formApi.updateSchema([
+      {
+        fieldName: 'defaultEffort',
+        hide: !supportsThinkingEffort(),
+      },
+    ]);
     await formApi.resetForm();
     await refreshProviderOptions();
     const providerId = tier.value?.binding?.providerId || undefined;
@@ -222,7 +253,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
       <Form />
       <div class="flex justify-end">
         <Space>
-          <a-button @click="handleTest">
+          <a-button :disabled="testing" :loading="testing" @click="handleTest">
             {{ $t('plugin.linapro-ai-core.tier.actions.testDraft') }}
           </a-button>
         </Space>

@@ -9,6 +9,8 @@ import {
   waitForTableReady,
 } from '@host-tests/support/ui';
 
+const DEPT_PAGE_READY_TIMEOUT = 90_000;
+
 export class DeptPage {
   constructor(private page: Page) {}
 
@@ -35,7 +37,7 @@ export class DeptPage {
 
   async goto() {
     await this.page.goto('/system/dept');
-    await waitForTableReady(this.page);
+    await waitForTableReady(this.page, '.vxe-table', DEPT_PAGE_READY_TIMEOUT);
   }
 
   /** Click "展开" toolbar button to expand all tree nodes */

@@ -64,24 +64,16 @@ require (
 	lina-core v0.0.0 // indirect
 )
 
-replace lina-core => ../lina-core
-
-replace lina-plugin-linapro-ai-core => ./linapro-ai-core
-
-replace lina-plugin-linapro-content-notice => ./linapro-content-notice
-
-replace lina-plugin-linapro-ops-demo-guard => ./linapro-ops-demo-guard
-
-replace lina-plugin-linapro-demo-source => ./linapro-demo-source
-
-replace lina-plugin-linapro-monitor-loginlog => ./linapro-monitor-loginlog
-
-replace lina-plugin-linapro-monitor-online => ./linapro-monitor-online
-
-replace lina-plugin-linapro-monitor-operlog => ./linapro-monitor-operlog
-
-replace lina-plugin-linapro-monitor-server => ./linapro-monitor-server
-
-replace lina-plugin-linapro-tenant-core => ./linapro-tenant-core
-
-replace lina-plugin-linapro-org-core => ./linapro-org-core
+replace (
+	lina-core => ../lina-core
+	lina-plugin-linapro-ai-core => ./linapro-ai-core
+	lina-plugin-linapro-content-notice => ./linapro-content-notice
+	lina-plugin-linapro-ops-demo-guard => ./linapro-ops-demo-guard
+	lina-plugin-linapro-demo-source => ./linapro-demo-source
+	lina-plugin-linapro-monitor-loginlog => ./linapro-monitor-loginlog
+	lina-plugin-linapro-monitor-online => ./linapro-monitor-online
+	lina-plugin-linapro-monitor-operlog => ./linapro-monitor-operlog
+	lina-plugin-linapro-monitor-server => ./linapro-monitor-server
+	lina-plugin-linapro-tenant-core => ./linapro-tenant-core
+	lina-plugin-linapro-org-core => ./linapro-org-core
+)

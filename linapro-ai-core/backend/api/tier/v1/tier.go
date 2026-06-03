@@ -8,7 +8,7 @@ type TierBindingItem struct {
 	ProviderName     string   `json:"providerName" dc:"Provider display name" eg:"OpenAI"`
 	ModelId          int64    `json:"modelId" dc:"Model ID bound to the tier" eg:"1"`
 	ModelName        string   `json:"modelName" dc:"Model name bound to the tier" eg:"gpt-4.1-mini"`
-	Protocol         string   `json:"protocol" dc:"Provider protocol: openai or anthropic" eg:"openai"`
+	Protocol         string   `json:"protocol" dc:"Provider protocol: openai, anthropic, voyage, openai-compatible, or anthropic-compatible" eg:"openai"`
 	SupportsThinking int      `json:"supportsThinking" dc:"Thinking effort support flag: 0=no 1=yes" eg:"1"`
 	SupportedEfforts []string `json:"supportedEfforts" dc:"Supported thinking efforts: low, medium, high, xhigh, max" eg:"low,medium,high"`
 	Enabled          int      `json:"enabled" dc:"Binding enabled flag: 0=disabled 1=enabled" eg:"1"`
@@ -17,10 +17,11 @@ type TierBindingItem struct {
 // TierItem is the AI capability tier projection.
 type TierItem struct {
 	Id                   int64            `json:"id" dc:"Tier ID" eg:"1"`
-	CapabilityType       string           `json:"capabilityType" dc:"Capability type; first release supports text" eg:"text"`
+	CapabilityType       string           `json:"capabilityType" dc:"Capability type such as text, image, embedding, audio, vision, document, safety, or video" eg:"image"`
+	CapabilityMethod     string           `json:"capabilityMethod" dc:"Capability method within the type, such as generate, create, transcribe, analyze, moderate, or operation.get" eg:"generate"`
 	Code                 string           `json:"code" dc:"Tier code: basic, standard, advanced" eg:"basic"`
 	DisplayName          string           `json:"displayName" dc:"Tier display name" eg:"Basic"`
-	Description          string           `json:"description" dc:"Tier description" eg:"Low-cost text generation tier"`
+	Description          string           `json:"description" dc:"Tier description" eg:"Low-cost image generation tier"`
 	DefaultEffort        string           `json:"defaultEffort" dc:"Default thinking effort: low, medium, high, xhigh, max, or empty" eg:"low"`
 	Enabled              int              `json:"enabled" dc:"Enabled flag: 0=disabled 1=enabled" eg:"1"`
 	SortOrder            int              `json:"sortOrder" dc:"Stable tier sort order" eg:"1"`

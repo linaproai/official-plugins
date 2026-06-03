@@ -14,12 +14,14 @@ import (
 // Test executes a lightweight saved or draft tier test.
 func (c *ControllerV1) Test(ctx context.Context, req *v1.TestReq) (res *v1.TestRes, err error) {
 	out, err := c.aiSvc.TestTier(ctx, aisvc.TierTestInput{
-		Code:            req.Code,
-		ProviderId:      req.ProviderId,
-		ModelId:         req.ModelId,
-		ThinkingEffort:  req.ThinkingEffort,
-		MaxOutputTokens: req.MaxOutputTokens,
-		Messages:        toServiceMessages(req.Messages),
+		CapabilityType:   req.CapabilityType,
+		CapabilityMethod: req.CapabilityMethod,
+		Code:             req.Code,
+		ProviderId:       req.ProviderId,
+		ModelId:          req.ModelId,
+		ThinkingEffort:   req.ThinkingEffort,
+		MaxOutputTokens:  req.MaxOutputTokens,
+		Messages:         toServiceMessages(req.Messages),
 	})
 	if err != nil {
 		return nil, err

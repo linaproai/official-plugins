@@ -28,27 +28,59 @@ func toAPIInvocationItem(item *aisvc.InvocationItem) *v1.InvocationItem {
 		return nil
 	}
 	return &v1.InvocationItem{
-		Id:             item.Id,
-		RequestId:      item.RequestId,
-		CapabilityType: item.CapabilityType,
-		Purpose:        item.Purpose,
-		TierCode:       item.TierCode,
-		SourcePluginId: item.SourcePluginId,
-		TenantId:       item.TenantId,
-		UserId:         item.UserId,
-		ProviderId:     item.ProviderId,
-		ModelId:        item.ModelId,
-		ProviderName:   item.ProviderName,
-		ModelName:      item.ModelName,
-		Protocol:       item.Protocol,
-		ThinkingEffort: item.ThinkingEffort,
-		Status:         item.Status,
-		InputTokens:    item.InputTokens,
-		OutputTokens:   item.OutputTokens,
-		LatencyMs:      item.LatencyMs,
-		ErrorCode:      item.ErrorCode,
-		ErrorSummary:   item.ErrorSummary,
-		CreatedAt:      milliValue(apitime.Milli(item.CreatedAt)),
+		Id:                   item.Id,
+		RequestId:            item.RequestId,
+		CapabilityType:       item.CapabilityType,
+		CapabilityMethod:     item.CapabilityMethod,
+		Purpose:              item.Purpose,
+		TierCode:             item.TierCode,
+		SourcePluginId:       item.SourcePluginId,
+		TenantId:             item.TenantId,
+		UserId:               item.UserId,
+		ProviderId:           item.ProviderId,
+		ModelId:              item.ModelId,
+		ProviderName:         item.ProviderName,
+		ModelName:            item.ModelName,
+		Protocol:             item.Protocol,
+		ThinkingEffort:       item.ThinkingEffort,
+		Status:               item.Status,
+		InputTokens:          item.InputTokens,
+		OutputTokens:         item.OutputTokens,
+		LatencyMs:            item.LatencyMs,
+		AssetSummaryJson:     item.AssetSummaryJson,
+		OperationSummaryJson: item.OperationSummaryJson,
+		MetadataSummaryJson:  item.MetadataSummaryJson,
+		ErrorCode:            item.ErrorCode,
+		ErrorSummary:         item.ErrorSummary,
+		CreatedAt:            milliValue(apitime.Milli(item.CreatedAt)),
+	}
+}
+
+// toAPIProviderOperationItem converts a service provider operation projection into API DTO shape.
+func toAPIProviderOperationItem(item *aisvc.ProviderOperationItem) *v1.ProviderOperationItem {
+	if item == nil {
+		return nil
+	}
+	return &v1.ProviderOperationItem{
+		Id:               item.Id,
+		OperationRef:     item.OperationRef,
+		CapabilityType:   item.CapabilityType,
+		CapabilityMethod: item.CapabilityMethod,
+		Purpose:          item.Purpose,
+		SourcePluginId:   item.SourcePluginId,
+		ProviderId:       item.ProviderId,
+		ModelId:          item.ModelId,
+		ProviderName:     item.ProviderName,
+		ModelName:        item.ModelName,
+		Protocol:         item.Protocol,
+		Status:           item.Status,
+		NextPollAfterMs:  item.NextPollAfterMs,
+		ExpiresAt:        milliValue(apitime.Milli(item.ExpiresAt)),
+		AssetSummaryJson: item.AssetSummaryJson,
+		ErrorCode:        item.ErrorCode,
+		ErrorSummary:     item.ErrorSummary,
+		CreatedAt:        milliValue(apitime.Milli(item.CreatedAt)),
+		UpdatedAt:        milliValue(apitime.Milli(item.UpdatedAt)),
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gogf/gf/v2/errors/gerror"
 
+	plugincontract "lina-core/pkg/plugin/capability/contract"
 	"lina-core/pkg/plugin/pluginhost"
 	monitorserverplugin "lina-plugin-linapro-monitor-server"
 	servercontroller "lina-plugin-linapro-monitor-server/backend/internal/controller/monitor"
@@ -97,10 +98,14 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 // registerBuiltinCrons contributes managed cron definitions for server-monitor collection and cleanup.
 func registerBuiltinCrons(ctx context.Context, registrar pluginhost.CronRegistrar) error {
 	services := registrar.Services()
-	if services == nil || services.Config() == nil {
+	if services == nil {
 		return gerror.New("linapro-monitor-server cron requires host config service")
 	}
-	monitorCfg, err := monitorconfig.Load(ctx, services.Config())
+	configSvc := services.Config()
+	if configSvc == nil {
+		return gerror.New("linapro-monitor-server cron requires host config service")
+	}
+	monitorCfg, err := monitorconfig.Load(ctx, configSvc)
 	if err != nil {
 		return err
 	}
@@ -125,7 +130,7 @@ func registerBuiltinCrons(ctx context.Context, registrar pluginhost.CronRegistra
 		serviceMonitorCleanupDisplayName,
 		serviceMonitorCleanupDescription,
 		func(ctx context.Context) error {
-			return cleanupSnapshots(ctx, registrar.IsPrimaryNode(), services, sharedMonitorSvc)
+			return cleanupSnapshots(ctx, registrar.IsPrimaryNode(), configSvc, sharedMonitorSvc)
 		},
 	)
 }
@@ -146,17 +151,17 @@ func collectSnapshot(ctx context.Context, monitorSvc monitorsvc.Service) error {
 func cleanupSnapshots(
 	ctx context.Context,
 	primaryNode bool,
-	services pluginhost.Services,
+	configSvc plugincontract.ConfigService,
 	monitorSvc monitorsvc.Service,
 ) error {
 	if !primaryNode {
 		return nil
 	}
 
-	if services == nil || services.Config() == nil {
+	if configSvc == nil {
 		return gerror.New("linapro-monitor-server cleanup requires host config service")
 	}
-	monitorCfg, err := monitorconfig.Load(ctx, services.Config())
+	monitorCfg, err := monitorconfig.Load(ctx, configSvc)
 	if err != nil {
 		return err
 	}

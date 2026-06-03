@@ -12,11 +12,13 @@ import (
 // Update updates one fixed AI capability tier.
 func (c *ControllerV1) Update(ctx context.Context, req *v1.UpdateReq) (res *v1.UpdateRes, err error) {
 	err = c.aiSvc.UpdateTier(ctx, aisvc.TierUpdateInput{
-		Code:          req.Code,
-		ProviderId:    req.ProviderId,
-		ModelId:       req.ModelId,
-		DefaultEffort: req.DefaultEffort,
-		Enabled:       req.Enabled,
+		CapabilityType:   req.CapabilityType,
+		CapabilityMethod: req.CapabilityMethod,
+		Code:             req.Code,
+		ProviderId:       req.ProviderId,
+		ModelId:          req.ModelId,
+		DefaultEffort:    req.DefaultEffort,
+		Enabled:          req.Enabled,
 	})
 	if err != nil {
 		return nil, err

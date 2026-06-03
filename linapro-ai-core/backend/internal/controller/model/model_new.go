@@ -6,7 +6,9 @@
 package model
 
 import (
+	"lina-core/pkg/apitime"
 	"lina-plugin-linapro-ai-core/backend/api/model"
+	v1 "lina-plugin-linapro-ai-core/backend/api/model/v1"
 	aisvc "lina-plugin-linapro-ai-core/backend/internal/service/ai"
 )
 
@@ -18,4 +20,67 @@ type ControllerV1 struct {
 // NewV1 creates and returns a new AI model controller instance.
 func NewV1(aiSvc aisvc.Service) model.IModelV1 {
 	return &ControllerV1{aiSvc: aiSvc}
+}
+
+// toAPIModelCapabilityItem converts a service capability projection into API DTO shape.
+func toAPIModelCapabilityItem(item *aisvc.ModelCapabilityItem) *v1.ModelCapabilityItem {
+	if item == nil {
+		return nil
+	}
+	return &v1.ModelCapabilityItem{
+		Id:                item.Id,
+		ModelId:           item.ModelId,
+		EndpointId:        item.EndpointId,
+		CapabilityType:    item.CapabilityType,
+		CapabilityMethod:  item.CapabilityMethod,
+		InputModalities:   item.InputModalities,
+		OutputModalities:  item.OutputModalities,
+		MaxInputTokens:    item.MaxInputTokens,
+		MaxOutputTokens:   item.MaxOutputTokens,
+		MaxInputAssets:    item.MaxInputAssets,
+		MaxOutputAssets:   item.MaxOutputAssets,
+		MaxAssetBytes:     item.MaxAssetBytes,
+		SupportsStreaming: item.SupportsStreaming,
+		SupportsOperation: item.SupportsOperation,
+		SupportsThinking:  item.SupportsThinking,
+		SupportedEfforts:  item.SupportedEfforts,
+		DefaultParamsJson: item.DefaultParamsJson,
+		Enabled:           item.Enabled,
+		CreatedAt:         milliValue(apitime.Milli(item.CreatedAt)),
+		UpdatedAt:         milliValue(apitime.Milli(item.UpdatedAt)),
+	}
+}
+
+// toServiceModelCapabilityInputs converts API save items to service inputs.
+func toServiceModelCapabilityInputs(items []v1.ModelCapabilityInput) []aisvc.ModelCapabilitySaveInput {
+	out := make([]aisvc.ModelCapabilitySaveInput, 0, len(items))
+	for _, item := range items {
+		out = append(out, aisvc.ModelCapabilitySaveInput{
+			EndpointId:        item.EndpointId,
+			CapabilityType:    item.CapabilityType,
+			CapabilityMethod:  item.CapabilityMethod,
+			InputModalities:   item.InputModalities,
+			OutputModalities:  item.OutputModalities,
+			MaxInputTokens:    item.MaxInputTokens,
+			MaxOutputTokens:   item.MaxOutputTokens,
+			MaxInputAssets:    item.MaxInputAssets,
+			MaxOutputAssets:   item.MaxOutputAssets,
+			MaxAssetBytes:     item.MaxAssetBytes,
+			SupportsStreaming: item.SupportsStreaming,
+			SupportsOperation: item.SupportsOperation,
+			SupportsThinking:  item.SupportsThinking,
+			SupportedEfforts:  item.SupportedEfforts,
+			DefaultParamsJson: item.DefaultParamsJson,
+			Enabled:           item.Enabled,
+		})
+	}
+	return out
+}
+
+// milliValue projects optional millisecond timestamps to zero for absent fields.
+func milliValue(value *int64) int64 {
+	if value == nil {
+		return 0
+	}
+	return *value
 }

@@ -11,6 +11,14 @@ import {
   withAdminApi,
 } from '../support/ai-core-api';
 
+function createGate() {
+  let release!: () => void;
+  const promise = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { promise, release };
+}
+
 test.describe('TC-2 智能中心档位管理', () => {
   test.beforeAll(async () => {
     await prepareSourcePluginsBaseline(['linapro-ai-core']);
@@ -23,9 +31,69 @@ test.describe('TC-2 智能中心档位管理', () => {
     await expect(adminPage.getByText(/基础|Basic/i)).toBeVisible();
     await expect(adminPage.getByText(/标准|Standard/i)).toBeVisible();
     await expect(adminPage.getByText(/高级|Advanced/i)).toBeVisible();
+    await smartCenter.assertTierThinkingEffortLabel();
   });
 
-  test('TC-2b: 不支持的 thinking effort 给出校验提示', async () => {
+  test('TC-2b: 测试按钮请求中显示 loading 并禁止重复点击', async ({ adminPage }) => {
+    await withAdminApi(async (api) => {
+      const suffix = Date.now();
+      const fixture = await createProviderWithModel(api, {
+        modelName: `e2e-loading-model-${suffix}`,
+        providerName: `E2E Loading Provider ${suffix}`,
+        supportedEfforts: ['low'],
+        supportsThinking: 1,
+      });
+      await bindTier(api, 'basic', fixture, 'low');
+
+      const routePattern = '**/x/linapro-ai-core/api/v1/ai/tiers/basic/test';
+      const gates = [createGate(), createGate()];
+      let routeCalls = 0;
+      await adminPage.route(routePattern, async (route) => {
+        const current = routeCalls;
+        routeCalls += 1;
+        await gates[current]?.promise;
+        await route.fulfill({
+          body: JSON.stringify({
+            code: 0,
+            data: {
+              errorSummary:
+                current === 0
+                  ? 'E2E delayed saved test'
+                  : 'E2E delayed draft test',
+              latencyMs: 0,
+              modelName: fixture.modelName,
+              protocol: 'openai',
+              providerName: fixture.providerName,
+              status: 'failed',
+              testedAt: Date.now(),
+              thinkingEffort: 'low',
+            },
+          }),
+          contentType: 'application/json',
+          status: 200,
+        });
+      });
+
+      try {
+        const smartCenter = new SmartCenterPage(adminPage);
+        await smartCenter.gotoTiers();
+        await smartCenter.clickSavedTierTestAndAssertLoading(/基础|Basic/i);
+        gates[0].release();
+        await expect(adminPage.getByText('E2E delayed saved test').first()).toBeVisible();
+
+        await smartCenter.clickDraftTierTestAndAssertLoading(/基础|Basic/i);
+        gates[1].release();
+        await expect(adminPage.getByText('E2E delayed draft test').first()).toBeVisible();
+        await smartCenter.cancelDrawer();
+      } finally {
+        await adminPage.unroute(routePattern).catch(() => {});
+        await clearTier(api, 'basic').catch(() => {});
+        await deleteProvider(api, fixture.providerId).catch(() => {});
+      }
+    });
+  });
+
+  test('TC-2c: 不支持的 thinking effort 给出校验提示', async () => {
     await withAdminApi(async (api) => {
       const suffix = Date.now();
       const fixture = await createProviderWithModel(api, {
@@ -53,7 +121,7 @@ test.describe('TC-2 智能中心档位管理', () => {
     });
   });
 
-  test('TC-2c: 禁用档位保留已有供应商模型绑定', async () => {
+  test('TC-2d: 禁用档位保留已有供应商模型绑定', async () => {
     await withAdminApi(async (api) => {
       const suffix = Date.now();
       const fixture = await createProviderWithModel(api, {

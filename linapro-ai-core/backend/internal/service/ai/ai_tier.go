@@ -19,32 +19,34 @@ import (
 
 // resolvedTierBinding contains the public and secret metadata needed for one provider call.
 type resolvedTierBinding struct {
-	TierId           int64
-	TierCode         string
-	CapabilityType   string
-	DefaultEffort    string
-	ProviderId       int64
-	ProviderName     string
-	ModelId          int64
-	ModelName        string
-	Protocol         string
-	OpenaiBaseUrl    string
-	AnthropicBaseUrl string
-	ApiKeySecretRef  string
-	SupportsThinking int
-	SupportedEfforts string
-	MaxOutputTokens  int
+	TierId            int64
+	TierCode          string
+	CapabilityType    string
+	CapabilityMethod  string
+	DefaultEffort     string
+	ProviderId        int64
+	ProviderName      string
+	ModelId           int64
+	ModelName         string
+	Protocol          string
+	EndpointId        int64
+	EndpointBaseUrl   string
+	EndpointSecretRef string
+	SupportsThinking  int
+	SupportedEfforts  string
+	MaxOutputTokens   int
 }
 
-// ListTiers returns the fixed text AI tier list with binding projections.
-func (s *serviceImpl) ListTiers(ctx context.Context, capabilityType string) ([]*TierItem, error) {
+// ListTiers returns the fixed AI tier list for one capability method with binding projections.
+func (s *serviceImpl) ListTiers(ctx context.Context, capabilityType string, capabilityMethod string) ([]*TierItem, error) {
 	if err := s.ensurePlatform(ctx); err != nil {
 		return nil, err
 	}
 	capabilityType = normalizeCapabilityType(capabilityType)
+	capabilityMethod = normalizeCapabilityMethod(capabilityMethod)
 	rows := make([]*entity.Tier, 0)
 	if err := dao.Tier.Ctx(ctx).
-		Where(do.Tier{CapabilityType: capabilityType}).
+		Where(do.Tier{CapabilityType: capabilityType, CapabilityMethod: capabilityMethod}).
 		OrderAsc(dao.Tier.Columns().SortOrder).
 		Scan(&rows); err != nil {
 		return nil, err
@@ -58,6 +60,7 @@ func (s *serviceImpl) ListTiers(ctx context.Context, capabilityType string) ([]*
 		item := &TierItem{
 			Id:                   row.Id,
 			CapabilityType:       row.CapabilityType,
+			CapabilityMethod:     row.CapabilityMethod,
 			Code:                 row.Code,
 			DisplayName:          row.DisplayName,
 			Description:          row.Description,
@@ -92,6 +95,8 @@ func (s *serviceImpl) UpdateTier(ctx context.Context, in TierUpdateInput) error 
 	if err := s.ensurePlatform(ctx); err != nil {
 		return err
 	}
+	capabilityType := normalizeCapabilityType(in.CapabilityType)
+	capabilityMethod := normalizeCapabilityMethod(in.CapabilityMethod)
 	code := normalizeTierCode(in.Code)
 	if code == "" {
 		return bizerr.NewCode(CodeTierNotFound)
@@ -100,7 +105,7 @@ func (s *serviceImpl) UpdateTier(ctx context.Context, in TierUpdateInput) error 
 	if err != nil {
 		return err
 	}
-	tier, err := s.getTier(ctx, CapabilityTypeText, code)
+	tier, err := s.getTier(ctx, capabilityType, capabilityMethod, code)
 	if err != nil {
 		return err
 	}
@@ -110,7 +115,7 @@ func (s *serviceImpl) UpdateTier(ctx context.Context, in TierUpdateInput) error 
 		return bizerr.NewCode(CodeRequestInvalid)
 	}
 	if bindingRequested {
-		model, err = s.validateModelBinding(ctx, in.ProviderId, in.ModelId, effort)
+		model, _, _, err = s.validateModelBinding(ctx, in.ProviderId, in.ModelId, capabilityType, capabilityMethod, effort)
 		if err != nil {
 			return err
 		}
@@ -144,7 +149,7 @@ func (s *serviceImpl) UpdateTier(ctx context.Context, in TierUpdateInput) error 
 	if err != nil {
 		return err
 	}
-	return s.InvalidateTierCache(ctx, CapabilityTypeText, code)
+	return s.InvalidateTierCache(ctx, capabilityType, capabilityMethod, code)
 }
 
 // TestTier executes a saved or draft tier binding test.
@@ -152,11 +157,13 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 	if err := s.ensurePlatform(ctx); err != nil {
 		return nil, err
 	}
+	capabilityType := normalizeCapabilityType(in.CapabilityType)
+	capabilityMethod := normalizeCapabilityMethod(in.CapabilityMethod)
 	code := normalizeTierCode(in.Code)
 	if code == "" {
 		return nil, bizerr.NewCode(CodeTierNotFound)
 	}
-	tier, err := s.getTier(ctx, CapabilityTypeText, code)
+	tier, err := s.getTier(ctx, capabilityType, capabilityMethod, code)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +173,7 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 	}
 	var binding *resolvedTierBinding
 	if in.ProviderId > 0 || in.ModelId > 0 {
-		model, err := s.validateModelBinding(ctx, in.ProviderId, in.ModelId, effort)
+		model, endpoint, capability, err := s.validateModelBinding(ctx, in.ProviderId, in.ModelId, capabilityType, capabilityMethod, effort)
 		if err != nil {
 			return nil, err
 		}
@@ -174,9 +181,9 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 		if err != nil {
 			return nil, err
 		}
-		binding = resolvedBindingFromRows(tier, provider, model)
+		binding = resolvedBindingFromRows(tier, provider, model, capability, endpoint)
 	} else {
-		binding, err = s.resolveTierBinding(ctx, CapabilityTypeText, code)
+		binding, err = s.resolveTierBinding(ctx, capabilityType, capabilityMethod, code)
 		if err != nil {
 			return nil, err
 		}
@@ -195,7 +202,9 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 		messages = defaultTierTestMessages()
 	}
 	testedAt := time.Now()
-	result, callErr := s.callProvider(ctx, binding, messages, in.MaxOutputTokens, nil, effort)
+	callCtx, cancel := context.WithTimeout(ctx, normalizeTierTestTimeout(in.timeout))
+	defer cancel()
+	result, callErr := s.callProvider(callCtx, binding, messages, in.MaxOutputTokens, nil, effort)
 	output := &TierTestOutput{
 		Status:         InvocationStatusSuccess,
 		ProviderName:   binding.ProviderName,
@@ -230,8 +239,16 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 	return output, nil
 }
 
+// normalizeTierTestTimeout returns the explicit timeout or the default test timeout.
+func normalizeTierTestTimeout(timeout time.Duration) time.Duration {
+	if timeout > 0 {
+		return timeout
+	}
+	return tierTestTimeout
+}
+
 // InvalidateTierCache publishes a shared revision and clears local cached tier binding entries.
-func (s *serviceImpl) InvalidateTierCache(ctx context.Context, capabilityType string, tierCode string) error {
+func (s *serviceImpl) InvalidateTierCache(ctx context.Context, capabilityType string, capabilityMethod string, tierCode string) error {
 	if s == nil {
 		return nil
 	}
@@ -239,7 +256,7 @@ func (s *serviceImpl) InvalidateTierCache(ctx context.Context, capabilityType st
 	if err != nil {
 		return err
 	}
-	s.clearLocalTierCache(revision, capabilityType, tierCode)
+	s.clearLocalTierCache(revision, capabilityType, capabilityMethod, tierCode)
 	return nil
 }
 
@@ -274,23 +291,27 @@ func (s *serviceImpl) observeTierCacheRevision(ctx context.Context) error {
 	if revision == current {
 		return nil
 	}
-	s.clearLocalTierCache(revision, "", "")
+	s.clearLocalTierCache(revision, "", "", "")
 	return nil
 }
 
 // clearLocalTierCache removes current-process entries after a local or shared revision change.
-func (s *serviceImpl) clearLocalTierCache(revision int64, capabilityType string, tierCode string) {
+func (s *serviceImpl) clearLocalTierCache(revision int64, capabilityType string, capabilityMethod string, tierCode string) {
 	if s == nil {
 		return
 	}
 	s.cacheMu.Lock()
 	defer s.cacheMu.Unlock()
-	if capabilityType == "" && tierCode == "" {
+	if capabilityType == "" && capabilityMethod == "" && tierCode == "" {
 		s.tierCache = make(map[string]tierCacheEntry)
 		s.revision = revision
 		return
 	}
-	delete(s.tierCache, tierCacheKey(normalizeCapabilityType(capabilityType), normalizeTierCode(tierCode)))
+	delete(s.tierCache, tierCacheKey(
+		normalizeCapabilityType(capabilityType),
+		normalizeCapabilityMethod(capabilityMethod),
+		normalizeTierCode(tierCode),
+	))
 	s.revision = revision
 }
 
@@ -303,14 +324,17 @@ func cacheRevisionValue(item *plugincontract.CacheItem) int64 {
 }
 
 // resolveTierBinding returns one cached or database-loaded binding.
-func (s *serviceImpl) resolveTierBinding(ctx context.Context, capabilityType string, tierCode string) (*resolvedTierBinding, error) {
+func (s *serviceImpl) resolveTierBinding(ctx context.Context, capabilityType string, capabilityMethod string, tierCode string) (*resolvedTierBinding, error) {
+	capabilityType = normalizeCapabilityType(capabilityType)
+	capabilityMethod = normalizeCapabilityMethod(capabilityMethod)
+	tierCode = normalizeTierCode(tierCode)
 	if !s.tierCacheEnabled(ctx) {
-		return s.loadTierBinding(ctx, capabilityType, tierCode)
+		return s.loadTierBinding(ctx, capabilityType, capabilityMethod, tierCode)
 	}
 	if err := s.observeTierCacheRevision(ctx); err != nil {
 		return nil, err
 	}
-	key := tierCacheKey(capabilityType, tierCode)
+	key := tierCacheKey(capabilityType, capabilityMethod, tierCode)
 	now := time.Now()
 	s.cacheMu.RLock()
 	if cached, ok := s.tierCache[key]; ok && now.Before(cached.expiresAt) && cached.value != nil {
@@ -319,7 +343,7 @@ func (s *serviceImpl) resolveTierBinding(ctx context.Context, capabilityType str
 		return &value, nil
 	}
 	s.cacheMu.RUnlock()
-	value, err := s.loadTierBinding(ctx, capabilityType, tierCode)
+	value, err := s.loadTierBinding(ctx, capabilityType, capabilityMethod, tierCode)
 	if err != nil {
 		return nil, err
 	}
@@ -345,8 +369,8 @@ func (s *serviceImpl) tierCacheEnabled(ctx context.Context) bool {
 }
 
 // loadTierBinding loads one tier binding from database.
-func (s *serviceImpl) loadTierBinding(ctx context.Context, capabilityType string, tierCode string) (*resolvedTierBinding, error) {
-	tier, err := s.getTier(ctx, capabilityType, tierCode)
+func (s *serviceImpl) loadTierBinding(ctx context.Context, capabilityType string, capabilityMethod string, tierCode string) (*resolvedTierBinding, error) {
+	tier, err := s.getTier(ctx, capabilityType, capabilityMethod, tierCode)
 	if err != nil {
 		return nil, err
 	}
@@ -364,11 +388,15 @@ func (s *serviceImpl) loadTierBinding(ctx context.Context, capabilityType string
 	return binding, nil
 }
 
-// getTier returns one fixed tier by capability and code.
-func (s *serviceImpl) getTier(ctx context.Context, capabilityType string, tierCode string) (*entity.Tier, error) {
+// getTier returns one fixed tier by capability method and code.
+func (s *serviceImpl) getTier(ctx context.Context, capabilityType string, capabilityMethod string, tierCode string) (*entity.Tier, error) {
 	var row *entity.Tier
 	if err := dao.Tier.Ctx(ctx).
-		Where(do.Tier{CapabilityType: normalizeCapabilityType(capabilityType), Code: normalizeTierCode(tierCode)}).
+		Where(do.Tier{
+			CapabilityType:   normalizeCapabilityType(capabilityType),
+			CapabilityMethod: normalizeCapabilityMethod(capabilityMethod),
+			Code:             normalizeTierCode(tierCode),
+		}).
 		Scan(&row); err != nil {
 		return nil, err
 	}
@@ -378,26 +406,53 @@ func (s *serviceImpl) getTier(ctx context.Context, capabilityType string, tierCo
 	return row, nil
 }
 
-// validateModelBinding verifies provider/model existence and effort support.
-func (s *serviceImpl) validateModelBinding(ctx context.Context, providerID int64, modelID int64, effort string) (*entity.Model, error) {
+// validateModelBinding verifies provider/model existence, method scope, and effort support.
+func (s *serviceImpl) validateModelBinding(
+	ctx context.Context,
+	providerID int64,
+	modelID int64,
+	capabilityType string,
+	capabilityMethod string,
+	effort string,
+) (*entity.Model, *entity.ProviderEndpoint, *entity.ModelCapability, error) {
 	provider, err := s.getProvider(ctx, providerID)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 	if provider.Enabled != enabledYes {
-		return nil, bizerr.NewCode(CodeProviderNotFound)
+		return nil, nil, nil, bizerr.NewCode(CodeProviderNotFound)
 	}
 	model, err := s.getModel(ctx, modelID)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
-	if model.ProviderId != providerID || model.Enabled != enabledYes || model.CapabilityType != CapabilityTypeText {
-		return nil, bizerr.NewCode(CodeModelNotFound)
+	if model.ProviderId != providerID || model.Enabled != enabledYes {
+		return nil, nil, nil, bizerr.NewCode(CodeModelNotFound)
 	}
-	if !effortSupported(model, effort) {
-		return nil, bizerr.NewCode(CodeThinkingEffortUnsupported)
+	var capability *entity.ModelCapability
+	if err := dao.ModelCapability.Ctx(ctx).Where(do.ModelCapability{
+		ModelId:          modelID,
+		CapabilityType:   normalizeCapabilityType(capabilityType),
+		CapabilityMethod: normalizeCapabilityMethod(capabilityMethod),
+		Enabled:          enabledYes,
+	}).Scan(&capability); err != nil {
+		return nil, nil, nil, err
 	}
-	return model, nil
+	if capability == nil {
+		return nil, nil, nil, bizerr.NewCode(CodeModelNotFound)
+	}
+	endpointID := model.EndpointId
+	if capability.EndpointId > 0 {
+		endpointID = capability.EndpointId
+	}
+	endpoint, err := s.requireProviderEndpoint(ctx, providerID, endpointID, model.Protocol)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if !effortSupported(capability, effort) {
+		return nil, nil, nil, bizerr.NewCode(CodeThinkingEffortUnsupported)
+	}
+	return model, endpoint, capability, nil
 }
 
 // upsertPrimaryBinding inserts or updates the active primary binding row.
@@ -454,6 +509,39 @@ func (s *serviceImpl) primaryBindingsByTier(ctx context.Context, tierIDs []int64
 	if err != nil {
 		return nil, err
 	}
+	capabilities, err := s.modelCapabilitiesByModel(ctx, modelIDs)
+	if err != nil {
+		return nil, err
+	}
+	capabilitiesByModelMethod := make(map[string]*entity.ModelCapability, len(capabilities))
+	for _, capability := range capabilities {
+		if capability != nil && capability.Enabled == enabledYes {
+			capabilitiesByModelMethod[modelCapabilityKey(capability.ModelId, capability.CapabilityType, capability.CapabilityMethod)] = capability
+		}
+	}
+	endpointIDs := make([]int64, 0, len(models)+len(capabilities))
+	for _, row := range bindingRows {
+		tier := tiers[row.TierId]
+		model := models[row.ModelId]
+		if tier == nil || model == nil {
+			continue
+		}
+		capability := capabilitiesByModelMethod[modelCapabilityKey(model.Id, tier.CapabilityType, tier.CapabilityMethod)]
+		if capability == nil {
+			continue
+		}
+		endpointID := model.EndpointId
+		if capability.EndpointId > 0 {
+			endpointID = capability.EndpointId
+		}
+		if endpointID > 0 {
+			endpointIDs = append(endpointIDs, endpointID)
+		}
+	}
+	endpoints, err := s.endpointsByID(ctx, endpointIDs)
+	if err != nil {
+		return nil, err
+	}
 	for _, row := range bindingRows {
 		tier := tiers[row.TierId]
 		provider := providers[row.ProviderId]
@@ -461,29 +549,48 @@ func (s *serviceImpl) primaryBindingsByTier(ctx context.Context, tierIDs []int64
 		if tier == nil || provider == nil || model == nil || provider.Enabled != enabledYes || model.Enabled != enabledYes {
 			continue
 		}
-		result[row.TierId] = resolvedBindingFromRows(tier, provider, model)
+		capability := capabilitiesByModelMethod[modelCapabilityKey(model.Id, tier.CapabilityType, tier.CapabilityMethod)]
+		if capability == nil {
+			continue
+		}
+		endpointID := model.EndpointId
+		if capability.EndpointId > 0 {
+			endpointID = capability.EndpointId
+		}
+		endpoint := endpoints[endpointID]
+		if endpoint == nil || endpoint.ProviderId != provider.Id || endpoint.Enabled != enabledYes || endpoint.Protocol != model.Protocol {
+			continue
+		}
+		result[row.TierId] = resolvedBindingFromRows(tier, provider, model, capability, endpoint)
 	}
 	return result, nil
 }
 
 // resolvedBindingFromRows builds a resolved binding from loaded rows.
-func resolvedBindingFromRows(tier *entity.Tier, provider *entity.Provider, model *entity.Model) *resolvedTierBinding {
+func resolvedBindingFromRows(
+	tier *entity.Tier,
+	provider *entity.Provider,
+	model *entity.Model,
+	capability *entity.ModelCapability,
+	endpoint *entity.ProviderEndpoint,
+) *resolvedTierBinding {
 	return &resolvedTierBinding{
-		TierId:           tier.Id,
-		TierCode:         tier.Code,
-		CapabilityType:   tier.CapabilityType,
-		DefaultEffort:    tier.DefaultEffort,
-		ProviderId:       provider.Id,
-		ProviderName:     provider.Name,
-		ModelId:          model.Id,
-		ModelName:        model.ModelName,
-		Protocol:         model.Protocol,
-		OpenaiBaseUrl:    provider.OpenaiBaseUrl,
-		AnthropicBaseUrl: provider.AnthropicBaseUrl,
-		ApiKeySecretRef:  provider.ApiKeySecretRef,
-		SupportsThinking: model.SupportsThinking,
-		SupportedEfforts: model.SupportedEfforts,
-		MaxOutputTokens:  model.MaxOutputTokens,
+		TierId:            tier.Id,
+		TierCode:          tier.Code,
+		CapabilityType:    tier.CapabilityType,
+		CapabilityMethod:  tier.CapabilityMethod,
+		DefaultEffort:     tier.DefaultEffort,
+		ProviderId:        provider.Id,
+		ProviderName:      provider.Name,
+		ModelId:           model.Id,
+		ModelName:         model.ModelName,
+		Protocol:          model.Protocol,
+		EndpointId:        endpoint.Id,
+		EndpointBaseUrl:   endpoint.BaseUrl,
+		EndpointSecretRef: endpoint.SecretRef,
+		SupportsThinking:  capability.SupportsThinking,
+		SupportedEfforts:  capability.SupportedEfforts,
+		MaxOutputTokens:   capability.MaxOutputTokens,
 	}
 }
 
@@ -519,6 +626,22 @@ func (s *serviceImpl) modelsByID(ctx context.Context, ids []int64) (map[int64]*e
 	return out, nil
 }
 
+// endpointsByID loads provider endpoints by ID in one query.
+func (s *serviceImpl) endpointsByID(ctx context.Context, ids []int64) (map[int64]*entity.ProviderEndpoint, error) {
+	out := make(map[int64]*entity.ProviderEndpoint, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	rows := make([]*entity.ProviderEndpoint, 0)
+	if err := dao.ProviderEndpoint.Ctx(ctx).WhereIn(dao.ProviderEndpoint.Columns().Id, ids).Scan(&rows); err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		out[row.Id] = row
+	}
+	return out, nil
+}
+
 // tiersByID loads tiers by ID in one query.
 func (s *serviceImpl) tiersByID(ctx context.Context, ids []int64) (map[int64]*entity.Tier, error) {
 	out := make(map[int64]*entity.Tier, len(ids))
@@ -546,9 +669,11 @@ func collectTierIDs(rows []*entity.Tier) []int64 {
 	return ids
 }
 
-// tierCacheKey builds the cache key for one capability/tier pair.
-func tierCacheKey(capabilityType string, tierCode string) string {
-	return normalizeCapabilityType(capabilityType) + ":" + normalizeTierCode(tierCode)
+// tierCacheKey builds the cache key for one capability method and tier pair.
+func tierCacheKey(capabilityType string, capabilityMethod string, tierCode string) string {
+	return normalizeCapabilityType(capabilityType) + ":" +
+		normalizeCapabilityMethod(capabilityMethod) + ":" +
+		normalizeTierCode(tierCode)
 }
 
 // effortSupportedByBinding reports whether effort matches binding model capabilities.

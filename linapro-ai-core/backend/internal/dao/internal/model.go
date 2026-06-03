@@ -21,38 +21,30 @@ type ModelDao struct {
 
 // ModelColumns defines and stores column names for the table plugin_linapro_ai_model.
 type ModelColumns struct {
-	Id               string // Model ID
-	ProviderId       string // Provider ID
-	CapabilityType   string // Capability type: text
-	ModelName        string // Provider model name
-	Protocol         string // Protocol: openai or anthropic
-	Source           string // Model source: manual or api
-	SupportsThinking string // Thinking effort support flag: 0=no 1=yes
-	SupportedEfforts string // Comma-separated supported thinking efforts
-	MaxInputTokens   string // Maximum input tokens, 0 means unspecified
-	MaxOutputTokens  string // Maximum output tokens, 0 means unspecified
-	Enabled          string // Enabled flag: 0=disabled 1=enabled
-	CreatedAt        string // Creation time
-	UpdatedAt        string // Update time
-	DeletedAt        string // Deletion time
+	Id         string // Model ID
+	ProviderId string // Provider ID
+	ModelName  string // Provider model name
+	Protocol   string // Protocol: openai or anthropic
+	Source     string // Model source: manual or api
+	Enabled    string // Enabled flag: 0=disabled 1=enabled
+	CreatedAt  string // Creation time
+	UpdatedAt  string // Update time
+	DeletedAt  string // Deletion time
+	EndpointId string // Provider endpoint ID used by the model
 }
 
 // modelColumns holds the columns for the table plugin_linapro_ai_model.
 var modelColumns = ModelColumns{
-	Id:               "id",
-	ProviderId:       "provider_id",
-	CapabilityType:   "capability_type",
-	ModelName:        "model_name",
-	Protocol:         "protocol",
-	Source:           "source",
-	SupportsThinking: "supports_thinking",
-	SupportedEfforts: "supported_efforts",
-	MaxInputTokens:   "max_input_tokens",
-	MaxOutputTokens:  "max_output_tokens",
-	Enabled:          "enabled",
-	CreatedAt:        "created_at",
-	UpdatedAt:        "updated_at",
-	DeletedAt:        "deleted_at",
+	Id:         "id",
+	ProviderId: "provider_id",
+	ModelName:  "model_name",
+	Protocol:   "protocol",
+	Source:     "source",
+	Enabled:    "enabled",
+	CreatedAt:  "created_at",
+	UpdatedAt:  "updated_at",
+	DeletedAt:  "deleted_at",
+	EndpointId: "endpoint_id",
 }
 
 // NewModelDao creates and returns a new DAO object for table data access.

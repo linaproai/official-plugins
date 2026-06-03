@@ -12,17 +12,18 @@ import (
 // List returns masked AI invocation logs with database-side filters.
 func (c *ControllerV1) List(ctx context.Context, req *v1.ListReq) (res *v1.ListRes, err error) {
 	out, err := c.aiSvc.ListInvocations(ctx, aisvc.InvocationListInput{
-		PageNum:        req.PageNum,
-		PageSize:       req.PageSize,
-		CapabilityType: req.CapabilityType,
-		Purpose:        req.Purpose,
-		TierCode:       req.TierCode,
-		Status:         req.Status,
-		ProviderId:     req.ProviderId,
-		ModelId:        req.ModelId,
-		SourcePluginId: req.SourcePluginId,
-		StartedAt:      req.StartedAt,
-		EndedAt:        req.EndedAt,
+		PageNum:          req.PageNum,
+		PageSize:         req.PageSize,
+		CapabilityType:   req.CapabilityType,
+		CapabilityMethod: req.CapabilityMethod,
+		Purpose:          req.Purpose,
+		TierCode:         req.TierCode,
+		Status:           req.Status,
+		ProviderId:       req.ProviderId,
+		ModelId:          req.ModelId,
+		SourcePluginId:   req.SourcePluginId,
+		StartedAt:        req.StartedAt,
+		EndedAt:          req.EndedAt,
 	})
 	if err != nil {
 		return nil, err
