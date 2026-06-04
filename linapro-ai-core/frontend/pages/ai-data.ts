@@ -1,6 +1,6 @@
 import type { VbenFormSchema } from "#/adapter/form";
 import type { VxeGridProps } from "#/adapter/vxe-table";
-import type { Provider, ProviderModelSummary, Tier } from "./ai-client";
+import type { Model, Provider, ProviderModelSummary, Tier } from "./ai-client";
 import type { Component } from "vue";
 
 import { h } from "vue";
@@ -276,20 +276,20 @@ function modelTag(
     "span",
     {
       class:
-        "ai-provider-model-tag inline-flex min-h-8 max-w-full items-start gap-1.5 rounded-full border border-border bg-background px-2.5 py-1.5 text-sm shadow-sm",
+        "ai-provider-model-tag inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-background px-2 py-1 text-xs shadow-sm",
     },
     [
       h(
         "span",
         {
           class:
-            "ai-provider-model-name min-w-0 break-all text-foreground whitespace-normal leading-5",
+            "ai-provider-model-name min-w-0 break-all text-foreground whitespace-normal leading-4",
         },
         model.modelName,
       ),
       h(
         "span",
-        { class: "shrink-0 text-xs text-muted-foreground leading-5" },
+        { class: "shrink-0 text-[11px] text-muted-foreground leading-4" },
         protocolLabel(model.protocol),
       ),
       modelDeleteButton(model, onDeleteModel),
@@ -330,27 +330,40 @@ function modelsCell(
       $t("plugin.linapro-ai-core.provider.empty.noModels"),
     );
   }
-  const groups = groupModels(models);
+  const orderedModels = groupModels(models).flatMap((group) => group.models);
   return h(
     "div",
     {
       class:
-        "ai-provider-model-list flex min-h-[48px] min-w-0 max-w-full flex-col justify-center gap-2 overflow-visible py-2",
+        "ai-provider-model-list flex min-h-10 w-full min-w-0 max-w-full flex-col items-start gap-1 overflow-visible py-1.5",
     },
-    groups.map((group, index) =>
-      h(
-        "div",
-        {
-          class: [
-            "ai-provider-model-row flex min-w-0 flex-wrap gap-2 overflow-visible",
-            index > 0 ? "border-t border-border pt-2" : "",
-          ]
-            .filter(Boolean)
-            .join(" "),
-        },
-        group.models.map((model) => modelTag(model, onDeleteModel)),
-      ),
+    h(
+      "div",
+      {
+        class:
+          "ai-provider-model-row flex min-w-0 max-w-full flex-wrap items-center gap-1.5 overflow-visible",
+      },
+      orderedModels.map((model) => modelTag(model, onDeleteModel)),
     ),
+  );
+}
+
+function modelEndpointCell(row: Model) {
+  if (!row.endpointBaseUrl) {
+    return h(
+      "span",
+      { class: "text-muted-foreground text-xs" },
+      $t("plugin.linapro-ai-core.provider.empty.noEndpoint"),
+    );
+  }
+  return h(
+    "span",
+    {
+      class:
+        "block min-w-0 break-all font-mono text-xs leading-5 whitespace-normal",
+      title: row.endpointBaseUrl,
+    },
+    row.endpointBaseUrl,
   );
 }
 
@@ -499,7 +512,7 @@ export function buildProviderColumns(
       field: "models",
       title: $t("plugin.linapro-ai-core.provider.fields.models"),
       className: "ai-provider-model-column",
-      minWidth: 300,
+      minWidth: 420,
       showOverflow: false,
       slots: {
         default: ({ row }) =>
@@ -510,7 +523,7 @@ export function buildProviderColumns(
       field: "endpoint",
       title: $t("plugin.linapro-ai-core.provider.fields.endpoint"),
       className: "ai-provider-endpoint-column",
-      minWidth: 300,
+      minWidth: 420,
       showOverflow: false,
       slots: {
         default: ({ row }) =>
@@ -537,13 +550,89 @@ export function buildProviderColumns(
     },
     {
       field: "action",
+      align: "center",
       className: "ai-provider-action-column",
       fixed: "right",
+      headerAlign: "center",
       showOverflow: false,
       resizable: false,
       slots: { default: "action" },
       title: $t("pages.common.actions"),
       width: 190,
+    },
+  ];
+}
+
+export function buildModelQuerySchema(): VbenFormSchema[] {
+  return [
+    {
+      component: "Input",
+      fieldName: "keyword",
+      label: $t("plugin.linapro-ai-core.model.fields.modelName"),
+    },
+    {
+      component: "Select",
+      fieldName: "enabled",
+      label: $t("pages.common.status"),
+      componentProps: { options: buildEnabledOptions() },
+    },
+  ];
+}
+
+export function buildModelColumns(): VxeGridProps["columns"] {
+  return [
+    {
+      field: "modelName",
+      title: $t("plugin.linapro-ai-core.model.fields.modelName"),
+      minWidth: 220,
+      showOverflow: "tooltip",
+    },
+    {
+      field: "providerName",
+      title: $t("plugin.linapro-ai-core.model.fields.provider"),
+      minWidth: 180,
+      showOverflow: "tooltip",
+    },
+    {
+      field: "protocol",
+      title: $t("plugin.linapro-ai-core.model.fields.protocol"),
+      formatter: ({ cellValue }) => protocolLabel(String(cellValue || "")),
+      minWidth: 110,
+    },
+    {
+      field: "endpointBaseUrl",
+      title: $t("plugin.linapro-ai-core.model.fields.endpoint"),
+      className: "ai-model-endpoint-column",
+      minWidth: 480,
+      showOverflow: false,
+      slots: { default: ({ row }) => modelEndpointCell(row as Model) },
+    },
+    {
+      field: "capabilityMethod",
+      title: $t("plugin.linapro-ai-core.capability.method"),
+      formatter: ({ row }) =>
+        joinCapabilityMethod(row.capabilityType, row.capabilityMethod),
+      minWidth: 150,
+    },
+    {
+      field: "enabled",
+      title: $t("pages.common.status"),
+      minWidth: 100,
+      slots: { default: ({ row }) => statusTag(row.enabled) },
+    },
+    {
+      field: "updatedAt",
+      title: $t("pages.common.updatedAt"),
+      formatter: ({ cellValue }) => formatTimestamp(cellValue),
+      minWidth: 180,
+    },
+    {
+      field: "action",
+      fixed: "right",
+      resizable: false,
+      slots: { default: "modelAction" },
+      title: $t("pages.common.actions"),
+      width: 140,
     },
   ];
 }
@@ -788,18 +877,14 @@ export function buildTierColumns(): VxeGridProps["columns"] {
       slots: {
         default: ({ row }) =>
           row.lastTestStatus
-            ? h(
-                "div",
-                { class: "flex items-center gap-2" },
-                [
-                  statusTag(row.lastTestStatus),
-                  h(
-                    "span",
-                    { class: "font-mono text-xs text-muted-foreground" },
-                    formatLatencyMs(row.lastTestLatencyMs),
-                  ),
-                ],
-              )
+            ? h("div", { class: "flex items-center gap-2" }, [
+                statusTag(row.lastTestStatus),
+                h(
+                  "span",
+                  { class: "font-mono text-xs text-muted-foreground" },
+                  formatLatencyMs(row.lastTestLatencyMs),
+                ),
+              ])
             : "-",
       },
     },

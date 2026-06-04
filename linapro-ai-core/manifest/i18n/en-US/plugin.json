@@ -83,9 +83,7 @@
       "model": {
         "actions": {
           "addModel": "Add Model",
-          "syncAnthropic": "Sync Anthropic Models",
-          "syncOpenAI": "Sync OpenAI Models",
-          "syncProtocol": "Sync {protocol} Models"
+          "syncModels": "Sync Models"
         },
         "drawer": {
           "createTitle": "Create Model",
@@ -155,6 +153,10 @@
           "keepSecret": "Leave blank to keep the existing secret",
           "openaiAccessUrl": "https://api.openai.com/v1",
           "openaiBaseUrl": "https://api.openai.com/v1"
+        },
+        "tabs": {
+          "models": "Model Management",
+          "providers": "Provider Management"
         },
         "tableTitle": "Providers"
       },

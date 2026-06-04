@@ -36,6 +36,68 @@ func TestOpenAIAdapterNormalizesURLAndMapsUsage(t *testing.T) {
 	}
 }
 
+// TestProviderAdaptersStripPlatformModelSuffix verifies tool-routing suffixes
+// remain platform-side and are not sent in provider protocol payloads.
+func TestProviderAdaptersStripPlatformModelSuffix(t *testing.T) {
+	t.Run("openai", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var payload map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Fatalf("decode OpenAI request: %v", err)
+			}
+			if payload["model"] != "mimo-v2.5-pro" {
+				t.Fatalf("expected stripped OpenAI model, got %#v", payload["model"])
+			}
+			w.Header().Set("Content-Type", "application/json")
+			if _, err := w.Write([]byte(`{"choices":[{"message":{"content":"ok"}}],"usage":{"prompt_tokens":1,"completion_tokens":1}}`)); err != nil {
+				t.Fatalf("write OpenAI response: %v", err)
+			}
+		}))
+		defer server.Close()
+
+		svc := New(nil, nil, server.Client()).(*serviceImpl)
+		result, err := svc.callOpenAI(context.Background(), &resolvedTierBinding{
+			ModelName:       "mimo-v2.5-pro[1m]",
+			EndpointBaseUrl: server.URL,
+		}, []aitext.Message{{Role: aitext.MessageRoleUser, Content: "hello"}}, 32, nil, "")
+		if err != nil {
+			t.Fatalf("call OpenAI adapter: %v", err)
+		}
+		if result.Text != "ok" {
+			t.Fatalf("unexpected OpenAI result: %#v", result)
+		}
+	})
+
+	t.Run("anthropic", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var payload map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Fatalf("decode Anthropic request: %v", err)
+			}
+			if payload["model"] != "claude-sonnet" {
+				t.Fatalf("expected stripped Anthropic model, got %#v", payload["model"])
+			}
+			w.Header().Set("Content-Type", "application/json")
+			if _, err := w.Write([]byte(`{"content":[{"type":"text","text":"ok"}],"usage":{"input_tokens":1,"output_tokens":1}}`)); err != nil {
+				t.Fatalf("write Anthropic response: %v", err)
+			}
+		}))
+		defer server.Close()
+
+		svc := New(nil, nil, server.Client()).(*serviceImpl)
+		result, err := svc.callAnthropic(context.Background(), &resolvedTierBinding{
+			ModelName:       "claude-sonnet[codex][fast]",
+			EndpointBaseUrl: server.URL,
+		}, []aitext.Message{{Role: aitext.MessageRoleUser, Content: "hello"}}, 32, nil, "")
+		if err != nil {
+			t.Fatalf("call Anthropic adapter: %v", err)
+		}
+		if result.Text != "ok" {
+			t.Fatalf("unexpected Anthropic result: %#v", result)
+		}
+	})
+}
+
 // TestAnthropicAdapterMapsThinkingEffort verifies Anthropic-compatible message
 // conversion and controlled thinking budget mapping.
 func TestAnthropicAdapterMapsThinkingEffort(t *testing.T) {

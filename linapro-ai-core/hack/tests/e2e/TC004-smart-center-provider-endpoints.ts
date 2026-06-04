@@ -88,8 +88,6 @@ test.describe("TC-4 智能中心供应商端点", () => {
         );
         await smartCenter.assertProviderSyncActions({
           providerName: fixture.providerName,
-          syncAnthropic: true,
-          syncOpenAI: true,
         });
         await smartCenter.captureEvidence("TC004-provider-endpoint-list");
 

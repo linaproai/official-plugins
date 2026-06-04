@@ -84,6 +84,24 @@ func normalizeProtocol(value string) string {
 	}
 }
 
+// providerRequestModelName removes platform-only trailing bracket suffixes
+// before adapter payloads are sent to external providers.
+func providerRequestModelName(modelName string) string {
+	trimmed := strings.TrimSpace(modelName)
+	for strings.HasSuffix(trimmed, "]") {
+		open := strings.LastIndex(trimmed, "[")
+		if open <= 0 || open == len(trimmed)-1 {
+			return trimmed
+		}
+		suffix := trimmed[open+1 : len(trimmed)-1]
+		if strings.TrimSpace(suffix) == "" || strings.ContainsAny(suffix, "[]") {
+			return trimmed
+		}
+		trimmed = strings.TrimSpace(trimmed[:open])
+	}
+	return trimmed
+}
+
 // normalizeTierCode returns one fixed tier code or an empty string.
 func normalizeTierCode(value string) string {
 	switch strings.TrimSpace(strings.ToLower(value)) {

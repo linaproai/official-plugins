@@ -254,6 +254,81 @@ func (s *serviceImpl) ListModels(ctx context.Context, in ModelListInput) (*Model
 	return &ModelListOutput{List: items, Total: total}, nil
 }
 
+// ListAllModels returns one bounded model-dimension page with provider and endpoint projections.
+func (s *serviceImpl) ListAllModels(ctx context.Context, in ModelGlobalListInput) (*ModelListOutput, error) {
+	if err := s.ensurePlatform(ctx); err != nil {
+		return nil, err
+	}
+	pageNum, pageSize := normalizePage(in.PageNum, in.PageSize)
+	cols := dao.Model.Columns()
+	model := dao.Model.Ctx(ctx)
+	if in.ProviderId > 0 {
+		model = model.Where(cols.ProviderId, in.ProviderId)
+	}
+	if keyword := strings.TrimSpace(in.Keyword); keyword != "" {
+		model = model.WhereLike(cols.ModelName, "%"+keyword+"%")
+	}
+	filterCapability := strings.TrimSpace(in.CapabilityType) != "" || strings.TrimSpace(in.CapabilityMethod) != ""
+	if in.Enabled != nil {
+		enabled := normalizeEnabled(*in.Enabled)
+		model = model.Where(cols.Enabled, enabled)
+	}
+	capabilityType := normalizeCapabilityType(in.CapabilityType)
+	capabilityMethod := normalizeCapabilityMethod(in.CapabilityMethod)
+	if filterCapability {
+		capCols := dao.ModelCapability.Columns()
+		capabilityQuery := dao.ModelCapability.Ctx(ctx).
+			Fields(capCols.ModelId).
+			Where(dao.ModelCapability.Table() + "." + capCols.ModelId + " = " + dao.Model.Table() + "." + cols.Id).
+			Where(do.ModelCapability{CapabilityType: capabilityType, CapabilityMethod: capabilityMethod})
+		if in.Enabled != nil {
+			capabilityQuery = capabilityQuery.Where(capCols.Enabled, normalizeEnabled(*in.Enabled))
+		}
+		model = model.Where("EXISTS ?", capabilityQuery)
+	}
+	total, err := model.Count()
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]*entity.Model, 0)
+	if err = model.Page(pageNum, pageSize).OrderDesc(cols.Id).Scan(&rows); err != nil {
+		return nil, err
+	}
+	modelIDs := collectModelIDs(rows)
+	var capabilities map[int64]*entity.ModelCapability
+	if filterCapability {
+		capabilities, err = s.modelCapabilitiesByModelMethod(ctx, modelIDs, capabilityType, capabilityMethod)
+	} else {
+		capabilities, err = s.firstModelCapabilitiesByModel(ctx, modelIDs)
+	}
+	if err != nil {
+		return nil, err
+	}
+	providers, err := s.providersByID(ctx, collectModelProviderIDs(rows))
+	if err != nil {
+		return nil, err
+	}
+	endpoints, err := s.endpointsByID(ctx, collectModelEndpointIDs(rows, capabilities))
+	if err != nil {
+		return nil, err
+	}
+	items := make([]*ModelItem, 0, len(rows))
+	for _, row := range rows {
+		item := modelToItem(row, capabilities[row.Id])
+		if item == nil {
+			continue
+		}
+		if provider := providers[row.ProviderId]; provider != nil {
+			item.ProviderName = provider.Name
+		}
+		if endpoint := endpoints[item.EndpointId]; endpoint != nil {
+			item.EndpointBaseUrl = endpoint.BaseUrl
+		}
+		items = append(items, item)
+	}
+	return &ModelListOutput{List: items, Total: total}, nil
+}
+
 // CreateModel creates one provider-owned model.
 func (s *serviceImpl) CreateModel(ctx context.Context, in ModelSaveInput) (int64, error) {
 	if err := s.ensurePlatform(ctx); err != nil {
@@ -367,7 +442,7 @@ func (s *serviceImpl) DeleteModel(ctx context.Context, id int64) error {
 	return s.InvalidateTierCache(ctx, "", "", "")
 }
 
-// SyncModels imports public model metadata from a provider endpoint.
+// SyncModels imports public model metadata from provider endpoints.
 func (s *serviceImpl) SyncModels(ctx context.Context, in ModelSyncInput) (*ModelSyncOutput, error) {
 	if err := s.ensurePlatform(ctx); err != nil {
 		return nil, err
@@ -377,60 +452,79 @@ func (s *serviceImpl) SyncModels(ctx context.Context, in ModelSyncInput) (*Model
 		return nil, err
 	}
 	protocol := normalizeProtocol(in.Protocol)
-	if protocol == "" {
+	if strings.TrimSpace(in.Protocol) != "" && protocol == "" {
 		return nil, bizerr.NewCode(CodeRequestInvalid)
 	}
-	endpoint, err := s.enabledEndpointForProtocol(ctx, provider.Id, protocol)
-	if err != nil {
-		return nil, err
-	}
-	names, err := s.listRemoteModels(ctx, endpoint)
+	endpoints, err := s.enabledSyncEndpoints(ctx, provider.Id, protocol)
 	if err != nil {
 		return nil, err
 	}
 	out := &ModelSyncOutput{}
-	existingNames, err := s.existingModelNames(ctx, provider.Id, protocol)
+	successes := make([]modelSyncEndpointResult, 0, len(endpoints))
+	var lastErr error
+	for _, endpoint := range endpoints {
+		names, listErr := s.listRemoteModels(ctx, endpoint)
+		if listErr != nil {
+			lastErr = listErr
+			continue
+		}
+		successes = append(successes, modelSyncEndpointResult{endpoint: endpoint, names: names})
+	}
+	if len(successes) == 0 {
+		if lastErr != nil {
+			return nil, lastErr
+		}
+		return nil, bizerr.NewCode(CodeProviderProtocolRequired)
+	}
+	existingNamesByProtocol, err := s.existingModelNamesByProtocol(ctx, provider.Id, collectSyncProtocols(successes))
 	if err != nil {
 		return nil, err
 	}
 	err = dao.Model.Transaction(ctx, func(ctx context.Context, _ gdb.TX) error {
-		for _, name := range names {
-			modelName := strings.TrimSpace(name)
-			if modelName == "" {
-				continue
+		for _, success := range successes {
+			existingNames := existingNamesByProtocol[success.endpoint.Protocol]
+			if existingNames == nil {
+				existingNames = make(map[string]struct{})
+				existingNamesByProtocol[success.endpoint.Protocol] = existingNames
 			}
-			if _, ok := existingNames[modelName]; ok {
-				out.Kept++
-				continue
+			for _, name := range success.names {
+				modelName := strings.TrimSpace(name)
+				if modelName == "" {
+					continue
+				}
+				if _, ok := existingNames[modelName]; ok {
+					out.Kept++
+					continue
+				}
+				modelID, err := dao.Model.Ctx(ctx).Data(do.Model{
+					ProviderId: provider.Id,
+					EndpointId: success.endpoint.Id,
+					ModelName:  modelName,
+					Protocol:   success.endpoint.Protocol,
+					Source:     ModelSourceAPI,
+					Enabled:    enabledYes,
+				}).InsertAndGetId()
+				if err != nil {
+					return err
+				}
+				if err = s.upsertModelCapability(ctx, &entity.Model{
+					Id:         modelID,
+					ProviderId: provider.Id,
+					EndpointId: success.endpoint.Id,
+					Protocol:   success.endpoint.Protocol,
+				}, ModelCapabilitySaveInput{
+					EndpointId:       success.endpoint.Id,
+					CapabilityType:   CapabilityTypeText,
+					CapabilityMethod: CapabilityMethodGenerate,
+					InputModalities:  []string{"text"},
+					OutputModalities: []string{"text"},
+					Enabled:          enabledYes,
+				}); err != nil {
+					return err
+				}
+				existingNames[modelName] = struct{}{}
+				out.Created++
 			}
-			modelID, err := dao.Model.Ctx(ctx).Data(do.Model{
-				ProviderId: provider.Id,
-				EndpointId: endpoint.Id,
-				ModelName:  modelName,
-				Protocol:   protocol,
-				Source:     ModelSourceAPI,
-				Enabled:    enabledYes,
-			}).InsertAndGetId()
-			if err != nil {
-				return err
-			}
-			if err = s.upsertModelCapability(ctx, &entity.Model{
-				Id:         modelID,
-				ProviderId: provider.Id,
-				EndpointId: endpoint.Id,
-				Protocol:   protocol,
-			}, ModelCapabilitySaveInput{
-				EndpointId:       endpoint.Id,
-				CapabilityType:   CapabilityTypeText,
-				CapabilityMethod: CapabilityMethodGenerate,
-				InputModalities:  []string{"text"},
-				OutputModalities: []string{"text"},
-				Enabled:          enabledYes,
-			}); err != nil {
-				return err
-			}
-			existingNames[modelName] = struct{}{}
-			out.Created++
 		}
 		return nil
 	})
@@ -491,6 +585,47 @@ func collectModelIDs(rows []*entity.Model) []int64 {
 		if row != nil && row.Id > 0 {
 			ids = append(ids, row.Id)
 		}
+	}
+	return ids
+}
+
+// collectModelProviderIDs extracts unique provider IDs from one model page.
+func collectModelProviderIDs(rows []*entity.Model) []int64 {
+	seen := make(map[int64]struct{}, len(rows))
+	ids := make([]int64, 0, len(rows))
+	for _, row := range rows {
+		if row == nil || row.ProviderId <= 0 {
+			continue
+		}
+		if _, ok := seen[row.ProviderId]; ok {
+			continue
+		}
+		seen[row.ProviderId] = struct{}{}
+		ids = append(ids, row.ProviderId)
+	}
+	return ids
+}
+
+// collectModelEndpointIDs extracts endpoint IDs needed by one model page projection.
+func collectModelEndpointIDs(rows []*entity.Model, capabilities map[int64]*entity.ModelCapability) []int64 {
+	seen := make(map[int64]struct{}, len(rows))
+	ids := make([]int64, 0, len(rows))
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		endpointID := row.EndpointId
+		if capability := capabilities[row.Id]; capability != nil && capability.EndpointId > 0 {
+			endpointID = capability.EndpointId
+		}
+		if endpointID <= 0 {
+			continue
+		}
+		if _, ok := seen[endpointID]; ok {
+			continue
+		}
+		seen[endpointID] = struct{}{}
+		ids = append(ids, endpointID)
 	}
 	return ids
 }
@@ -662,6 +797,25 @@ func (s *serviceImpl) modelCapabilitiesByModel(ctx context.Context, modelIDs []i
 	return rows, nil
 }
 
+// firstModelCapabilitiesByModel loads one stable capability projection per model in a single query.
+func (s *serviceImpl) firstModelCapabilitiesByModel(ctx context.Context, modelIDs []int64) (map[int64]*entity.ModelCapability, error) {
+	result := make(map[int64]*entity.ModelCapability, len(modelIDs))
+	rows, err := s.modelCapabilitiesByModel(ctx, modelIDs)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		if _, exists := result[row.ModelId]; exists {
+			continue
+		}
+		result[row.ModelId] = row
+	}
+	return result, nil
+}
+
 // ensureModelCapabilityEndpointsMatchProtocol rejects model protocol changes that would leave method endpoint overrides inconsistent.
 func (s *serviceImpl) ensureModelCapabilityEndpointsMatchProtocol(ctx context.Context, modelID int64, providerID int64, protocol string) error {
 	capRows := make([]*entity.ModelCapability, 0)
@@ -725,4 +879,63 @@ func (s *serviceImpl) existingModelNames(ctx context.Context, providerID int64, 
 		}
 	}
 	return result, nil
+}
+
+// existingModelNamesByProtocol returns provider model names grouped by protocol in one query.
+func (s *serviceImpl) existingModelNamesByProtocol(ctx context.Context, providerID int64, protocols []string) (map[string]map[string]struct{}, error) {
+	result := make(map[string]map[string]struct{}, len(protocols))
+	if providerID <= 0 || len(protocols) == 0 {
+		return result, nil
+	}
+	rows := make([]*entity.Model, 0)
+	cols := dao.Model.Columns()
+	if err := dao.Model.Ctx(ctx).
+		Fields(cols.ModelName, cols.Protocol).
+		Where(cols.ProviderId, providerID).
+		WhereIn(cols.Protocol, protocols).
+		Scan(&rows); err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		protocol := normalizeProtocol(row.Protocol)
+		modelName := strings.TrimSpace(row.ModelName)
+		if protocol == "" || modelName == "" {
+			continue
+		}
+		names := result[protocol]
+		if names == nil {
+			names = make(map[string]struct{})
+			result[protocol] = names
+		}
+		names[modelName] = struct{}{}
+	}
+	return result, nil
+}
+
+type modelSyncEndpointResult struct {
+	endpoint *entity.ProviderEndpoint
+	names    []string
+}
+
+func collectSyncProtocols(items []modelSyncEndpointResult) []string {
+	seen := make(map[string]struct{}, len(items))
+	protocols := make([]string, 0, len(items))
+	for _, item := range items {
+		if item.endpoint == nil {
+			continue
+		}
+		protocol := normalizeProtocol(item.endpoint.Protocol)
+		if protocol == "" {
+			continue
+		}
+		if _, ok := seen[protocol]; ok {
+			continue
+		}
+		seen[protocol] = struct{}{}
+		protocols = append(protocols, protocol)
+	}
+	return protocols
 }

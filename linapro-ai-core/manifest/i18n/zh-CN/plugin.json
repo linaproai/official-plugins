@@ -83,9 +83,7 @@
       "model": {
         "actions": {
           "addModel": "新增模型",
-          "syncAnthropic": "同步 Anthropic 模型",
-          "syncOpenAI": "同步 OpenAI 模型",
-          "syncProtocol": "同步 {protocol} 模型"
+          "syncModels": "同步模型"
         },
         "drawer": {
           "createTitle": "新增模型",
@@ -155,6 +153,10 @@
           "keepSecret": "留空则保持原密钥",
           "openaiAccessUrl": "https://api.openai.com/v1",
           "openaiBaseUrl": "https://api.openai.com/v1"
+        },
+        "tabs": {
+          "models": "模型管理",
+          "providers": "供应商管理"
         },
         "tableTitle": "供应商列表"
       },

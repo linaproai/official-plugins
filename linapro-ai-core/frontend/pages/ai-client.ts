@@ -80,7 +80,9 @@ export interface ProviderListParams {
 export interface Model {
   id: number;
   providerId: number;
+  providerName: string;
   endpointId: number;
+  endpointBaseUrl: string;
   capabilityType: string;
   capabilityMethod: string;
   modelName: string;
@@ -200,6 +202,16 @@ export interface InvocationListParams {
   endedAt?: number;
 }
 
+export interface ModelListParams {
+  pageNum?: number;
+  pageSize?: number;
+  keyword?: string;
+  providerId?: number;
+  capabilityType?: string;
+  capabilityMethod?: string;
+  enabled?: number;
+}
+
 export async function providerList(params?: ProviderListParams) {
   const res = await requestClient.get<{ list: Provider[]; total: number }>(
     aiApi("ai/providers"),
@@ -283,6 +295,14 @@ export async function providerModels(
   return res.list;
 }
 
+export async function modelList(params?: ModelListParams) {
+  const res = await requestClient.get<{ list: Model[]; total: number }>(
+    aiApi("ai/models"),
+    { params },
+  );
+  return { items: res.list, total: res.total };
+}
+
 export type ModelCreateInput = Partial<Model> & {
   endpointId: number;
   protocol: string;
@@ -359,10 +379,11 @@ export function modelCapabilitiesSave(
   return requestClient.put(aiApi(`ai/models/${id}/capabilities`), { items });
 }
 
-export function modelSync(providerId: number, protocol: string) {
+export function modelSync(providerId: number, protocol?: string) {
+  const payload = protocol ? { protocol } : {};
   return requestClient.post<{ created: number; kept: number }>(
     aiApi(`ai/providers/${providerId}/models/sync`),
-    { protocol },
+    payload,
   );
 }
 

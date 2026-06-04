@@ -133,7 +133,7 @@ func (s *serviceImpl) callOpenAI(
 		return nil, bizerr.NewCode(CodeThinkingEffortUnsupported)
 	}
 	payload := map[string]any{
-		"model":    binding.ModelName,
+		"model":    providerRequestModelName(binding.ModelName),
 		"messages": openAIMessages(messages),
 	}
 	if maxOutputTokens > 0 {
@@ -208,7 +208,7 @@ func (s *serviceImpl) callAnthropic(
 ) (*adapterResult, error) {
 	systemPrompt, anthropicMessages := anthropicMessages(messages)
 	payload := map[string]any{
-		"model":      binding.ModelName,
+		"model":      providerRequestModelName(binding.ModelName),
 		"messages":   anthropicMessages,
 		"max_tokens": maxOutputTokens,
 	}

@@ -22,6 +22,32 @@ func NewV1(aiSvc aisvc.Service) model.IModelV1 {
 	return &ControllerV1{aiSvc: aiSvc}
 }
 
+// toAPIModelItem converts a service model projection into API DTO shape.
+func toAPIModelItem(item *aisvc.ModelItem) *v1.ModelItem {
+	if item == nil {
+		return nil
+	}
+	return &v1.ModelItem{
+		Id:               item.Id,
+		ProviderId:       item.ProviderId,
+		ProviderName:     item.ProviderName,
+		EndpointId:       item.EndpointId,
+		EndpointBaseUrl:  item.EndpointBaseUrl,
+		CapabilityType:   item.CapabilityType,
+		CapabilityMethod: item.CapabilityMethod,
+		ModelName:        item.ModelName,
+		Protocol:         item.Protocol,
+		Source:           item.Source,
+		SupportsThinking: item.SupportsThinking,
+		SupportedEfforts: item.SupportedEfforts,
+		MaxInputTokens:   item.MaxInputTokens,
+		MaxOutputTokens:  item.MaxOutputTokens,
+		Enabled:          item.Enabled,
+		CreatedAt:        milliValue(apitime.Milli(item.CreatedAt)),
+		UpdatedAt:        milliValue(apitime.Milli(item.UpdatedAt)),
+	}
+}
+
 // toAPIModelCapabilityItem converts a service capability projection into API DTO shape.
 func toAPIModelCapabilityItem(item *aisvc.ModelCapabilityItem) *v1.ModelCapabilityItem {
 	if item == nil {

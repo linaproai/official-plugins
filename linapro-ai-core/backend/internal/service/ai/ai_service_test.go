@@ -5,6 +5,7 @@ package ai
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"sort"
@@ -172,6 +173,91 @@ func TestProviderModelTierAndInvocationFlow(t *testing.T) {
 	}
 	if logs.Total < 1 || logs.List[0].CapabilityMethod != CapabilityMethodGenerate || strings.Contains(logs.List[0].ErrorSummary, "full prompt") {
 		t.Fatalf("expected masked invocation log, got %#v", logs)
+	}
+}
+
+// TestSyncModelsAggregatesEnabledEndpoints verifies provider sync can import
+// from successful endpoints while tolerating unsupported or failing endpoints,
+// but still returns an error when every endpoint fails.
+func TestSyncModelsAggregatesEnabledEndpoints(t *testing.T) {
+	ctx := context.Background()
+	prepareDatabase(t, ctx)
+	openAIServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/models" && r.URL.Path != "/models" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if _, err := w.Write([]byte(`{"data":[{"id":"sync-existing"},{"id":"sync-created"}]}`)); err != nil {
+			t.Fatalf("write OpenAI sync response: %v", err)
+		}
+	}))
+	t.Cleanup(openAIServer.Close)
+	failingServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(failingServer.Close)
+
+	ctx = context.WithValue(ctx, providerBaseURLKey{}, openAIServer.URL+"/v1")
+	svc := New(testBizCtx{}, nil, openAIServer.Client()).(*serviceImpl)
+	providerID := createTestProvider(t, ctx, svc, "aggregate-sync")
+	t.Cleanup(func() { deleteProviderFixture(t, ctx, providerID) })
+	createTestModel(t, ctx, svc, providerID, "sync-existing")
+	if _, err := svc.CreateProviderEndpoint(ctx, ProviderEndpointSaveInput{
+		ProviderId: providerID,
+		Protocol:   ProtocolAnthropic,
+		BaseUrl:    failingServer.URL + "/v1",
+		SecretRef:  "unit-secret",
+		Enabled:    enabledYes,
+	}); err != nil {
+		t.Fatalf("create failing endpoint: %v", err)
+	}
+
+	out, err := svc.SyncModels(ctx, ModelSyncInput{ProviderId: providerID})
+	if err != nil {
+		t.Fatalf("sync aggregate endpoints: %v", err)
+	}
+	if out.Created != 1 || out.Kept != 1 {
+		t.Fatalf("expected one created and one kept model, got %#v", out)
+	}
+	models, err := svc.ListAllModels(ctx, ModelGlobalListInput{
+		Keyword:  "sync-created",
+		PageNum:  1,
+		PageSize: 10,
+	})
+	if err != nil {
+		t.Fatalf("list synced model: %v", err)
+	}
+	if models.Total != 1 || len(models.List) != 1 {
+		t.Fatalf("expected one synced model projection, got %#v", models)
+	}
+	if models.List[0].ProviderName == "" ||
+		models.List[0].EndpointBaseUrl != openAIServer.URL+"/v1" ||
+		models.List[0].Protocol != ProtocolOpenAI {
+		t.Fatalf("expected synced model provider and endpoint projection, got %#v", models.List[0])
+	}
+
+	failingProviderID, err := svc.CreateProvider(ctx, ProviderSaveInput{
+		Name:    "unit-provider-all-failing-sync-" + time.Now().Format("150405.000000000"),
+		Enabled: enabledYes,
+	})
+	if err != nil {
+		t.Fatalf("create all-failing provider: %v", err)
+	}
+	t.Cleanup(func() { deleteProviderFixture(t, ctx, failingProviderID) })
+	for _, protocol := range []string{ProtocolOpenAI, ProtocolAnthropic} {
+		if _, err = svc.CreateProviderEndpoint(ctx, ProviderEndpointSaveInput{
+			ProviderId: failingProviderID,
+			Protocol:   protocol,
+			BaseUrl:    failingServer.URL + "/v1",
+			SecretRef:  "unit-secret",
+			Enabled:    enabledYes,
+		}); err != nil {
+			t.Fatalf("create all-failing endpoint %s: %v", protocol, err)
+		}
+	}
+	if _, err = svc.SyncModels(ctx, ModelSyncInput{ProviderId: failingProviderID}); err == nil {
+		t.Fatalf("expected all-failing sync to return an error")
 	}
 }
 

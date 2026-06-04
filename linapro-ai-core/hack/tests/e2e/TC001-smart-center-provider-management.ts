@@ -4,6 +4,7 @@ import { SmartCenterPage } from "../pages/SmartCenterPage";
 import {
   bindTier,
   clearTier,
+  createProviderModel,
   createProviderWithModel,
   deleteProvider,
   withAdminApi,
@@ -19,26 +20,58 @@ test.describe("TC-1 智能中心供应商管理", () => {
       const suffix = Date.now();
       const fixture = await createProviderWithModel(api, {
         anthropicEndpointUrl: `https://api.anthropic.example.com/v1/workspaces/${suffix}/long-provider-endpoint-url-rendering-check`,
-        modelName: `e2e-model-${suffix}-gpt-4-1-mini-long-context-rendering-check`,
+        modelName: "gpt-4o",
         openaiEndpointUrl: `https://api.openai.example.com/v1/organizations/${suffix}/projects/long-provider-endpoint-url-rendering-check`,
         providerName: `E2E Provider ${suffix}`,
         secretRef: "sk-1234567890",
         websiteUrl: `https://example.com/e2e-provider-${suffix}`,
       });
-      const multiProtocolModelName = `e2e-ui-model-${suffix}-multi-protocol`;
+      const multiProtocolModelName = "mimo";
+      const managedModelName = `e2e-managed-model-${suffix}`;
+      const renamedManagedModelName = `e2e-managed-model-renamed-${suffix}`;
+      const overflowModelNames = [
+        "claude-3-5",
+        "o4-mini",
+        "qwen3",
+        "deepseek-v3",
+        "gpt-4.1",
+        "gemini-2.5",
+        "mistral",
+        "llama-4",
+      ];
       try {
+        await createProviderModel(api, fixture.providerId, {
+          capabilityMethod: "generate",
+          capabilityType: "text",
+          endpointId: fixture.endpointId,
+          maxOutputTokens: 384,
+          modelName: managedModelName,
+          protocol: "openai",
+        });
+        for (const modelName of overflowModelNames) {
+          await createProviderModel(api, fixture.providerId, {
+            capabilityMethod: "generate",
+            capabilityType: "text",
+            endpointId: fixture.endpointId,
+            maxOutputTokens: 384,
+            modelName,
+            protocol: "openai",
+          });
+        }
         const smartCenter = new SmartCenterPage(adminPage);
         await smartCenter.gotoProviders();
+        await smartCenter.assertProviderTabs();
         await smartCenter.assertCreateProviderDrawerChineseTranslations();
         await smartCenter.searchProvider(fixture.providerName);
         await smartCenter.assertProviderVisible(fixture.providerName);
         await smartCenter.assertProviderListProjection(fixture);
         await smartCenter.assertProviderSyncActions({
           providerName: fixture.providerName,
-          syncAnthropic: true,
-          syncOpenAI: true,
         });
         await smartCenter.captureEvidence("TC001-provider-list-layout");
+        await smartCenter.assertProviderRowAddModelDefaults(
+          fixture.providerName,
+        );
         await smartCenter.assertCreateModelDrawerChineseTranslations(
           fixture.providerName,
         );
@@ -47,6 +80,21 @@ test.describe("TC-1 智能中心供应商管理", () => {
           providerName: fixture.providerName,
           protocolLabels: [/OpenAI/i, /Anthropic/i],
         });
+        await smartCenter.assertModelManagementProjection({
+          endpointUrl: fixture.openaiEndpointUrl,
+          modelName: managedModelName,
+          protocolLabel: /OpenAI/i,
+          providerName: fixture.providerName,
+        });
+        await smartCenter.renameModelFromModelManagement({
+          modelName: managedModelName,
+          nextModelName: renamedManagedModelName,
+        });
+        await smartCenter.deleteModelFromModelManagement(
+          renamedManagedModelName,
+        );
+        await smartCenter.openProviderManagementTab();
+        await smartCenter.searchProvider(fixture.providerName);
         await smartCenter.deleteModelFromProviderRow(
           fixture.providerName,
           fixture.modelName,

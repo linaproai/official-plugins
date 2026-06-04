@@ -44,9 +44,9 @@ type CreateModelRes struct {
 
 // SyncModelsReq defines the request for synchronizing provider models.
 type SyncModelsReq struct {
-	g.Meta     `path:"/ai/providers/{providerId}/models/sync" method:"post" tags:"AI Provider Models" summary:"Sync provider models" dc:"Synchronize public model metadata from the provider protocol. Failures keep existing manual and referenced models unchanged." permission:"ai:provider:update"`
+	g.Meta     `path:"/ai/providers/{providerId}/models/sync" method:"post" tags:"AI Provider Models" summary:"Sync provider models" dc:"Synchronize public model metadata from enabled provider endpoints. When protocol is omitted, all enabled syncable endpoints are queried and partial endpoint failures keep successful endpoint results." permission:"ai:provider:update"`
 	ProviderId int64  `json:"providerId" v:"required|min:1" dc:"Provider ID" eg:"1"`
-	Protocol   string `json:"protocol" v:"required|in:openai,anthropic,voyage,openai-compatible,anthropic-compatible" dc:"Protocol used for model synchronization: openai, anthropic, voyage, openai-compatible, or anthropic-compatible" eg:"openai"`
+	Protocol   string `json:"protocol" v:"in:openai,anthropic,voyage,openai-compatible,anthropic-compatible" dc:"Optional protocol used for narrow model synchronization; empty queries all enabled syncable endpoints" eg:"openai"`
 }
 
 // SyncModelsRes defines the response for synchronizing provider models.

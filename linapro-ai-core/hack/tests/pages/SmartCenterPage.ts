@@ -98,6 +98,50 @@ export class SmartCenterPage {
     await waitForTableReady(this.page);
   }
 
+  async assertProviderTabs() {
+    const tabs = this.page.getByTestId("ai-provider-management-tabs");
+    await expect(tabs).toBeVisible();
+    await expect(
+      tabs.getByRole("tab", { name: /供应商管理|Provider Management/i }),
+    ).toBeVisible();
+    await expect(
+      tabs.getByRole("tab", { name: /模型管理|Model Management/i }),
+    ).toBeVisible();
+    await this.assertVisibleIcon("ai-provider-tab-icon-providers");
+    await this.assertVisibleIcon("ai-provider-tab-icon-models");
+    await expect(
+      this.page.getByText(/plugin\.linapro-ai-core\.provider\.tabs/),
+    ).toHaveCount(0);
+    await this.assertProviderPageHeightStable();
+  }
+
+  private async assertVisibleIcon(testId: string) {
+    const icon = this.page.getByTestId(testId);
+    await expect(icon).toBeVisible();
+    await expect
+      .poll(async () =>
+        icon.evaluate((node) => {
+          const box = node.getBoundingClientRect();
+          return box.width > 0 && box.height > 0;
+        }),
+      )
+      .toBe(true);
+  }
+
+  async openProviderManagementTab() {
+    await this.page
+      .getByRole("tab", { name: /供应商管理|Provider Management/i })
+      .click();
+    await this.waitForActiveTabTable();
+  }
+
+  async openModelManagementTab() {
+    await this.page
+      .getByRole("tab", { name: /模型管理|Model Management/i })
+      .click();
+    await this.waitForActiveTabTable();
+  }
+
   async gotoTiers() {
     await this.page.goto(workspacePath("/ai/tiers"));
     await waitForTableReady(this.page);
@@ -219,7 +263,9 @@ export class SmartCenterPage {
     websiteUrl: string;
   }) {
     await expect(
-      this.page.getByRole("button", { name: /新\s*增\s*模\s*型|Add Model/i }),
+      this.page
+        .getByRole("button", { name: /新\s*增\s*模\s*型|Add Model/i })
+        .first(),
     ).toBeVisible();
     await expect(
       this.page.getByRole("button", {
@@ -269,10 +315,12 @@ export class SmartCenterPage {
       .first()
       .locator(".vxe-body--column:visible")
       .nth(endpointHeaderIndex);
-    const actionRow = await this.providerActionRow(input.providerName);
-    const modelRow = modelCell.locator(".ai-provider-model-row").first();
+    const modelRows = modelCell.locator(".ai-provider-model-row");
+    await expect(modelRows).toHaveCount(1);
+    const modelRow = modelRows.first();
     await expect(modelRow).toBeVisible();
     const modelText = modelCell.locator(".ai-provider-model-name").first();
+    const modelTag = modelCell.locator(".ai-provider-model-tag").first();
     await expect(modelText).toHaveText(input.modelName);
     await expect
       .poll(async () => {
@@ -285,34 +333,49 @@ export class SmartCenterPage {
     const [
       modelCellBox,
       endpointCellBox,
-      actionCellBox,
+      modelListLayout,
       modelRowLayout,
+      modelTagStyle,
       modelTextStyle,
     ] = await Promise.all([
       modelCell.evaluate((node) => {
         const box = node.getBoundingClientRect();
-        return { right: box.right };
+        return { right: box.right, width: box.width };
       }),
       endpointCell.evaluate((node) => {
         const box = node.getBoundingClientRect();
-        return { left: box.left, right: box.right };
+        return { left: box.left, right: box.right, width: box.width };
       }),
-      actionRow.locator(".ai-provider-action-list").evaluate((node) => {
-        const box = node.getBoundingClientRect();
-        return { left: box.left };
+      modelCell.locator(".ai-provider-model-list").evaluate((node) => {
+        const style = window.getComputedStyle(node);
+        return {
+          alignItems: style.alignItems,
+          flexDirection: style.flexDirection,
+        };
       }),
       modelRow.evaluate((node) => {
         const box = node.getBoundingClientRect();
         const style = window.getComputedStyle(node);
         return {
+          columnGap: Number.parseFloat(style.columnGap),
           flexWrap: style.flexWrap,
           overflowX: style.overflowX,
           right: box.right,
+          rowGap: Number.parseFloat(style.rowGap),
+        };
+      }),
+      modelTag.evaluate((node) => {
+        const style = window.getComputedStyle(node);
+        return {
+          display: style.display,
+          fontSize: Number.parseFloat(style.fontSize),
+          paddingLeft: Number.parseFloat(style.paddingLeft),
         };
       }),
       modelText.evaluate((node) => {
         const style = window.getComputedStyle(node);
         return {
+          fontSize: Number.parseFloat(style.fontSize),
           overflow: style.overflow,
           textOverflow: style.textOverflow,
           whiteSpace: style.whiteSpace,
@@ -320,15 +383,25 @@ export class SmartCenterPage {
         };
       }),
     ]);
+    expect(modelListLayout.flexDirection).toBe("column");
+    expect(modelListLayout.alignItems).toBe("flex-start");
     expect(modelRowLayout.flexWrap).toBe("wrap");
+    expect(modelRowLayout.columnGap).toBeLessThanOrEqual(6);
+    expect(modelRowLayout.rowGap).toBeLessThanOrEqual(6);
     expect(["auto", "scroll"]).not.toContain(modelRowLayout.overflowX);
+    expect(["flex", "inline-flex"]).toContain(modelTagStyle.display);
+    expect(modelTagStyle.fontSize).toBeLessThanOrEqual(12);
+    expect(modelTagStyle.paddingLeft).toBeLessThanOrEqual(8);
+    expect(modelTextStyle.fontSize).toBeLessThanOrEqual(12);
     expect(modelTextStyle.whiteSpace).toBe("normal");
     expect(modelTextStyle.overflow).not.toBe("hidden");
     expect(modelTextStyle.textOverflow).not.toBe("ellipsis");
     expect(modelTextStyle.wordBreak).toBe("break-all");
     expect(modelRowLayout.right).toBeLessThanOrEqual(modelCellBox.right + 1);
     expect(modelCellBox.right).toBeLessThanOrEqual(endpointCellBox.left + 1);
-    expect(endpointCellBox.right).toBeLessThanOrEqual(actionCellBox.left + 1);
+    expect(modelCellBox.width).toBeGreaterThanOrEqual(400);
+    expect(endpointCellBox.width).toBeGreaterThanOrEqual(400);
+    await this.assertProviderModelListFullyVisible(modelCell);
     const deleteModelButton = row.first().getByRole("button", {
       name: new RegExp(
         `删\\s*除.*${escapeRegExp(input.modelName)}|Delete.*${escapeRegExp(input.modelName)}`,
@@ -462,6 +535,40 @@ export class SmartCenterPage {
     await expect(row.first()).toContainText(input.maskedApiKey);
   }
 
+  private async assertProviderModelListFullyVisible(
+    modelCell: ReturnType<Page["locator"]>,
+  ) {
+    await expect(modelCell.locator(".ai-provider-model-toggle")).toHaveCount(0);
+    await expect(
+      modelCell.locator(".ai-provider-model-list-content"),
+    ).toHaveCount(0);
+    const modelList = modelCell.locator(".ai-provider-model-list");
+    const tags = modelCell.locator(".ai-provider-model-tag");
+    await expect
+      .poll(async () => tags.count())
+      .toBeGreaterThanOrEqual(10);
+    await expect(tags.first()).toBeVisible();
+    const listMetrics = await modelList.evaluate((node) => {
+      const box = node.getBoundingClientRect();
+      const style = window.getComputedStyle(node);
+      return {
+        height: box.height,
+        maxHeight: style.maxHeight,
+        overflow: style.overflow,
+      };
+    });
+    expect(listMetrics.height).toBeGreaterThan(104);
+    expect(listMetrics.maxHeight).toBe("none");
+    expect(listMetrics.overflow).toBe("visible");
+    const hiddenTagCount = await tags.evaluateAll((nodes) =>
+      nodes.filter((node) => {
+        const box = node.getBoundingClientRect();
+        return box.width === 0 || box.height === 0;
+      }).length,
+    );
+    expect(hiddenTagCount).toBe(0);
+  }
+
   async captureEvidence(name: string) {
     const dir = path.join(repoRoot, "temp");
     mkdirSync(dir, { recursive: true });
@@ -570,23 +677,41 @@ export class SmartCenterPage {
     const modelTags = modelCell.locator(".ai-provider-model-tag", {
       hasText: input.modelName,
     });
+    await expect(modelCell.locator(".ai-provider-model-toggle")).toHaveCount(0);
     await expect(modelTags).toHaveCount(input.protocolLabels.length);
     for (const label of input.protocolLabels) {
       await expect(modelTags.filter({ hasText: label }).first()).toBeVisible();
     }
+    const maxTagsOnOneLine = await modelCell
+      .locator(".ai-provider-model-tag")
+      .evaluateAll((nodes) => {
+        const groups = new Map<number, number>();
+        for (const node of nodes) {
+          const top = Math.round(node.getBoundingClientRect().top);
+          groups.set(top, (groups.get(top) || 0) + 1);
+        }
+        return Math.max(...groups.values());
+      });
+    expect(maxTagsOnOneLine).toBeGreaterThanOrEqual(2);
   }
 
-  async assertProviderSyncActions(input: {
-    providerName: string;
-    syncAnthropic?: boolean;
-    syncOpenAI?: boolean;
-  }) {
+  async assertProviderSyncActions(input: { providerName: string }) {
     const actionRow = await this.providerActionRow(input.providerName);
     const primaryActions = actionRow.locator(".ai-provider-action-primary");
-    const syncActions = actionRow.locator(".ai-provider-action-sync");
+    const actionRows = actionRow.locator(".ai-provider-action-row");
     await expect(primaryActions).toBeVisible();
     await expect(
       actionRow.getByRole("button", { name: /端\s*点|Endpoints/i }),
+    ).toHaveCount(0);
+    await expect(
+      actionRow.getByRole("button", {
+        name: /同步 OpenAI 模型|Sync OpenAI Models/i,
+      }),
+    ).toHaveCount(0);
+    await expect(
+      actionRow.getByRole("button", {
+        name: /同步 Anthropic 模型|Sync Anthropic Models/i,
+      }),
     ).toHaveCount(0);
     const editButton = primaryActions.getByRole("button", {
       name: /编\s*辑|Edit/i,
@@ -596,21 +721,18 @@ export class SmartCenterPage {
     });
     await expect(editButton).toBeVisible();
     await expect(deleteButton).toBeVisible();
-    const openaiSync = syncActions.getByRole("button", {
-      name: /同步 OpenAI 模型|Sync OpenAI Models/i,
-    });
-    const anthropicSync = syncActions.getByRole("button", {
-      name: /同步 Anthropic 模型|Sync Anthropic Models/i,
-    });
-    if (input.syncOpenAI) {
-      await expect(openaiSync).toBeVisible();
-    }
-    if (input.syncAnthropic) {
-      await expect(anthropicSync).toBeVisible();
-    }
+    await expect(actionRows).toHaveCount(2);
+    const addModelButton = actionRows
+      .nth(0)
+      .getByRole("button", { name: /新\s*增\s*模\s*型|Add Model/i });
+    const syncButton = actionRows
+      .nth(1)
+      .getByRole("button", { name: /同步模型|Sync Models/i });
+    await expect(addModelButton).toBeVisible();
+    await expect(syncButton).toBeVisible();
     const actionList = actionRow.locator(".ai-provider-action-list");
     await expect(actionList).toBeVisible();
-    const [editBox, deleteBox, primaryBox, actionListGap, syncActionGap] =
+    const [editBox, deleteBox, primaryBox, addBox, syncBox, actionListLayout] =
       await Promise.all([
         editButton.evaluate((node) => {
           const box = node.getBoundingClientRect();
@@ -622,34 +744,65 @@ export class SmartCenterPage {
         }),
         primaryActions.evaluate((node) => {
           const box = node.getBoundingClientRect();
-          return { bottom: box.bottom };
+          const style = window.getComputedStyle(node);
+          return {
+            bottom: box.bottom,
+            centerX: box.left + box.width / 2,
+            justifyContent: style.justifyContent,
+          };
         }),
-        actionList.evaluate((node) =>
-          Number.parseFloat(window.getComputedStyle(node).rowGap),
-        ),
-        syncActions.evaluate((node) =>
-          Number.parseFloat(window.getComputedStyle(node).rowGap),
-        ),
+        addModelButton.evaluate((node) => {
+          const box = node.getBoundingClientRect();
+          const style = window.getComputedStyle(node);
+          return {
+            backgroundColor: style.backgroundColor,
+            borderColor: style.borderColor,
+            centerX: box.left + box.width / 2,
+            color: style.color,
+            top: box.top,
+          };
+        }),
+        syncButton.evaluate((node) => {
+          const box = node.getBoundingClientRect();
+          const style = window.getComputedStyle(node);
+          return {
+            backgroundColor: style.backgroundColor,
+            borderColor: style.borderColor,
+            centerX: box.left + box.width / 2,
+            color: style.color,
+            top: box.top,
+          };
+        }),
+        actionList.evaluate((node) => {
+          const listBox = node.getBoundingClientRect();
+          const cellBox = node.closest(".vxe-cell")?.getBoundingClientRect();
+          const style = window.getComputedStyle(node);
+          return {
+            alignItems: style.alignItems,
+            centerDelta: cellBox
+              ? Math.abs(
+                  listBox.left +
+                    listBox.width / 2 -
+                    (cellBox.left + cellBox.width / 2),
+                )
+              : Number.POSITIVE_INFINITY,
+            rowGap: Number.parseFloat(style.rowGap),
+          };
+        }),
       ]);
     expect(deleteBox.left).toBeGreaterThan(editBox.left);
     expect(Math.abs(deleteBox.top - editBox.top)).toBeLessThan(2);
-    expect(actionListGap).toBeGreaterThanOrEqual(8);
-    expect(syncActionGap).toBeGreaterThanOrEqual(6);
-    if (input.syncOpenAI && input.syncAnthropic) {
-      const [openaiBox, anthropicBox] = await Promise.all([
-        openaiSync.evaluate((node) => {
-          const box = node.getBoundingClientRect();
-          return { left: box.left, top: box.top };
-        }),
-        anthropicSync.evaluate((node) => {
-          const box = node.getBoundingClientRect();
-          return { left: box.left, top: box.top };
-        }),
-      ]);
-      expect(openaiBox.top).toBeGreaterThanOrEqual(primaryBox.bottom - 1);
-      expect(openaiBox.top).toBeLessThan(anthropicBox.top);
-      expect(Math.abs(openaiBox.left - anthropicBox.left)).toBeLessThan(2);
-    }
+    expect(actionListLayout.alignItems).toBe("center");
+    expect(actionListLayout.centerDelta).toBeLessThanOrEqual(2);
+    expect(actionListLayout.rowGap).toBeGreaterThanOrEqual(8);
+    expect(primaryBox.justifyContent).toBe("center");
+    expect(addBox.top).toBeGreaterThanOrEqual(primaryBox.bottom - 1);
+    expect(syncBox.top).toBeGreaterThan(addBox.top);
+    expect(Math.abs(addBox.centerX - syncBox.centerX)).toBeLessThan(2);
+    expect(Math.abs(primaryBox.centerX - addBox.centerX)).toBeLessThan(2);
+    expect(syncBox.color).toBe(addBox.color);
+    expect(syncBox.borderColor).toBe(addBox.borderColor);
+    expect(syncBox.backgroundColor).toBe(addBox.backgroundColor);
     await expect
       .poll(async () =>
         actionList.evaluate((node) => {
@@ -659,6 +812,135 @@ export class SmartCenterPage {
         }),
       )
       .toBe(true);
+  }
+
+  async assertProviderRowAddModelDefaults(providerName: string) {
+    const actionRow = await this.providerActionRow(providerName);
+    await actionRow
+      .getByRole("button", { name: /新\s*增\s*模\s*型|Add Model/i })
+      .click();
+    await waitForDialogReady(this.dialog);
+    await expect(
+      this.dialog.getByText(/新\s*增\s*模\s*型|Add Model/i).first(),
+    ).toBeVisible();
+    const providerField = this.dialog
+      .locator(".relative.flex", { hasText: /供应商|Provider/i })
+      .first();
+    await expect(
+      providerField.locator(".ant-select-selection-item").first(),
+    ).toHaveText(providerName);
+    await this.captureEvidence("TC001-provider-row-add-model-default");
+    await this.cancelDrawer();
+  }
+
+  async assertProviderPageHeightStable() {
+    const samples: Array<{ body: number; tabs: number }> = [];
+    for (let index = 0; index < 6; index += 1) {
+      await this.page.waitForTimeout(200);
+      samples.push(
+        await this.page.evaluate(() => {
+          const tabs = document.querySelector(
+            '[data-testid="ai-provider-management-tabs"]',
+          );
+          return {
+            body: document.documentElement.scrollHeight,
+            tabs: Math.round(tabs?.getBoundingClientRect().height || 0),
+          };
+        }),
+      );
+    }
+    const bodyHeights = samples.map((item) => item.body);
+    const tabHeights = samples.map((item) => item.tabs);
+    const bodyGrowth = bodyHeights.at(-1)! - bodyHeights[0]!;
+    const tabGrowth = tabHeights.at(-1)! - tabHeights[0]!;
+    expect(bodyGrowth).toBeLessThanOrEqual(8);
+    expect(tabGrowth).toBeLessThanOrEqual(8);
+    expect(
+      Math.max(...bodyHeights) - Math.min(...bodyHeights),
+    ).toBeLessThanOrEqual(16);
+    expect(
+      Math.max(...tabHeights) - Math.min(...tabHeights),
+    ).toBeLessThanOrEqual(16);
+  }
+
+  async assertModelManagementProjection(input: {
+    endpointUrl: string;
+    modelName: string;
+    protocolLabel: RegExp;
+    providerName: string;
+  }) {
+    await this.openModelManagementTab();
+    await expect(
+      this.activeTabPane().getByRole("button", {
+        name: /新\s*增\s*模\s*型|Add Model/i,
+      }),
+    ).toBeVisible();
+    await this.searchModel(input.modelName);
+    const row = this.modelMainRow(input.modelName);
+    await expect(row).toBeVisible();
+    await expect(row).toContainText(input.providerName);
+    await expect(row).toContainText(input.protocolLabel);
+    await expect(row).toContainText(input.endpointUrl);
+    const endpointHeaderIndex = await this.modelHeaderIndex(/端点|Endpoint/i);
+    const endpointCell = row
+      .locator(".vxe-body--column:visible")
+      .nth(endpointHeaderIndex);
+    await expect
+      .poll(async () =>
+        endpointCell.evaluate((node) => node.getBoundingClientRect().width),
+      )
+      .toBeGreaterThanOrEqual(460);
+    await expect(this.page.getByText(/plugin\.linapro-ai-core/)).toHaveCount(0);
+  }
+
+  async renameModelFromModelManagement(input: {
+    modelName: string;
+    nextModelName: string;
+  }) {
+    await this.openModelManagementTab();
+    await this.searchModel(input.modelName);
+    const actionRow = await this.modelActionRow(input.modelName);
+    await actionRow.getByRole("button", { name: /编\s*辑|Edit/i }).click();
+    await waitForDialogReady(this.dialog);
+    await expect(
+      this.dialog.getByText(/编\s*辑\s*模\s*型|Edit Model/i).first(),
+    ).toBeVisible();
+    await this.fillModel({ modelName: input.nextModelName });
+    const updateResponse = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === "PUT" &&
+        /\/x\/linapro-ai-core\/api\/v1\/ai\/models\/\d+$/.test(response.url()),
+      { timeout: 20_000 },
+    );
+    await this.saveModel();
+    const response = await updateResponse;
+    expect(response.ok(), `更新模型响应状态: ${response.status()}`).toBe(true);
+    await expect(this.dialog).toBeHidden({ timeout: 20_000 });
+    await waitForBusyIndicatorsToClear(this.page);
+    await this.searchModel(input.nextModelName);
+    await expect(this.modelMainRow(input.nextModelName)).toBeVisible();
+  }
+
+  async deleteModelFromModelManagement(modelName: string) {
+    await this.openModelManagementTab();
+    await this.searchModel(modelName);
+    const actionRow = await this.modelActionRow(modelName);
+    const deleteResponse = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === "DELETE" &&
+        /\/x\/linapro-ai-core\/api\/v1\/ai\/models\/\d+$/.test(response.url()),
+      { timeout: 20_000 },
+    );
+    await actionRow.getByRole("button", { name: /删\s*除|Delete/i }).click();
+    await this.page
+      .locator(".ant-popover")
+      .getByRole("button", { name: /确\s*定|OK/i })
+      .click();
+    const response = await deleteResponse;
+    expect(response.ok(), `删除模型响应状态: ${response.status()}`).toBe(true);
+    await waitForBusyIndicatorsToClear(this.page);
+    await this.searchModel(modelName);
+    await expect(this.modelMainRow(modelName)).toBeHidden({ timeout: 10_000 });
   }
 
   private async assertEndpointBadgeLayout(
@@ -949,11 +1231,9 @@ export class SmartCenterPage {
   }
 
   async searchProvider(name: string) {
-    await this.page
-      .getByLabel(/供应商|Provider/i)
-      .first()
-      .fill(name);
-    await this.page
+    const pane = this.activeTabPane();
+    await pane.getByRole("textbox").first().fill(name);
+    await pane
       .getByRole("button", { name: /搜\s*索|Search/i })
       .first()
       .click();
@@ -1580,6 +1860,64 @@ export class SmartCenterPage {
       document.documentElement.scrollLeft = 0;
       document.body.scrollLeft = 0;
     });
+  }
+
+  private activeTabPane() {
+    return this.page.locator(".ant-tabs-tabpane-active").first();
+  }
+
+  private async waitForActiveTabTable(timeout = 10_000) {
+    await this.activeTabPane()
+      .locator(".vxe-table:visible")
+      .first()
+      .waitFor({ state: "visible", timeout });
+    await waitForBusyIndicatorsToClear(this.page);
+  }
+
+  private async searchModel(name: string) {
+    const pane = this.activeTabPane();
+    await pane.getByRole("textbox").first().fill(name);
+    await pane
+      .getByRole("button", { name: /搜\s*索|Search/i })
+      .first()
+      .click();
+    await waitForBusyIndicatorsToClear(this.page);
+  }
+
+  private async modelHeaderIndex(header: RegExp) {
+    const headers = this.activeTabPane().locator(
+      ".vxe-table--main-wrapper .vxe-header--column:visible",
+    );
+    const count = await headers.count();
+    for (let index = 0; index < count; index += 1) {
+      const text = (await headers.nth(index).innerText()).trim();
+      if (header.test(text)) {
+        return index;
+      }
+    }
+    throw new Error(`未找到模型表列: ${header}`);
+  }
+
+  private modelMainRow(modelName: string) {
+    return this.activeTabPane()
+      .locator(".vxe-table--main-wrapper .vxe-body--row:visible", {
+        hasText: modelName,
+      })
+      .first();
+  }
+
+  private async modelActionRow(modelName: string) {
+    const row = this.modelMainRow(modelName);
+    await row.waitFor({ state: "visible", timeout: 10_000 });
+    const rowID = await row.getAttribute("rowid");
+    expect(rowID, `未找到模型行 rowid: ${modelName}`).toBeTruthy();
+    const actionRow = this.activeTabPane()
+      .locator(
+        `.vxe-table--fixed-right-wrapper .vxe-body--row[rowid="${cssAttributeValue(rowID || "")}"]:visible`,
+      )
+      .first();
+    await actionRow.waitFor({ state: "visible", timeout: 10_000 });
+    return actionRow;
   }
 
   private providerMainRow(providerName: string) {

@@ -137,6 +137,50 @@
               },
               "schema": { "dc": "删除一个未被 AI 能力档位绑定引用的模型" }
             },
+            "ListReq": {
+              "fields": {
+                "capabilityMethod": { "dc": "可选能力方法筛选，例如 generate、create、transcribe、analyze、moderate 或 operation.get" },
+                "capabilityType": { "dc": "可选能力类型筛选，例如 text、image、embedding、audio、vision、document、safety 或 video" },
+                "enabled": { "dc": "可选启用状态筛选：0=停用 1=启用" },
+                "keyword": { "dc": "可选模型名称关键词筛选" },
+                "pageNum": { "dc": "页码" },
+                "pageSize": { "dc": "每页数量，最多 100 条" },
+                "providerId": { "dc": "可选供应商ID筛选；0 表示全部供应商" }
+              },
+              "meta": {
+                "dc": "按页查询平台智能中心的所有 AI 模型，并通过批量装配返回供应商和端点投影",
+                "summary": "查询 AI 模型",
+                "tags": "AI 模型"
+              },
+              "schema": { "dc": "按页查询平台智能中心的所有 AI 模型，并通过批量装配返回供应商和端点投影" }
+            },
+            "ListRes": {
+              "fields": {
+                "list": { "dc": "AI 模型列表" },
+                "total": { "dc": "符合筛选条件的 AI 模型总数" }
+              }
+            },
+            "ModelItem": {
+              "fields": {
+                "capabilityMethod": { "dc": "投影的模型能力声明中的能力方法，例如 generate、create、transcribe、analyze、moderate 或 operation.get" },
+                "capabilityType": { "dc": "投影的模型能力声明中的能力类型，例如 text、image、embedding、audio、vision、document、safety 或 video" },
+                "createdAt": { "dc": "创建时间，Unix 毫秒时间戳" },
+                "enabled": { "dc": "启用标记：0=停用 1=启用" },
+                "endpointBaseUrl": { "dc": "协议端点基础地址" },
+                "endpointId": { "dc": "该能力投影解析出的供应商端点ID；未覆盖时为模型默认端点" },
+                "id": { "dc": "模型ID" },
+                "maxInputTokens": { "dc": "投影能力声明的最大输入 token 数，0 表示未指定" },
+                "maxOutputTokens": { "dc": "投影能力声明的最大输出 token 数，0 表示未指定" },
+                "modelName": { "dc": "供应商模型名称" },
+                "protocol": { "dc": "供应商协议：openai、anthropic、voyage、openai-compatible 或 anthropic-compatible" },
+                "providerId": { "dc": "所属供应商ID" },
+                "providerName": { "dc": "所属供应商显示名称" },
+                "source": { "dc": "模型来源：manual 或 api" },
+                "supportedEfforts": { "dc": "投影能力声明支持的 thinking effort：low、medium、high、xhigh、max" },
+                "supportsThinking": { "dc": "投影能力声明是否支持 thinking effort：0=不支持 1=支持" },
+                "updatedAt": { "dc": "更新时间，Unix 毫秒时间戳" }
+              }
+            },
             "UpdateReq": {
               "fields": {
                 "endpointId": { "dc": "默认供应商端点ID；能力声明没有端点覆盖时使用该端点" },
@@ -455,15 +499,15 @@
             },
             "SyncModelsReq": {
               "fields": {
-                "protocol": { "dc": "用于模型同步的协议：openai、anthropic、voyage、openai-compatible 或 anthropic-compatible" },
+                "protocol": { "dc": "可选窄范围模型同步协议；为空时查询该供应商全部已启用且可同步的端点" },
                 "providerId": { "dc": "供应商ID" }
               },
               "meta": {
-                "dc": "从供应商协议同步公开模型元数据；失败时保留已有手工模型和被引用模型",
+                "dc": "从供应商已启用端点同步公开模型元数据；未传协议时会聚合全部可同步端点，单个端点失败不会回滚其他端点的成功结果",
                 "summary": "同步供应商模型",
                 "tags": "AI 供应商模型"
               },
-              "schema": { "dc": "从供应商协议同步公开模型元数据；失败时保留已有手工模型和被引用模型" }
+              "schema": { "dc": "从供应商已启用端点同步公开模型元数据；未传协议时会聚合全部可同步端点，单个端点失败不会回滚其他端点的成功结果" }
             },
             "SyncModelsRes": {
               "fields": {

@@ -107,14 +107,17 @@ type ProviderEndpointService interface {
 type ModelService interface {
 	// ListModels returns one bounded provider-owned model page using database-side filters.
 	ListModels(ctx context.Context, in ModelListInput) (*ModelListOutput, error)
+	// ListAllModels returns one bounded platform model page with provider and endpoint
+	// projections batch-assembled for model-dimension management.
+	ListAllModels(ctx context.Context, in ModelGlobalListInput) (*ModelListOutput, error)
 	// CreateModel creates one provider-owned AI model identity row and its initial capability declaration.
 	CreateModel(ctx context.Context, in ModelSaveInput) (int64, error)
 	// UpdateModel updates one provider-owned AI model identity row. Capability declarations are maintained separately.
 	UpdateModel(ctx context.Context, in ModelSaveInput) error
 	// DeleteModel soft-deletes one model after verifying no active tier binding references it.
 	DeleteModel(ctx context.Context, id int64) error
-	// SyncModels imports public model metadata from the selected provider protocol
-	// while preserving existing manual and referenced models on failure.
+	// SyncModels imports public model metadata from enabled provider endpoints.
+	// Endpoint failures are tolerated when at least one endpoint returns models.
 	SyncModels(ctx context.Context, in ModelSyncInput) (*ModelSyncOutput, error)
 }
 
@@ -270,6 +273,17 @@ type ModelListOutput struct {
 	Total int
 }
 
+// ModelGlobalListInput defines model-dimension list filters.
+type ModelGlobalListInput struct {
+	PageNum          int
+	PageSize         int
+	Keyword          string
+	ProviderId       int64
+	CapabilityType   string
+	CapabilityMethod string
+	Enabled          *int
+}
+
 // ModelSaveInput defines model identity fields plus create-time initial capability fields.
 type ModelSaveInput struct {
 	Id               int64
@@ -291,7 +305,9 @@ type ModelSaveInput struct {
 type ModelItem struct {
 	Id               int64
 	ProviderId       int64
+	ProviderName     string
 	EndpointId       int64
+	EndpointBaseUrl  string
 	CapabilityType   string
 	CapabilityMethod string
 	ModelName        string
