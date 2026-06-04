@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Model, Provider, Tier } from "./ai-client";
+import type { Model, Provider, Tier, TierTestResult } from "./ai-client";
 import type { VbenFormSchema } from "#/adapter/form";
 
 import { computed, ref } from "vue";
@@ -32,9 +32,13 @@ const tier = ref<Tier>();
 const providers = ref<Provider[]>([]);
 const models = ref<Model[]>([]);
 const testing = ref(false);
+const currentTestResult = ref<TierTestResult>();
 const defaultParamsInvalid = ref(false);
 const methodDefaultParamsJson = ref("{}");
 const title = computed(tierDrawerTitle);
+const currentTestLatency = computed(() =>
+  formatLatencyMs(currentTestResult.value?.latencyMs),
+);
 const methodDefaultScope = computed(() => {
   const capabilityType = tier.value?.capabilityType || "text";
   const capabilityMethod = tier.value?.capabilityMethod || "generate";
@@ -51,7 +55,53 @@ function modelLabel(model: Model) {
   const efforts = model.supportedEfforts?.length
     ? model.supportedEfforts.join(",")
     : $t("plugin.linapro-ai-core.effort.empty");
-  return `${model.modelName} / ${model.protocol} / ${efforts}`;
+  return `${model.modelName} / ${efforts}`;
+}
+
+function modelProtocolLabel(protocol: string) {
+  return protocol?.includes("anthropic")
+    ? "Anthropic"
+    : protocol?.includes("voyage")
+      ? "Voyage"
+      : "OpenAI";
+}
+
+function modelProtocolGroupKey(protocol: string) {
+  return protocol?.includes("anthropic")
+    ? "anthropic"
+    : protocol?.includes("voyage")
+      ? "voyage"
+      : "openai";
+}
+
+function buildModelOptionGroups(items: Model[]) {
+  const groups = new Map<string, Array<{ label: string; value: number }>>();
+  for (const item of items) {
+    const key = modelProtocolGroupKey(item.protocol);
+    const group = groups.get(key) || [];
+    group.push({ label: modelLabel(item), value: item.id });
+    groups.set(key, group);
+  }
+  const order = ["openai", "anthropic", "voyage"];
+  return [
+    ...order.filter((key) => groups.has(key)),
+    ...[...groups.keys()].filter((key) => !order.includes(key)),
+  ].map((key) => ({
+    label: modelProtocolLabel(key),
+    options: groups.get(key) || [],
+  }));
+}
+
+function formatLatencyMs(value: number | undefined) {
+  return `${Math.max(0, Math.round(Number(value || 0)))}ms`;
+}
+
+function resultMessage(result: TierTestResult, fallbackKey: string) {
+  const text =
+    result.errorSummary ||
+    $t(fallbackKey) ||
+    $t("plugin.linapro-ai-core.tier.messages.testFailed");
+  return `${text} (${formatLatencyMs(result.latencyMs)})`;
 }
 
 function supportsThinkingEffort() {
@@ -151,10 +201,9 @@ async function refreshModelOptions(providerId: number, resetModel = false) {
     {
       fieldName: "modelId",
       componentProps: {
-        options: models.value.map((item) => ({
-          label: modelLabel(item),
-          value: item.id,
-        })),
+        optionFilterProp: "label",
+        options: buildModelOptionGroups(models.value),
+        showSearch: true,
       },
     },
   ]);
@@ -258,12 +307,20 @@ async function handleTest() {
       thinkingEffort: values.defaultEffort,
       maxOutputTokens: 128,
     });
+    currentTestResult.value = result;
     if (result.status === "success") {
-      message.success($t("plugin.linapro-ai-core.tier.messages.testSuccess"));
+      message.success(
+        resultMessage(
+          result,
+          "plugin.linapro-ai-core.tier.messages.testSuccess",
+        ),
+      );
     } else {
       message.error(
-        result.errorSummary ||
-          $t("plugin.linapro-ai-core.tier.messages.testFailed"),
+        resultMessage(
+          result,
+          "plugin.linapro-ai-core.tier.messages.testFailed",
+        ),
       );
     }
     emit("reload");
@@ -280,6 +337,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
     drawerApi.setState({ loading: true });
     const data = drawerApi.getData<{ tier?: Tier }>();
     tier.value = data?.tier;
+    currentTestResult.value = undefined;
     formApi.updateSchema([
       {
         fieldName: "defaultEffort",
@@ -361,6 +419,14 @@ const [Drawer, drawerApi] = useVbenDrawer({
       </Form>
       <div class="flex justify-end">
         <Space>
+          <div
+            v-if="currentTestResult"
+            class="tier-current-test-result"
+            data-testid="ai-tier-current-test-result"
+          >
+            <span>{{ $t("plugin.linapro-ai-core.invocation.fields.latencyMs") }}</span>
+            <span>{{ currentTestLatency }}</span>
+          </div>
           <a-button :disabled="testing" :loading="testing" @click="handleTest">
             {{ $t("plugin.linapro-ai-core.tier.actions.testDraft") }}
           </a-button>
@@ -385,5 +451,24 @@ const [Drawer, drawerApi] = useVbenDrawer({
     "Courier New", monospace;
   font-size: 12px;
   line-height: 20px;
+}
+
+.tier-current-test-result {
+  align-items: center;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  color: hsl(var(--muted-foreground));
+  display: inline-flex;
+  font-size: 12px;
+  gap: 8px;
+  line-height: 22px;
+  padding: 0 10px;
+}
+
+.tier-current-test-result span:last-child {
+  color: hsl(var(--foreground));
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
 }
 </style>

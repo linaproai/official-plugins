@@ -4,9 +4,11 @@ import { SmartCenterPage } from "../pages/SmartCenterPage";
 import {
   bindTier,
   clearTier,
+  createProviderModel,
   createProviderWithModel,
   deleteProvider,
   deleteProviderRaw,
+  listProviderEndpoints,
   listMethodDefaults,
   listTiers,
   updateMethodDefault,
@@ -107,7 +109,50 @@ test.describe("TC-2 智能中心档位管理", () => {
     });
   });
 
-  test("TC-2c: 测试按钮请求中显示 loading 并禁止重复点击", async ({
+  test("TC-2c: 档位模型选择按供应商协议分组展示", async ({
+    adminPage,
+  }) => {
+    await withAdminApi(async (api) => {
+      const suffix = Date.now();
+      const anthropicModelName = `e2e-anthropic-tier-model-${suffix}`;
+      const openAIModelName = `e2e-openai-tier-model-${suffix}`;
+      const fixture = await createProviderWithModel(api, {
+        anthropicEndpointUrl: "http://127.0.0.1:65535/anthropic/v1",
+        modelName: openAIModelName,
+        providerName: `E2E Tier Group Provider ${suffix}`,
+      });
+      const endpoints = await listProviderEndpoints(api, fixture.providerId, {
+        protocol: "anthropic",
+      });
+      const anthropicEndpointId = Number(endpoints[0]?.id || 0);
+      expect(anthropicEndpointId).toBeGreaterThan(0);
+      await createProviderModel(api, fixture.providerId, {
+        capabilityMethod: "generate",
+        capabilityType: "text",
+        endpointId: anthropicEndpointId,
+        maxOutputTokens: 512,
+        modelName: anthropicModelName,
+        protocol: "anthropic",
+        supportedEfforts: ["low", "medium"],
+        supportsThinking: 1,
+      });
+
+      try {
+        const smartCenter = new SmartCenterPage(adminPage);
+        await smartCenter.gotoTiers();
+        await smartCenter.assertTierModelOptionsGrouped({
+          anthropicModelName,
+          openAIModelName,
+          providerName: fixture.providerName,
+          tierName: /基础|Basic/i,
+        });
+      } finally {
+        await deleteProvider(api, fixture.providerId).catch(() => {});
+      }
+    });
+  });
+
+  test("TC-2d: 测试按钮请求中显示 loading 并禁止重复点击", async ({
     adminPage,
   }) => {
     await withAdminApi(async (api) => {
@@ -163,6 +208,7 @@ test.describe("TC-2 智能中心档位管理", () => {
         await expect(
           adminPage.getByText("E2E delayed draft test").first(),
         ).toBeVisible();
+        await smartCenter.assertDraftTierCurrentTestLatency("0ms");
         await smartCenter.cancelDrawer();
       } finally {
         await adminPage.unroute(routePattern).catch(() => {});
@@ -172,7 +218,7 @@ test.describe("TC-2 智能中心档位管理", () => {
     });
   });
 
-  test("TC-2d: 不支持的 thinking effort 给出校验提示", async () => {
+  test("TC-2e: 不支持的 thinking effort 给出校验提示", async () => {
     await withAdminApi(async (api) => {
       const suffix = Date.now();
       const fixture = await createProviderWithModel(api, {
@@ -200,7 +246,7 @@ test.describe("TC-2 智能中心档位管理", () => {
     });
   });
 
-  test("TC-2e: 禁用档位保留已有供应商模型绑定", async () => {
+  test("TC-2f: 禁用档位保留已有供应商模型绑定", async () => {
     await withAdminApi(async (api) => {
       const suffix = Date.now();
       const fixture = await createProviderWithModel(api, {

@@ -258,6 +258,40 @@ func TestTierDraftTestDoesNotPersistBinding(t *testing.T) {
 	if count != 0 {
 		t.Fatalf("draft tier test persisted binding count=%d", count)
 	}
+	afterDraft := snapshotTier(t, ctx, svc, TierCodeStandard)
+	if afterDraft.tier.LastTestStatus != snapshot.tier.LastTestStatus ||
+		afterDraft.tier.LastTestLatencyMs != snapshot.tier.LastTestLatencyMs ||
+		afterDraft.tier.LastTestErrorSummary != snapshot.tier.LastTestErrorSummary ||
+		!sameOptionalTime(afterDraft.tier.LastTestAt, snapshot.tier.LastTestAt) {
+		t.Fatalf("draft tier test changed last test summary, before=%#v after=%#v", snapshot.tier, afterDraft.tier)
+	}
+
+	if err = svc.UpdateTier(ctx, TierUpdateInput{
+		Code:          TierCodeStandard,
+		ProviderId:    providerID,
+		ModelId:       modelID,
+		DefaultEffort: string(aitext.ThinkingEffortLow),
+		Enabled:       enabledYes,
+	}); err != nil {
+		t.Fatalf("save tier binding: %v", err)
+	}
+	beforeSavedTest := snapshotTier(t, ctx, svc, TierCodeStandard)
+	savedOut, err := svc.TestTier(ctx, TierTestInput{
+		Code:     TierCodeStandard,
+		Messages: []aitext.Message{{Role: aitext.MessageRoleUser, Content: "ping"}},
+	})
+	if err != nil {
+		t.Fatalf("test saved tier: %v", err)
+	}
+	if savedOut.Status != InvocationStatusSuccess || savedOut.ModelName != "draft-model" {
+		t.Fatalf("unexpected saved test output: %#v", savedOut)
+	}
+	afterSavedTest := snapshotTier(t, ctx, svc, TierCodeStandard)
+	if afterSavedTest.tier.LastTestStatus != InvocationStatusSuccess ||
+		afterSavedTest.tier.LastTestAt == nil ||
+		sameOptionalTime(afterSavedTest.tier.LastTestAt, beforeSavedTest.tier.LastTestAt) {
+		t.Fatalf("saved tier test did not update last test summary, before=%#v after=%#v", beforeSavedTest.tier, afterSavedTest.tier)
+	}
 }
 
 // TestTierTestAppliesProviderCallTimeout verifies tier tests cancel provider
@@ -304,6 +338,13 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
+}
+
+func sameOptionalTime(left *time.Time, right *time.Time) bool {
+	if left == nil || right == nil {
+		return left == nil && right == nil
+	}
+	return left.Equal(*right)
 }
 
 // TestTierCacheSharedRevisionInvalidatesPeerService verifies that one service

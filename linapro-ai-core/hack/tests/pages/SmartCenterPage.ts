@@ -184,6 +184,23 @@ export class SmartCenterPage {
     await expect(this.dialog.getByText("新增模型")).toBeVisible();
     await expect(this.dialog.getByText("供应商")).toBeVisible();
     await expect(this.dialog.getByText("模型名称")).toBeVisible();
+    await expect(this.dialog.getByText("支持的 Thinking Effort")).toBeHidden();
+    await this.assertModelThinkingEffortDisabledByDefault();
+    await this.assertModelDrawerLabelsSingleLine([
+      "供应商",
+      "端点",
+      "模型名称",
+      "协议",
+      "支持 Thinking",
+      "最大输入 Tokens",
+      "最大输出 Tokens",
+    ]);
+    await this.captureEvidence("TC001-create-model-drawer-default");
+    await this.assertModelProtocolOptions();
+    await this.enableModelThinkingEffort();
+    await expect(this.dialog.getByText("支持的 Thinking Effort")).toBeVisible();
+    await this.assertModelDrawerLabelsSingleLine(["支持的 Thinking Effort"]);
+    await this.captureEvidence("TC001-create-model-drawer-thinking-enabled");
     await this.dialog.getByLabel(/供应商|Provider/i).click();
     await this.page.getByTitle(providerName).click();
     await expect(this.dialog.getByTitle(providerName)).toBeVisible();
@@ -738,6 +755,73 @@ export class SmartCenterPage {
     await maxOutput.fill(data.maxOutputTokens || "256");
   }
 
+  private async assertModelProtocolOptions() {
+    await this.dialog
+      .locator(".relative.flex", { hasText: /协议|Protocol/i })
+      .first()
+      .locator(".ant-select-selector")
+      .click();
+    const dropdown = this.page.locator(".ant-select-dropdown:visible").last();
+    await expect(dropdown.getByTitle("OpenAI")).toBeVisible();
+    await expect(dropdown.getByTitle("Anthropic")).toBeVisible();
+    await expect(dropdown.getByTitle("OpenAI Compatible")).toHaveCount(0);
+    await expect(dropdown.getByTitle("Anthropic Compatible")).toHaveCount(0);
+    await expect(dropdown.getByTitle("Voyage")).toHaveCount(0);
+    await dropdown.getByTitle("OpenAI").click();
+    await dropdown
+      .waitFor({ state: "hidden", timeout: 1_000 })
+      .catch(async () => {
+        await this.dialog.getByText("新增模型").click();
+        await expect(dropdown).toBeHidden();
+      });
+  }
+
+  private async enableModelThinkingEffort() {
+    const field = this.modelThinkingEffortField();
+    await field
+      .getByText(/启用|Enabled/i)
+      .first()
+      .click();
+  }
+
+  private modelThinkingEffortField() {
+    return this.dialog
+      .locator(".relative.flex", {
+        hasText: /支持 Thinking|Supports Thinking/i,
+      })
+      .first();
+  }
+
+  private async assertModelThinkingEffortDisabledByDefault() {
+    const field = this.modelThinkingEffortField();
+    await expect(
+      field.locator(".ant-radio-button-wrapper-checked", {
+        hasText: /停用|Disabled/i,
+      }),
+    ).toBeVisible();
+  }
+
+  private async assertModelDrawerLabelsSingleLine(labels: string[]) {
+    for (const labelText of labels) {
+      const label = this.dialog
+        .locator("label", { hasText: labelText })
+        .first();
+      await expect(label).toBeVisible();
+      const metrics = await label.evaluate((node) => {
+        const style = window.getComputedStyle(node);
+        const lineHeight = Number.parseFloat(style.lineHeight);
+        const box = node.getBoundingClientRect();
+        return {
+          height: box.height,
+          lineHeight: Number.isNaN(lineHeight) ? 24 : lineHeight,
+          whiteSpace: style.whiteSpace,
+        };
+      });
+      expect(metrics.whiteSpace).toBe("nowrap");
+      expect(metrics.height).toBeLessThanOrEqual(metrics.lineHeight + 4);
+    }
+  }
+
   async saveModel() {
     await this.dialog
       .getByRole("button", { name: /保\s*存|Save/i })
@@ -827,6 +911,74 @@ export class SmartCenterPage {
     await expect(
       button.locator(".ant-btn-loading-icon, .anticon-loading").first(),
     ).toBeVisible();
+  }
+
+  async assertDraftTierCurrentTestLatency(expectedLatency: string) {
+    const result = this.dialog.getByTestId("ai-tier-current-test-result");
+    await expect(result).toBeVisible();
+    await expect(result).toContainText(/耗时|Latency/i);
+    await expect(result).toContainText(expectedLatency);
+  }
+
+  async assertTierModelOptionsGrouped(input: {
+    anthropicModelName: string;
+    openAIModelName: string;
+    providerName: string;
+    tierName: RegExp;
+  }) {
+    await this.editTier(input.tierName);
+    await this.dialog.getByLabel(/供应商|Provider/i).click();
+    const modelResponse = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === "GET" &&
+        /\/x\/linapro-ai-core\/api\/v1\/ai\/providers\/\d+\/models/.test(
+          response.url(),
+        ),
+      { timeout: 20_000 },
+    );
+    await this.page.getByTitle(input.providerName).click();
+    await modelResponse;
+    await this.dialog.getByLabel(/模型|Model/i).click();
+    const dropdown = this.page
+      .locator(".ant-select-dropdown:not(.ant-select-dropdown-hidden):visible")
+      .last();
+    await expect(dropdown.locator(".ant-select-item-group")).toContainText([
+      /OpenAI/i,
+      /Anthropic/i,
+    ]);
+    const openAIOption = dropdown.getByTitle(
+      new RegExp(escapeRegExp(input.openAIModelName)),
+    );
+    const anthropicOption = dropdown.getByTitle(
+      new RegExp(escapeRegExp(input.anthropicModelName)),
+    );
+    await expect(openAIOption).toBeVisible();
+    await expect(anthropicOption).toBeVisible();
+    const [openAIGroupText, anthropicGroupText] = await Promise.all([
+      openAIOption.evaluate((node) => {
+        let current: Element | null = node;
+        while (current?.previousElementSibling) {
+          current = current.previousElementSibling;
+          if (current.classList.contains("ant-select-item-group")) {
+            return current.textContent || "";
+          }
+        }
+        return "";
+      }),
+      anthropicOption.evaluate((node) => {
+        let current: Element | null = node;
+        while (current?.previousElementSibling) {
+          current = current.previousElementSibling;
+          if (current.classList.contains("ant-select-item-group")) {
+            return current.textContent || "";
+          }
+        }
+        return "";
+      }),
+    ]);
+    expect(openAIGroupText).toMatch(/OpenAI/i);
+    expect(anthropicGroupText).toMatch(/Anthropic/i);
+    await this.cancelDrawer();
   }
 
   async selectTierCapabilityType(capabilityType: string) {

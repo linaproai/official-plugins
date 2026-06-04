@@ -1,37 +1,39 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref } from "vue";
 
-import { useVbenDrawer } from '@vben/common-ui';
+import { useVbenDrawer } from "@vben/common-ui";
 
-import { message } from 'ant-design-vue';
+import { message } from "ant-design-vue";
 
-import { useVbenForm } from '#/adapter/form';
-import { $t } from '#/locales';
-import { modelAdd, providerList } from './ai-client';
-import {
-  buildModelFormSchema,
-  splitCapabilityMethod,
-} from './ai-data';
+import { useVbenForm } from "#/adapter/form";
+import { $t } from "#/locales";
+import { modelAdd, providerList } from "./ai-client";
+import { buildModelFormSchema, splitCapabilityMethod } from "./ai-data";
 
 const emit = defineEmits<{ reload: [] }>();
 
 const providerOptions = ref<Array<{ label: string; value: number }>>([]);
-const providers = ref<Awaited<ReturnType<typeof providerList>>['items']>([]);
+const providers = ref<Awaited<ReturnType<typeof providerList>>["items"]>([]);
 const title = computed(modelDrawerTitle);
 
 function modelDrawerTitle() {
-  return $t('plugin.linapro-ai-core.model.drawer.createTitle');
+  return $t("plugin.linapro-ai-core.model.drawer.createTitle");
+}
+
+function endpointProtocolLabel(protocol: string) {
+  return protocol.includes("anthropic") ? "Anthropic" : "OpenAI";
 }
 
 const [ModelForm, modelFormApi] = useVbenForm({
   commonConfig: {
-    componentProps: { class: 'w-full' },
-    formItemClass: 'col-span-1',
-    labelWidth: 132,
+    componentProps: { class: "w-full" },
+    formItemClass: "col-span-1",
+    labelClass: "whitespace-nowrap",
+    labelWidth: 176,
   },
   schema: buildModelFormSchema(),
   showDefaultActions: false,
-  wrapperClass: 'grid-cols-1',
+  wrapperClass: "grid-cols-1",
 });
 
 async function loadProviderOptions() {
@@ -43,9 +45,10 @@ async function loadProviderOptions() {
   }));
   modelFormApi.updateSchema([
     {
-      fieldName: 'providerId',
+      fieldName: "providerId",
       componentProps: {
-        onChange: (value: number) => refreshEndpointOptions(Number(value), true),
+        onChange: (value: number) =>
+          refreshEndpointOptions(Number(value), true),
         options: providerOptions.value,
         showSearch: true,
       },
@@ -53,15 +56,18 @@ async function loadProviderOptions() {
   ]);
 }
 
-async function refreshEndpointOptions(providerId: number, resetEndpoint = false) {
+async function refreshEndpointOptions(
+  providerId: number,
+  resetEndpoint = false,
+) {
   const provider = providers.value.find((item) => item.id === providerId);
   const options = (provider?.endpoints || []).map((endpoint) => ({
-    label: `${endpoint.protocol} / ${endpoint.baseUrl}`,
+    label: `${endpointProtocolLabel(endpoint.protocol)} / ${endpoint.baseUrl}`,
     value: endpoint.id,
   }));
   modelFormApi.updateSchema([
     {
-      fieldName: 'endpointId',
+      fieldName: "endpointId",
       componentProps: {
         allowClear: false,
         options,
@@ -81,7 +87,7 @@ async function resetModelForm(providerId = 0) {
   await modelFormApi.resetForm();
   const endpointOptions = await refreshEndpointOptions(providerId, false);
   await modelFormApi.setValues({
-    capabilityKey: 'text.generate',
+    capabilityKey: "text.generate",
     enabled: 1,
     endpointId:
       providerId > 0 && endpointOptions.length === 1
@@ -89,7 +95,7 @@ async function resetModelForm(providerId = 0) {
         : undefined,
     maxInputTokens: 0,
     maxOutputTokens: 0,
-    protocol: 'openai',
+    protocol: "openai",
     providerId: providerId || undefined,
     supportsThinking: 0,
     supportedEfforts: [],
@@ -104,6 +110,7 @@ async function saveModel() {
   const values = await modelFormApi.getValues();
   const providerId = Number(values.providerId || 0);
   const capability = splitCapabilityMethod(values.capabilityKey);
+  const supportsThinking = Number(values.supportsThinking || 0);
   await modelAdd(providerId, {
     ...capability,
     enabled: values.enabled,
@@ -112,11 +119,12 @@ async function saveModel() {
     maxOutputTokens: values.maxOutputTokens,
     modelName: values.modelName,
     protocol: values.protocol,
-    supportedEfforts: values.supportedEfforts,
-    supportsThinking: values.supportsThinking,
+    supportedEfforts:
+      supportsThinking === 1 ? values.supportedEfforts || [] : [],
+    supportsThinking,
   });
-  message.success($t('pages.common.createSuccess'));
-  emit('reload');
+  message.success($t("pages.common.createSuccess"));
+  emit("reload");
   return true;
 }
 
@@ -151,7 +159,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
 </script>
 
 <template>
-  <Drawer :title="title" class="w-[720px] max-w-[calc(100vw-32px)]">
+  <Drawer :title="title" class="w-[760px] max-w-[calc(100vw-32px)]">
     <ModelForm />
   </Drawer>
 </template>

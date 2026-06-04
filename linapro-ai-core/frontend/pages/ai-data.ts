@@ -35,21 +35,20 @@ export function buildEnabledOptions() {
 export const protocolOptions = [
   { label: "OpenAI", value: "openai" },
   { label: "Anthropic", value: "anthropic" },
-  { label: "Voyage", value: "voyage" },
-  { label: "OpenAI Compatible", value: "openai-compatible" },
-  { label: "Anthropic Compatible", value: "anthropic-compatible" },
 ];
 
-export const endpointProtocolOptions = protocolOptions.filter((item) =>
-  ["openai", "anthropic"].includes(item.value),
-);
+export const endpointProtocolOptions = protocolOptions;
+
+const protocolDisplayLabels: Record<string, string> = {
+  anthropic: "Anthropic",
+  "anthropic-compatible": "Anthropic",
+  openai: "OpenAI",
+  "openai-compatible": "OpenAI",
+  voyage: "Voyage",
+};
 
 function protocolLabel(value: string) {
-  return (
-    protocolOptions.find((item) => item.value === value)?.label ||
-    value ||
-    "OpenAI"
-  );
+  return protocolDisplayLabels[value] || value || "OpenAI";
 }
 
 function protocolBadgeMeta(value: string) {
@@ -85,6 +84,10 @@ function formatOptionalTimestamp(value: null | number | string | undefined) {
     return "";
   }
   return formatTimestamp(value, "");
+}
+
+function formatLatencyMs(value: unknown) {
+  return `${Math.max(0, Math.round(Number(value || 0)))}ms`;
 }
 
 function externalHref(url: string) {
@@ -727,6 +730,18 @@ export function buildModelFormSchema(
         mode: "multiple",
         options: buildEffortOptions().filter((item) => item.value),
       },
+      dependencies: {
+        show: (values) => Number(values.supportsThinking || 0) === 1,
+        trigger: (values, actions) => {
+          if (Number(values.supportsThinking || 0) === 1) {
+            return;
+          }
+          if ((values.supportedEfforts || []).length > 0) {
+            actions.setFieldValue("supportedEfforts", []);
+          }
+        },
+        triggerFields: ["supportsThinking"],
+      },
     },
     {
       component: "InputNumber",
@@ -776,7 +791,20 @@ export function buildTierColumns(): VxeGridProps["columns"] {
       minWidth: 120,
       slots: {
         default: ({ row }) =>
-          row.lastTestStatus ? statusTag(row.lastTestStatus) : "-",
+          row.lastTestStatus
+            ? h(
+                "div",
+                { class: "flex items-center gap-2" },
+                [
+                  statusTag(row.lastTestStatus),
+                  h(
+                    "span",
+                    { class: "font-mono text-xs text-muted-foreground" },
+                    formatLatencyMs(row.lastTestLatencyMs),
+                  ),
+                ],
+              )
+            : "-",
       },
     },
     {

@@ -103,6 +103,19 @@ function setTierTesting(code: string, testing: boolean) {
   testingTierCodes.value = next;
 }
 
+function formatLatencyMs(value: number | undefined) {
+  return `${Math.max(0, Math.round(Number(value || 0)))}ms`;
+}
+
+function resultMessage(result: Awaited<ReturnType<typeof tierTest>>) {
+  const text =
+    result.status === "success"
+      ? $t("plugin.linapro-ai-core.tier.messages.testSuccess")
+      : result.errorSummary ||
+        $t("plugin.linapro-ai-core.tier.messages.testFailed");
+  return `${text} (${formatLatencyMs(result.latencyMs)})`;
+}
+
 async function handleTest(row: Tier) {
   if (isTierTesting(row.code)) {
     return;
@@ -115,12 +128,9 @@ async function handleTest(row: Tier) {
       maxOutputTokens: 128,
     });
     if (result.status === "success") {
-      message.success($t("plugin.linapro-ai-core.tier.messages.testSuccess"));
+      message.success(resultMessage(result));
     } else {
-      message.error(
-        result.errorSummary ||
-          $t("plugin.linapro-ai-core.tier.messages.testFailed"),
-      );
+      message.error(resultMessage(result));
     }
     await gridApi.query();
   } finally {

@@ -1,6 +1,6 @@
 id: linapro-ai-core
 name: Smart Center
-version: v0.1.14
+version: v0.1.15
 type: source
 scope_nature: platform_only
 supports_multi_tenant: false

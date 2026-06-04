@@ -172,7 +172,8 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 		return nil, err
 	}
 	var binding *resolvedTierBinding
-	if in.ProviderId > 0 || in.ModelId > 0 {
+	draftBindingRequested := in.ProviderId > 0 || in.ModelId > 0
+	if draftBindingRequested {
 		model, endpoint, capability, err := s.validateModelBinding(ctx, in.ProviderId, in.ModelId, capabilityType, capabilityMethod, effort)
 		if err != nil {
 			return nil, err
@@ -221,17 +222,19 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 		output.Status = InvocationStatusFailed
 		output.ErrorSummary = sanitizeErrorSummary(callErr)
 	}
-	_, updateErr := dao.Tier.Ctx(ctx).
-		Where(do.Tier{Id: tier.Id}).
-		Data(do.Tier{
-			LastTestStatus:       output.Status,
-			LastTestLatencyMs:    output.LatencyMs,
-			LastTestErrorSummary: output.ErrorSummary,
-			LastTestAt:           &testedAt,
-		}).
-		Update()
-	if updateErr != nil {
-		return nil, updateErr
+	if !draftBindingRequested {
+		_, updateErr := dao.Tier.Ctx(ctx).
+			Where(do.Tier{Id: tier.Id}).
+			Data(do.Tier{
+				LastTestStatus:       output.Status,
+				LastTestLatencyMs:    output.LatencyMs,
+				LastTestErrorSummary: output.ErrorSummary,
+				LastTestAt:           &testedAt,
+			}).
+			Update()
+		if updateErr != nil {
+			return nil, updateErr
+		}
 	}
 	if callErr != nil {
 		return output, nil
