@@ -669,11 +669,14 @@ export function buildModelFormSchema(
     },
     {
       component: "Select",
-      fieldName: "endpointId",
-      label: $t("plugin.linapro-ai-core.model.fields.endpoint"),
+      fieldName: "endpointIds",
+      label: `${$t("plugin.linapro-ai-core.model.fields.endpoint")} / ${$t("plugin.linapro-ai-core.model.fields.protocol")}`,
       rules: "selectRequired",
       componentProps: {
         allowClear: false,
+        maxTagCount: "responsive",
+        mode: "multiple",
+        optionFilterProp: "label",
         options: endpointOptions,
         showSearch: true,
       },
@@ -692,13 +695,6 @@ export function buildModelFormSchema(
       fieldName: "modelName",
       label: $t("plugin.linapro-ai-core.model.fields.modelName"),
       rules: "required",
-    },
-    {
-      component: "Select",
-      fieldName: "protocol",
-      label: $t("plugin.linapro-ai-core.model.fields.protocol"),
-      rules: "selectRequired",
-      componentProps: { options: protocolOptions },
     },
     {
       component: "RadioGroup",

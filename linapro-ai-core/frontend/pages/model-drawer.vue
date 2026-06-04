@@ -7,7 +7,7 @@ import { message } from "ant-design-vue";
 
 import { useVbenForm } from "#/adapter/form";
 import { $t } from "#/locales";
-import { modelAdd, providerList } from "./ai-client";
+import { modelAdd, modelDelete, providerList } from "./ai-client";
 import { buildModelFormSchema, splitCapabilityMethod } from "./ai-data";
 
 const emit = defineEmits<{ reload: [] }>();
@@ -35,6 +35,21 @@ const [ModelForm, modelFormApi] = useVbenForm({
   showDefaultActions: false,
   wrapperClass: "grid-cols-1",
 });
+
+function normalizeSelectedEndpointIds(value: unknown) {
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+  return [
+    ...new Set(
+      values.map((item) => Number(item || 0)).filter((item) => item > 0),
+    ),
+  ];
+}
+
+function providerEndpointById(providerId: number, endpointId: number) {
+  return providers.value
+    .find((item) => item.id === providerId)
+    ?.endpoints?.find((endpoint) => endpoint.id === endpointId);
+}
 
 async function loadProviderOptions() {
   const res = await providerList({ pageNum: 1, pageSize: 100 });
@@ -67,9 +82,12 @@ async function refreshEndpointOptions(
   }));
   modelFormApi.updateSchema([
     {
-      fieldName: "endpointId",
+      fieldName: "endpointIds",
       componentProps: {
         allowClear: false,
+        maxTagCount: "responsive",
+        mode: "multiple",
+        optionFilterProp: "label",
         options,
         showSearch: true,
       },
@@ -77,7 +95,7 @@ async function refreshEndpointOptions(
   ]);
   if (resetEndpoint) {
     await modelFormApi.setValues({
-      endpointId: options.length === 1 ? options[0]?.value : undefined,
+      endpointIds: options.length === 1 ? [options[0]?.value] : [],
     });
   }
   return options;
@@ -89,13 +107,12 @@ async function resetModelForm(providerId = 0) {
   await modelFormApi.setValues({
     capabilityKey: "text.generate",
     enabled: 1,
-    endpointId:
+    endpointIds:
       providerId > 0 && endpointOptions.length === 1
-        ? endpointOptions[0]?.value
-        : undefined,
+        ? [endpointOptions[0]?.value]
+        : [],
     maxInputTokens: 0,
     maxOutputTokens: 0,
-    protocol: "openai",
     providerId: providerId || undefined,
     supportsThinking: 0,
     supportedEfforts: [],
@@ -109,20 +126,35 @@ async function saveModel() {
   }
   const values = await modelFormApi.getValues();
   const providerId = Number(values.providerId || 0);
+  const endpointIds = normalizeSelectedEndpointIds(values.endpointIds);
   const capability = splitCapabilityMethod(values.capabilityKey);
   const supportsThinking = Number(values.supportsThinking || 0);
-  await modelAdd(providerId, {
-    ...capability,
-    enabled: values.enabled,
-    endpointId: Number(values.endpointId || 0),
-    maxInputTokens: values.maxInputTokens,
-    maxOutputTokens: values.maxOutputTokens,
-    modelName: values.modelName,
-    protocol: values.protocol,
-    supportedEfforts:
-      supportsThinking === 1 ? values.supportedEfforts || [] : [],
-    supportsThinking,
-  });
+  const createdModelIds: number[] = [];
+  try {
+    for (const endpointId of endpointIds) {
+      const endpoint = providerEndpointById(providerId, endpointId);
+      const created = await modelAdd(providerId, {
+        ...capability,
+        enabled: values.enabled,
+        endpointId,
+        maxInputTokens: values.maxInputTokens,
+        maxOutputTokens: values.maxOutputTokens,
+        modelName: values.modelName,
+        protocol: endpoint?.protocol || "openai",
+        supportedEfforts:
+          supportsThinking === 1 ? values.supportedEfforts || [] : [],
+        supportsThinking,
+      });
+      if (created?.id) {
+        createdModelIds.push(Number(created.id));
+      }
+    }
+  } catch (error) {
+    await Promise.all(
+      createdModelIds.map((id) => modelDelete(id).catch(() => undefined)),
+    );
+    throw error;
+  }
   message.success($t("pages.common.createSuccess"));
   emit("reload");
   return true;

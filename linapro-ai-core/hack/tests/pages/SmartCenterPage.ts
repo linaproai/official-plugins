@@ -1,4 +1,8 @@
-import { expect, type Page } from "@host-tests/support/playwright";
+import {
+  expect,
+  type Page,
+  type Response,
+} from "@host-tests/support/playwright";
 
 import { mkdirSync } from "node:fs";
 import path from "node:path";
@@ -188,15 +192,13 @@ export class SmartCenterPage {
     await this.assertModelThinkingEffortDisabledByDefault();
     await this.assertModelDrawerLabelsSingleLine([
       "供应商",
-      "端点",
+      "端点 / 协议",
       "模型名称",
-      "协议",
       "支持 Thinking",
       "最大输入 Tokens",
       "最大输出 Tokens",
     ]);
     await this.captureEvidence("TC001-create-model-drawer-default");
-    await this.assertModelProtocolOptions();
     await this.enableModelThinkingEffort();
     await expect(this.dialog.getByText("支持的 Thinking Effort")).toBeVisible();
     await this.assertModelDrawerLabelsSingleLine(["支持的 Thinking Effort"]);
@@ -204,6 +206,7 @@ export class SmartCenterPage {
     await this.dialog.getByLabel(/供应商|Provider/i).click();
     await this.page.getByTitle(providerName).click();
     await expect(this.dialog.getByTitle(providerName)).toBeVisible();
+    await this.assertModelEndpointOptions();
     await this.cancelDrawer();
   }
 
@@ -504,6 +507,75 @@ export class SmartCenterPage {
     await expect(row.first()).toBeVisible();
   }
 
+  async createModelForProviderProtocols(input: {
+    modelName: string;
+    providerName: string;
+    protocolLabels: RegExp[];
+  }) {
+    await this.openCreateModel();
+    await this.dialog.getByLabel(/供应商|Provider/i).click();
+    await this.page.getByTitle(input.providerName).click();
+    await expect(this.dialog.getByTitle(input.providerName)).toBeVisible();
+    await this.fillModel({ modelName: input.modelName });
+    await this.selectModelEndpointProtocols(input.protocolLabels);
+
+    const responses: Response[] = [];
+    const onResponse = (response: Response) => {
+      const request = response.request();
+      if (
+        request.method() === "POST" &&
+        /\/x\/linapro-ai-core\/api\/v1\/ai\/providers\/\d+\/models$/.test(
+          response.url(),
+        )
+      ) {
+        responses.push(response);
+      }
+    };
+    this.page.on("response", onResponse);
+    try {
+      await this.saveModel();
+      await expect
+        .poll(() => responses.length, {
+          message: "等待多协议模型创建请求完成",
+          timeout: 20_000,
+        })
+        .toBe(input.protocolLabels.length);
+      await expect(this.dialog).toBeHidden({ timeout: 20_000 });
+      await waitForBusyIndicatorsToClear(this.page);
+    } finally {
+      this.page.off("response", onResponse);
+    }
+    for (const response of responses) {
+      expect(response.ok(), `创建模型响应状态: ${response.status()}`).toBe(
+        true,
+      );
+    }
+
+    await this.searchProvider(input.providerName);
+    await this.assertProviderModelProtocolTags(input);
+    await this.captureEvidence("TC001-provider-list-multi-protocol-model");
+  }
+
+  async assertProviderModelProtocolTags(input: {
+    modelName: string;
+    providerName: string;
+    protocolLabels: RegExp[];
+  }) {
+    const row = this.providerMainRow(input.providerName);
+    await row.waitFor({ state: "visible", timeout: 10_000 });
+    const modelHeaderIndex = await this.providerHeaderIndex(/模型|Models/i);
+    const modelCell = row
+      .locator(".vxe-body--column:visible")
+      .nth(modelHeaderIndex);
+    const modelTags = modelCell.locator(".ai-provider-model-tag", {
+      hasText: input.modelName,
+    });
+    await expect(modelTags).toHaveCount(input.protocolLabels.length);
+    for (const label of input.protocolLabels) {
+      await expect(modelTags.filter({ hasText: label }).first()).toBeVisible();
+    }
+  }
+
   async assertProviderSyncActions(input: {
     providerName: string;
     syncAnthropic?: boolean;
@@ -755,25 +827,63 @@ export class SmartCenterPage {
     await maxOutput.fill(data.maxOutputTokens || "256");
   }
 
-  private async assertModelProtocolOptions() {
-    await this.dialog
-      .locator(".relative.flex", { hasText: /协议|Protocol/i })
-      .first()
-      .locator(".ant-select-selector")
-      .click();
+  private async assertModelEndpointOptions() {
+    await this.modelEndpointField().locator(".ant-select-selector").click();
     const dropdown = this.page.locator(".ant-select-dropdown:visible").last();
-    await expect(dropdown.getByTitle("OpenAI")).toBeVisible();
-    await expect(dropdown.getByTitle("Anthropic")).toBeVisible();
+    await expect(dropdown.getByTitle(/OpenAI/i).first()).toBeVisible();
+    await expect(dropdown.getByTitle(/Anthropic/i).first()).toBeVisible();
     await expect(dropdown.getByTitle("OpenAI Compatible")).toHaveCount(0);
     await expect(dropdown.getByTitle("Anthropic Compatible")).toHaveCount(0);
     await expect(dropdown.getByTitle("Voyage")).toHaveCount(0);
-    await dropdown.getByTitle("OpenAI").click();
     await dropdown
-      .waitFor({ state: "hidden", timeout: 1_000 })
-      .catch(async () => {
-        await this.dialog.getByText("新增模型").click();
-        await expect(dropdown).toBeHidden();
-      });
+      .getByTitle(/OpenAI/i)
+      .first()
+      .evaluate((node) => (node as HTMLElement).click());
+    await dropdown
+      .getByTitle(/Anthropic/i)
+      .first()
+      .evaluate((node) => (node as HTMLElement).click());
+    await this.assertModelEndpointSelectionCount(2);
+    await this.page.keyboard.press("Escape");
+    await expect(dropdown).toBeHidden();
+  }
+
+  private modelEndpointField() {
+    return this.dialog
+      .locator(".relative.flex", {
+        hasText: /端点\s*\/\s*协议|Endpoint\s*\/\s*Protocol/i,
+      })
+      .first();
+  }
+
+  private async selectModelEndpointProtocols(protocolLabels: RegExp[]) {
+    await this.modelEndpointField().locator(".ant-select-selector").click();
+    const dropdown = this.page.locator(".ant-select-dropdown:visible").last();
+    for (const label of protocolLabels) {
+      await dropdown
+        .locator(".ant-select-item-option", { hasText: label })
+        .first()
+        .evaluate((node) => (node as HTMLElement).click());
+    }
+    await this.assertModelEndpointSelectionCount(protocolLabels.length);
+    await this.page.keyboard.press("Escape");
+  }
+
+  private async assertModelEndpointSelectionCount(expectedCount: number) {
+    await expect
+      .poll(async () =>
+        this.modelEndpointField().evaluate((node) => {
+          const visibleItems = node.querySelectorAll(
+            ".ant-select-selection-overflow-item:not(.ant-select-selection-overflow-item-rest) .ant-select-selection-item",
+          ).length;
+          const restText =
+            node.querySelector(".ant-select-selection-overflow-item-rest")
+              ?.textContent || "";
+          const restCount = Number(restText.match(/\+(\d+)/)?.[1] || 0);
+          return visibleItems + restCount;
+        }),
+      )
+      .toBe(expectedCount);
   }
 
   private async enableModelThinkingEffort() {
@@ -823,11 +933,11 @@ export class SmartCenterPage {
   }
 
   async saveModel() {
-    await this.dialog
-      .getByRole("button", { name: /保\s*存|Save/i })
-      .last()
-      .click();
-    await waitForBusyIndicatorsToClear(this.page);
+    const confirmButton = this.dialog
+      .getByRole("button", { name: /保\s*存|确\s*认|Save|Confirm/i })
+      .last();
+    await expect(confirmButton).toBeVisible({ timeout: 10_000 });
+    await confirmButton.evaluate((node) => (node as HTMLElement).click());
   }
 
   async confirmDrawer() {

@@ -555,12 +555,14 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	bizCtxSvc  plugincontract.BizCtxService
-	cacheSvc   plugincontract.CacheService
-	httpClient *http.Client
-	cacheMu    sync.RWMutex
-	tierCache  map[string]tierCacheEntry
-	revision   int64
+	bizCtxSvc        plugincontract.BizCtxService
+	cacheSvc         plugincontract.CacheService
+	httpClient       *http.Client
+	cacheMu          sync.RWMutex
+	tierCache        map[string]tierCacheEntry
+	revision         int64
+	providerURLMu    sync.RWMutex
+	providerURLCache map[string]string
 }
 
 // New creates and returns a Smart Center service with explicit host dependencies.
@@ -573,9 +575,10 @@ func New(
 		httpClient = http.DefaultClient
 	}
 	return &serviceImpl{
-		bizCtxSvc:  bizCtxSvc,
-		cacheSvc:   cacheSvc,
-		httpClient: httpClient,
-		tierCache:  make(map[string]tierCacheEntry),
+		bizCtxSvc:        bizCtxSvc,
+		cacheSvc:         cacheSvc,
+		httpClient:       httpClient,
+		tierCache:        make(map[string]tierCacheEntry),
+		providerURLCache: make(map[string]string),
 	}
 }

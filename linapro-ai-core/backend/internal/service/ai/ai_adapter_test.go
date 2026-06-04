@@ -8,10 +8,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/plugin/capability/ai/aitext"
+	"lina-plugin-linapro-ai-core/backend/internal/model/entity"
 )
 
 type providerBaseURLKey struct{}
@@ -73,6 +75,141 @@ func TestAnthropicAdapterMapsThinkingEffort(t *testing.T) {
 	}
 	if result.Text != "anthropic ok" || result.Usage.InputTokens != 5 || result.Usage.OutputTokens != 3 {
 		t.Fatalf("unexpected Anthropic adapter result: %#v", result)
+	}
+}
+
+// TestAnthropicAdapterRetriesVersionedURLAndCachesBase verifies 404 fallback
+// and process-local URL cache reuse for Anthropic-compatible generation.
+func TestAnthropicAdapterRetriesVersionedURLAndCachesBase(t *testing.T) {
+	var (
+		mu    sync.Mutex
+		paths []string
+	)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		paths = append(paths, r.URL.Path)
+		mu.Unlock()
+		switch r.URL.Path {
+		case "/anthropic/messages":
+			http.NotFound(w, r)
+		case "/anthropic/v1/messages":
+			w.Header().Set("Content-Type", "application/json")
+			if _, err := w.Write([]byte(`{"content":[{"type":"text","text":"anthropic ok"}],"usage":{"input_tokens":5,"output_tokens":3}}`)); err != nil {
+				t.Fatalf("write response: %v", err)
+			}
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	svc := New(nil, nil, server.Client()).(*serviceImpl)
+	binding := &resolvedTierBinding{
+		ModelName:         "unit-anthropic",
+		Protocol:          ProtocolAnthropicCompatible,
+		EndpointBaseUrl:   server.URL + "/anthropic",
+		EndpointSecretRef: "unit-secret",
+	}
+	for i := 0; i < 2; i++ {
+		result, err := svc.callAnthropic(context.Background(), binding, []aitext.Message{{Role: aitext.MessageRoleUser, Content: "hello"}}, 128, nil, "")
+		if err != nil {
+			t.Fatalf("call anthropic adapter on attempt %d: %v", i+1, err)
+		}
+		if result.Text != "anthropic ok" {
+			t.Fatalf("unexpected Anthropic adapter result: %#v", result)
+		}
+	}
+
+	mu.Lock()
+	got := append([]string(nil), paths...)
+	mu.Unlock()
+	want := []string{"/anthropic/messages", "/anthropic/v1/messages", "/anthropic/v1/messages"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("unexpected paths: got %v want %v", got, want)
+	}
+}
+
+// TestOpenAIModelListRetriesVersionedURLAndCachesBase verifies the same 404
+// fallback and cache path for OpenAI-compatible model synchronization.
+func TestOpenAIModelListRetriesVersionedURLAndCachesBase(t *testing.T) {
+	var (
+		mu    sync.Mutex
+		paths []string
+	)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		paths = append(paths, r.URL.Path)
+		mu.Unlock()
+		switch r.URL.Path {
+		case "/proxy/models":
+			http.NotFound(w, r)
+		case "/proxy/v1/models":
+			w.Header().Set("Content-Type", "application/json")
+			if _, err := w.Write([]byte(`{"data":[{"id":"flow-model"},{"id":"remote-model"}]}`)); err != nil {
+				t.Fatalf("write model list response: %v", err)
+			}
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	svc := New(nil, nil, server.Client()).(*serviceImpl)
+	endpoint := &entity.ProviderEndpoint{
+		Protocol:  ProtocolOpenAICompatible,
+		BaseUrl:   server.URL + "/proxy",
+		SecretRef: "unit-secret",
+	}
+	for i := 0; i < 2; i++ {
+		names, err := svc.listOpenAIModels(context.Background(), endpoint)
+		if err != nil {
+			t.Fatalf("list OpenAI models on attempt %d: %v", i+1, err)
+		}
+		if strings.Join(names, ",") != "flow-model,remote-model" {
+			t.Fatalf("unexpected model names: %v", names)
+		}
+	}
+
+	mu.Lock()
+	got := append([]string(nil), paths...)
+	mu.Unlock()
+	want := []string{"/proxy/models", "/proxy/v1/models", "/proxy/v1/models"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("unexpected paths: got %v want %v", got, want)
+	}
+}
+
+// TestAnthropicAdapterDoesNotDuplicateVersionSuffix verifies already-versioned
+// base URLs are requested directly and never retried with /v1/v1.
+func TestAnthropicAdapterDoesNotDuplicateVersionSuffix(t *testing.T) {
+	var (
+		mu    sync.Mutex
+		paths []string
+	)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		paths = append(paths, r.URL.Path)
+		mu.Unlock()
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+
+	svc := New(nil, nil, server.Client()).(*serviceImpl)
+	_, err := svc.callAnthropic(context.Background(), &resolvedTierBinding{
+		ModelName:       "unit-anthropic",
+		Protocol:        ProtocolAnthropicCompatible,
+		EndpointBaseUrl: server.URL + "/anthropic/v1",
+	}, []aitext.Message{{Role: aitext.MessageRoleUser, Content: "hello"}}, 128, nil, "")
+	if !bizerr.Is(err, CodeProviderHTTPError) {
+		t.Fatalf("expected structured provider HTTP error, got %v", err)
+	}
+
+	mu.Lock()
+	got := append([]string(nil), paths...)
+	mu.Unlock()
+	want := []string{"/anthropic/v1/messages"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("unexpected paths: got %v want %v", got, want)
 	}
 }
 

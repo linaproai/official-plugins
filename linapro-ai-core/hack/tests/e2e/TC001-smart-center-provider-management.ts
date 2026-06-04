@@ -25,6 +25,7 @@ test.describe("TC-1 智能中心供应商管理", () => {
         secretRef: "sk-1234567890",
         websiteUrl: `https://example.com/e2e-provider-${suffix}`,
       });
+      const multiProtocolModelName = `e2e-ui-model-${suffix}-multi-protocol`;
       try {
         const smartCenter = new SmartCenterPage(adminPage);
         await smartCenter.gotoProviders();
@@ -41,6 +42,11 @@ test.describe("TC-1 智能中心供应商管理", () => {
         await smartCenter.assertCreateModelDrawerChineseTranslations(
           fixture.providerName,
         );
+        await smartCenter.createModelForProviderProtocols({
+          modelName: multiProtocolModelName,
+          providerName: fixture.providerName,
+          protocolLabels: [/OpenAI/i, /Anthropic/i],
+        });
         await smartCenter.deleteModelFromProviderRow(
           fixture.providerName,
           fixture.modelName,

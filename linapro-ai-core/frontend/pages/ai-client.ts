@@ -283,12 +283,20 @@ export async function providerModels(
   return res.list;
 }
 
-export function modelAdd(providerId: number, data: Partial<Model>) {
-  return requestClient.post(aiApi(`ai/providers/${providerId}/models`), {
-    capabilityMethod: defaultCapabilityMethod,
-    capabilityType: defaultCapabilityType,
-    ...data,
-  });
+export type ModelCreateInput = Partial<Model> & {
+  endpointId: number;
+  protocol: string;
+};
+
+export function modelAdd(providerId: number, data: ModelCreateInput) {
+  return requestClient.post<{ id: number }>(
+    aiApi(`ai/providers/${providerId}/models`),
+    {
+      capabilityMethod: defaultCapabilityMethod,
+      capabilityType: defaultCapabilityType,
+      ...data,
+    },
+  );
 }
 
 export function modelUpdate(id: number, data: Partial<Model>) {
