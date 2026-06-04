@@ -241,7 +241,19 @@ export class SmartCenterPage {
     await popup.close();
     await expect(row.first()).toContainText(input.modelName);
     await expect(row.first()).toContainText("OpenAI");
-    const modelText = row.first().getByText(input.modelName).first();
+    const modelCell = row
+      .first()
+      .locator(".vxe-body--column:visible")
+      .nth(modelHeaderIndex);
+    const endpointCell = row
+      .first()
+      .locator(".vxe-body--column:visible")
+      .nth(endpointHeaderIndex);
+    const actionRow = await this.providerActionRow(input.providerName);
+    const modelRow = modelCell.locator(".ai-provider-model-row").first();
+    await expect(modelRow).toBeVisible();
+    const modelText = modelCell.locator(".ai-provider-model-name").first();
+    await expect(modelText).toHaveText(input.modelName);
     await expect
       .poll(async () => {
         const weight = await modelText.evaluate((node) =>
@@ -250,6 +262,53 @@ export class SmartCenterPage {
         return Number.isNaN(weight) ? 400 : weight;
       })
       .toBeLessThan(600);
+    const [
+      modelCellBox,
+      endpointCellBox,
+      actionCellBox,
+      modelRowLayout,
+      modelTextStyle,
+    ] = await Promise.all([
+      modelCell.evaluate((node) => {
+        const box = node.getBoundingClientRect();
+        return { right: box.right };
+      }),
+      endpointCell.evaluate((node) => {
+        const box = node.getBoundingClientRect();
+        return { left: box.left, right: box.right };
+      }),
+      actionRow.locator(".ai-provider-action-list").evaluate((node) => {
+        const box = node.getBoundingClientRect();
+        return { left: box.left };
+      }),
+      modelRow.evaluate((node) => {
+        const box = node.getBoundingClientRect();
+        const style = window.getComputedStyle(node);
+        return {
+          flexWrap: style.flexWrap,
+          overflowX: style.overflowX,
+          right: box.right,
+        };
+      }),
+      modelText.evaluate((node) => {
+        const style = window.getComputedStyle(node);
+        return {
+          overflow: style.overflow,
+          textOverflow: style.textOverflow,
+          whiteSpace: style.whiteSpace,
+          wordBreak: style.wordBreak,
+        };
+      }),
+    ]);
+    expect(modelRowLayout.flexWrap).toBe("wrap");
+    expect(["auto", "scroll"]).not.toContain(modelRowLayout.overflowX);
+    expect(modelTextStyle.whiteSpace).toBe("normal");
+    expect(modelTextStyle.overflow).not.toBe("hidden");
+    expect(modelTextStyle.textOverflow).not.toBe("ellipsis");
+    expect(modelTextStyle.wordBreak).toBe("break-all");
+    expect(modelRowLayout.right).toBeLessThanOrEqual(modelCellBox.right + 1);
+    expect(modelCellBox.right).toBeLessThanOrEqual(endpointCellBox.left + 1);
+    expect(endpointCellBox.right).toBeLessThanOrEqual(actionCellBox.left + 1);
     const deleteModelButton = row.first().getByRole("button", {
       name: new RegExp(
         `删\\s*除.*${escapeRegExp(input.modelName)}|Delete.*${escapeRegExp(input.modelName)}`,
@@ -287,6 +346,11 @@ export class SmartCenterPage {
       },
     );
     await expect(openaiEndpointTag).toBeVisible();
+    await this.assertEndpointBadgeLayout(
+      openaiEndpointItem,
+      openaiEndpointTag,
+      input.openaiEndpointUrl,
+    );
     if (input.anthropicEndpointUrl) {
       await expect(row.first()).toContainText("Anthropic");
       await expect(row.first()).toContainText(input.anthropicEndpointUrl);
@@ -302,6 +366,11 @@ export class SmartCenterPage {
         },
       );
       await expect(anthropicEndpointTag).toBeVisible();
+      await this.assertEndpointBadgeLayout(
+        anthropicEndpointItem,
+        anthropicEndpointTag,
+        input.anthropicEndpointUrl,
+      );
       const [
         openaiUrlLeft,
         anthropicUrlLeft,
@@ -424,20 +493,25 @@ export class SmartCenterPage {
     syncOpenAI?: boolean;
   }) {
     const actionRow = await this.providerActionRow(input.providerName);
+    const primaryActions = actionRow.locator(".ai-provider-action-primary");
+    const syncActions = actionRow.locator(".ai-provider-action-sync");
+    await expect(primaryActions).toBeVisible();
     await expect(
       actionRow.getByRole("button", { name: /端\s*点|Endpoints/i }),
     ).toHaveCount(0);
-    await expect(
-      actionRow.getByRole("button", { name: /编\s*辑|Edit/i }),
-    ).toBeVisible();
-    await expect(
-      actionRow.getByRole("button", { name: /删\s*除|Delete/i }),
-    ).toBeVisible();
-    const openaiSync = actionRow.getByRole("button", {
-      name: /同步 openai 模型|Sync openai Models/i,
+    const editButton = primaryActions.getByRole("button", {
+      name: /编\s*辑|Edit/i,
     });
-    const anthropicSync = actionRow.getByRole("button", {
-      name: /同步 anthropic 模型|Sync anthropic Models/i,
+    const deleteButton = primaryActions.getByRole("button", {
+      name: /删\s*除|Delete/i,
+    });
+    await expect(editButton).toBeVisible();
+    await expect(deleteButton).toBeVisible();
+    const openaiSync = syncActions.getByRole("button", {
+      name: /同步 OpenAI 模型|Sync OpenAI Models/i,
+    });
+    const anthropicSync = syncActions.getByRole("button", {
+      name: /同步 Anthropic 模型|Sync Anthropic Models/i,
     });
     if (input.syncOpenAI) {
       await expect(openaiSync).toBeVisible();
@@ -447,6 +521,46 @@ export class SmartCenterPage {
     }
     const actionList = actionRow.locator(".ai-provider-action-list");
     await expect(actionList).toBeVisible();
+    const [editBox, deleteBox, primaryBox, actionListGap, syncActionGap] =
+      await Promise.all([
+        editButton.evaluate((node) => {
+          const box = node.getBoundingClientRect();
+          return { left: box.left, top: box.top };
+        }),
+        deleteButton.evaluate((node) => {
+          const box = node.getBoundingClientRect();
+          return { left: box.left, top: box.top };
+        }),
+        primaryActions.evaluate((node) => {
+          const box = node.getBoundingClientRect();
+          return { bottom: box.bottom };
+        }),
+        actionList.evaluate((node) =>
+          Number.parseFloat(window.getComputedStyle(node).rowGap),
+        ),
+        syncActions.evaluate((node) =>
+          Number.parseFloat(window.getComputedStyle(node).rowGap),
+        ),
+      ]);
+    expect(deleteBox.left).toBeGreaterThan(editBox.left);
+    expect(Math.abs(deleteBox.top - editBox.top)).toBeLessThan(2);
+    expect(actionListGap).toBeGreaterThanOrEqual(8);
+    expect(syncActionGap).toBeGreaterThanOrEqual(6);
+    if (input.syncOpenAI && input.syncAnthropic) {
+      const [openaiBox, anthropicBox] = await Promise.all([
+        openaiSync.evaluate((node) => {
+          const box = node.getBoundingClientRect();
+          return { left: box.left, top: box.top };
+        }),
+        anthropicSync.evaluate((node) => {
+          const box = node.getBoundingClientRect();
+          return { left: box.left, top: box.top };
+        }),
+      ]);
+      expect(openaiBox.top).toBeGreaterThanOrEqual(primaryBox.bottom - 1);
+      expect(openaiBox.top).toBeLessThan(anthropicBox.top);
+      expect(Math.abs(openaiBox.left - anthropicBox.left)).toBeLessThan(2);
+    }
     await expect
       .poll(async () =>
         actionList.evaluate((node) => {
@@ -456,6 +570,47 @@ export class SmartCenterPage {
         }),
       )
       .toBe(true);
+  }
+
+  private async assertEndpointBadgeLayout(
+    endpointItem: ReturnType<Page["locator"]>,
+    endpointTag: ReturnType<Page["locator"]>,
+    expectedUrl: string,
+  ) {
+    const endpointUrl = endpointItem.locator(".ai-provider-endpoint-url");
+    const iconMark = endpointTag.locator(".ai-provider-endpoint-icon-mark");
+    await expect(endpointUrl).toBeVisible();
+    await expect(endpointUrl).toHaveText(expectedUrl);
+    await expect(iconMark).toBeVisible();
+    await expect(iconMark.locator("svg").first()).toBeVisible();
+    await expect
+      .poll(async () => (await iconMark.textContent())?.trim() || "")
+      .toBe("");
+    const [urlStyle, tagStyle] = await Promise.all([
+      endpointUrl.evaluate((node) => {
+        const style = window.getComputedStyle(node);
+        return {
+          fontSize: Number.parseFloat(style.fontSize),
+          overflow: style.overflow,
+          overflowX: style.overflowX,
+          textOverflow: style.textOverflow,
+          whiteSpace: style.whiteSpace,
+          wordBreak: style.wordBreak,
+        };
+      }),
+      endpointTag.evaluate((node) => {
+        const style = window.getComputedStyle(node);
+        return {
+          fontSize: Number.parseFloat(style.fontSize),
+        };
+      }),
+    ]);
+    expect(urlStyle.whiteSpace).toBe("normal");
+    expect(urlStyle.overflow).not.toBe("hidden");
+    expect(urlStyle.overflowX).not.toBe("hidden");
+    expect(urlStyle.textOverflow).not.toBe("ellipsis");
+    expect(urlStyle.wordBreak).toBe("break-all");
+    expect(tagStyle.fontSize).toBeLessThan(urlStyle.fontSize);
   }
 
   async cancelDrawer() {

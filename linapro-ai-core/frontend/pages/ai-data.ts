@@ -1,6 +1,7 @@
 import type { VbenFormSchema } from "#/adapter/form";
 import type { VxeGridProps } from "#/adapter/vxe-table";
 import type { Provider, ProviderModelSummary, Tier } from "./ai-client";
+import type { Component } from "vue";
 
 import { h } from "vue";
 
@@ -54,9 +55,8 @@ function protocolLabel(value: string) {
 function protocolBadgeMeta(value: string) {
   if (value === "anthropic" || value === "anthropic-compatible") {
     return {
-      iconClass:
-        "rounded-[3px] border border-orange-300 bg-orange-100 font-serif text-[9px] text-orange-700 dark:border-orange-300/40 dark:bg-orange-300/15 dark:text-orange-100",
-      iconLabel: "A",
+      icon: "simple-icons:anthropic",
+      iconClass: "text-orange-700 dark:text-orange-100",
       styleClass:
         "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-400/30 dark:bg-orange-500/15 dark:text-orange-200",
       type: "anthropic",
@@ -64,18 +64,16 @@ function protocolBadgeMeta(value: string) {
   }
   if (value === "voyage") {
     return {
-      iconClass:
-        "rounded-full border border-cyan-300 bg-cyan-100 text-[9px] text-cyan-700 dark:border-cyan-300/40 dark:bg-cyan-300/15 dark:text-cyan-100",
-      iconLabel: "V",
+      icon: "simple-icons:voyage",
+      iconClass: "text-cyan-700 dark:text-cyan-100",
       styleClass:
         "border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-400/30 dark:bg-cyan-500/15 dark:text-cyan-200",
       type: "voyage",
     };
   }
   return {
-    iconClass:
-      "rounded-full border border-emerald-300 bg-emerald-100 text-[9px] text-emerald-700 dark:border-emerald-300/40 dark:bg-emerald-300/15 dark:text-emerald-100",
-    iconLabel: "O",
+    icon: "simple-icons:openai",
+    iconClass: "text-emerald-700 dark:text-emerald-100",
     styleClass:
       "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200",
     type: "openai",
@@ -136,7 +134,7 @@ function endpointRows(row: Provider) {
   }));
 }
 
-function endpointCell(row: Provider) {
+function endpointCell(row: Provider, providerIcon?: Component) {
   const endpoints = endpointRows(row);
   if (endpoints.length === 0) {
     return h(
@@ -161,7 +159,7 @@ function endpointCell(row: Provider) {
             "span",
             {
               class:
-                "ai-provider-endpoint-url block min-w-0 break-all pr-[140px] text-left font-mono text-[11px] leading-4",
+                "ai-provider-endpoint-url block min-w-0 break-all pr-[108px] text-left font-mono text-xs leading-5 whitespace-normal",
               title: endpoint.url,
             },
             endpoint.url,
@@ -170,7 +168,7 @@ function endpointCell(row: Provider) {
             "span",
             {
               class: [
-                "ai-provider-endpoint-badge absolute right-4 top-1.5 inline-flex h-5 max-w-[118px] items-center gap-1 rounded border px-1.5 text-[10px] font-medium leading-none shadow-sm",
+                "ai-provider-endpoint-badge absolute right-3 top-1.5 inline-flex h-5 max-w-[92px] items-center gap-1 rounded border px-1.5 text-[9px] font-medium leading-none shadow-sm",
                 badgeMeta.styleClass,
               ].join(" "),
               "data-protocol": endpoint.type,
@@ -182,12 +180,14 @@ function endpointCell(row: Provider) {
                 {
                   "aria-hidden": true,
                   class: [
-                    "ai-provider-endpoint-icon-mark inline-flex size-3 shrink-0 items-center justify-center font-semibold leading-none",
+                    "ai-provider-endpoint-icon-mark inline-flex size-3 shrink-0 items-center justify-center leading-none",
                     badgeMeta.iconClass,
                   ].join(" "),
                   "data-provider-icon": badgeMeta.type,
                 },
-                badgeMeta.iconLabel,
+                providerIcon
+                  ? h(providerIcon, { class: "size-3", icon: badgeMeta.icon })
+                  : undefined,
               ),
               h("span", { class: "truncate" }, endpoint.label),
             ],
@@ -226,6 +226,7 @@ function secretCell(row: Provider) {
 
 type ProviderColumnOptions = {
   onDeleteModel?: (model: ProviderModelSummary) => Promise<void> | void;
+  providerIcon?: Component;
 };
 
 function modelDeleteButton(
@@ -272,13 +273,20 @@ function modelTag(
     "span",
     {
       class:
-        "inline-flex h-8 max-w-full items-center gap-1.5 rounded-full border border-border bg-background px-2.5 text-sm shadow-sm",
+        "ai-provider-model-tag inline-flex min-h-8 max-w-full items-start gap-1.5 rounded-full border border-border bg-background px-2.5 py-1.5 text-sm shadow-sm",
     },
     [
-      h("span", { class: "min-w-0 truncate text-foreground" }, model.modelName),
       h(
         "span",
-        { class: "shrink-0 text-xs text-muted-foreground" },
+        {
+          class:
+            "ai-provider-model-name min-w-0 break-all text-foreground whitespace-normal leading-5",
+        },
+        model.modelName,
+      ),
+      h(
+        "span",
+        { class: "shrink-0 text-xs text-muted-foreground leading-5" },
         protocolLabel(model.protocol),
       ),
       modelDeleteButton(model, onDeleteModel),
@@ -324,14 +332,14 @@ function modelsCell(
     "div",
     {
       class:
-        "flex min-h-[104px] min-w-[420px] max-w-[620px] flex-col justify-center gap-2 py-2",
+        "ai-provider-model-list flex min-h-[48px] min-w-0 max-w-full flex-col justify-center gap-2 overflow-visible py-2",
     },
     groups.map((group, index) =>
       h(
         "div",
         {
           class: [
-            "flex flex-wrap gap-2",
+            "ai-provider-model-row flex min-w-0 flex-wrap gap-2 overflow-visible",
             index > 0 ? "border-t border-border pt-2" : "",
           ]
             .filter(Boolean)
@@ -487,7 +495,8 @@ export function buildProviderColumns(
     {
       field: "models",
       title: $t("plugin.linapro-ai-core.provider.fields.models"),
-      minWidth: 360,
+      className: "ai-provider-model-column",
+      minWidth: 300,
       showOverflow: false,
       slots: {
         default: ({ row }) =>
@@ -497,9 +506,13 @@ export function buildProviderColumns(
     {
       field: "endpoint",
       title: $t("plugin.linapro-ai-core.provider.fields.endpoint"),
-      minWidth: 360,
+      className: "ai-provider-endpoint-column",
+      minWidth: 300,
       showOverflow: false,
-      slots: { default: ({ row }) => endpointCell(row as Provider) },
+      slots: {
+        default: ({ row }) =>
+          endpointCell(row as Provider, options.providerIcon),
+      },
     },
     {
       field: "enabled",
@@ -527,7 +540,7 @@ export function buildProviderColumns(
       resizable: false,
       slots: { default: "action" },
       title: $t("pages.common.actions"),
-      width: 260,
+      width: 190,
     },
   ];
 }

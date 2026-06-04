@@ -18,8 +18,9 @@ test.describe("TC-1 智能中心供应商管理", () => {
     await withAdminApi(async (api) => {
       const suffix = Date.now();
       const fixture = await createProviderWithModel(api, {
-        anthropicEndpointUrl: "http://127.0.0.1:65535/anthropic",
-        modelName: `e2e-model-${suffix}`,
+        anthropicEndpointUrl: `https://api.anthropic.example.com/v1/workspaces/${suffix}/long-provider-endpoint-url-rendering-check`,
+        modelName: `e2e-model-${suffix}-gpt-4-1-mini-long-context-rendering-check`,
+        openaiEndpointUrl: `https://api.openai.example.com/v1/organizations/${suffix}/projects/long-provider-endpoint-url-rendering-check`,
         providerName: `E2E Provider ${suffix}`,
         secretRef: "sk-1234567890",
         websiteUrl: `https://example.com/e2e-provider-${suffix}`,
@@ -36,6 +37,7 @@ test.describe("TC-1 智能中心供应商管理", () => {
           syncAnthropic: true,
           syncOpenAI: true,
         });
+        await smartCenter.captureEvidence("TC001-provider-list-layout");
         await smartCenter.assertCreateModelDrawerChineseTranslations(
           fixture.providerName,
         );

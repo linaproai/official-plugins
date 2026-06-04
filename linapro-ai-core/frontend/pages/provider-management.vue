@@ -47,7 +47,10 @@ const [Grid, gridApi] = useVbenVxeGrid({
       highlight: true,
       reserve: true,
     },
-    columns: buildProviderColumns({ onDeleteModel: handleDeleteModel }),
+    columns: buildProviderColumns({
+      onDeleteModel: handleDeleteModel,
+      providerIcon: IconifyIcon,
+    }),
     height: "auto",
     keepSource: true,
     pagerConfig: {},
@@ -108,14 +111,21 @@ async function handleSync(row: Provider, protocol: string) {
 }
 
 function syncableProtocols(row: Provider) {
+  const enabledProtocols = new Set(
+    (row.endpoints || [])
+      .filter((item) => item.enabled === 1)
+      .map((item) => item.protocol),
+  );
   return [
-    ...new Set(
-      (row.endpoints || [])
-        .filter((item) => item.enabled === 1)
-        .map((item) => item.protocol)
-        .filter((protocol) => ["openai", "anthropic"].includes(protocol)),
-    ),
-  ];
+    enabledProtocols.has("openai") ? "openai" : "",
+    enabledProtocols.has("anthropic") ? "anthropic" : "",
+  ].filter(Boolean);
+}
+
+function syncActionLabel(protocol: string) {
+  return protocol === "anthropic"
+    ? $t("plugin.linapro-ai-core.model.actions.syncAnthropic")
+    : $t("plugin.linapro-ai-core.model.actions.syncOpenAI");
 }
 </script>
 
@@ -141,29 +151,29 @@ function syncableProtocols(row: Provider) {
 
       <template #action="{ row }">
         <div class="ai-provider-action-list">
-          <ghost-button @click.stop="handleEdit(row)">
-            {{ $t("pages.common.edit") }}
-          </ghost-button>
-          <Popconfirm
-            :title="$t('pages.common.deleteConfirm')"
-            placement="left"
-            @confirm="handleDelete(row)"
-          >
-            <ghost-button danger @click.stop="">
-              {{ $t("pages.common.delete") }}
+          <div class="ai-provider-action-primary">
+            <ghost-button @click.stop="handleEdit(row)">
+              {{ $t("pages.common.edit") }}
             </ghost-button>
-          </Popconfirm>
-          <ghost-button
-            v-for="protocol in syncableProtocols(row)"
-            :key="protocol"
-            @click.stop="handleSync(row, protocol)"
-          >
-            {{
-              $t("plugin.linapro-ai-core.model.actions.syncProtocol", {
-                protocol,
-              })
-            }}
-          </ghost-button>
+            <Popconfirm
+              :title="$t('pages.common.deleteConfirm')"
+              placement="left"
+              @confirm="handleDelete(row)"
+            >
+              <ghost-button danger @click.stop="">
+                {{ $t("pages.common.delete") }}
+              </ghost-button>
+            </Popconfirm>
+          </div>
+          <div class="ai-provider-action-sync">
+            <ghost-button
+              v-for="protocol in syncableProtocols(row)"
+              :key="protocol"
+              @click.stop="handleSync(row, protocol)"
+            >
+              {{ syncActionLabel(protocol) }}
+            </ghost-button>
+          </div>
         </div>
       </template>
     </Grid>
@@ -176,11 +186,26 @@ function syncableProtocols(row: Provider) {
 <style scoped>
 .ai-provider-action-list {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   max-width: 100%;
   padding: 2px 0;
+}
+
+.ai-provider-action-primary,
+.ai-provider-action-sync {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ai-provider-action-sync {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
 }
 
 :deep(.ai-provider-action-list .ant-btn) {
@@ -190,6 +215,13 @@ function syncableProtocols(row: Provider) {
 }
 
 :deep(.ai-provider-action-column .vxe-cell) {
+  max-height: none !important;
+  overflow: visible !important;
+  line-height: 1.4;
+}
+
+:deep(.ai-provider-model-column .vxe-cell),
+:deep(.ai-provider-endpoint-column .vxe-cell) {
   max-height: none !important;
   overflow: visible !important;
   line-height: 1.4;
