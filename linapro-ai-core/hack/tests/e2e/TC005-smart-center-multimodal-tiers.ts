@@ -27,7 +27,7 @@ test.describe("TC-5 智能中心多模态档位", () => {
     await prepareSourcePluginsBaseline(["linapro-ai-core"]);
   });
 
-  test("TC-5a: 能力类型 Tab、三档绑定、默认参数和错误路径", async ({
+  test("TC-5a: 能力类型 Tab、三档绑定、调用参数和错误路径", async ({
     adminPage,
   }) => {
     await withAdminApi(async (api) => {
@@ -53,7 +53,6 @@ test.describe("TC-5 智能中心多模态档位", () => {
         {
           capabilityMethod: "analyze",
           capabilityType: "document",
-          defaultParamsJson: '{"maxOutputTokens":2048}',
           enabled: 1,
           endpointId,
           inputModalities: ["document"],
@@ -77,6 +76,7 @@ test.describe("TC-5 智能中心多模态档位", () => {
         const body = route.request().postDataJSON() as Record<string, unknown>;
         expect(body.capabilityType).toBe("document");
         expect(body.capabilityMethod).toBe("analyze");
+        expect(body.maxOutputTokens).toBe(128);
         await gate.promise;
         await route.fulfill({
           body: JSON.stringify({
@@ -103,10 +103,7 @@ test.describe("TC-5 智能中心多模态档位", () => {
         await smartCenter.assertTierCapabilityTypeTabs();
         await smartCenter.assertTierTabsVisualStyle();
         await smartCenter.selectTierCapabilityType("document");
-        await smartCenter.assertTierTypePage(
-          "document",
-          '{"maxOutputTokens":2048}',
-        );
+        await smartCenter.assertTierTypePage("document");
         await smartCenter.assertTierUpdatedAtHidden(/基础|Basic/i);
         await smartCenter.captureEvidence("TC005-document-tier-tab-list");
         await smartCenter.assertTierDrawerWithoutThinkingEffort(/基础|Basic/i);

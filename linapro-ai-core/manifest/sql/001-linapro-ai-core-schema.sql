@@ -121,7 +121,6 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_ai_model_capability (
     "supported_efforts"   VARCHAR(128) NOT NULL DEFAULT '',
     "supports_streaming"  SMALLINT NOT NULL DEFAULT 0,
     "supports_operation"  SMALLINT NOT NULL DEFAULT 0,
-    "default_params_json" TEXT NOT NULL DEFAULT '{}',
     "enabled"             SMALLINT NOT NULL DEFAULT 1,
     "created_at"          TIMESTAMP,
     "updated_at"          TIMESTAMP,
@@ -145,7 +144,6 @@ COMMENT ON COLUMN plugin_linapro_ai_model_capability."supports_thinking" IS 'Thi
 COMMENT ON COLUMN plugin_linapro_ai_model_capability."supported_efforts" IS 'Comma-separated thinking efforts supported by this model method';
 COMMENT ON COLUMN plugin_linapro_ai_model_capability."supports_streaming" IS 'Streaming support flag: 0=no 1=yes';
 COMMENT ON COLUMN plugin_linapro_ai_model_capability."supports_operation" IS 'Provider operation support flag: 0=no 1=yes';
-COMMENT ON COLUMN plugin_linapro_ai_model_capability."default_params_json" IS 'Method-specific default params JSON';
 COMMENT ON COLUMN plugin_linapro_ai_model_capability."enabled" IS 'Enabled flag: 0=disabled 1=enabled';
 COMMENT ON COLUMN plugin_linapro_ai_model_capability."created_at" IS 'Creation time';
 COMMENT ON COLUMN plugin_linapro_ai_model_capability."updated_at" IS 'Update time';
@@ -307,28 +305,6 @@ CREATE INDEX IF NOT EXISTS idx_plugin_linapro_ai_invocation_source_plugin
 CREATE INDEX IF NOT EXISTS idx_plugin_linapro_ai_invocation_method_created
     ON plugin_linapro_ai_invocation ("capability_type", "capability_method", "created_at" DESC);
 
--- Purpose: Stores method-specific default parameter templates for AI capability calls.
--- 用途：存储 AI 能力调用的方法级默认参数模板。
-CREATE TABLE IF NOT EXISTS plugin_linapro_ai_method_default_param (
-    "id"                  BIGSERIAL PRIMARY KEY,
-    "capability_type"     VARCHAR(32) NOT NULL,
-    "capability_method"   VARCHAR(32) NOT NULL,
-    "default_params_json" TEXT NOT NULL DEFAULT '{}',
-    "enabled"             SMALLINT NOT NULL DEFAULT 1,
-    "created_at"          TIMESTAMP,
-    "updated_at"          TIMESTAMP,
-    CONSTRAINT uk_plugin_linapro_ai_method_default_identity UNIQUE ("capability_type", "capability_method")
-);
-
-COMMENT ON TABLE plugin_linapro_ai_method_default_param IS 'AI capability method default params table';
-COMMENT ON COLUMN plugin_linapro_ai_method_default_param."id" IS 'Method default param ID';
-COMMENT ON COLUMN plugin_linapro_ai_method_default_param."capability_type" IS 'Capability type';
-COMMENT ON COLUMN plugin_linapro_ai_method_default_param."capability_method" IS 'Capability method';
-COMMENT ON COLUMN plugin_linapro_ai_method_default_param."default_params_json" IS 'Method-specific default params JSON';
-COMMENT ON COLUMN plugin_linapro_ai_method_default_param."enabled" IS 'Enabled flag: 0=disabled 1=enabled';
-COMMENT ON COLUMN plugin_linapro_ai_method_default_param."created_at" IS 'Creation time';
-COMMENT ON COLUMN plugin_linapro_ai_method_default_param."updated_at" IS 'Update time';
-
 -- Purpose: Stores minimal provider operation projections without business task ownership.
 -- 用途：存储不承载业务任务归属的最小渠道 Operation 投影。
 CREATE TABLE IF NOT EXISTS plugin_linapro_ai_provider_operation (
@@ -409,23 +385,6 @@ tier_catalog("code", "display_name", "sort_order", "text_description") AS (
         ('basic', 'Basic', 1, 'Low-cost AI capability tier for simple text generation and commit message generation.'),
         ('standard', 'Standard', 2, 'Default AI capability tier for regular code generation and code optimization.'),
         ('advanced', 'Advanced', 3, 'High-capability AI tier for complex code generation and cross-file reasoning.')
-),
-method_default_insert AS (
-    INSERT INTO plugin_linapro_ai_method_default_param (
-        "capability_type",
-        "capability_method",
-        "enabled"
-    )
-    SELECT
-        methods."capability_type",
-        methods."capability_method",
-        1
-    FROM capability_methods AS methods
-    ON CONFLICT ("capability_type", "capability_method") DO NOTHING
-    RETURNING 1
-),
-method_default_insert_marker AS (
-    SELECT COUNT(*) AS "ignored" FROM method_default_insert
 )
 INSERT INTO plugin_linapro_ai_tier (
     "capability_type",
@@ -451,5 +410,4 @@ SELECT
     tiers."sort_order"
 FROM capability_methods AS methods
 CROSS JOIN tier_catalog AS tiers
-CROSS JOIN method_default_insert_marker AS marker
 ON CONFLICT ("capability_type", "capability_method", "code") DO NOTHING;

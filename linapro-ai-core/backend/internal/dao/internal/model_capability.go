@@ -33,15 +33,14 @@ type ModelCapabilityColumns struct {
 	MaxInputAssets    string // Maximum input assets, 0 means unspecified
 	MaxOutputAssets   string // Maximum output assets, 0 means unspecified
 	MaxAssetBytes     string // Maximum single asset bytes, 0 means unspecified
+	SupportsThinking  string // Thinking effort support flag for this model method: 0=no 1=yes
+	SupportedEfforts  string // Comma-separated thinking efforts supported by this model method
 	SupportsStreaming string // Streaming support flag: 0=no 1=yes
 	SupportsOperation string // Provider operation support flag: 0=no 1=yes
-	DefaultParamsJson string // Method-specific default params JSON
 	Enabled           string // Enabled flag: 0=disabled 1=enabled
 	CreatedAt         string // Creation time
 	UpdatedAt         string // Update time
 	DeletedAt         string // Deletion time
-	SupportsThinking  string // Thinking effort support flag for this model method: 0=no 1=yes
-	SupportedEfforts  string // Comma-separated thinking efforts supported by this model method
 }
 
 // modelCapabilityColumns holds the columns for the table plugin_linapro_ai_model_capability.
@@ -58,15 +57,14 @@ var modelCapabilityColumns = ModelCapabilityColumns{
 	MaxInputAssets:    "max_input_assets",
 	MaxOutputAssets:   "max_output_assets",
 	MaxAssetBytes:     "max_asset_bytes",
+	SupportsThinking:  "supports_thinking",
+	SupportedEfforts:  "supported_efforts",
 	SupportsStreaming: "supports_streaming",
 	SupportsOperation: "supports_operation",
-	DefaultParamsJson: "default_params_json",
 	Enabled:           "enabled",
 	CreatedAt:         "created_at",
 	UpdatedAt:         "updated_at",
 	DeletedAt:         "deleted_at",
-	SupportsThinking:  "supports_thinking",
-	SupportedEfforts:  "supported_efforts",
 }
 
 // NewModelCapabilityDao creates and returns a new DAO object for table data access.

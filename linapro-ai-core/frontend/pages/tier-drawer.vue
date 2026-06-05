@@ -11,8 +11,6 @@ import { message, Space } from "ant-design-vue";
 import { useVbenForm } from "#/adapter/form";
 import { $t } from "#/locales";
 import {
-  methodDefaultList,
-  methodDefaultUpdate,
   providerList,
   providerModels,
   tierTest,
@@ -23,7 +21,6 @@ import {
   buildEnabledOptions,
   tierDisplayName,
 } from "./ai-data";
-import JsonHighlightEditor from "./json-highlight-editor.vue";
 
 const emit = defineEmits<{ reload: [] }>();
 
@@ -32,9 +29,6 @@ const providers = ref<Provider[]>([]);
 const models = ref<Model[]>([]);
 const testing = ref(false);
 const currentTestResult = ref<TierTestResult>();
-const defaultParamsJson = ref("{}");
-const defaultParamsCompact = ref("{}");
-const defaultParamsInvalid = ref(false);
 const title = computed(tierDrawerTitle);
 const currentTestLatency = computed(() =>
   formatLatencyMs(currentTestResult.value?.latencyMs),
@@ -101,30 +95,6 @@ function supportsThinkingEffort() {
     tier.value?.capabilityType === "text" &&
     tier.value?.capabilityMethod === "generate"
   );
-}
-
-function formatDefaultParams(raw: string) {
-  try {
-    return JSON.stringify(JSON.parse(raw || "{}"), null, 2);
-  } catch {
-    return raw || "{}";
-  }
-}
-
-function normalizeDefaultParams(raw: string) {
-  try {
-    const parsed = JSON.parse(raw || "{}");
-    if (
-      parsed === null ||
-      Array.isArray(parsed) ||
-      typeof parsed !== "object"
-    ) {
-      return "";
-    }
-    return JSON.stringify(parsed);
-  } catch {
-    return "";
-  }
 }
 
 function buildSchema(): VbenFormSchema[] {
@@ -204,44 +174,6 @@ async function refreshProviderOptions() {
       },
     },
   ]);
-}
-
-async function refreshMethodDefault() {
-  const capabilityType = tier.value?.capabilityType || "text";
-  const capabilityMethod = tier.value?.capabilityMethod || "generate";
-  const items = await methodDefaultList();
-  const current = items.find(
-    (item) =>
-      item.capabilityType === capabilityType &&
-      item.capabilityMethod === capabilityMethod,
-  );
-  defaultParamsCompact.value =
-    normalizeDefaultParams(current?.defaultParamsJson || "{}") || "{}";
-  defaultParamsJson.value = formatDefaultParams(defaultParamsCompact.value);
-  defaultParamsInvalid.value = false;
-}
-
-async function saveMethodDefaultIfChanged() {
-  const normalized = normalizeDefaultParams(defaultParamsJson.value);
-  if (!normalized) {
-    defaultParamsInvalid.value = true;
-    message.error(
-      $t("plugin.linapro-ai-core.methodDefault.messages.invalidJson"),
-    );
-    return false;
-  }
-  defaultParamsInvalid.value = false;
-  if (normalized === defaultParamsCompact.value) {
-    return true;
-  }
-  await methodDefaultUpdate(
-    tier.value?.capabilityType || "text",
-    tier.value?.capabilityMethod || "generate",
-    normalized,
-  );
-  defaultParamsCompact.value = normalized;
-  defaultParamsJson.value = formatDefaultParams(normalized);
-  return true;
 }
 
 async function currentValues() {
@@ -325,7 +257,6 @@ const [Drawer, drawerApi] = useVbenDrawer({
     ]);
     await formApi.resetForm();
     await refreshProviderOptions();
-    await refreshMethodDefault();
     const providerId = tier.value?.binding?.providerId || undefined;
     await refreshModelOptions(Number(providerId || 0), false);
     await formApi.setValues({
@@ -347,9 +278,6 @@ const [Drawer, drawerApi] = useVbenDrawer({
       if (!validateBindingValues(values, false)) {
         return;
       }
-      if (!(await saveMethodDefaultIfChanged())) {
-        return;
-      }
       await tierUpdate(tier.value.code, values);
       message.success($t("pages.common.updateSuccess"));
       emit("reload");
@@ -365,24 +293,6 @@ const [Drawer, drawerApi] = useVbenDrawer({
   <Drawer :title="title" class="w-[720px] max-w-[calc(100vw-32px)]">
     <div class="flex flex-col gap-[16px]">
       <Form />
-      <div class="tier-default-params-item relative flex">
-        <label class="tier-default-params-label">
-          {{
-            $t("plugin.linapro-ai-core.methodDefault.fields.defaultParamsJson")
-          }}
-        </label>
-        <div class="tier-default-params-control flex-auto">
-          <JsonHighlightEditor
-            v-model="defaultParamsJson"
-            :invalid="defaultParamsInvalid"
-            :placeholder="
-              $t('plugin.linapro-ai-core.methodDefault.placeholders.json')
-            "
-            testid="ai-tier-default-params-editor"
-            @update:model-value="defaultParamsInvalid = false"
-          />
-        </div>
-      </div>
       <div class="flex justify-end">
         <Space>
           <div
@@ -422,26 +332,5 @@ const [Drawer, drawerApi] = useVbenDrawer({
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
     "Courier New", monospace;
-}
-
-.tier-default-params-item {
-  align-items: flex-start;
-  column-gap: 8px;
-  width: 100%;
-}
-
-.tier-default-params-label {
-  flex: 0 0 132px;
-  width: 132px;
-  min-height: 32px;
-  padding-right: 12px;
-  color: hsl(var(--foreground));
-  font-size: 14px;
-  line-height: 32px;
-  text-align: right;
-}
-
-.tier-default-params-control {
-  min-width: 0;
 }
 </style>

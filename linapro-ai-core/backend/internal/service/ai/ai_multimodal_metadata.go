@@ -1,6 +1,6 @@
 // This file implements multimodal Smart Center metadata management for
-// provider endpoints, model method capabilities, method defaults, and provider
-// operation projections.
+// provider endpoints, model method capabilities, and provider operation
+// projections.
 
 package ai
 
@@ -391,61 +391,6 @@ func (s *serviceImpl) modelCapabilityKeysReferencedByTiers(ctx context.Context, 
 	return false, nil
 }
 
-// ListMethodDefaults returns method-specific default parameter projections.
-func (s *serviceImpl) ListMethodDefaults(ctx context.Context) ([]*MethodDefaultParamItem, error) {
-	if err := s.ensurePlatform(ctx); err != nil {
-		return nil, err
-	}
-	cols := dao.MethodDefaultParam.Columns()
-	rows := make([]*entity.MethodDefaultParam, 0)
-	if err := dao.MethodDefaultParam.Ctx(ctx).
-		OrderAsc(cols.CapabilityType).
-		OrderAsc(cols.CapabilityMethod).
-		Scan(&rows); err != nil {
-		return nil, err
-	}
-	items := make([]*MethodDefaultParamItem, 0, len(rows))
-	for _, row := range rows {
-		items = append(items, methodDefaultParamToItem(row))
-	}
-	return items, nil
-}
-
-// UpdateMethodDefault updates one method-specific default parameter projection.
-func (s *serviceImpl) UpdateMethodDefault(ctx context.Context, in MethodDefaultParamSaveInput) error {
-	if err := s.ensurePlatform(ctx); err != nil {
-		return err
-	}
-	capabilityType := normalizeCapabilityType(in.CapabilityType)
-	capabilityMethod := normalizeCapabilityMethod(in.CapabilityMethod)
-	if capabilityType == "" || capabilityMethod == "" {
-		return bizerr.NewCode(CodeRequestInvalid)
-	}
-	var row *entity.MethodDefaultParam
-	if err := dao.MethodDefaultParam.Ctx(ctx).
-		Where(do.MethodDefaultParam{CapabilityType: capabilityType, CapabilityMethod: capabilityMethod}).
-		Scan(&row); err != nil {
-		return err
-	}
-	data := do.MethodDefaultParam{
-		CapabilityType:    capabilityType,
-		CapabilityMethod:  capabilityMethod,
-		DefaultParamsJson: normalizeJSONText(in.DefaultParamsJson),
-		Enabled:           normalizeEnabled(in.Enabled),
-	}
-	if row == nil {
-		_, err := dao.MethodDefaultParam.Ctx(ctx).Data(data).Insert()
-		if err != nil {
-			return err
-		}
-		return s.InvalidateTierCache(ctx, capabilityType, capabilityMethod, "")
-	}
-	if _, err := dao.MethodDefaultParam.Ctx(ctx).Where(do.MethodDefaultParam{Id: row.Id}).Data(data).Update(); err != nil {
-		return err
-	}
-	return s.InvalidateTierCache(ctx, capabilityType, capabilityMethod, "")
-}
-
 // ListProviderOperations returns masked provider operation projections with database-side filters.
 func (s *serviceImpl) ListProviderOperations(ctx context.Context, in ProviderOperationListInput) (*ProviderOperationListOutput, error) {
 	if err := s.ensurePlatform(ctx); err != nil {
@@ -546,7 +491,6 @@ func (s *serviceImpl) upsertModelCapability(ctx context.Context, model *entity.M
 		SupportsOperation: normalizeEnabled(item.SupportsOperation),
 		SupportsThinking:  normalizeEnabled(item.SupportsThinking),
 		SupportedEfforts:  supportedEfforts,
-		DefaultParamsJson: normalizeJSONText(item.DefaultParamsJson),
 		Enabled:           normalizeEnabled(item.Enabled),
 	}
 	var existing *entity.ModelCapability
@@ -732,22 +676,6 @@ func modelCapabilityToItem(row *entity.ModelCapability) *ModelCapabilityItem {
 		SupportsOperation: row.SupportsOperation,
 		SupportsThinking:  row.SupportsThinking,
 		SupportedEfforts:  splitEfforts(row.SupportedEfforts),
-		DefaultParamsJson: row.DefaultParamsJson,
-		Enabled:           row.Enabled,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
-	}
-}
-
-func methodDefaultParamToItem(row *entity.MethodDefaultParam) *MethodDefaultParamItem {
-	if row == nil {
-		return nil
-	}
-	return &MethodDefaultParamItem{
-		Id:                row.Id,
-		CapabilityType:    row.CapabilityType,
-		CapabilityMethod:  row.CapabilityMethod,
-		DefaultParamsJson: row.DefaultParamsJson,
 		Enabled:           row.Enabled,
 		CreatedAt:         row.CreatedAt,
 		UpdatedAt:         row.UpdatedAt,

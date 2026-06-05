@@ -13,7 +13,6 @@ gfcli:
           plugin_linapro_ai_tier,
           plugin_linapro_ai_tier_binding,
           plugin_linapro_ai_invocation,
-          plugin_linapro_ai_method_default_param,
           plugin_linapro_ai_provider_operation
         removePrefix: "plugin_linapro_ai_"
         importPrefix: "lina-plugin-linapro-ai-core/backend/internal"

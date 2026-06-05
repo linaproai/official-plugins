@@ -703,6 +703,54 @@ func TestTierBindingAllowsModelWithoutCapabilityDeclaration(t *testing.T) {
 	}
 }
 
+// TestMultimodalTierBindingRequiresModelCapabilityDeclaration verifies non-text
+// tiers cannot bind an unclassified or wrong-method model.
+func TestMultimodalTierBindingRequiresModelCapabilityDeclaration(t *testing.T) {
+	ctx := context.Background()
+	prepareDatabase(t, ctx)
+	server := testOpenAIServer(t)
+	ctx = context.WithValue(ctx, providerBaseURLKey{}, server.URL+"/v1")
+	svc := New(testBizCtx{}, nil, server.Client()).(*serviceImpl)
+	snapshot := snapshotTierFor(t, ctx, svc, "document", "analyze", TierCodeStandard)
+	t.Cleanup(func() { restoreTier(t, ctx, snapshot) })
+
+	providerID := createTestProvider(t, ctx, svc, "document-capability-required")
+	t.Cleanup(func() { deleteProviderFixture(t, ctx, providerID) })
+	modelID, err := svc.CreateModel(ctx, ModelSaveInput{
+		ProviderId: providerID,
+		EndpointId: defaultTestEndpointID(t, ctx, svc, providerID, ProtocolOpenAI),
+		ModelName:  "capability-free-document-model",
+		Protocol:   ProtocolOpenAI,
+		Enabled:    enabledYes,
+	})
+	if err != nil {
+		t.Fatalf("create capability-free model: %v", err)
+	}
+
+	err = svc.UpdateTier(ctx, TierUpdateInput{
+		CapabilityType:   "document",
+		CapabilityMethod: "analyze",
+		Code:             TierCodeStandard,
+		ProviderId:       providerID,
+		ModelId:          modelID,
+		Enabled:          enabledYes,
+	})
+	if !bizerr.Is(err, CodeModelNotFound) {
+		t.Fatalf("expected document tier binding to reject undeclared model capability, got %v", err)
+	}
+
+	_, err = svc.TestTier(ctx, TierTestInput{
+		CapabilityType:   "document",
+		CapabilityMethod: "analyze",
+		Code:             TierCodeStandard,
+		ProviderId:       providerID,
+		ModelId:          modelID,
+	})
+	if !bizerr.Is(err, CodeModelNotFound) {
+		t.Fatalf("expected document tier draft test to reject undeclared model capability, got %v", err)
+	}
+}
+
 // TestTierDraftTestDoesNotPersistBinding verifies draft tier testing calls the
 // provider but does not persist the draft binding as the primary tier binding.
 func TestTierDraftTestDoesNotPersistBinding(t *testing.T) {
@@ -1142,7 +1190,6 @@ func TestMultimodalMetadataManagementFlow(t *testing.T) {
 		MaxOutputAssets:   2,
 		MaxAssetBytes:     8 * 1024 * 1024,
 		SupportsOperation: enabledYes,
-		DefaultParamsJson: `{"size":"1024x1024"}`,
 		Enabled:           enabledYes,
 		SupportsStreaming: enabledNo,
 	}}); err != nil {
@@ -1170,29 +1217,6 @@ func TestMultimodalMetadataManagementFlow(t *testing.T) {
 	}
 	if err = svc.DeleteProviderEndpoint(ctx, providerID, endpointID); !bizerr.Is(err, CodeProviderEndpointInUse) {
 		t.Fatalf("expected endpoint in-use protection, got %v", err)
-	}
-
-	if err = svc.UpdateMethodDefault(ctx, MethodDefaultParamSaveInput{
-		CapabilityType:    "image",
-		CapabilityMethod:  "generate",
-		DefaultParamsJson: `{"count":2,"size":"1024x1024"}`,
-		Enabled:           enabledYes,
-	}); err != nil {
-		t.Fatalf("update method default: %v", err)
-	}
-	defaults, err := svc.ListMethodDefaults(ctx)
-	if err != nil {
-		t.Fatalf("list method defaults: %v", err)
-	}
-	foundDefault := false
-	for _, item := range defaults {
-		if item.CapabilityType == "image" && item.CapabilityMethod == "generate" {
-			foundDefault = item.DefaultParamsJson == `{"count":2,"size":"1024x1024"}`
-			break
-		}
-	}
-	if !foundDefault {
-		t.Fatalf("expected updated image.generate defaults, got %#v", defaults)
 	}
 
 	expiresAt := time.Now().Add(time.Hour)

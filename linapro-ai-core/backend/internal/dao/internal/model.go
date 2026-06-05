@@ -23,6 +23,7 @@ type ModelDao struct {
 type ModelColumns struct {
 	Id         string // Model ID
 	ProviderId string // Provider ID
+	EndpointId string // Provider endpoint ID used by the model
 	ModelName  string // Provider model name
 	Protocol   string // Protocol: openai or anthropic
 	Source     string // Model source: manual or api
@@ -30,13 +31,13 @@ type ModelColumns struct {
 	CreatedAt  string // Creation time
 	UpdatedAt  string // Update time
 	DeletedAt  string // Deletion time
-	EndpointId string // Provider endpoint ID used by the model
 }
 
 // modelColumns holds the columns for the table plugin_linapro_ai_model.
 var modelColumns = ModelColumns{
 	Id:         "id",
 	ProviderId: "provider_id",
+	EndpointId: "endpoint_id",
 	ModelName:  "model_name",
 	Protocol:   "protocol",
 	Source:     "source",
@@ -44,7 +45,6 @@ var modelColumns = ModelColumns{
 	CreatedAt:  "created_at",
 	UpdatedAt:  "updated_at",
 	DeletedAt:  "deleted_at",
-	EndpointId: "endpoint_id",
 }
 
 // NewModelDao creates and returns a new DAO object for table data access.

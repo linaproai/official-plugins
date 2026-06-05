@@ -27,7 +27,7 @@ func TestMaskSecretRefPreservesRecognizablePrefixAndSuffix(t *testing.T) {
 	}
 }
 
-func TestCapabilityMethodDefaultsAndCacheKey(t *testing.T) {
+func TestCapabilityMethodCacheKey(t *testing.T) {
 	if got := normalizeCapabilityMethod(""); got != CapabilityMethodGenerate {
 		t.Fatalf("expected default method %q, got %q", CapabilityMethodGenerate, got)
 	}

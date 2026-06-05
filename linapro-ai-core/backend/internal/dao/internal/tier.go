@@ -22,8 +22,8 @@ type TierDao struct {
 // TierColumns defines and stores column names for the table plugin_linapro_ai_tier.
 type TierColumns struct {
 	Id                   string // Tier ID
-	CapabilityType       string // Capability type: text
-	CapabilityMethod     string // Capability method: generate
+	CapabilityType       string // Capability type
+	CapabilityMethod     string // Capability method
 	Code                 string // Tier code: basic, standard, advanced
 	DisplayName          string // Tier display name
 	Description          string // Tier description

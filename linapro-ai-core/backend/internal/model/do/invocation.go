@@ -34,8 +34,8 @@ type Invocation struct {
 	LatencyMs            any        // Provider call latency in milliseconds
 	ErrorCode            any        // Stable error code
 	ErrorSummary         any        // Masked error summary
-	CreatedAt            *time.Time // Creation time
 	AssetSummaryJson     any        // Asset reference summary JSON without file contents
 	OperationSummaryJson any        // Provider operation summary JSON without provider secrets
 	MetadataSummaryJson  any        // Bounded metadata summary JSON without request or response bodies
+	CreatedAt            *time.Time // Creation time
 }

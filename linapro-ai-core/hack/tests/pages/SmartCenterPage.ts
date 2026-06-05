@@ -1706,12 +1706,14 @@ export class SmartCenterPage {
     ).toBeLessThanOrEqual(1);
   }
 
-  async assertTierTypePage(capabilityType: string, defaultParams: string) {
+  async assertTierTypePage(capabilityType: string) {
     await expect(this.tierCapabilityTypeTab(capabilityType)).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    await expect(this.page.getByText(defaultParams)).toHaveCount(0);
+    await expect(
+      this.page.getByText(/默认参数 JSON|Default Params JSON/i),
+    ).toHaveCount(0);
     await expect(this.page.getByText(/基础|Basic/i)).toBeVisible();
     await expect(this.page.getByText(/标准|Standard/i)).toBeVisible();
     await expect(this.page.getByText(/高级|Advanced/i)).toBeVisible();
@@ -1741,10 +1743,7 @@ export class SmartCenterPage {
     await this.cancelDrawer();
   }
 
-  async assertTierDrawerDefaultConfig(
-    tierName: RegExp,
-    expectedParamsFragment: string,
-  ) {
+  async assertTierDrawerDefaultConfig(tierName: RegExp) {
     await this.editTier(tierName);
     await expect(
       this.dialog.getByText("Thinking Effort", { exact: true }),
@@ -1754,106 +1753,10 @@ export class SmartCenterPage {
     ).toBeVisible();
     await expect(
       this.dialog.getByText(/默认参数 JSON|Default Params JSON/i),
-    ).toBeVisible();
-    const editorInput = this.dialog.getByTestId(
-      "ai-tier-default-params-editor-input",
-    );
-    await expect(editorInput).toBeVisible();
-    await expect(editorInput).toHaveValue(
-      new RegExp(escapeRegExp(expectedParamsFragment)),
-    );
+    ).toHaveCount(0);
     await expect(
-      this.dialog
-        .getByTestId("ai-tier-default-params-editor")
-        .locator(".json-token-key")
-        .first(),
-    ).toBeVisible();
-  }
-
-  async assertTierDefaultParamsFormLayout() {
-    const defaultParamsLabel = this.dialog
-      .locator("label", {
-        hasText: /默认参数 JSON|Default Params JSON/i,
-      })
-      .first();
-    const providerLabel = this.dialog
-      .locator("label", { hasText: /渠道|Provider/i })
-      .first();
-    const editor = this.dialog.getByTestId("ai-tier-default-params-editor");
-
-    await expect(defaultParamsLabel).toBeVisible();
-    await expect(providerLabel).toBeVisible();
-    await expect(editor).toBeVisible();
-
-    const [defaultParamsMetrics, providerMetrics, editorMetrics] =
-      await Promise.all([
-        defaultParamsLabel.evaluate((node) => {
-          const formItem = node.closest(".relative.flex");
-          const control = formItem?.querySelector(".flex-auto");
-          const labelBox = node.getBoundingClientRect();
-          const controlBox = control?.getBoundingClientRect();
-          if (!controlBox) {
-            throw new Error("default params form control was not found");
-          }
-          return {
-            controlLeft: controlBox.left,
-            controlRight: controlBox.right,
-            labelLeft: labelBox.left,
-          };
-        }),
-        providerLabel.evaluate((node) => {
-          const formItem = node.closest(".relative.flex");
-          const control = formItem?.querySelector(".flex-auto");
-          const labelBox = node.getBoundingClientRect();
-          const controlBox = control?.getBoundingClientRect();
-          if (!controlBox) {
-            throw new Error("provider form control was not found");
-          }
-          return {
-            controlLeft: controlBox.left,
-            controlRight: controlBox.right,
-            labelLeft: labelBox.left,
-          };
-        }),
-        editor.evaluate((node) => {
-          const box = node.getBoundingClientRect();
-          return {
-            left: box.left,
-            right: box.right,
-          };
-        }),
-      ]);
-
-    expect(
-      Math.abs(defaultParamsMetrics.labelLeft - providerMetrics.labelLeft),
-    ).toBeLessThan(1);
-    expect(
-      Math.abs(defaultParamsMetrics.controlLeft - providerMetrics.controlLeft),
-    ).toBeLessThan(2);
-    expect(
-      Math.abs(
-        defaultParamsMetrics.controlRight - providerMetrics.controlRight,
-      ),
-    ).toBeLessThan(2);
-    expect(
-      Math.abs(editorMetrics.left - defaultParamsMetrics.controlLeft),
-    ).toBeLessThan(2);
-    expect(
-      Math.abs(editorMetrics.right - defaultParamsMetrics.controlRight),
-    ).toBeLessThan(2);
-  }
-
-  async fillTierDefaultParams(defaultParamsJson: string) {
-    const editorInput = this.dialog.getByTestId(
-      "ai-tier-default-params-editor-input",
-    );
-    await editorInput.fill(defaultParamsJson);
-    await expect(
-      this.dialog
-        .getByTestId("ai-tier-default-params-editor")
-        .locator(".json-token-key")
-        .first(),
-    ).toBeVisible();
+      this.dialog.getByTestId("ai-tier-default-params-editor"),
+    ).toHaveCount(0);
   }
 
   async saveTierDrawer() {
@@ -2193,9 +2096,9 @@ export class SmartCenterPage {
     expect(methodSelectWidth).toBeLessThanOrEqual(243);
     expect(metrics.pickerWidth).toBeGreaterThanOrEqual(241);
     expect(metrics.pickerWidth).toBeLessThanOrEqual(243);
-    expect(Math.abs(metrics.pickerWidth - methodSelectWidth)).toBeLessThanOrEqual(
-      1,
-    );
+    expect(
+      Math.abs(metrics.pickerWidth - methodSelectWidth),
+    ).toBeLessThanOrEqual(1);
     expect(metrics.pickerWidth).toBeLessThanOrEqual(metrics.fieldWidth);
     expect(metrics.pickerRight).toBeLessThanOrEqual(
       metrics.clippingParentRight + 1,
@@ -2316,9 +2219,9 @@ export class SmartCenterPage {
     expect(
       Math.abs(metrics.sourcePlugin.itemTop - metrics.created.itemTop),
     ).toBeLessThanOrEqual(4);
-    expect(metrics.created.itemTop - metrics.capability.itemTop).toBeGreaterThan(
-      20,
-    );
+    expect(
+      metrics.created.itemTop - metrics.capability.itemTop,
+    ).toBeGreaterThan(20);
     expect(
       Math.abs(metrics.created.itemLeft - metrics.capability.itemLeft),
     ).toBeLessThanOrEqual(1);
@@ -2355,8 +2258,12 @@ export class SmartCenterPage {
     expect(metrics.purpose.itemLeft).toBeGreaterThan(
       metrics.capability.itemLeft + 120,
     );
-    expect(metrics.tier.itemLeft).toBeGreaterThan(metrics.purpose.itemLeft + 120);
-    expect(metrics.status.itemLeft).toBeGreaterThan(metrics.tier.itemLeft + 120);
+    expect(metrics.tier.itemLeft).toBeGreaterThan(
+      metrics.purpose.itemLeft + 120,
+    );
+    expect(metrics.status.itemLeft).toBeGreaterThan(
+      metrics.tier.itemLeft + 120,
+    );
     expect(metrics.sourcePlugin.itemLeft).toBeGreaterThan(
       metrics.created.itemLeft + 120,
     );

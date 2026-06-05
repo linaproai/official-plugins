@@ -15,6 +15,7 @@ type Model struct {
 	g.Meta     `orm:"table:plugin_linapro_ai_model, do:true"`
 	Id         any        // Model ID
 	ProviderId any        // Provider ID
+	EndpointId any        // Provider endpoint ID used by the model
 	ModelName  any        // Provider model name
 	Protocol   any        // Protocol: openai or anthropic
 	Source     any        // Model source: manual or api
@@ -22,5 +23,4 @@ type Model struct {
 	CreatedAt  *time.Time // Creation time
 	UpdatedAt  *time.Time // Update time
 	DeletedAt  *time.Time // Deletion time
-	EndpointId any        // Provider endpoint ID used by the model
 }

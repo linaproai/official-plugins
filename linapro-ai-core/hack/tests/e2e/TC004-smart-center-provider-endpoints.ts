@@ -47,7 +47,6 @@ test.describe("TC-4 智能中心渠道端点", () => {
           {
             capabilityMethod: "generate",
             capabilityType: "image",
-            defaultParamsJson: '{"size":"1024x1024"}',
             enabled: 1,
             endpointId,
             inputModalities: ["text"],

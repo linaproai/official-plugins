@@ -113,18 +113,6 @@
         "tableTitle": "Models"
       },
       "name": "AI Hub",
-      "methodDefault": {
-        "current": "Defaults for {capability}",
-        "fields": {
-          "defaultParamsJson": "Default Params JSON"
-        },
-        "messages": {
-          "invalidJson": "Default params must be a valid JSON object"
-        },
-        "placeholders": {
-          "json": "{}"
-        }
-      },
       "provider": {
         "actions": {
           "addProvider": "Add Provider"

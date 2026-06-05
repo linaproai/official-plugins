@@ -64,7 +64,6 @@ func toAPIModelCapabilityItem(item *aisvc.ModelCapabilityItem) *v1.ModelCapabili
 		SupportsOperation: item.SupportsOperation,
 		SupportsThinking:  item.SupportsThinking,
 		SupportedEfforts:  item.SupportedEfforts,
-		DefaultParamsJson: item.DefaultParamsJson,
 		Enabled:           item.Enabled,
 		CreatedAt:         milliValue(apitime.Milli(item.CreatedAt)),
 		UpdatedAt:         milliValue(apitime.Milli(item.UpdatedAt)),
@@ -90,7 +89,6 @@ func toServiceModelCapabilityInputs(items []v1.ModelCapabilityInput) []aisvc.Mod
 			SupportsOperation: item.SupportsOperation,
 			SupportsThinking:  item.SupportsThinking,
 			SupportedEfforts:  item.SupportedEfforts,
-			DefaultParamsJson: item.DefaultParamsJson,
 			Enabled:           item.Enabled,
 		})
 	}

@@ -365,34 +365,6 @@ export async function listTiers(
   return out?.list ?? [];
 }
 
-export async function listMethodDefaults(api: APIRequestContext) {
-  const response = await api.get(pluginApiPath(pluginId, "ai/method-defaults"));
-  await assertOk(response, "查询 AI 方法默认参数失败");
-  const out = unwrapApiData(await response.json());
-  return out?.list ?? [];
-}
-
-export async function updateMethodDefault(
-  api: APIRequestContext,
-  capabilityType: string,
-  capabilityMethod: string,
-  defaultParamsJson: string,
-) {
-  const response = await api.put(
-    pluginApiPath(
-      pluginId,
-      `ai/method-defaults/${capabilityType}/${capabilityMethod}`,
-    ),
-    {
-      data: {
-        defaultParamsJson,
-        enabled: 1,
-      },
-    },
-  );
-  await assertOk(response, "更新 AI 方法默认参数失败");
-}
-
 export function deleteProviderRaw(api: APIRequestContext, providerId: number) {
   return api.delete(pluginApiPath(pluginId, `ai/providers/${providerId}`));
 }

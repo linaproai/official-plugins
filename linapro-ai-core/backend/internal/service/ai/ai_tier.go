@@ -114,6 +114,9 @@ func (s *serviceImpl) UpdateTier(ctx context.Context, in TierUpdateInput) error 
 		if err != nil {
 			return err
 		}
+		if err = s.validateModelCapabilityBinding(ctx, model.Id, capabilityType, capabilityMethod); err != nil {
+			return err
+		}
 	} else if normalizeEnabled(in.Enabled) == enabledYes {
 		bindings, err := s.primaryBindingsByTier(ctx, []int64{tier.Id})
 		if err != nil {
@@ -171,6 +174,9 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 	if draftBindingRequested {
 		model, endpoint, err := s.validateModelBinding(ctx, in.ProviderId, in.ModelId)
 		if err != nil {
+			return nil, err
+		}
+		if err = s.validateModelCapabilityBinding(ctx, model.Id, capabilityType, capabilityMethod); err != nil {
 			return nil, err
 		}
 		provider, err := s.getProvider(ctx, in.ProviderId)
@@ -424,8 +430,7 @@ func (s *serviceImpl) getTier(ctx context.Context, capabilityType string, capabi
 	return row, nil
 }
 
-// validateModelBinding verifies provider, model, and endpoint existence without
-// requiring model-side capability method declarations.
+// validateModelBinding verifies provider, model, and endpoint existence.
 func (s *serviceImpl) validateModelBinding(
 	ctx context.Context,
 	providerID int64,
@@ -450,6 +455,35 @@ func (s *serviceImpl) validateModelBinding(
 		return nil, nil, err
 	}
 	return model, endpoint, nil
+}
+
+// validateModelCapabilityBinding requires explicit model capability declarations
+// for multimodal methods while keeping text.generate declaration-free for the
+// framework default path.
+func (s *serviceImpl) validateModelCapabilityBinding(
+	ctx context.Context,
+	modelID int64,
+	capabilityType string,
+	capabilityMethod string,
+) error {
+	capabilityType = normalizeCapabilityType(capabilityType)
+	capabilityMethod = normalizeCapabilityMethod(capabilityMethod)
+	if capabilityType == CapabilityTypeText && capabilityMethod == CapabilityMethodGenerate {
+		return nil
+	}
+	count, err := dao.ModelCapability.Ctx(ctx).Where(do.ModelCapability{
+		ModelId:          modelID,
+		CapabilityType:   capabilityType,
+		CapabilityMethod: capabilityMethod,
+		Enabled:          enabledYes,
+	}).Count()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return bizerr.NewCode(CodeModelNotFound)
+	}
+	return nil
 }
 
 // upsertPrimaryBinding inserts or updates the active primary binding row.

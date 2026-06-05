@@ -25,13 +25,12 @@ type ModelCapability struct {
 	MaxInputAssets    any        // Maximum input assets, 0 means unspecified
 	MaxOutputAssets   any        // Maximum output assets, 0 means unspecified
 	MaxAssetBytes     any        // Maximum single asset bytes, 0 means unspecified
+	SupportsThinking  any        // Thinking effort support flag for this model method: 0=no 1=yes
+	SupportedEfforts  any        // Comma-separated thinking efforts supported by this model method
 	SupportsStreaming any        // Streaming support flag: 0=no 1=yes
 	SupportsOperation any        // Provider operation support flag: 0=no 1=yes
-	DefaultParamsJson any        // Method-specific default params JSON
 	Enabled           any        // Enabled flag: 0=disabled 1=enabled
 	CreatedAt         *time.Time // Creation time
 	UpdatedAt         *time.Time // Update time
 	DeletedAt         *time.Time // Deletion time
-	SupportsThinking  any        // Thinking effort support flag for this model method: 0=no 1=yes
-	SupportedEfforts  any        // Comma-separated thinking efforts supported by this model method
 }

@@ -14,8 +14,8 @@ import (
 type Tier struct {
 	g.Meta               `orm:"table:plugin_linapro_ai_tier, do:true"`
 	Id                   any        // Tier ID
-	CapabilityType       any        // Capability type: text
-	CapabilityMethod     any        // Capability method: generate
+	CapabilityType       any        // Capability type
+	CapabilityMethod     any        // Capability method
 	Code                 any        // Tier code: basic, standard, advanced
 	DisplayName          any        // Tier display name
 	Description          any        // Tier description

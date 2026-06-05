@@ -9,9 +9,7 @@ import {
   deleteProvider,
   deleteProviderRaw,
   listProviderEndpoints,
-  listMethodDefaults,
   listTiers,
-  updateMethodDefault,
   updateTierRaw,
   withAdminApi,
 } from "../support/ai-core-api";
@@ -46,68 +44,38 @@ test.describe("TC-2 智能中心档位管理", () => {
     await smartCenter.assertTierThinkingEffortLabel();
   });
 
-  test("TC-2b: 编辑档位默认使用模型默认并可在双列表单中保存方法参数", async ({
+  test("TC-2b: 编辑档位默认使用模型默认且不维护默认参数 JSON", async ({
     adminPage,
   }) => {
     await withAdminApi(async (api) => {
       const suffix = Date.now();
-      const originalDefaults = await listMethodDefaults(api);
-      const originalTextDefault = originalDefaults.find(
-        (item: any) =>
-          item.capabilityType === "text" &&
-          item.capabilityMethod === "generate",
-      );
       const fixture = await createProviderWithModel(api, {
         modelName: `e2e-default-config-model-${suffix}`,
         providerName: `E2E Default Config Provider ${suffix}`,
       });
-      const updatedMaxOutputTokens = 1200 + (suffix % 100);
-      const updatedParamsJson = `{
-  "maxOutputTokens": ${updatedMaxOutputTokens},
-  "temperature": 0.2
-}`;
+      const methodDefaultsRoute =
+        "**/x/linapro-ai-core/api/v1/ai/method-defaults**";
+      let methodDefaultsCalled = false;
+      await adminPage.route(methodDefaultsRoute, async (route) => {
+        methodDefaultsCalled = true;
+        await route.abort();
+      });
 
       try {
-        await updateMethodDefault(
-          api,
-          "text",
-          "generate",
-          '{"temperature":0.2}',
-        );
         await bindTier(api, "basic", fixture);
 
         const smartCenter = new SmartCenterPage(adminPage);
         await smartCenter.gotoTiers();
-        await smartCenter.assertTierDrawerDefaultConfig(
-          /基础|Basic/i,
-          '"temperature": 0.2',
-        );
-        await smartCenter.assertTierDefaultParamsFormLayout();
-        await smartCenter.fillTierDefaultParams(updatedParamsJson);
-        await smartCenter.captureEvidence("TC002-tier-default-config-drawer");
+        await smartCenter.assertTierDrawerDefaultConfig(/基础|Basic/i);
+        await smartCenter.captureEvidence("TC002-tier-config-drawer");
         await smartCenter.saveTierDrawer();
 
-        const [tiers, defaults] = await Promise.all([
-          listTiers(api),
-          listMethodDefaults(api),
-        ]);
+        const tiers = await listTiers(api);
         const basicTier = tiers.find((item: any) => item.code === "basic");
-        const textDefault = defaults.find(
-          (item: any) =>
-            item.capabilityType === "text" &&
-            item.capabilityMethod === "generate",
-        );
         expect(basicTier?.defaultEffort).toBe("");
-        expect(textDefault?.defaultParamsJson).toBe(
-          `{"maxOutputTokens":${updatedMaxOutputTokens},"temperature":0.2}`,
-        );
+        expect(methodDefaultsCalled).toBe(false);
       } finally {
-        await updateMethodDefault(
-          api,
-          "text",
-          "generate",
-          originalTextDefault?.defaultParamsJson || "{}",
-        ).catch(() => {});
+        await adminPage.unroute(methodDefaultsRoute).catch(() => {});
         await clearTier(api, "basic").catch(() => {});
         await deleteProvider(api, fixture.providerId).catch(() => {});
       }

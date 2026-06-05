@@ -31,8 +31,8 @@ type Invocation struct {
 	LatencyMs            int        `json:"latencyMs"            orm:"latency_ms"             description:"Provider call latency in milliseconds"`
 	ErrorCode            string     `json:"errorCode"            orm:"error_code"             description:"Stable error code"`
 	ErrorSummary         string     `json:"errorSummary"         orm:"error_summary"          description:"Masked error summary"`
-	CreatedAt            *time.Time `json:"createdAt"            orm:"created_at"             description:"Creation time"`
 	AssetSummaryJson     string     `json:"assetSummaryJson"     orm:"asset_summary_json"     description:"Asset reference summary JSON without file contents"`
 	OperationSummaryJson string     `json:"operationSummaryJson" orm:"operation_summary_json" description:"Provider operation summary JSON without provider secrets"`
 	MetadataSummaryJson  string     `json:"metadataSummaryJson"  orm:"metadata_summary_json"  description:"Bounded metadata summary JSON without request or response bodies"`
+	CreatedAt            *time.Time `json:"createdAt"            orm:"created_at"             description:"Creation time"`
 }

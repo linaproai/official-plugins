@@ -42,10 +42,10 @@ type InvocationColumns struct {
 	LatencyMs            string // Provider call latency in milliseconds
 	ErrorCode            string // Stable error code
 	ErrorSummary         string // Masked error summary
-	CreatedAt            string // Creation time
 	AssetSummaryJson     string // Asset reference summary JSON without file contents
 	OperationSummaryJson string // Provider operation summary JSON without provider secrets
 	MetadataSummaryJson  string // Bounded metadata summary JSON without request or response bodies
+	CreatedAt            string // Creation time
 }
 
 // invocationColumns holds the columns for the table plugin_linapro_ai_invocation.
@@ -71,10 +71,10 @@ var invocationColumns = InvocationColumns{
 	LatencyMs:            "latency_ms",
 	ErrorCode:            "error_code",
 	ErrorSummary:         "error_summary",
-	CreatedAt:            "created_at",
 	AssetSummaryJson:     "asset_summary_json",
 	OperationSummaryJson: "operation_summary_json",
 	MetadataSummaryJson:  "metadata_summary_json",
+	CreatedAt:            "created_at",
 }
 
 // NewInvocationDao creates and returns a new DAO object for table data access.

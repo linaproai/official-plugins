@@ -11,8 +11,8 @@ import (
 // Tier is the golang structure for table tier.
 type Tier struct {
 	Id                   int64      `json:"id"                   orm:"id"                      description:"Tier ID"`
-	CapabilityType       string     `json:"capabilityType"       orm:"capability_type"         description:"Capability type: text"`
-	CapabilityMethod     string     `json:"capabilityMethod"     orm:"capability_method"       description:"Capability method: generate"`
+	CapabilityType       string     `json:"capabilityType"       orm:"capability_type"         description:"Capability type"`
+	CapabilityMethod     string     `json:"capabilityMethod"     orm:"capability_method"       description:"Capability method"`
 	Code                 string     `json:"code"                 orm:"code"                    description:"Tier code: basic, standard, advanced"`
 	DisplayName          string     `json:"displayName"          orm:"display_name"            description:"Tier display name"`
 	Description          string     `json:"description"          orm:"description"             description:"Tier description"`

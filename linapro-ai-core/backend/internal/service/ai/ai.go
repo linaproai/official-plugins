@@ -67,7 +67,6 @@ type Service interface {
 	ProviderEndpointService
 	ModelService
 	ModelCapabilityService
-	MethodDefaultService
 	TierService
 	InvocationService
 	TextGenerationService
@@ -130,14 +129,6 @@ type ModelCapabilityService interface {
 	ListModelCapabilities(ctx context.Context, modelID int64) ([]*ModelCapabilityItem, error)
 	// UpsertModelCapabilities replaces explicit method capability declarations for one model.
 	UpsertModelCapabilities(ctx context.Context, modelID int64, items []ModelCapabilitySaveInput) error
-}
-
-// MethodDefaultService defines default parameter metadata operations for capability methods.
-type MethodDefaultService interface {
-	// ListMethodDefaults returns method-specific default parameter projections.
-	ListMethodDefaults(ctx context.Context) ([]*MethodDefaultParamItem, error)
-	// UpdateMethodDefault updates one method-specific default parameter projection.
-	UpdateMethodDefault(ctx context.Context, in MethodDefaultParamSaveInput) error
 }
 
 // TierService defines fixed AI tier management and saved or draft tier test operations.
@@ -331,7 +322,6 @@ type ModelCapabilitySaveInput struct {
 	SupportsOperation int
 	SupportsThinking  int
 	SupportedEfforts  []string
-	DefaultParamsJson string
 	Enabled           int
 }
 
@@ -353,26 +343,6 @@ type ModelCapabilityItem struct {
 	SupportsOperation int
 	SupportsThinking  int
 	SupportedEfforts  []string
-	DefaultParamsJson string
-	Enabled           int
-	CreatedAt         *time.Time
-	UpdatedAt         *time.Time
-}
-
-// MethodDefaultParamSaveInput defines one method default params update.
-type MethodDefaultParamSaveInput struct {
-	CapabilityType    string
-	CapabilityMethod  string
-	DefaultParamsJson string
-	Enabled           int
-}
-
-// MethodDefaultParamItem defines one method default params projection.
-type MethodDefaultParamItem struct {
-	Id                int64
-	CapabilityType    string
-	CapabilityMethod  string
-	DefaultParamsJson string
 	Enabled           int
 	CreatedAt         *time.Time
 	UpdatedAt         *time.Time

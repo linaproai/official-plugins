@@ -22,7 +22,6 @@ type ModelCapabilityItem struct {
 	SupportsOperation int      `json:"supportsOperation" dc:"Provider operation support flag: 0=no 1=yes" eg:"1"`
 	SupportsThinking  int      `json:"supportsThinking" dc:"Thinking effort support flag for this model method: 0=no 1=yes" eg:"1"`
 	SupportedEfforts  []string `json:"supportedEfforts" dc:"Supported thinking efforts for this model method: low, medium, high, xhigh, max" eg:"low,medium,high"`
-	DefaultParamsJson string   `json:"defaultParamsJson" dc:"Method-specific default params JSON without provider secrets" eg:"{}"`
 	Enabled           int      `json:"enabled" dc:"Enabled flag: 0=disabled 1=enabled" eg:"1"`
 	CreatedAt         int64    `json:"createdAt" dc:"Creation time, Unix timestamp in milliseconds" eg:"1717200000000"`
 	UpdatedAt         int64    `json:"updatedAt" dc:"Update time, Unix timestamp in milliseconds" eg:"1717200000000"`
@@ -44,7 +43,6 @@ type ModelCapabilityInput struct {
 	SupportsOperation int      `json:"supportsOperation" dc:"Provider operation support flag: 0=no 1=yes" eg:"1"`
 	SupportsThinking  int      `json:"supportsThinking" dc:"Thinking effort support flag for this model method: 0=no 1=yes" eg:"1"`
 	SupportedEfforts  []string `json:"supportedEfforts" dc:"Supported thinking efforts for this model method: low, medium, high, xhigh, max" eg:"low,medium,high"`
-	DefaultParamsJson string   `json:"defaultParamsJson" dc:"Method-specific default params JSON without provider secrets" eg:"{}"`
 	Enabled           int      `json:"enabled" d:"1" dc:"Enabled flag: 0=disabled 1=enabled" eg:"1"`
 }
 

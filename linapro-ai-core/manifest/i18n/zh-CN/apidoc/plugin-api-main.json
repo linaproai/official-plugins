@@ -428,9 +428,6 @@
                 "createdAt": {
                   "dc": "创建时间，Unix 毫秒时间戳"
                 },
-                "defaultParamsJson": {
-                  "dc": "不包含渠道密钥的方法默认参数 JSON"
-                },
                 "enabled": {
                   "dc": "启用标记：0=停用 1=启用"
                 },
@@ -488,9 +485,6 @@
                 },
                 "capabilityType": {
                   "dc": "能力类型，例如 text、image、embedding、audio、vision、document、safety 或 video"
-                },
-                "defaultParamsJson": {
-                  "dc": "不包含渠道密钥的方法默认参数 JSON"
                 },
                 "enabled": {
                   "dc": "启用标记：0=停用 1=启用"
@@ -1265,72 +1259,6 @@
               },
               "schema": {
                 "dc": "更新一个能力方法下的 AI 能力档位，包括启用状态、默认 thinking effort 和主渠道模型绑定"
-              }
-            },
-            "MethodDefaultParamItem": {
-              "fields": {
-                "capabilityMethod": {
-                  "dc": "能力类型下的方法，例如 generate、create、transcribe、analyze、moderate 或 operation.get"
-                },
-                "capabilityType": {
-                  "dc": "能力类型，例如 text、image、embedding、audio、vision、document、safety 或 video"
-                },
-                "createdAt": {
-                  "dc": "创建时间，Unix 毫秒时间戳"
-                },
-                "defaultParamsJson": {
-                  "dc": "不包含渠道密钥的方法默认参数 JSON"
-                },
-                "enabled": {
-                  "dc": "启用标记：0=停用 1=启用"
-                },
-                "id": {
-                  "dc": "方法默认参数ID"
-                },
-                "updatedAt": {
-                  "dc": "更新时间，Unix 毫秒时间戳"
-                }
-              }
-            },
-            "ListMethodDefaultsReq": {
-              "meta": {
-                "dc": "查询所有受治理 AI 能力方法的方法级默认参数投影",
-                "summary": "查询 AI 方法默认参数",
-                "tags": "AI 方法默认参数"
-              },
-              "schema": {
-                "dc": "查询所有受治理 AI 能力方法的方法级默认参数投影"
-              }
-            },
-            "ListMethodDefaultsRes": {
-              "fields": {
-                "list": {
-                  "dc": "能力方法默认参数列表"
-                }
-              }
-            },
-            "UpdateMethodDefaultReq": {
-              "fields": {
-                "capabilityMethod": {
-                  "dc": "能力类型下的方法，例如 generate、create、transcribe、analyze、moderate 或 operation.get"
-                },
-                "capabilityType": {
-                  "dc": "能力类型，例如 text、image、embedding、audio、vision、document、safety 或 video"
-                },
-                "defaultParamsJson": {
-                  "dc": "不包含渠道密钥的方法默认参数 JSON"
-                },
-                "enabled": {
-                  "dc": "启用标记：0=停用 1=启用"
-                }
-              },
-              "meta": {
-                "dc": "更新一个受治理 AI 能力方法的方法级默认参数，并在持久化成功后失效能力方法解析缓存",
-                "summary": "更新 AI 方法默认参数",
-                "tags": "AI 方法默认参数"
-              },
-              "schema": {
-                "dc": "更新一个受治理 AI 能力方法的方法级默认参数，并在持久化成功后失效能力方法解析缓存"
               }
             }
           }

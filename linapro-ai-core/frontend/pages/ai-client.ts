@@ -177,16 +177,6 @@ export interface ProviderOperation {
   updatedAt: number;
 }
 
-export interface MethodDefaultParam {
-  id: number;
-  capabilityType: string;
-  capabilityMethod: string;
-  defaultParamsJson: string;
-  enabled: number;
-  createdAt: number;
-  updatedAt: number;
-}
-
 export interface InvocationListParams {
   pageNum?: number;
   pageSize?: number;
@@ -357,24 +347,6 @@ export function tierTest(code: string, data: Record<string, any>) {
       ...data,
     },
     { timeout: tierTestRequestTimeout },
-  );
-}
-
-export async function methodDefaultList() {
-  const res = await requestClient.get<{ list: MethodDefaultParam[] }>(
-    aiApi("ai/method-defaults"),
-  );
-  return res.list;
-}
-
-export function methodDefaultUpdate(
-  capabilityType: string,
-  capabilityMethod: string,
-  defaultParamsJson: string,
-) {
-  return requestClient.put(
-    aiApi(`ai/method-defaults/${capabilityType}/${capabilityMethod}`),
-    { defaultParamsJson },
   );
 }
 
