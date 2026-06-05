@@ -21,28 +21,28 @@
         "provider": {
           "endpoint": {
             "in": {
-              "use": "AI供应商端点正在被模型能力使用"
+              "use": "AI渠道端点正在被模型使用"
             },
             "not": {
-              "found": "AI供应商端点不存在"
+              "found": "AI渠道端点不存在"
             }
           },
           "http": {
-            "error": "AI供应商返回 HTTP {status}"
+            "error": "AI渠道返回 HTTP {status}"
           },
           "in": {
-            "use": "AI供应商正在被能力档位使用"
+            "use": "AI渠道正在被能力档位使用"
           },
           "not": {
-            "found": "AI供应商不存在"
+            "found": "AI渠道不存在"
           },
           "protocol": {
-            "required": "供应商缺少所选协议的启用端点"
+            "required": "渠道缺少所选协议的启用端点"
           }
         },
         "providerOperation": {
           "not": {
-            "found": "AI供应商 Operation 不存在"
+            "found": "AI渠道 Operation 不存在"
           }
         },
         "request": {
@@ -50,7 +50,7 @@
         },
         "tier": {
           "binding": {
-            "unavailable": "AI档位未配置可用的供应商和模型"
+            "unavailable": "AI档位未配置可用的渠道和模型"
           },
           "not": {
             "found": "AI档位不存在"

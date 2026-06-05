@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import type {
-  Model,
-  ModelCapability,
-  ModelCapabilityInput,
-} from "./ai-client";
+import type { Model } from "./ai-client";
 
 import { computed, ref } from "vue";
 
@@ -15,22 +11,15 @@ import { useVbenForm } from "#/adapter/form";
 import { $t } from "#/locales";
 import {
   modelAdd,
-  modelCapabilities,
-  modelCapabilitiesSave,
   modelDelete,
   modelUpdate,
   providerList,
 } from "./ai-client";
-import {
-  buildModelFormSchema,
-  joinCapabilityMethod,
-  splitCapabilityMethod,
-} from "./ai-data";
+import { buildModelFormSchema } from "./ai-data";
 
 const emit = defineEmits<{ reload: [] }>();
 
 const currentModel = ref<Model>();
-const currentCapabilities = ref<ModelCapability[]>([]);
 const providerOptions = ref<Array<{ label: string; value: number }>>([]);
 const providers = ref<Awaited<ReturnType<typeof providerList>>["items"]>([]);
 const title = computed(modelDrawerTitle);
@@ -43,7 +32,14 @@ function modelDrawerTitle() {
 }
 
 function endpointProtocolLabel(protocol: string) {
-  return protocol.includes("anthropic") ? "Anthropic" : "OpenAI";
+  const labels: Record<string, string> = {
+    anthropic: "Anthropic",
+    "anthropic-compatible": "Anthropic Compatible",
+    openai: "OpenAI",
+    "openai-compatible": "OpenAI Compatible",
+    voyage: "Voyage",
+  };
+  return labels[protocol] || protocol || "OpenAI";
 }
 
 const [ModelForm, modelFormApi] = useVbenForm({
@@ -73,29 +69,6 @@ function providerEndpointById(providerId: number, endpointId: number) {
     ?.endpoints?.find((endpoint) => endpoint.id === endpointId);
 }
 
-function toModelCapabilityInput(
-  item: ModelCapabilityInput,
-): ModelCapabilityInput {
-  return {
-    capabilityMethod: item.capabilityMethod,
-    capabilityType: item.capabilityType,
-    defaultParamsJson: item.defaultParamsJson,
-    enabled: item.enabled,
-    endpointId: item.endpointId,
-    inputModalities: item.inputModalities,
-    maxAssetBytes: item.maxAssetBytes,
-    maxInputAssets: item.maxInputAssets,
-    maxInputTokens: item.maxInputTokens,
-    maxOutputAssets: item.maxOutputAssets,
-    maxOutputTokens: item.maxOutputTokens,
-    outputModalities: item.outputModalities,
-    supportedEfforts: item.supportedEfforts,
-    supportsOperation: item.supportsOperation,
-    supportsStreaming: item.supportsStreaming,
-    supportsThinking: item.supportsThinking,
-  };
-}
-
 async function loadProviderOptions() {
   const res = await providerList({ pageNum: 1, pageSize: 100 });
   providers.value = res.items;
@@ -114,12 +87,6 @@ async function loadProviderOptions() {
         showSearch: true,
       },
     },
-    {
-      fieldName: "capabilityKey",
-      componentProps: {
-        disabled: isEdit.value,
-      },
-    },
   ]);
 }
 
@@ -128,14 +95,27 @@ async function refreshEndpointOptions(
   resetEndpoint = false,
 ) {
   const provider = providers.value.find((item) => item.id === providerId);
+  const preferredEndpointId = isEdit.value
+    ? Number(currentModel.value?.endpointId || 0)
+    : 0;
   const endpoints = (provider?.endpoints || []).filter(
     (endpoint) =>
       !isEdit.value || endpoint.protocol === currentModel.value?.protocol,
   );
-  const options = endpoints.map((endpoint) => ({
-    label: `${endpointProtocolLabel(endpoint.protocol)} / ${endpoint.baseUrl}`,
-    value: endpoint.id,
-  }));
+  const optionByProtocol = new Map<string, { label: string; value: number }>();
+  for (const endpoint of endpoints) {
+    const protocol = endpoint.protocol || "openai";
+    if (
+      !optionByProtocol.has(protocol) ||
+      Number(endpoint.id) === preferredEndpointId
+    ) {
+      optionByProtocol.set(protocol, {
+        label: endpointProtocolLabel(protocol),
+        value: endpoint.id,
+      });
+    }
+  }
+  const options = [...optionByProtocol.values()];
   modelFormApi.updateSchema([
     {
       fieldName: "endpointIds",
@@ -161,39 +141,19 @@ async function refreshEndpointOptions(
   return options;
 }
 
-function currentModelCapability(model?: Model) {
-  if (!model) {
-    return undefined;
-  }
-  return currentCapabilities.value.find(
-    (item) =>
-      item.capabilityType === model.capabilityType &&
-      item.capabilityMethod === model.capabilityMethod,
-  );
-}
-
 async function resetModelForm(providerId = 0, model?: Model) {
   currentModel.value = model;
-  const capability = currentModelCapability(model);
   await modelFormApi.resetForm();
   const endpointOptions = await refreshEndpointOptions(providerId, false);
   await modelFormApi.setValues({
-    capabilityKey: model
-      ? joinCapabilityMethod(model.capabilityType, model.capabilityMethod)
-      : "text.generate",
     enabled: model?.enabled ?? 1,
     endpointIds:
-      capability?.endpointId ||
       model?.endpointId ||
       (providerId > 0 && endpointOptions.length === 1 && !isEdit.value
         ? [endpointOptions[0]?.value]
         : []),
-    maxInputTokens: capability?.maxInputTokens ?? model?.maxInputTokens ?? 0,
-    maxOutputTokens: capability?.maxOutputTokens ?? model?.maxOutputTokens ?? 0,
     modelName: model?.modelName,
     providerId: providerId || undefined,
-    supportsThinking: capability?.supportsThinking ?? model?.supportsThinking ?? 0,
-    supportedEfforts: capability?.supportedEfforts ?? model?.supportedEfforts ?? [],
   });
 }
 
@@ -205,8 +165,6 @@ async function saveModel() {
   const values = await modelFormApi.getValues();
   const providerId = Number(values.providerId || 0);
   const endpointIds = normalizeSelectedEndpointIds(values.endpointIds);
-  const capability = splitCapabilityMethod(values.capabilityKey);
-  const supportsThinking = Number(values.supportsThinking || 0);
   if (isEdit.value) {
     const endpointId = endpointIds[0] || 0;
     const endpoint = providerEndpointById(providerId, endpointId);
@@ -216,30 +174,6 @@ async function saveModel() {
       modelName: values.modelName,
       protocol: endpoint?.protocol || currentModel.value!.protocol,
     });
-    const updatedCapability: ModelCapabilityInput = {
-      ...currentModelCapability(currentModel.value),
-      ...capability,
-      enabled: values.enabled,
-      endpointId,
-      maxInputTokens: values.maxInputTokens,
-      maxOutputTokens: values.maxOutputTokens,
-      supportedEfforts:
-        supportsThinking === 1 ? values.supportedEfforts || [] : [],
-      supportsThinking,
-    };
-    const nextCapabilities = currentCapabilities.value.some(
-      (item) =>
-        item.capabilityType === capability.capabilityType &&
-        item.capabilityMethod === capability.capabilityMethod,
-    )
-      ? currentCapabilities.value.map((item) =>
-          item.capabilityType === capability.capabilityType &&
-          item.capabilityMethod === capability.capabilityMethod
-            ? updatedCapability
-            : toModelCapabilityInput(item),
-        )
-      : [updatedCapability];
-    await modelCapabilitiesSave(currentModel.value!.id, nextCapabilities);
     message.success($t("pages.common.updateSuccess"));
     emit("reload");
     return true;
@@ -249,16 +183,10 @@ async function saveModel() {
     for (const endpointId of endpointIds) {
       const endpoint = providerEndpointById(providerId, endpointId);
       const created = await modelAdd(providerId, {
-        ...capability,
         enabled: values.enabled,
         endpointId,
-        maxInputTokens: values.maxInputTokens,
-        maxOutputTokens: values.maxOutputTokens,
         modelName: values.modelName,
         protocol: endpoint?.protocol || "openai",
-        supportedEfforts:
-          supportsThinking === 1 ? values.supportedEfforts || [] : [],
-        supportsThinking,
       });
       if (created?.id) {
         createdModelIds.push(Number(created.id));
@@ -284,9 +212,6 @@ const [Drawer, drawerApi] = useVbenDrawer({
     const data = drawerApi.getData<{ model?: Model; providerId?: number }>();
     currentModel.value = data?.model;
     await loadProviderOptions();
-    currentCapabilities.value = data?.model
-      ? await modelCapabilities(data.model.id)
-      : [];
     await resetModelForm(
       Number(data?.model?.providerId || data?.providerId || 0),
       data?.model,
@@ -306,7 +231,6 @@ const [Drawer, drawerApi] = useVbenDrawer({
   },
   onClosed() {
     currentModel.value = undefined;
-    currentCapabilities.value = [];
     providerOptions.value = [];
     providers.value = [];
     modelFormApi.resetForm();

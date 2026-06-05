@@ -4,6 +4,8 @@ package backend
 import (
 	"context"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,6 +25,14 @@ import (
 const (
 	// pluginID is the immutable identifier published by the embedded source plugin.
 	pluginID = aitext.ProviderPluginID
+	// logRetentionDaysKey is the host protected runtime parameter shared by log cleanup jobs.
+	logRetentionDaysKey = "sys.log.retentionDays"
+	// invocationLogCleanupCronName identifies the AI invocation-log cleanup cron declaration.
+	invocationLogCleanupCronName = "ai-invocation-log-cleanup"
+	// invocationLogCleanupCronDisplayName is the English source title for the cleanup cron.
+	invocationLogCleanupCronDisplayName = "AI Invocation Log Cleanup"
+	// invocationLogCleanupCronDescription is the English source description for the cleanup cron.
+	invocationLogCleanupCronDescription = "Cleans up expired AI invocation logs for the linapro-ai-core plugin."
 )
 
 var (
@@ -30,6 +40,12 @@ var (
 	smartCenterService    aisvc.Service
 	smartCenterHTTPClient = &http.Client{Timeout: 60 * time.Second}
 )
+
+// invocationRetentionCleaner is the Smart Center service subset needed by the cleanup cron.
+type invocationRetentionCleaner interface {
+	// CleanupExpiredInvocations hard-deletes invocation logs older than the retention period.
+	CleanupExpiredInvocations(ctx context.Context, retentionDays int) (int, error)
+}
 
 // init registers the linapro-ai-core source plugin, route bindings, and text AI provider.
 func init() {
@@ -42,6 +58,13 @@ func init() {
 		pluginhost.ExtensionPointHTTPRouteRegister,
 		pluginhost.CallbackExecutionModeBlocking,
 		registerRoutes,
+	); err != nil {
+		panic(err)
+	}
+	if err := plugin.Cron().RegisterCron(
+		pluginhost.ExtensionPointCronRegister,
+		pluginhost.CallbackExecutionModeBlocking,
+		registerCleanupCron,
 	); err != nil {
 		panic(err)
 	}
@@ -95,6 +118,71 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		})
 	})
 	return nil
+}
+
+// registerCleanupCron contributes the plugin-owned AI invocation retention cleanup job.
+func registerCleanupCron(ctx context.Context, registrar pluginhost.CronRegistrar) error {
+	services := registrar.Services()
+	if services == nil ||
+		services.HostConfig() == nil ||
+		services.BizCtx() == nil ||
+		services.Cache() == nil {
+		return gerror.New("linapro-ai-core cleanup cron requires host config, biz-context, and cache services")
+	}
+	aiService := smartCenter(services.BizCtx(), services.Cache())
+	return registrar.AddWithMetadata(
+		ctx,
+		"# 37 3 * * *",
+		invocationLogCleanupCronName,
+		invocationLogCleanupCronDisplayName,
+		invocationLogCleanupCronDescription,
+		func(ctx context.Context) error {
+			return cleanupExpiredInvocations(ctx, registrar.IsPrimaryNode(), services.HostConfig(), aiService)
+		},
+	)
+}
+
+// cleanupExpiredInvocations runs primary-node AI invocation retention cleanup.
+func cleanupExpiredInvocations(
+	ctx context.Context,
+	primaryNode bool,
+	hostConfigSvc contract.HostConfigService,
+	cleaner invocationRetentionCleaner,
+) error {
+	if !primaryNode {
+		return nil
+	}
+	if hostConfigSvc == nil {
+		return gerror.New("linapro-ai-core cleanup requires host config service")
+	}
+	if cleaner == nil {
+		return gerror.New("linapro-ai-core cleanup requires Smart Center service")
+	}
+	retentionDays, err := requiredLogRetentionDays(ctx, hostConfigSvc)
+	if err != nil {
+		return err
+	}
+	_, err = cleaner.CleanupExpiredInvocations(ctx, retentionDays)
+	return err
+}
+
+// requiredLogRetentionDays reads the required host log-retention parameter.
+func requiredLogRetentionDays(ctx context.Context, hostConfigSvc contract.HostConfigService) (int, error) {
+	value, err := hostConfigSvc.Get(ctx, logRetentionDaysKey)
+	if err != nil {
+		return 0, err
+	}
+	if value == nil || value.IsNil() || strings.TrimSpace(value.String()) == "" {
+		return 0, gerror.Newf("linapro-ai-core cleanup requires %s", logRetentionDaysKey)
+	}
+	retentionDays, err := strconv.Atoi(strings.TrimSpace(value.String()))
+	if err != nil {
+		return 0, gerror.Wrapf(err, "parse linapro-ai-core cleanup %s failed", logRetentionDaysKey)
+	}
+	if retentionDays <= 0 {
+		return 0, gerror.Newf("linapro-ai-core cleanup requires positive %s", logRetentionDaysKey)
+	}
+	return retentionDays, nil
 }
 
 // smartCenter returns the shared Smart Center service so management writes and

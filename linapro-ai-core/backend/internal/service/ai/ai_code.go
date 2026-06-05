@@ -33,10 +33,10 @@ var (
 		"AI provider endpoint does not exist",
 		gcode.CodeNotFound,
 	)
-	// CodeProviderEndpointInUse reports that a provider endpoint is referenced by a model or capability.
+	// CodeProviderEndpointInUse reports that a provider endpoint is referenced by a model.
 	CodeProviderEndpointInUse = bizerr.MustDefine(
 		"AI_CORE_PROVIDER_ENDPOINT_IN_USE",
-		"AI provider endpoint is used by a model capability",
+		"AI provider endpoint is used by a model",
 		gcode.CodeInvalidOperation,
 	)
 	// CodeProviderProtocolRequired reports missing provider protocol endpoint configuration.
@@ -75,7 +75,7 @@ var (
 		"AI tier is not configured with an enabled provider and model",
 		gcode.CodeInvalidOperation,
 	)
-	// CodeThinkingEffortUnsupported reports a model capability mismatch.
+	// CodeThinkingEffortUnsupported reports an invalid effort enum or adapter-side mismatch.
 	CodeThinkingEffortUnsupported = bizerr.MustDefine(
 		"AI_CORE_THINKING_EFFORT_UNSUPPORTED",
 		"The selected model does not support this thinking effort",

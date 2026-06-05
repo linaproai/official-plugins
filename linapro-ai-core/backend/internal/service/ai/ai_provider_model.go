@@ -222,19 +222,10 @@ func (s *serviceImpl) ListModels(ctx context.Context, in ModelListInput) (*Model
 	pageNum, pageSize := normalizePage(in.PageNum, in.PageSize)
 	cols := dao.Model.Columns()
 	model := dao.Model.Ctx(ctx).Where(cols.ProviderId, in.ProviderId)
-	capabilityType := normalizeCapabilityType(in.CapabilityType)
-	capabilityMethod := normalizeCapabilityMethod(in.CapabilityMethod)
-	capCols := dao.ModelCapability.Columns()
-	capabilityQuery := dao.ModelCapability.Ctx(ctx).
-		Fields(capCols.ModelId).
-		Where(dao.ModelCapability.Table() + "." + capCols.ModelId + " = " + dao.Model.Table() + "." + cols.Id).
-		Where(do.ModelCapability{CapabilityType: capabilityType, CapabilityMethod: capabilityMethod})
 	if in.Enabled != nil {
 		enabled := normalizeEnabled(*in.Enabled)
 		model = model.Where(cols.Enabled, enabled)
-		capabilityQuery = capabilityQuery.Where(capCols.Enabled, enabled)
 	}
-	model = model.Where("EXISTS ?", capabilityQuery)
 	total, err := model.Count()
 	if err != nil {
 		return nil, err
@@ -243,13 +234,9 @@ func (s *serviceImpl) ListModels(ctx context.Context, in ModelListInput) (*Model
 	if err = model.Page(pageNum, pageSize).OrderAsc(cols.Id).Scan(&rows); err != nil {
 		return nil, err
 	}
-	capabilities, err := s.modelCapabilitiesByModelMethod(ctx, collectModelIDs(rows), capabilityType, capabilityMethod)
-	if err != nil {
-		return nil, err
-	}
 	items := make([]*ModelItem, 0, len(rows))
 	for _, row := range rows {
-		items = append(items, modelToItem(row, capabilities[row.Id]))
+		items = append(items, modelToItem(row, nil))
 	}
 	return &ModelListOutput{List: items, Total: total}, nil
 }
@@ -268,23 +255,9 @@ func (s *serviceImpl) ListAllModels(ctx context.Context, in ModelGlobalListInput
 	if keyword := strings.TrimSpace(in.Keyword); keyword != "" {
 		model = model.WhereLike(cols.ModelName, "%"+keyword+"%")
 	}
-	filterCapability := strings.TrimSpace(in.CapabilityType) != "" || strings.TrimSpace(in.CapabilityMethod) != ""
 	if in.Enabled != nil {
 		enabled := normalizeEnabled(*in.Enabled)
 		model = model.Where(cols.Enabled, enabled)
-	}
-	capabilityType := normalizeCapabilityType(in.CapabilityType)
-	capabilityMethod := normalizeCapabilityMethod(in.CapabilityMethod)
-	if filterCapability {
-		capCols := dao.ModelCapability.Columns()
-		capabilityQuery := dao.ModelCapability.Ctx(ctx).
-			Fields(capCols.ModelId).
-			Where(dao.ModelCapability.Table() + "." + capCols.ModelId + " = " + dao.Model.Table() + "." + cols.Id).
-			Where(do.ModelCapability{CapabilityType: capabilityType, CapabilityMethod: capabilityMethod})
-		if in.Enabled != nil {
-			capabilityQuery = capabilityQuery.Where(capCols.Enabled, normalizeEnabled(*in.Enabled))
-		}
-		model = model.Where("EXISTS ?", capabilityQuery)
 	}
 	total, err := model.Count()
 	if err != nil {
@@ -294,27 +267,17 @@ func (s *serviceImpl) ListAllModels(ctx context.Context, in ModelGlobalListInput
 	if err = model.Page(pageNum, pageSize).OrderDesc(cols.Id).Scan(&rows); err != nil {
 		return nil, err
 	}
-	modelIDs := collectModelIDs(rows)
-	var capabilities map[int64]*entity.ModelCapability
-	if filterCapability {
-		capabilities, err = s.modelCapabilitiesByModelMethod(ctx, modelIDs, capabilityType, capabilityMethod)
-	} else {
-		capabilities, err = s.firstModelCapabilitiesByModel(ctx, modelIDs)
-	}
-	if err != nil {
-		return nil, err
-	}
 	providers, err := s.providersByID(ctx, collectModelProviderIDs(rows))
 	if err != nil {
 		return nil, err
 	}
-	endpoints, err := s.endpointsByID(ctx, collectModelEndpointIDs(rows, capabilities))
+	endpoints, err := s.endpointsByID(ctx, collectModelEndpointIDs(rows))
 	if err != nil {
 		return nil, err
 	}
 	items := make([]*ModelItem, 0, len(rows))
 	for _, row := range rows {
-		item := modelToItem(row, capabilities[row.Id])
+		item := modelToItem(row, nil)
 		if item == nil {
 			continue
 		}
@@ -362,12 +325,7 @@ func (s *serviceImpl) CreateModel(ctx context.Context, in ModelSaveInput) (int64
 		if insertErr != nil {
 			return insertErr
 		}
-		return s.upsertModelCapability(ctx, &entity.Model{
-			Id:         id,
-			ProviderId: in.ProviderId,
-			EndpointId: in.EndpointId,
-			Protocol:   protocol,
-		}, modelCapabilityFromModelSaveInput(in))
+		return nil
 	})
 	if err != nil {
 		return 0, err
@@ -394,9 +352,6 @@ func (s *serviceImpl) UpdateModel(ctx context.Context, in ModelSaveInput) error 
 	if _, err := s.requireProviderEndpoint(ctx, row.ProviderId, in.EndpointId, protocol); err != nil {
 		return err
 	}
-	if err := s.ensureModelCapabilityEndpointsMatchProtocol(ctx, row.Id, row.ProviderId, protocol); err != nil {
-		return err
-	}
 	_, err = dao.Model.Ctx(ctx).
 		Where(do.Model{Id: in.Id}).
 		Data(do.Model{
@@ -414,15 +369,25 @@ func (s *serviceImpl) UpdateModel(ctx context.Context, in ModelSaveInput) error 
 	return s.InvalidateTierCache(ctx, "", "", "")
 }
 
-// DeleteModel soft-deletes one model after reference checks.
+// DeleteModel soft-deletes all provider-local rows sharing the target model name
+// after reference checks.
 func (s *serviceImpl) DeleteModel(ctx context.Context, id int64) error {
 	if err := s.ensurePlatform(ctx); err != nil {
 		return err
 	}
-	if _, err := s.getModel(ctx, id); err != nil {
+	row, err := s.getModel(ctx, id)
+	if err != nil {
 		return err
 	}
-	inUse, err := s.modelReferenced(ctx, id)
+	modelRows, err := s.modelsByProviderAndName(ctx, row.ProviderId, row.ModelName)
+	if err != nil {
+		return err
+	}
+	modelIDs := collectModelIDs(modelRows)
+	if len(modelIDs) == 0 {
+		return bizerr.NewCode(CodeModelNotFound)
+	}
+	inUse, err := s.modelsReferenced(ctx, modelIDs)
 	if err != nil {
 		return err
 	}
@@ -430,10 +395,14 @@ func (s *serviceImpl) DeleteModel(ctx context.Context, id int64) error {
 		return bizerr.NewCode(CodeModelInUse)
 	}
 	err = dao.Model.Transaction(ctx, func(ctx context.Context, _ gdb.TX) error {
-		if _, err := dao.ModelCapability.Ctx(ctx).Where(do.ModelCapability{ModelId: id}).Delete(); err != nil {
+		if _, err := dao.ModelCapability.Ctx(ctx).
+			WhereIn(dao.ModelCapability.Columns().ModelId, modelIDs).
+			Delete(); err != nil {
 			return err
 		}
-		_, err := dao.Model.Ctx(ctx).Where(do.Model{Id: id}).Delete()
+		_, err := dao.Model.Ctx(ctx).
+			WhereIn(dao.Model.Columns().Id, modelIDs).
+			Delete()
 		return err
 	})
 	if err != nil {
@@ -463,12 +432,12 @@ func (s *serviceImpl) SyncModels(ctx context.Context, in ModelSyncInput) (*Model
 	successes := make([]modelSyncEndpointResult, 0, len(endpoints))
 	var lastErr error
 	for _, endpoint := range endpoints {
-		names, listErr := s.listRemoteModels(ctx, endpoint)
+		models, listErr := s.listRemoteModels(ctx, endpoint)
 		if listErr != nil {
 			lastErr = listErr
 			continue
 		}
-		successes = append(successes, modelSyncEndpointResult{endpoint: endpoint, names: names})
+		successes = append(successes, modelSyncEndpointResult{endpoint: endpoint, models: models})
 	}
 	if len(successes) == 0 {
 		if lastErr != nil {
@@ -476,23 +445,23 @@ func (s *serviceImpl) SyncModels(ctx context.Context, in ModelSyncInput) (*Model
 		}
 		return nil, bizerr.NewCode(CodeProviderProtocolRequired)
 	}
-	existingNamesByProtocol, err := s.existingModelNamesByProtocol(ctx, provider.Id, collectSyncProtocols(successes))
+	existingModelsByProtocol, err := s.existingModelsByProtocol(ctx, provider.Id, collectSyncProtocols(successes))
 	if err != nil {
 		return nil, err
 	}
 	err = dao.Model.Transaction(ctx, func(ctx context.Context, _ gdb.TX) error {
 		for _, success := range successes {
-			existingNames := existingNamesByProtocol[success.endpoint.Protocol]
-			if existingNames == nil {
-				existingNames = make(map[string]struct{})
-				existingNamesByProtocol[success.endpoint.Protocol] = existingNames
+			existingModels := existingModelsByProtocol[success.endpoint.Protocol]
+			if existingModels == nil {
+				existingModels = make(map[string]*entity.Model)
+				existingModelsByProtocol[success.endpoint.Protocol] = existingModels
 			}
-			for _, name := range success.names {
-				modelName := strings.TrimSpace(name)
+			for _, remote := range success.models {
+				modelName := strings.TrimSpace(remote.Name)
 				if modelName == "" {
 					continue
 				}
-				if _, ok := existingNames[modelName]; ok {
+				if existing := existingModels[modelName]; existing != nil {
 					out.Kept++
 					continue
 				}
@@ -507,22 +476,12 @@ func (s *serviceImpl) SyncModels(ctx context.Context, in ModelSyncInput) (*Model
 				if err != nil {
 					return err
 				}
-				if err = s.upsertModelCapability(ctx, &entity.Model{
+				existingModels[modelName] = &entity.Model{
 					Id:         modelID,
 					ProviderId: provider.Id,
 					EndpointId: success.endpoint.Id,
 					Protocol:   success.endpoint.Protocol,
-				}, ModelCapabilitySaveInput{
-					EndpointId:       success.endpoint.Id,
-					CapabilityType:   CapabilityTypeText,
-					CapabilityMethod: CapabilityMethodGenerate,
-					InputModalities:  []string{"text"},
-					OutputModalities: []string{"text"},
-					Enabled:          enabledYes,
-				}); err != nil {
-					return err
 				}
-				existingNames[modelName] = struct{}{}
 				out.Created++
 			}
 		}
@@ -567,6 +526,25 @@ func (s *serviceImpl) getModel(ctx context.Context, id int64) (*entity.Model, er
 	return row, nil
 }
 
+// modelsByProviderAndName returns active model rows in one provider sharing the
+// same display model name.
+func (s *serviceImpl) modelsByProviderAndName(ctx context.Context, providerID int64, modelName string) ([]*entity.Model, error) {
+	name := strings.TrimSpace(modelName)
+	if providerID <= 0 || name == "" {
+		return nil, nil
+	}
+	cols := dao.Model.Columns()
+	rows := make([]*entity.Model, 0)
+	if err := dao.Model.Ctx(ctx).
+		Fields(cols.Id, cols.ProviderId, cols.ModelName).
+		Where(do.Model{ProviderId: providerID, ModelName: name}).
+		OrderAsc(cols.Id).
+		Scan(&rows); err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
 // collectProviderIDs extracts provider IDs from one page.
 func collectProviderIDs(rows []*entity.Provider) []int64 {
 	ids := make([]int64, 0, len(rows))
@@ -607,7 +585,7 @@ func collectModelProviderIDs(rows []*entity.Model) []int64 {
 }
 
 // collectModelEndpointIDs extracts endpoint IDs needed by one model page projection.
-func collectModelEndpointIDs(rows []*entity.Model, capabilities map[int64]*entity.ModelCapability) []int64 {
+func collectModelEndpointIDs(rows []*entity.Model) []int64 {
 	seen := make(map[int64]struct{}, len(rows))
 	ids := make([]int64, 0, len(rows))
 	for _, row := range rows {
@@ -615,9 +593,6 @@ func collectModelEndpointIDs(rows []*entity.Model, capabilities map[int64]*entit
 			continue
 		}
 		endpointID := row.EndpointId
-		if capability := capabilities[row.Id]; capability != nil && capability.EndpointId > 0 {
-			endpointID = capability.EndpointId
-		}
 		if endpointID <= 0 {
 			continue
 		}
@@ -628,58 +603,6 @@ func collectModelEndpointIDs(rows []*entity.Model, capabilities map[int64]*entit
 		ids = append(ids, endpointID)
 	}
 	return ids
-}
-
-// modelCapabilityFromModelSaveInput builds the default explicit capability declaration for one model row.
-func modelCapabilityFromModelSaveInput(in ModelSaveInput) ModelCapabilitySaveInput {
-	capabilityType := normalizeCapabilityType(in.CapabilityType)
-	capabilityMethod := normalizeCapabilityMethod(in.CapabilityMethod)
-	inputModalities, outputModalities := defaultModalitiesForCapability(capabilityType, capabilityMethod)
-	supportsOperation := enabledNo
-	if strings.HasPrefix(capabilityMethod, "operation.") {
-		supportsOperation = enabledYes
-	}
-	return ModelCapabilitySaveInput{
-		EndpointId:        in.EndpointId,
-		CapabilityType:    capabilityType,
-		CapabilityMethod:  capabilityMethod,
-		InputModalities:   inputModalities,
-		OutputModalities:  outputModalities,
-		MaxInputTokens:    in.MaxInputTokens,
-		MaxOutputTokens:   in.MaxOutputTokens,
-		SupportsOperation: supportsOperation,
-		SupportsThinking:  in.SupportsThinking,
-		SupportedEfforts:  in.SupportedEfforts,
-		Enabled:           normalizeEnabled(in.Enabled),
-	}
-}
-
-// defaultModalitiesForCapability returns conservative modality projections for a capability method.
-func defaultModalitiesForCapability(capabilityType string, capabilityMethod string) ([]string, []string) {
-	switch capabilityType {
-	case "audio":
-		if capabilityMethod == "transcribe" {
-			return []string{"audio"}, []string{"text"}
-		}
-		return []string{"text"}, []string{"audio"}
-	case "document":
-		return []string{"document"}, []string{"text"}
-	case "embedding":
-		return []string{"text"}, []string{"embedding"}
-	case "image":
-		if capabilityMethod == "edit" {
-			return []string{"image", "text"}, []string{"image"}
-		}
-		return []string{"text"}, []string{"image"}
-	case "safety":
-		return []string{"text"}, []string{"safety"}
-	case "video":
-		return []string{"text"}, []string{"video"}
-	case "vision":
-		return []string{"image"}, []string{"text"}
-	default:
-		return []string{"text"}, []string{"text"}
-	}
 }
 
 // countModelsByProvider counts all and enabled models using one batch query.
@@ -726,25 +649,32 @@ func (s *serviceImpl) listModelSummariesByProvider(ctx context.Context, provider
 		Scan(&rows); err != nil {
 		return nil, err
 	}
-	modelsByID := make(map[int64]*entity.Model, len(rows))
-	modelIDs := make([]int64, 0, len(rows))
-	for _, row := range rows {
-		if row == nil {
+	summariesByProviderName := make(map[int64]map[string]*ProviderModelSummaryItem, len(providerIDs))
+	for _, model := range rows {
+		if model == nil {
 			continue
 		}
-		modelsByID[row.Id] = row
-		modelIDs = append(modelIDs, row.Id)
-	}
-	capabilities, err := s.modelCapabilitiesByModel(ctx, modelIDs)
-	if err != nil {
-		return nil, err
-	}
-	for _, capability := range capabilities {
-		model := modelsByID[capability.ModelId]
-		summary := providerModelSummaryFromRows(model, capability)
+		modelName := strings.TrimSpace(model.ModelName)
+		if modelName == "" {
+			continue
+		}
+		providerSummaries := summariesByProviderName[model.ProviderId]
+		if providerSummaries == nil {
+			providerSummaries = make(map[string]*ProviderModelSummaryItem)
+			summariesByProviderName[model.ProviderId] = providerSummaries
+		}
+		if summary := providerSummaries[modelName]; summary != nil {
+			if summary.Enabled != enabledYes && model.Enabled == enabledYes {
+				summary.Enabled = enabledYes
+			}
+			continue
+		}
+		summary := providerModelSummaryFromRows(model, nil)
 		if summary == nil {
 			continue
 		}
+		summary.ModelName = modelName
+		providerSummaries[modelName] = summary
 		result[model.ProviderId] = append(result[model.ProviderId], summary)
 	}
 	return result, nil
@@ -852,9 +782,14 @@ func (s *serviceImpl) providerReferenced(ctx context.Context, providerID int64) 
 	return count > 0, err
 }
 
-// modelReferenced reports whether active tier bindings reference one model.
-func (s *serviceImpl) modelReferenced(ctx context.Context, modelID int64) (bool, error) {
-	count, err := dao.TierBinding.Ctx(ctx).Where(do.TierBinding{ModelId: modelID}).Count()
+// modelsReferenced reports whether active tier bindings reference any model in the set.
+func (s *serviceImpl) modelsReferenced(ctx context.Context, modelIDs []int64) (bool, error) {
+	if len(modelIDs) == 0 {
+		return false, nil
+	}
+	count, err := dao.TierBinding.Ctx(ctx).
+		WhereIn(dao.TierBinding.Columns().ModelId, modelIDs).
+		Count()
 	return count > 0, err
 }
 
@@ -881,16 +816,16 @@ func (s *serviceImpl) existingModelNames(ctx context.Context, providerID int64, 
 	return result, nil
 }
 
-// existingModelNamesByProtocol returns provider model names grouped by protocol in one query.
-func (s *serviceImpl) existingModelNamesByProtocol(ctx context.Context, providerID int64, protocols []string) (map[string]map[string]struct{}, error) {
-	result := make(map[string]map[string]struct{}, len(protocols))
+// existingModelsByProtocol returns provider models grouped by protocol and model name in one query.
+func (s *serviceImpl) existingModelsByProtocol(ctx context.Context, providerID int64, protocols []string) (map[string]map[string]*entity.Model, error) {
+	result := make(map[string]map[string]*entity.Model, len(protocols))
 	if providerID <= 0 || len(protocols) == 0 {
 		return result, nil
 	}
 	rows := make([]*entity.Model, 0)
 	cols := dao.Model.Columns()
 	if err := dao.Model.Ctx(ctx).
-		Fields(cols.ModelName, cols.Protocol).
+		Fields(cols.Id, cols.ProviderId, cols.EndpointId, cols.ModelName, cols.Protocol, cols.Enabled).
 		Where(cols.ProviderId, providerID).
 		WhereIn(cols.Protocol, protocols).
 		Scan(&rows); err != nil {
@@ -905,19 +840,116 @@ func (s *serviceImpl) existingModelNamesByProtocol(ctx context.Context, provider
 		if protocol == "" || modelName == "" {
 			continue
 		}
-		names := result[protocol]
-		if names == nil {
-			names = make(map[string]struct{})
-			result[protocol] = names
+		models := result[protocol]
+		if models == nil {
+			models = make(map[string]*entity.Model)
+			result[protocol] = models
 		}
-		names[modelName] = struct{}{}
+		models[modelName] = row
 	}
 	return result, nil
 }
 
+// existingSyncModelCapabilityKeys loads existing capability identities for synced models in one query.
+func (s *serviceImpl) existingSyncModelCapabilityKeys(
+	ctx context.Context,
+	successes []modelSyncEndpointResult,
+	existingModelsByProtocol map[string]map[string]*entity.Model,
+) (map[string]struct{}, error) {
+	modelIDs := make([]int64, 0)
+	seen := make(map[int64]struct{})
+	for _, success := range successes {
+		if success.endpoint == nil {
+			continue
+		}
+		existingModels := existingModelsByProtocol[success.endpoint.Protocol]
+		if len(existingModels) == 0 {
+			continue
+		}
+		for _, remote := range success.models {
+			if len(remote.Capabilities) == 0 {
+				continue
+			}
+			modelName := strings.TrimSpace(remote.Name)
+			if modelName == "" {
+				continue
+			}
+			model := existingModels[modelName]
+			if model == nil || model.Id <= 0 {
+				continue
+			}
+			if _, ok := seen[model.Id]; ok {
+				continue
+			}
+			seen[model.Id] = struct{}{}
+			modelIDs = append(modelIDs, model.Id)
+		}
+	}
+	return s.modelCapabilityKeysByModel(ctx, modelIDs)
+}
+
+// modelCapabilityKeysByModel loads persisted capability identities for a model set in one query.
+func (s *serviceImpl) modelCapabilityKeysByModel(ctx context.Context, modelIDs []int64) (map[string]struct{}, error) {
+	rows, err := s.modelCapabilitiesByModel(ctx, modelIDs)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]struct{}, len(rows))
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		result[modelCapabilityKey(row.ModelId, row.CapabilityType, row.CapabilityMethod)] = struct{}{}
+	}
+	return result, nil
+}
+
+// insertConfirmedRemoteModelCapabilities inserts only capabilities explicitly returned by the provider.
+func (s *serviceImpl) insertConfirmedRemoteModelCapabilities(
+	ctx context.Context,
+	existing map[string]struct{},
+	model *entity.Model,
+	endpointID int64,
+	capabilities []remoteModelCapability,
+) error {
+	if model == nil || len(capabilities) == 0 {
+		return nil
+	}
+	if existing == nil {
+		existing = make(map[string]struct{})
+	}
+	for _, capability := range capabilities {
+		capabilityType := normalizeCapabilityType(capability.CapabilityType)
+		capabilityMethod := normalizeCapabilityMethod(capability.CapabilityMethod)
+		if capabilityType == "" || capabilityMethod == "" {
+			continue
+		}
+		key := modelCapabilityKey(model.Id, capabilityType, capabilityMethod)
+		if _, ok := existing[key]; ok {
+			continue
+		}
+		if _, err := dao.ModelCapability.Ctx(ctx).Data(do.ModelCapability{
+			ModelId:           model.Id,
+			EndpointId:        endpointID,
+			CapabilityType:    capabilityType,
+			CapabilityMethod:  capabilityMethod,
+			InputModalities:   joinCSV(capability.InputModalities),
+			OutputModalities:  joinCSV(capability.OutputModalities),
+			SupportsOperation: enabledNo,
+			SupportsStreaming: enabledNo,
+			SupportsThinking:  enabledNo,
+			Enabled:           enabledYes,
+		}).Insert(); err != nil {
+			return err
+		}
+		existing[key] = struct{}{}
+	}
+	return nil
+}
+
 type modelSyncEndpointResult struct {
 	endpoint *entity.ProviderEndpoint
-	names    []string
+	models   []remoteModel
 }
 
 func collectSyncProtocols(items []modelSyncEndpointResult) []string {

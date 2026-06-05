@@ -27,7 +27,12 @@
       "messages": {
         "clearConfirm": "确认清空所有操作日志吗？",
         "clearSuccess": "清空操作日志成功",
-        "deleteSelectedConfirm": "确认删除选中的 {count} 条操作日志吗？"
+        "deleteAllHint": "勾选后将忽略日期范围，删除当前权限范围内的所有操作日志。",
+        "deleteAllLabel": "删除所有操作日志",
+        "deleteRangeDescription": "请选择操作日志删除方式。默认按日期范围清理，勾选全部日志后将清理当前权限范围内的所有日志。",
+        "deleteRangeRequired": "请选择完整的操作日志日期范围",
+        "deleteRangeSuccess": "已删除 {count} 条操作日志",
+        "deleteRangeTitle": "删除操作日志"
       },
       "method": {
         "patch": "补丁"

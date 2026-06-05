@@ -12,12 +12,10 @@ import (
 // ListModels returns models belonging to one provider.
 func (c *ControllerV1) ListModels(ctx context.Context, req *v1.ListModelsReq) (res *v1.ListModelsRes, err error) {
 	out, err := c.aiSvc.ListModels(ctx, aisvc.ModelListInput{
-		ProviderId:       req.ProviderId,
-		PageNum:          req.PageNum,
-		PageSize:         req.PageSize,
-		CapabilityType:   req.CapabilityType,
-		CapabilityMethod: req.CapabilityMethod,
-		Enabled:          req.Enabled,
+		ProviderId: req.ProviderId,
+		PageNum:    req.PageNum,
+		PageSize:   req.PageSize,
+		Enabled:    req.Enabled,
 	})
 	if err != nil {
 		return nil, err

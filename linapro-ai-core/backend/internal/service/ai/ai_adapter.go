@@ -28,8 +28,22 @@ type adapterResult struct {
 	ThinkingEffort string
 }
 
-// listRemoteModels returns public model names from one selected provider endpoint.
-func (s *serviceImpl) listRemoteModels(ctx context.Context, endpoint *entity.ProviderEndpoint) ([]string, error) {
+// remoteModel carries public model identity and provider-confirmed capabilities.
+type remoteModel struct {
+	Name         string
+	Capabilities []remoteModelCapability
+}
+
+// remoteModelCapability carries one confirmed remote model capability.
+type remoteModelCapability struct {
+	CapabilityType   string
+	CapabilityMethod string
+	InputModalities  []string
+	OutputModalities []string
+}
+
+// listRemoteModels returns public model identities from one selected provider endpoint.
+func (s *serviceImpl) listRemoteModels(ctx context.Context, endpoint *entity.ProviderEndpoint) ([]remoteModel, error) {
 	if endpoint == nil {
 		return nil, bizerr.NewCode(CodeProviderProtocolRequired)
 	}
@@ -63,7 +77,7 @@ func (s *serviceImpl) callProvider(
 }
 
 // listOpenAIModels reads OpenAI-compatible /models data.
-func (s *serviceImpl) listOpenAIModels(ctx context.Context, endpointRow *entity.ProviderEndpoint) ([]string, error) {
+func (s *serviceImpl) listOpenAIModels(ctx context.Context, endpointRow *entity.ProviderEndpoint) ([]remoteModel, error) {
 	resp, err := s.doProviderRequest(ctx, endpointRow.Protocol, endpointRow.BaseUrl, "/models", http.MethodGet, nil, func(req *http.Request) {
 		addBearerAuth(req, endpointRow.SecretRef)
 	})
@@ -82,17 +96,17 @@ func (s *serviceImpl) listOpenAIModels(ctx context.Context, endpointRow *entity.
 	if err = json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&payload); err != nil {
 		return nil, gerror.Wrap(err, "decode OpenAI model list failed")
 	}
-	names := make([]string, 0, len(payload.Data))
+	models := make([]remoteModel, 0, len(payload.Data))
 	for _, item := range payload.Data {
-		if strings.TrimSpace(item.ID) != "" {
-			names = append(names, item.ID)
+		if name := strings.TrimSpace(item.ID); name != "" {
+			models = append(models, remoteModel{Name: name})
 		}
 	}
-	return names, nil
+	return models, nil
 }
 
 // listAnthropicModels reads Anthropic-compatible /models data.
-func (s *serviceImpl) listAnthropicModels(ctx context.Context, endpointRow *entity.ProviderEndpoint) ([]string, error) {
+func (s *serviceImpl) listAnthropicModels(ctx context.Context, endpointRow *entity.ProviderEndpoint) ([]remoteModel, error) {
 	resp, err := s.doProviderRequest(ctx, endpointRow.Protocol, endpointRow.BaseUrl, "/models", http.MethodGet, nil, func(req *http.Request) {
 		addAnthropicHeaders(req, endpointRow.SecretRef)
 	})
@@ -111,13 +125,13 @@ func (s *serviceImpl) listAnthropicModels(ctx context.Context, endpointRow *enti
 	if err = json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&payload); err != nil {
 		return nil, gerror.Wrap(err, "decode Anthropic model list failed")
 	}
-	names := make([]string, 0, len(payload.Data))
+	models := make([]remoteModel, 0, len(payload.Data))
 	for _, item := range payload.Data {
-		if strings.TrimSpace(item.ID) != "" {
-			names = append(names, item.ID)
+		if name := strings.TrimSpace(item.ID); name != "" {
+			models = append(models, remoteModel{Name: name})
 		}
 	}
-	return names, nil
+	return models, nil
 }
 
 // callOpenAI executes one OpenAI-compatible chat completion request.

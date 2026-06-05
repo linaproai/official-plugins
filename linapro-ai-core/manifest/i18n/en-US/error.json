@@ -16,12 +16,12 @@
           }
         },
         "platform": {
-          "required": "Smart Center requires platform context"
+          "required": "AI Hub requires platform context"
         },
         "provider": {
           "endpoint": {
             "in": {
-              "use": "AI provider endpoint is used by a model capability"
+              "use": "AI provider endpoint is used by a model"
             },
             "not": {
               "found": "AI provider endpoint does not exist"

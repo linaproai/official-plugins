@@ -18,8 +18,8 @@ import (
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/excelutil"
 	"lina-core/pkg/gdbutil"
-	"lina-core/pkg/plugin/pluginhost"
 	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/pluginhost"
 	"lina-plugin-linapro-monitor-loginlog/backend/internal/dao"
 	"lina-plugin-linapro-monitor-loginlog/backend/internal/model/do"
 )
@@ -123,6 +123,25 @@ func (s *serviceImpl) Clean(ctx context.Context, in CleanInput) (int, error) {
 	}
 
 	result, err := model.Delete()
+	if err != nil {
+		return 0, err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return int(affected), nil
+}
+
+// CleanupExpired hard-deletes login logs older than the global retention boundary.
+func (s *serviceImpl) CleanupExpired(ctx context.Context, retentionDays int) (int, error) {
+	if retentionDays <= 0 {
+		return 0, nil
+	}
+	cutoff := time.Now().AddDate(0, 0, -retentionDays)
+	result, err := dao.Loginlog.Ctx(ctx).
+		WhereLT(colLoginTime, cutoff).
+		Delete()
 	if err != nil {
 		return 0, err
 	}

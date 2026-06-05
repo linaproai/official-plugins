@@ -32,15 +32,11 @@ func (s *serviceImpl) GenerateText(ctx context.Context, request aitext.ProviderR
 		s.writeInvocation(ctx, requestID, request, binding, InvocationStatusFailed, aitext.Usage{}, 0, err)
 		return nil, err
 	}
-	maxOutputTokens := request.MaxOutputTokens
-	if maxOutputTokens == 0 {
-		maxOutputTokens = binding.MaxOutputTokens
-	}
 	result, err := s.callProvider(
 		ctx,
 		binding,
 		request.Messages,
-		maxOutputTokens,
+		request.MaxOutputTokens,
 		request.Temperature,
 		effort,
 	)

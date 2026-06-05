@@ -1,4 +1,4 @@
-// This file declares model capability management DTOs.
+// This file declares advanced model capability metadata DTOs.
 
 package v1
 
@@ -48,9 +48,9 @@ type ModelCapabilityInput struct {
 	Enabled           int      `json:"enabled" d:"1" dc:"Enabled flag: 0=disabled 1=enabled" eg:"1"`
 }
 
-// ListCapabilitiesReq defines the request for listing model capability methods.
+// ListCapabilitiesReq defines the request for listing advanced model capability metadata.
 type ListCapabilitiesReq struct {
-	g.Meta `path:"/ai/models/{id}/capabilities" method:"get" tags:"AI Model Capabilities" summary:"List model capabilities" dc:"List explicit capability method declarations for one AI model, including modality, asset, token, thinking effort, streaming, and provider operation limits." permission:"ai:provider:list"`
+	g.Meta `path:"/ai/models/{id}/capabilities" method:"get" tags:"AI Model Capability Metadata" summary:"List model capability metadata" dc:"List advanced model capability metadata for compatibility and diagnostics. Model management, tier candidates, and tier binding validation do not depend on these records." permission:"ai:provider:list"`
 	Id     int64 `json:"id" v:"required|min:1" dc:"Model ID" eg:"1"`
 }
 
@@ -59,9 +59,9 @@ type ListCapabilitiesRes struct {
 	List []*ModelCapabilityItem `json:"list" dc:"Model capability method list" eg:"[]"`
 }
 
-// UpsertCapabilitiesReq defines the request for replacing model capability methods.
+// UpsertCapabilitiesReq defines the request for replacing advanced model capability metadata.
 type UpsertCapabilitiesReq struct {
-	g.Meta `path:"/ai/models/{id}/capabilities" method:"put" tags:"AI Model Capabilities" summary:"Upsert model capabilities" dc:"Replace or insert explicit capability method declarations for one AI model. Endpoint references must belong to the same provider as the model." permission:"ai:provider:update"`
+	g.Meta `path:"/ai/models/{id}/capabilities" method:"put" tags:"AI Model Capability Metadata" summary:"Save model capability metadata" dc:"Replace advanced capability metadata for one AI model. Endpoint references must belong to the same provider as the model, but model management and tier candidates do not depend on these records." permission:"ai:provider:update"`
 	Id     int64                  `json:"id" v:"required|min:1" dc:"Model ID" eg:"1"`
 	Items  []ModelCapabilityInput `json:"items" v:"required" dc:"Capability method save items" eg:"[]"`
 }

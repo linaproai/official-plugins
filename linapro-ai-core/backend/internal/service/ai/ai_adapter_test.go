@@ -125,9 +125,6 @@ func TestAnthropicAdapterMapsThinkingEffort(t *testing.T) {
 		ModelName:         "unit-anthropic",
 		EndpointBaseUrl:   server.URL,
 		EndpointSecretRef: "unit-secret",
-		SupportedEfforts:  "max",
-		SupportsThinking:  enabledYes,
-		MaxOutputTokens:   128,
 		ProviderName:      "Anthropic",
 		CapabilityType:    CapabilityTypeText,
 		DefaultEffort:     string(aitext.ThinkingEffortMax),
@@ -223,9 +220,16 @@ func TestOpenAIModelListRetriesVersionedURLAndCachesBase(t *testing.T) {
 		SecretRef: "unit-secret",
 	}
 	for i := 0; i < 2; i++ {
-		names, err := svc.listOpenAIModels(context.Background(), endpoint)
+		models, err := svc.listOpenAIModels(context.Background(), endpoint)
 		if err != nil {
 			t.Fatalf("list OpenAI models on attempt %d: %v", i+1, err)
+		}
+		names := make([]string, 0, len(models))
+		for _, model := range models {
+			names = append(names, model.Name)
+			if len(model.Capabilities) != 0 {
+				t.Fatalf("OpenAI /models must not imply capabilities, got %#v", model.Capabilities)
+			}
 		}
 		if strings.Join(names, ",") != "flow-model,remote-model" {
 			t.Fatalf("unexpected model names: %v", names)

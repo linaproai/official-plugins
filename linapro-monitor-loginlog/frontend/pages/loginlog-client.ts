@@ -34,6 +34,10 @@ export interface LoginLogListResult {
   total: number;
 }
 
+export interface LoginLogCleanResult {
+  deleted: number;
+}
+
 export async function loginLogList(params?: LoginLogListParams) {
   return await requestClient.get<LoginLogListResult>(loginLogApi('loginlog'), {
     params,
@@ -45,7 +49,10 @@ export function loginLogDetail(id: number) {
 }
 
 export function loginLogClean(params?: { beginTime?: string; endTime?: string }) {
-  return requestClient.delete(loginLogApi('loginlog/clean'), { params });
+  return requestClient.delete<LoginLogCleanResult>(
+    loginLogApi('loginlog/clean'),
+    { params },
+  );
 }
 
 export function loginLogDelete(ids: number[]) {

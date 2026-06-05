@@ -4,14 +4,12 @@ package v1
 
 // TierBindingItem is the primary provider-model binding projection for a tier.
 type TierBindingItem struct {
-	ProviderId       int64    `json:"providerId" dc:"Provider ID bound to the tier" eg:"1"`
-	ProviderName     string   `json:"providerName" dc:"Provider display name" eg:"OpenAI"`
-	ModelId          int64    `json:"modelId" dc:"Model ID bound to the tier" eg:"1"`
-	ModelName        string   `json:"modelName" dc:"Model name bound to the tier" eg:"gpt-4.1-mini"`
-	Protocol         string   `json:"protocol" dc:"Provider protocol: openai, anthropic, voyage, openai-compatible, or anthropic-compatible" eg:"openai"`
-	SupportsThinking int      `json:"supportsThinking" dc:"Thinking effort support flag: 0=no 1=yes" eg:"1"`
-	SupportedEfforts []string `json:"supportedEfforts" dc:"Supported thinking efforts: low, medium, high, xhigh, max" eg:"low,medium,high"`
-	Enabled          int      `json:"enabled" dc:"Binding enabled flag: 0=disabled 1=enabled" eg:"1"`
+	ProviderId   int64  `json:"providerId" dc:"Provider ID bound to the tier" eg:"1"`
+	ProviderName string `json:"providerName" dc:"Provider display name" eg:"OpenAI"`
+	ModelId      int64  `json:"modelId" dc:"Model ID bound to the tier" eg:"1"`
+	ModelName    string `json:"modelName" dc:"Model name bound to the tier" eg:"gpt-4.1-mini"`
+	Protocol     string `json:"protocol" dc:"Provider protocol: openai, anthropic, voyage, openai-compatible, or anthropic-compatible" eg:"openai"`
+	Enabled      int    `json:"enabled" dc:"Binding enabled flag: 0=disabled 1=enabled" eg:"1"`
 }
 
 // TierItem is the AI capability tier projection.

@@ -12,18 +12,12 @@ import (
 // CreateModel creates one model under a provider.
 func (c *ControllerV1) CreateModel(ctx context.Context, req *v1.CreateModelReq) (res *v1.CreateModelRes, err error) {
 	id, err := c.aiSvc.CreateModel(ctx, aisvc.ModelSaveInput{
-		ProviderId:       req.ProviderId,
-		EndpointId:       req.EndpointId,
-		CapabilityType:   req.CapabilityType,
-		CapabilityMethod: req.CapabilityMethod,
-		ModelName:        req.ModelName,
-		Protocol:         req.Protocol,
-		Source:           aisvc.ModelSourceManual,
-		SupportsThinking: req.SupportsThinking,
-		SupportedEfforts: req.SupportedEfforts,
-		MaxInputTokens:   req.MaxInputTokens,
-		MaxOutputTokens:  req.MaxOutputTokens,
-		Enabled:          req.Enabled,
+		ProviderId: req.ProviderId,
+		EndpointId: req.EndpointId,
+		ModelName:  req.ModelName,
+		Protocol:   req.Protocol,
+		Source:     aisvc.ModelSourceManual,
+		Enabled:    req.Enabled,
 	})
 	if err != nil {
 		return nil, err

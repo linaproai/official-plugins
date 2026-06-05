@@ -9,7 +9,7 @@
         "success": "Success",
         "yes": "Yes"
       },
-      "description": "Official source plugin for AI providers, models, capability tiers, and invocation logs",
+      "description": "Official source plugin for AI providers, models, capability tiers, and request logs",
       "capability": {
         "method": "Capability Method",
         "types": {
@@ -67,6 +67,7 @@
           "inputTokens": "Input Tokens",
           "latencyMs": "Latency(ms)",
           "metadataSummaryJson": "Metadata Summary",
+          "method": "Invocation Method",
           "modelName": "Model",
           "operationSummaryJson": "Operation Summary",
           "outputTokens": "Output Tokens",
@@ -78,7 +79,18 @@
           "tierCode": "Tier",
           "tokens": "Tokens"
         },
-        "tableTitle": "Invocation Logs"
+        "messages": {
+          "clearAllConfirm": "Clear all request logs?",
+          "clearRangeConfirm": "Clear request logs from {startedAt} to {endedAt}?",
+          "clearSuccess": "Cleared {count} request log(s)",
+          "deleteAllHint": "When selected, the date and time range is ignored and all request logs in the current permission scope are deleted.",
+          "deleteAllLabel": "Delete all request logs",
+          "deleteRangeDescription": "Select how to delete request logs. By default, logs are cleaned by date and time range; selecting all logs cleans every request log in the current permission scope.",
+          "deleteRangeRequired": "Select a complete request log date and time range",
+          "deleteRangeSuccess": "Deleted {count} request log(s)",
+          "deleteRangeTitle": "Delete Request Logs"
+        },
+        "tableTitle": "Request Logs"
       },
       "model": {
         "actions": {
@@ -90,21 +102,17 @@
           "editTitle": "Edit Model"
         },
         "fields": {
-          "maxInputTokens": "Max Input Tokens",
-          "maxOutputTokens": "Max Output Tokens",
           "modelName": "Model Name",
           "endpoint": "Endpoint",
           "protocol": "Protocol",
-          "provider": "Provider",
-          "supportedEfforts": "Supported Thinking Efforts",
-          "supportsThinking": "Supports Thinking"
+          "provider": "Provider"
         },
         "messages": {
           "syncDone": "Model sync finished: {created} created, {kept} kept"
         },
         "tableTitle": "Models"
       },
-      "name": "Smart Center",
+      "name": "AI Hub",
       "methodDefault": {
         "current": "Defaults for {capability}",
         "fields": {
@@ -114,7 +122,7 @@
           "invalidJson": "Default params must be a valid JSON object"
         },
         "placeholders": {
-          "json": "{\n  \"maxOutputTokens\": 1024\n}"
+          "json": "{}"
         }
       },
       "provider": {
@@ -191,7 +199,7 @@
           "basic": "Basic",
           "standard": "Standard"
         },
-        "tableTitle": "Tier Management"
+        "tableTitle": "AI Tiers"
       }
     }
   }

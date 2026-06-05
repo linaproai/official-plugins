@@ -44,29 +44,21 @@ type ProviderEndpointSaveItem struct {
 
 // ProviderModelSummaryItem is the compact model projection embedded in provider lists.
 type ProviderModelSummaryItem struct {
-	Id               int64  `json:"id" dc:"Model ID" eg:"1"`
-	CapabilityType   string `json:"capabilityType" dc:"Capability type from the model capability declaration, such as text, image, embedding, audio, vision, document, safety, or video" eg:"image"`
-	CapabilityMethod string `json:"capabilityMethod" dc:"Capability method from the model capability declaration, such as generate, create, transcribe, analyze, moderate, or operation.get" eg:"generate"`
-	ModelName        string `json:"modelName" dc:"Provider model name" eg:"gpt-4.1-mini"`
-	Protocol         string `json:"protocol" dc:"Provider protocol: openai, anthropic, voyage, openai-compatible, or anthropic-compatible" eg:"openai"`
-	Enabled          int    `json:"enabled" dc:"Enabled flag: 0=disabled 1=enabled" eg:"1"`
+	Id        int64  `json:"id" dc:"Model ID" eg:"1"`
+	ModelName string `json:"modelName" dc:"Provider model name" eg:"gpt-4.1-mini"`
+	Protocol  string `json:"protocol" dc:"Provider protocol: openai, anthropic, voyage, openai-compatible, or anthropic-compatible" eg:"openai"`
+	Enabled   int    `json:"enabled" dc:"Enabled flag: 0=disabled 1=enabled" eg:"1"`
 }
 
 // ModelItem is the AI model projection returned by provider model APIs.
 type ModelItem struct {
-	Id               int64    `json:"id" dc:"Model ID" eg:"1"`
-	ProviderId       int64    `json:"providerId" dc:"Owning provider ID" eg:"1"`
-	EndpointId       int64    `json:"endpointId" dc:"Provider endpoint ID resolved for the projected capability; falls back to the model default endpoint" eg:"1"`
-	CapabilityType   string   `json:"capabilityType" dc:"Capability type from the projected model capability declaration, such as text, image, embedding, audio, vision, document, safety, or video" eg:"image"`
-	CapabilityMethod string   `json:"capabilityMethod" dc:"Capability method from the projected model capability declaration, such as generate, create, transcribe, analyze, moderate, or operation.get" eg:"generate"`
-	ModelName        string   `json:"modelName" dc:"Provider model name" eg:"gpt-4.1-mini"`
-	Protocol         string   `json:"protocol" dc:"Provider protocol: openai, anthropic, voyage, openai-compatible, or anthropic-compatible" eg:"openai"`
-	Source           string   `json:"source" dc:"Model source: manual or api" eg:"manual"`
-	SupportsThinking int      `json:"supportsThinking" dc:"Thinking effort support flag from the projected capability: 0=no 1=yes" eg:"1"`
-	SupportedEfforts []string `json:"supportedEfforts" dc:"Thinking efforts supported by the projected capability: low, medium, high, xhigh, max" eg:"low,medium,high"`
-	MaxInputTokens   int      `json:"maxInputTokens" dc:"Maximum input tokens declared by the projected capability; 0 means unspecified" eg:"128000"`
-	MaxOutputTokens  int      `json:"maxOutputTokens" dc:"Maximum output tokens declared by the projected capability; 0 means unspecified" eg:"8192"`
-	Enabled          int      `json:"enabled" dc:"Enabled flag: 0=disabled 1=enabled" eg:"1"`
-	CreatedAt        int64    `json:"createdAt" dc:"Creation time, Unix timestamp in milliseconds" eg:"1717200000000"`
-	UpdatedAt        int64    `json:"updatedAt" dc:"Update time, Unix timestamp in milliseconds" eg:"1717200000000"`
+	Id         int64  `json:"id" dc:"Model ID" eg:"1"`
+	ProviderId int64  `json:"providerId" dc:"Owning provider ID" eg:"1"`
+	EndpointId int64  `json:"endpointId" dc:"Default provider endpoint ID used by this model" eg:"1"`
+	ModelName  string `json:"modelName" dc:"Provider model name" eg:"gpt-4.1-mini"`
+	Protocol   string `json:"protocol" dc:"Provider protocol: openai, anthropic, voyage, openai-compatible, or anthropic-compatible" eg:"openai"`
+	Source     string `json:"source" dc:"Model source: manual or api" eg:"manual"`
+	Enabled    int    `json:"enabled" dc:"Enabled flag: 0=disabled 1=enabled" eg:"1"`
+	CreatedAt  int64  `json:"createdAt" dc:"Creation time, Unix timestamp in milliseconds" eg:"1717200000000"`
+	UpdatedAt  int64  `json:"updatedAt" dc:"Update time, Unix timestamp in milliseconds" eg:"1717200000000"`
 }

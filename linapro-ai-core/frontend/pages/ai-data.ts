@@ -47,8 +47,23 @@ const protocolDisplayLabels: Record<string, string> = {
   voyage: "Voyage",
 };
 
-function protocolLabel(value: string) {
-  return protocolDisplayLabels[value] || value || "OpenAI";
+export function protocolLabel(value: string) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "OpenAI";
+  }
+  const knownLabel = protocolDisplayLabels[raw.toLowerCase()];
+  if (knownLabel) {
+    return knownLabel;
+  }
+  const fallbackLabel = raw
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .map(
+      (part) => `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}`,
+    )
+    .join("");
+  return fallbackLabel || raw;
 }
 
 function protocolBadgeMeta(value: string) {
@@ -287,35 +302,34 @@ function modelTag(
         },
         model.modelName,
       ),
-      h(
-        "span",
-        { class: "shrink-0 text-[11px] text-muted-foreground leading-4" },
-        protocolLabel(model.protocol),
-      ),
       modelDeleteButton(model, onDeleteModel),
     ].filter(Boolean),
   );
 }
 
-function groupModels(models: ProviderModelSummary[]) {
-  const order = [
-    "openai",
-    "openai-compatible",
-    "anthropic",
-    "anthropic-compatible",
-    "voyage",
-  ];
-  const groups = new Map<string, ProviderModelSummary[]>();
+function dedupeModelsByName(models: ProviderModelSummary[]) {
+  const deduped: ProviderModelSummary[] = [];
+  const indexByName = new Map<string, number>();
   for (const model of models) {
-    const key = model.protocol || "openai";
-    const current = groups.get(key) || [];
-    current.push(model);
-    groups.set(key, current);
+    const modelName = String(model.modelName || "").trim();
+    const key = modelName || `id:${model.id}`;
+    const existingIndex = indexByName.get(key);
+    if (existingIndex === undefined) {
+      indexByName.set(key, deduped.length);
+      deduped.push({ ...model, modelName: modelName || model.modelName });
+      continue;
+    }
+    const existing = deduped[existingIndex];
+    if (!existing) {
+      continue;
+    }
+    deduped[existingIndex] = {
+      ...existing,
+      enabled:
+        Number(existing.enabled) === 1 || Number(model.enabled) === 1 ? 1 : 0,
+    };
   }
-  return [
-    ...order.filter((key) => groups.has(key)),
-    ...[...groups.keys()].filter((key) => !order.includes(key)),
-  ].map((key) => ({ key, models: groups.get(key) || [] }));
+  return deduped;
 }
 
 function modelsCell(
@@ -330,7 +344,7 @@ function modelsCell(
       $t("plugin.linapro-ai-core.provider.empty.noModels"),
     );
   }
-  const orderedModels = groupModels(models).flatMap((group) => group.models);
+  const orderedModels = dedupeModelsByName(models);
   return h(
     "div",
     {
@@ -440,14 +454,24 @@ export function joinCapabilityMethod(type = "text", method = "generate") {
   return `${type || "text"}.${method || "generate"}`;
 }
 
-export function buildCapabilityQuerySchema(): VbenFormSchema[] {
+export function buildCapabilityQuerySchema(
+  options: {
+    componentProps?: Record<string, unknown>;
+    label?: string;
+    labelClass?: string;
+    labelWidth?: number;
+  } = {},
+): VbenFormSchema[] {
   return [
     {
       component: "Select",
       fieldName: "capabilityKey",
-      label: $t("plugin.linapro-ai-core.capability.method"),
+      label: options.label ?? $t("plugin.linapro-ai-core.capability.method"),
+      ...(options.labelClass ? { labelClass: options.labelClass } : {}),
+      ...(options.labelWidth ? { labelWidth: options.labelWidth } : {}),
       defaultValue: "text.generate",
       componentProps: {
+        ...(options.componentProps || {}),
         options: buildCapabilityMethodOptions(),
       },
     },
@@ -572,6 +596,16 @@ export function buildModelQuerySchema(): VbenFormSchema[] {
     },
     {
       component: "Select",
+      fieldName: "providerId",
+      label: $t("plugin.linapro-ai-core.model.fields.provider"),
+      componentProps: {
+        optionFilterProp: "label",
+        options: [],
+        showSearch: true,
+      },
+    },
+    {
+      component: "Select",
       fieldName: "enabled",
       label: $t("pages.common.status"),
       componentProps: { options: buildEnabledOptions() },
@@ -606,13 +640,6 @@ export function buildModelColumns(): VxeGridProps["columns"] {
       minWidth: 480,
       showOverflow: false,
       slots: { default: ({ row }) => modelEndpointCell(row as Model) },
-    },
-    {
-      field: "capabilityMethod",
-      title: $t("plugin.linapro-ai-core.capability.method"),
-      formatter: ({ row }) =>
-        joinCapabilityMethod(row.capabilityType, row.capabilityMethod),
-      minWidth: 150,
     },
     {
       field: "enabled",
@@ -684,7 +711,6 @@ export function buildProviderFormSchema(): VbenFormSchema[] {
       component: "Input",
       fieldName: "anthropicBaseUrl",
       label: `${$t("plugin.linapro-ai-core.endpoint.names.anthropic")} ${$t("plugin.linapro-ai-core.endpoint.fields.baseUrl")}`,
-      defaultValue: "https://api.anthropic.com/v1",
       componentProps: {
         placeholder: "https://api.anthropic.com/v1",
       },
@@ -759,7 +785,7 @@ export function buildModelFormSchema(
     {
       component: "Select",
       fieldName: "endpointIds",
-      label: `${$t("plugin.linapro-ai-core.model.fields.endpoint")} / ${$t("plugin.linapro-ai-core.model.fields.protocol")}`,
+      label: $t("plugin.linapro-ai-core.model.fields.protocol"),
       rules: "selectRequired",
       componentProps: {
         allowClear: false,
@@ -768,15 +794,6 @@ export function buildModelFormSchema(
         optionFilterProp: "label",
         options: endpointOptions,
         showSearch: true,
-      },
-    },
-    {
-      component: "Select",
-      fieldName: "capabilityKey",
-      label: $t("plugin.linapro-ai-core.capability.method"),
-      rules: "selectRequired",
-      componentProps: {
-        options: buildCapabilityMethodOptions(),
       },
     },
     {
@@ -795,48 +812,6 @@ export function buildModelFormSchema(
         optionType: "button",
         options: buildEnabledOptions(),
       },
-    },
-    {
-      component: "RadioGroup",
-      fieldName: "supportsThinking",
-      label: $t("plugin.linapro-ai-core.model.fields.supportsThinking"),
-      defaultValue: 0,
-      componentProps: {
-        buttonStyle: "solid",
-        optionType: "button",
-        options: buildEnabledOptions(),
-      },
-    },
-    {
-      component: "Select",
-      fieldName: "supportedEfforts",
-      label: $t("plugin.linapro-ai-core.model.fields.supportedEfforts"),
-      componentProps: {
-        mode: "multiple",
-        options: buildEffortOptions().filter((item) => item.value),
-      },
-      dependencies: {
-        show: (values) => Number(values.supportsThinking || 0) === 1,
-        trigger: (values, actions) => {
-          if (Number(values.supportsThinking || 0) === 1) {
-            return;
-          }
-          if ((values.supportedEfforts || []).length > 0) {
-            actions.setFieldValue("supportedEfforts", []);
-          }
-        },
-        triggerFields: ["supportsThinking"],
-      },
-    },
-    {
-      component: "InputNumber",
-      fieldName: "maxInputTokens",
-      label: $t("plugin.linapro-ai-core.model.fields.maxInputTokens"),
-    },
-    {
-      component: "InputNumber",
-      fieldName: "maxOutputTokens",
-      label: $t("plugin.linapro-ai-core.model.fields.maxOutputTokens"),
     },
   ];
 }
@@ -909,18 +884,32 @@ export function buildTierQuerySchema(): VbenFormSchema[] {
   return buildCapabilityQuerySchema();
 }
 
+const invocationQueryLabelWidth = 112;
+const invocationQuerySourceLabelWidth = 96;
+const invocationQueryCompactLabelWidth = 48;
+const invocationQueryPrimaryControlWidth = "242px";
+
 export function buildInvocationQuerySchema(): VbenFormSchema[] {
   return [
-    ...buildCapabilityQuerySchema(),
+    ...buildCapabilityQuerySchema({
+      componentProps: {
+        style: { width: invocationQueryPrimaryControlWidth },
+      },
+      label: $t("plugin.linapro-ai-core.invocation.fields.method"),
+      labelClass: "whitespace-nowrap",
+      labelWidth: invocationQueryLabelWidth,
+    }),
     {
       component: "Input",
       fieldName: "purpose",
       label: $t("plugin.linapro-ai-core.invocation.fields.purpose"),
+      labelWidth: invocationQuerySourceLabelWidth,
     },
     {
       component: "Select",
       fieldName: "tierCode",
       label: $t("plugin.linapro-ai-core.invocation.fields.tierCode"),
+      labelWidth: invocationQueryCompactLabelWidth,
       componentProps: {
         options: ["basic", "standard", "advanced"].map((value) => ({
           label: tierCodeLabel(value),
@@ -932,6 +921,7 @@ export function buildInvocationQuerySchema(): VbenFormSchema[] {
       component: "Select",
       fieldName: "status",
       label: $t("plugin.linapro-ai-core.invocation.fields.status"),
+      labelWidth: invocationQueryCompactLabelWidth,
       componentProps: {
         options: [
           {
@@ -946,9 +936,20 @@ export function buildInvocationQuerySchema(): VbenFormSchema[] {
       },
     },
     {
+      component: "RangePicker",
+      fieldName: "createdAtRange",
+      label: $t("pages.common.createdAt"),
+      labelWidth: invocationQueryLabelWidth,
+      componentProps: {
+        style: { width: invocationQueryPrimaryControlWidth },
+        valueFormat: "YYYY-MM-DD",
+      },
+    },
+    {
       component: "Input",
       fieldName: "sourcePluginId",
       label: $t("plugin.linapro-ai-core.invocation.fields.sourcePluginId"),
+      labelWidth: invocationQuerySourceLabelWidth,
     },
   ];
 }
@@ -968,10 +969,22 @@ export function buildInvocationColumns(): VxeGridProps["columns"] {
     },
     {
       field: "capabilityType",
-      title: $t("plugin.linapro-ai-core.capability.method"),
+      title: $t("plugin.linapro-ai-core.invocation.fields.method"),
       formatter: ({ row }) =>
         joinCapabilityMethod(row.capabilityType, row.capabilityMethod),
       minWidth: 150,
+    },
+    {
+      field: "protocol",
+      title: $t("plugin.linapro-ai-core.model.fields.protocol"),
+      formatter: ({ cellValue }) => protocolLabel(String(cellValue || "")),
+      minWidth: 120,
+    },
+    {
+      field: "sourcePluginId",
+      title: $t("plugin.linapro-ai-core.invocation.fields.sourcePluginId"),
+      minWidth: 180,
+      showOverflow: "tooltip",
     },
     {
       field: "tierCode",

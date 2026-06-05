@@ -1,12 +1,12 @@
-import type { VbenFormSchema } from '#/adapter/form';
-import type { VxeGridProps } from '#/adapter/vxe-table';
+import type { VbenFormSchema } from "#/adapter/form";
+import type { VxeGridProps } from "#/adapter/vxe-table";
 
-import { h } from 'vue';
+import { h } from "vue";
 
-import { $t } from '#/locales';
-import { DictTag } from '#/components/dict';
-import { useDictStore } from '#/store/dict';
-import { formatTimestamp } from '#/utils/time';
+import { $t } from "#/locales";
+import { DictTag } from "#/components/dict";
+import { useDictStore } from "#/store/dict";
+import { formatTimestamp } from "#/utils/time";
 
 function resolveDictOptions(dictType: string) {
   return useDictStore().getDictOptions(dictType);
@@ -16,103 +16,102 @@ function resolveDictOptions(dictType: string) {
 export function buildQuerySchema(): VbenFormSchema[] {
   return [
     {
-      component: 'Input',
-      fieldName: 'title',
-      label: $t('plugin.linapro-monitor-operlog.fields.moduleName'),
+      component: "Input",
+      fieldName: "title",
+      label: $t("plugin.linapro-monitor-operlog.fields.moduleName"),
     },
     {
-      component: 'Input',
-      fieldName: 'operName',
-      label: $t('plugin.linapro-monitor-operlog.fields.operator'),
+      component: "Input",
+      fieldName: "operName",
+      label: $t("plugin.linapro-monitor-operlog.fields.operator"),
     },
     {
-      component: 'Select',
-      fieldName: 'operType',
-      label: $t('plugin.linapro-monitor-operlog.fields.operType'),
+      component: "Select",
+      fieldName: "operType",
+      label: $t("plugin.linapro-monitor-operlog.fields.operType"),
       componentProps: {
         options: [] as { label: string; value: string }[],
       },
     },
     {
-      component: 'Select',
-      fieldName: 'status',
-      label: $t('plugin.linapro-monitor-operlog.fields.operResult'),
+      component: "Select",
+      fieldName: "status",
+      label: $t("plugin.linapro-monitor-operlog.fields.operResult"),
       componentProps: {
         options: [] as { label: string; value: string }[],
       },
     },
     {
-      component: 'RangePicker',
-      fieldName: 'operTime',
-      label: $t('plugin.linapro-monitor-operlog.fields.operTime'),
+      component: "RangePicker",
+      fieldName: "operTime",
+      label: $t("plugin.linapro-monitor-operlog.fields.operTime"),
       componentProps: {
-        valueFormat: 'YYYY-MM-DD',
+        valueFormat: "YYYY-MM-DD",
       },
     },
   ];
 }
 
 /** 表格列定义 */
-export function buildColumns(): VxeGridProps['columns'] {
+export function buildColumns(): VxeGridProps["columns"] {
   return [
-    { type: 'checkbox', width: 60 },
     {
-      field: 'id',
-      title: $t('plugin.linapro-monitor-operlog.fields.logId'),
+      field: "id",
+      title: $t("plugin.linapro-monitor-operlog.fields.logId"),
       minWidth: 100,
     },
     {
-      field: 'title',
-      title: $t('plugin.linapro-monitor-operlog.fields.moduleName'),
+      field: "title",
+      title: $t("plugin.linapro-monitor-operlog.fields.moduleName"),
       minWidth: 120,
     },
     {
-      field: 'operSummary',
-      title: $t('plugin.linapro-monitor-operlog.fields.operSummary'),
+      field: "operSummary",
+      title: $t("plugin.linapro-monitor-operlog.fields.operSummary"),
       minWidth: 140,
     },
     {
-      field: 'operType',
-      title: $t('plugin.linapro-monitor-operlog.fields.operType'),
+      field: "operType",
+      title: $t("plugin.linapro-monitor-operlog.fields.operType"),
       minWidth: 100,
       slots: {
         default: ({ row }) => {
-          const dicts = resolveDictOptions('sys_oper_type');
+          const dicts = resolveDictOptions("sys_oper_type");
           return h(DictTag, { dicts: dicts as any, value: row.operType });
         },
       },
     },
     {
-      field: 'operName',
-      title: $t('plugin.linapro-monitor-operlog.fields.operator'),
+      field: "operName",
+      title: $t("plugin.linapro-monitor-operlog.fields.operator"),
       minWidth: 120,
     },
     {
-      field: 'operIp',
-      title: $t('plugin.linapro-monitor-operlog.fields.ipAddress'),
+      field: "operIp",
+      title: $t("plugin.linapro-monitor-operlog.fields.ipAddress"),
       minWidth: 130,
     },
     {
-      field: 'status',
-      title: $t('plugin.linapro-monitor-operlog.fields.operResult'),
+      field: "status",
+      title: $t("plugin.linapro-monitor-operlog.fields.operResult"),
       minWidth: 100,
       slots: {
         default: ({ row }) => {
-          const dicts = resolveDictOptions('sys_oper_status');
+          const dicts = resolveDictOptions("sys_oper_status");
           return h(DictTag, { dicts: dicts as any, value: row.status });
         },
       },
     },
     {
-      field: 'operTime',
-      title: $t('plugin.linapro-monitor-operlog.fields.operDate'),
+      field: "operTime",
+      title: $t("plugin.linapro-monitor-operlog.fields.operDate"),
       formatter: ({ cellValue }) => formatTimestamp(cellValue),
       minWidth: 180,
       sortable: true,
     },
     {
-      field: 'costTime',
-      title: $t('plugin.linapro-monitor-operlog.fields.duration'),
+      field: "costTime",
+      title: $t("plugin.linapro-monitor-operlog.fields.duration"),
       minWidth: 100,
       sortable: true,
       formatter({ cellValue }) {
@@ -120,12 +119,12 @@ export function buildColumns(): VxeGridProps['columns'] {
       },
     },
     {
-      field: 'action',
-      fixed: 'right',
-      slots: { default: 'action' },
-      title: $t('pages.common.actions'),
+      field: "action",
+      fixed: "right",
+      slots: { default: "action" },
+      title: $t("pages.common.actions"),
       resizable: false,
-      width: 'auto',
+      width: "auto",
     },
   ];
 }
@@ -133,22 +132,22 @@ export function buildColumns(): VxeGridProps['columns'] {
 /** 请求方法标签颜色映射 */
 export function getMethodTagColor(method: string): string {
   const map: Record<string, string> = {
-    GET: 'green',
-    POST: 'blue',
-    PUT: 'orange',
-    DELETE: 'red',
-    PATCH: 'cyan',
+    GET: "green",
+    POST: "blue",
+    PUT: "orange",
+    DELETE: "red",
+    PATCH: "cyan",
   };
-  return map[method?.toUpperCase()] || 'default';
+  return map[method?.toUpperCase()] || "default";
 }
 
 export function getMethodLabel(method: string): string {
   const map: Record<string, string> = {
-    DELETE: $t('pages.common.delete'),
-    GET: $t('pages.common.search'),
-    PATCH: $t('plugin.linapro-monitor-operlog.method.patch'),
-    POST: $t('pages.common.add'),
-    PUT: $t('pages.common.edit'),
+    DELETE: $t("pages.common.delete"),
+    GET: $t("pages.common.search"),
+    PATCH: $t("plugin.linapro-monitor-operlog.method.patch"),
+    POST: $t("pages.common.add"),
+    PUT: $t("pages.common.edit"),
   };
   return map[method?.toUpperCase()] || method;
 }

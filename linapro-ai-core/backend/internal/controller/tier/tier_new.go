@@ -61,14 +61,12 @@ func toAPITierItem(item *aisvc.TierItem) *v1.TierItem {
 	}
 	if item.Binding != nil {
 		dto.Binding = &v1.TierBindingItem{
-			ProviderId:       item.Binding.ProviderId,
-			ProviderName:     item.Binding.ProviderName,
-			ModelId:          item.Binding.ModelId,
-			ModelName:        item.Binding.ModelName,
-			Protocol:         item.Binding.Protocol,
-			SupportsThinking: item.Binding.SupportsThinking,
-			SupportedEfforts: item.Binding.SupportedEfforts,
-			Enabled:          item.Binding.Enabled,
+			ProviderId:   item.Binding.ProviderId,
+			ProviderName: item.Binding.ProviderName,
+			ModelId:      item.Binding.ModelId,
+			ModelName:    item.Binding.ModelName,
+			Protocol:     item.Binding.Protocol,
+			Enabled:      item.Binding.Enabled,
 		}
 	}
 	return dto

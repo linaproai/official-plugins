@@ -1,7 +1,7 @@
 <script lang="ts">
 export const pluginPageMeta = {
   routePath: "/ai/tiers",
-  title: "Tier Management",
+  title: "AI Tiers",
 };
 </script>
 

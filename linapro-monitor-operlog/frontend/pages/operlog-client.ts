@@ -42,6 +42,10 @@ export interface OperLogListResult {
   total: number;
 }
 
+export interface OperLogCleanResult {
+  deleted: number;
+}
+
 export async function operLogList(params?: OperLogListParams) {
   return await requestClient.get<OperLogListResult>(operLogApi('operlog'), {
     params,
@@ -53,7 +57,9 @@ export function operLogDetail(id: number) {
 }
 
 export function operLogClean(params?: { beginTime?: string; endTime?: string }) {
-  return requestClient.delete(operLogApi('operlog/clean'), { params });
+  return requestClient.delete<OperLogCleanResult>(operLogApi('operlog/clean'), {
+    params,
+  });
 }
 
 export function operLogDelete(ids: number[]) {

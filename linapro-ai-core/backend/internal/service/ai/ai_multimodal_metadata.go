@@ -261,7 +261,7 @@ func (s *serviceImpl) ListModelCapabilities(ctx context.Context, modelID int64) 
 	return items, nil
 }
 
-// UpsertModelCapabilities replaces or inserts explicit method capability declarations for one model.
+// UpsertModelCapabilities replaces explicit method capability declarations for one model.
 func (s *serviceImpl) UpsertModelCapabilities(ctx context.Context, modelID int64, items []ModelCapabilitySaveInput) error {
 	if err := s.ensurePlatform(ctx); err != nil {
 		return err
@@ -273,9 +273,34 @@ func (s *serviceImpl) UpsertModelCapabilities(ctx context.Context, modelID int64
 	if len(items) == 0 {
 		return bizerr.NewCode(CodeRequestInvalid)
 	}
+	keepKeys, err := modelCapabilityInputKeys(modelID, items)
+	if err != nil {
+		return err
+	}
 	err = dao.ModelCapability.Transaction(ctx, func(ctx context.Context, _ gdb.TX) error {
+		existingRows, err := s.modelCapabilitiesByModel(ctx, []int64{modelID})
+		if err != nil {
+			return err
+		}
+		removedIDs, removedKeys := removedModelCapabilityIDs(existingRows, keepKeys)
+		if len(removedKeys) > 0 {
+			referenced, err := s.modelCapabilityKeysReferencedByTiers(ctx, modelID, removedKeys)
+			if err != nil {
+				return err
+			}
+			if referenced {
+				return bizerr.NewCode(CodeModelInUse)
+			}
+		}
 		for _, item := range items {
 			if err := s.upsertModelCapability(ctx, model, item); err != nil {
+				return err
+			}
+		}
+		if len(removedIDs) > 0 {
+			if _, err := dao.ModelCapability.Ctx(ctx).
+				WhereIn(dao.ModelCapability.Columns().Id, removedIDs).
+				Delete(); err != nil {
 				return err
 			}
 		}
@@ -285,6 +310,85 @@ func (s *serviceImpl) UpsertModelCapabilities(ctx context.Context, modelID int64
 		return err
 	}
 	return s.InvalidateTierCache(ctx, "", "", "")
+}
+
+// modelCapabilityInputKeys returns normalized capability identities from the save payload.
+func modelCapabilityInputKeys(modelID int64, items []ModelCapabilitySaveInput) (map[string]struct{}, error) {
+	keys := make(map[string]struct{}, len(items))
+	for _, item := range items {
+		capabilityType := normalizeCapabilityType(item.CapabilityType)
+		capabilityMethod := normalizeCapabilityMethod(item.CapabilityMethod)
+		if capabilityType == "" || capabilityMethod == "" {
+			return nil, bizerr.NewCode(CodeRequestInvalid)
+		}
+		key := modelCapabilityKey(modelID, capabilityType, capabilityMethod)
+		if _, exists := keys[key]; exists {
+			return nil, bizerr.NewCode(CodeRequestInvalid)
+		}
+		keys[key] = struct{}{}
+	}
+	return keys, nil
+}
+
+// removedModelCapabilityIDs returns existing capability rows absent from the replacement payload.
+func removedModelCapabilityIDs(rows []*entity.ModelCapability, keepKeys map[string]struct{}) ([]int64, map[string]struct{}) {
+	ids := make([]int64, 0)
+	keys := make(map[string]struct{})
+	for _, row := range rows {
+		if row == nil || row.Id <= 0 {
+			continue
+		}
+		key := modelCapabilityKey(row.ModelId, row.CapabilityType, row.CapabilityMethod)
+		if _, keep := keepKeys[key]; keep {
+			continue
+		}
+		ids = append(ids, row.Id)
+		keys[key] = struct{}{}
+	}
+	return ids, keys
+}
+
+// modelCapabilityKeysReferencedByTiers reports whether removed capability keys are still tier-bound.
+func (s *serviceImpl) modelCapabilityKeysReferencedByTiers(ctx context.Context, modelID int64, keys map[string]struct{}) (bool, error) {
+	if modelID <= 0 || len(keys) == 0 {
+		return false, nil
+	}
+	bindingRows := make([]*entity.TierBinding, 0)
+	if err := dao.TierBinding.Ctx(ctx).
+		Fields(dao.TierBinding.Columns().TierId).
+		Where(do.TierBinding{ModelId: modelID}).
+		Scan(&bindingRows); err != nil {
+		return false, err
+	}
+	tierIDs := make([]int64, 0, len(bindingRows))
+	seenTierIDs := make(map[int64]struct{}, len(bindingRows))
+	for _, row := range bindingRows {
+		if row == nil || row.TierId <= 0 {
+			continue
+		}
+		if _, seen := seenTierIDs[row.TierId]; seen {
+			continue
+		}
+		seenTierIDs[row.TierId] = struct{}{}
+		tierIDs = append(tierIDs, row.TierId)
+	}
+	tiers, err := s.tiersByID(ctx, tierIDs)
+	if err != nil {
+		return false, err
+	}
+	for _, row := range bindingRows {
+		if row == nil {
+			continue
+		}
+		tier := tiers[row.TierId]
+		if tier == nil {
+			continue
+		}
+		if _, referenced := keys[modelCapabilityKey(modelID, tier.CapabilityType, tier.CapabilityMethod)]; referenced {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // ListMethodDefaults returns method-specific default parameter projections.
@@ -533,11 +637,7 @@ func (s *serviceImpl) enabledSyncEndpoints(ctx context.Context, providerID int64
 
 func (s *serviceImpl) providerEndpointReferenced(ctx context.Context, endpointID int64) (bool, error) {
 	modelCount, err := dao.Model.Ctx(ctx).Where(do.Model{EndpointId: endpointID}).Count()
-	if err != nil || modelCount > 0 {
-		return modelCount > 0, err
-	}
-	capabilityCount, err := dao.ModelCapability.Ctx(ctx).Where(do.ModelCapability{EndpointId: endpointID}).Count()
-	return capabilityCount > 0, err
+	return modelCount > 0, err
 }
 
 func providerEndpointToItem(row *entity.ProviderEndpoint) *ProviderEndpointItem {

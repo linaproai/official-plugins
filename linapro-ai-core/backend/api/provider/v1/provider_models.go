@@ -6,13 +6,11 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // ListModelsReq defines the request for listing provider models.
 type ListModelsReq struct {
-	g.Meta           `path:"/ai/providers/{providerId}/models" method:"get" tags:"AI Provider Models" summary:"List provider models" dc:"List models belonging to one AI provider by filtering explicit model capability declarations and returning bounded model identity projections." permission:"ai:provider:list"`
-	ProviderId       int64  `json:"providerId" v:"required|min:1" dc:"Provider ID" eg:"1"`
-	PageNum          int    `json:"pageNum" d:"1" v:"min:1" dc:"Page number" eg:"1"`
-	PageSize         int    `json:"pageSize" d:"10" v:"min:1|max:100" dc:"Page size, capped at 100" eg:"10"`
-	CapabilityType   string `json:"capabilityType" d:"text" dc:"Capability type filter such as text, image, embedding, audio, vision, document, safety, or video" eg:"image"`
-	CapabilityMethod string `json:"capabilityMethod" d:"generate" dc:"Capability method filter such as generate, create, transcribe, analyze, moderate, or operation.get" eg:"generate"`
-	Enabled          *int   `json:"enabled" dc:"Optional enabled filter: 0=disabled 1=enabled" eg:"1"`
+	g.Meta     `path:"/ai/providers/{providerId}/models" method:"get" tags:"AI Provider Models" summary:"List provider models" dc:"List model identities belonging to one AI provider with bounded pagination. Model candidates are not filtered by capability method declarations." permission:"ai:provider:list"`
+	ProviderId int64 `json:"providerId" v:"required|min:1" dc:"Provider ID" eg:"1"`
+	PageNum    int   `json:"pageNum" d:"1" v:"min:1" dc:"Page number" eg:"1"`
+	PageSize   int   `json:"pageSize" d:"10" v:"min:1|max:100" dc:"Page size, capped at 100" eg:"10"`
+	Enabled    *int  `json:"enabled" dc:"Optional enabled filter: 0=disabled 1=enabled" eg:"1"`
 }
 
 // ListModelsRes defines the response for listing provider models.
@@ -23,18 +21,12 @@ type ListModelsRes struct {
 
 // CreateModelReq defines the request for creating a provider model.
 type CreateModelReq struct {
-	g.Meta           `path:"/ai/providers/{providerId}/models" method:"post" tags:"AI Provider Models" summary:"Create provider model" dc:"Create one model identity under an AI provider and create its initial explicit capability declaration with endpoint preference, token bounds, and thinking effort support." permission:"ai:provider:create"`
-	ProviderId       int64    `json:"providerId" v:"required|min:1" dc:"Provider ID" eg:"1"`
-	EndpointId       int64    `json:"endpointId" v:"required|min:1" dc:"Provider endpoint ID used for this model" eg:"1"`
-	CapabilityType   string   `json:"capabilityType" d:"text" dc:"Capability type such as text, image, embedding, audio, vision, document, safety, or video" eg:"image"`
-	CapabilityMethod string   `json:"capabilityMethod" d:"generate" dc:"Capability method within the type, such as generate, create, transcribe, analyze, moderate, or operation.get" eg:"generate"`
-	ModelName        string   `json:"modelName" v:"required|max-length:128" dc:"Provider model name" eg:"gpt-4.1-mini"`
-	Protocol         string   `json:"protocol" v:"required|in:openai,anthropic,voyage,openai-compatible,anthropic-compatible" dc:"Provider protocol: openai, anthropic, voyage, openai-compatible, or anthropic-compatible" eg:"openai-compatible"`
-	SupportsThinking int      `json:"supportsThinking" dc:"Thinking effort support flag: 0=no 1=yes" eg:"1"`
-	SupportedEfforts []string `json:"supportedEfforts" dc:"Supported thinking efforts: low, medium, high, xhigh, max" eg:"low,medium,high"`
-	MaxInputTokens   int      `json:"maxInputTokens" dc:"Maximum input tokens; 0 means unspecified" eg:"128000"`
-	MaxOutputTokens  int      `json:"maxOutputTokens" dc:"Maximum output tokens; 0 means unspecified" eg:"8192"`
-	Enabled          int      `json:"enabled" d:"1" dc:"Enabled flag: 0=disabled 1=enabled" eg:"1"`
+	g.Meta     `path:"/ai/providers/{providerId}/models" method:"post" tags:"AI Provider Models" summary:"Create provider model" dc:"Create one model identity under an AI provider. Capability method support is decided by administrators through tier selection and tests, not by model declarations." permission:"ai:provider:create"`
+	ProviderId int64  `json:"providerId" v:"required|min:1" dc:"Provider ID" eg:"1"`
+	EndpointId int64  `json:"endpointId" v:"required|min:1" dc:"Provider endpoint ID used for this model" eg:"1"`
+	ModelName  string `json:"modelName" v:"required|max-length:128" dc:"Provider model name" eg:"gpt-4.1-mini"`
+	Protocol   string `json:"protocol" v:"required|in:openai,anthropic,voyage,openai-compatible,anthropic-compatible" dc:"Provider protocol: openai, anthropic, voyage, openai-compatible, or anthropic-compatible" eg:"openai-compatible"`
+	Enabled    int    `json:"enabled" d:"1" dc:"Enabled flag: 0=disabled 1=enabled" eg:"1"`
 }
 
 // CreateModelRes defines the response for creating a provider model.

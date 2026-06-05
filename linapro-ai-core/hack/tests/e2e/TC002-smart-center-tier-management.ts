@@ -31,10 +31,15 @@ test.describe("TC-2 智能中心档位管理", () => {
 
   test("TC-2a: 三个文本能力档位稳定展示且列表不展示默认值", async ({
     adminPage,
+    mainLayout,
   }) => {
     const smartCenter = new SmartCenterPage(adminPage);
+    await mainLayout.switchLanguage("English");
     await smartCenter.gotoTiers();
 
+    const mainContent = adminPage.locator("#__vben_main_content");
+    await expect(mainContent.getByText("AI Tiers").first()).toBeVisible();
+    await expect(mainContent.getByText("Tier Management")).toHaveCount(0);
     await expect(adminPage.getByText(/基础|Basic/i)).toBeVisible();
     await expect(adminPage.getByText(/标准|Standard/i)).toBeVisible();
     await expect(adminPage.getByText(/高级|Advanced/i)).toBeVisible();
@@ -67,7 +72,7 @@ test.describe("TC-2 智能中心档位管理", () => {
           api,
           "text",
           "generate",
-          '{"maxOutputTokens":1024}',
+          '{"temperature":0.2}',
         );
         await bindTier(api, "basic", fixture);
 
@@ -75,7 +80,7 @@ test.describe("TC-2 智能中心档位管理", () => {
         await smartCenter.gotoTiers();
         await smartCenter.assertTierDrawerDefaultConfig(
           /基础|Basic/i,
-          '"maxOutputTokens": 1024',
+          '"temperature": 0.2',
         );
         await smartCenter.assertTierDefaultParamsFormLayout();
         await smartCenter.fillTierDefaultParams(updatedParamsJson);
@@ -101,7 +106,7 @@ test.describe("TC-2 智能中心档位管理", () => {
           api,
           "text",
           "generate",
-          originalTextDefault?.defaultParamsJson || '{"maxOutputTokens":1024}',
+          originalTextDefault?.defaultParamsJson || "{}",
         ).catch(() => {});
         await clearTier(api, "basic").catch(() => {});
         await deleteProvider(api, fixture.providerId).catch(() => {});
@@ -109,9 +114,7 @@ test.describe("TC-2 智能中心档位管理", () => {
     });
   });
 
-  test("TC-2c: 档位模型选择按供应商协议分组展示", async ({
-    adminPage,
-  }) => {
+  test("TC-2c: 档位模型选择按渠道协议分组展示", async ({ adminPage }) => {
     await withAdminApi(async (api) => {
       const suffix = Date.now();
       const anthropicModelName = `e2e-anthropic-tier-model-${suffix}`;
@@ -127,14 +130,9 @@ test.describe("TC-2 智能中心档位管理", () => {
       const anthropicEndpointId = Number(endpoints[0]?.id || 0);
       expect(anthropicEndpointId).toBeGreaterThan(0);
       await createProviderModel(api, fixture.providerId, {
-        capabilityMethod: "generate",
-        capabilityType: "text",
         endpointId: anthropicEndpointId,
-        maxOutputTokens: 512,
         modelName: anthropicModelName,
         protocol: "anthropic",
-        supportedEfforts: ["low", "medium"],
-        supportsThinking: 1,
       });
 
       try {
@@ -160,8 +158,6 @@ test.describe("TC-2 智能中心档位管理", () => {
       const fixture = await createProviderWithModel(api, {
         modelName: `e2e-loading-model-${suffix}`,
         providerName: `E2E Loading Provider ${suffix}`,
-        supportedEfforts: ["low"],
-        supportsThinking: 1,
       });
       await bindTier(api, "basic", fixture, "low");
 
@@ -218,14 +214,12 @@ test.describe("TC-2 智能中心档位管理", () => {
     });
   });
 
-  test("TC-2e: 不支持的 thinking effort 给出校验提示", async () => {
+  test("TC-2e: 默认 thinking effort 只做枚举校验不依赖模型声明", async () => {
     await withAdminApi(async (api) => {
       const suffix = Date.now();
       const fixture = await createProviderWithModel(api, {
         modelName: `e2e-model-${suffix}`,
         providerName: `E2E Provider ${suffix}`,
-        supportedEfforts: ["low"],
-        supportsThinking: 1,
       });
       try {
         const response = await updateTierRaw(api, "basic", {
@@ -236,9 +230,9 @@ test.describe("TC-2 智能中心档位管理", () => {
         });
 
         expect(response.ok()).toBe(true);
-        await expect(response.text()).resolves.toMatch(
-          /不支持.*thinking effort|does not support this thinking effort|THINKING_EFFORT/i,
-        );
+        const tiers = await listTiers(api);
+        const basicTier = tiers.find((item: any) => item.code === "basic");
+        expect(basicTier?.defaultEffort).toBe("max");
       } finally {
         await clearTier(api, "basic").catch(() => {});
         await deleteProvider(api, fixture.providerId).catch(() => {});
@@ -246,14 +240,12 @@ test.describe("TC-2 智能中心档位管理", () => {
     });
   });
 
-  test("TC-2f: 禁用档位保留已有供应商模型绑定", async () => {
+  test("TC-2f: 禁用档位保留已有渠道模型绑定", async () => {
     await withAdminApi(async (api) => {
       const suffix = Date.now();
       const fixture = await createProviderWithModel(api, {
         modelName: `e2e-disable-model-${suffix}`,
         providerName: `E2E Disable Provider ${suffix}`,
-        supportedEfforts: ["low"],
-        supportsThinking: 1,
       });
       try {
         await bindTier(api, "standard", fixture, "low");

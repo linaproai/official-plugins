@@ -13,12 +13,12 @@ import {
   withAdminApi,
 } from "../support/ai-core-api";
 
-test.describe("TC-4 智能中心供应商端点", () => {
+test.describe("TC-4 智能中心渠道端点", () => {
   test.beforeAll(async () => {
     await prepareSourcePluginsBaseline(["linapro-ai-core"]);
   });
 
-  test("TC-4a: 供应商端点和模型能力按多模态方法维护", async ({ adminPage }) => {
+  test("TC-4a: 渠道端点和模型能力按多模态方法维护", async ({ adminPage }) => {
     await withAdminApi(async (api) => {
       const suffix = Date.now();
       const fixture = await createProviderWithModel(api, {
@@ -39,11 +39,7 @@ test.describe("TC-4 智能中心供应商端点", () => {
           },
         );
         const modelId = await createProviderModel(api, fixture.providerId, {
-          capabilityMethod: "generate",
-          capabilityType: "image",
           endpointId,
-          maxInputTokens: 2048,
-          maxOutputTokens: 4096,
           modelName: imageModelName,
           protocol: "anthropic",
         });
@@ -97,7 +93,7 @@ test.describe("TC-4 智能中心供应商端点", () => {
           endpointId,
         );
         await expect(deleteResponse.text()).resolves.toMatch(
-          /AI_CORE_PROVIDER_ENDPOINT_IN_USE|供应商端点正在被模型能力使用|provider endpoint is used/i,
+          /AI_CORE_PROVIDER_ENDPOINT_IN_USE|渠道端点正在被模型使用|provider endpoint is used by a model/i,
         );
       } finally {
         await deleteProvider(api, fixture.providerId).catch(() => {});

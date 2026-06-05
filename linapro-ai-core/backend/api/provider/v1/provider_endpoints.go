@@ -50,7 +50,7 @@ type UpdateProviderEndpointRes struct{}
 
 // DeleteProviderEndpointReq defines the request for deleting a provider endpoint.
 type DeleteProviderEndpointReq struct {
-	g.Meta     `path:"/ai/providers/{providerId}/endpoints/{id}" method:"delete" tags:"AI Provider Endpoints" summary:"Delete provider endpoint" dc:"Delete one provider endpoint after verifying no model or model capability references it." permission:"ai:provider:delete"`
+	g.Meta     `path:"/ai/providers/{providerId}/endpoints/{id}" method:"delete" tags:"AI Provider Endpoints" summary:"Delete provider endpoint" dc:"Delete one provider endpoint after verifying no model references it." permission:"ai:provider:delete"`
 	ProviderId int64 `json:"providerId" v:"required|min:1" dc:"Provider ID" eg:"1"`
 	Id         int64 `json:"id" v:"required|min:1" dc:"Provider endpoint ID" eg:"1"`
 }

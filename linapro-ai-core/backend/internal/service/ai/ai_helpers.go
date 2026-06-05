@@ -276,16 +276,15 @@ func providerToItem(
 	}
 }
 
-// modelToItem converts one model entity and an optional method capability into a service projection.
-func modelToItem(row *entity.Model, capability *entity.ModelCapability) *ModelItem {
+// modelToItem converts one model entity into a service projection.
+func modelToItem(row *entity.Model, _ *entity.ModelCapability) *ModelItem {
 	if row == nil {
 		return nil
 	}
-	endpointID := row.EndpointId
-	item := &ModelItem{
+	return &ModelItem{
 		Id:         row.Id,
 		ProviderId: row.ProviderId,
-		EndpointId: endpointID,
+		EndpointId: row.EndpointId,
 		ModelName:  row.ModelName,
 		Protocol:   row.Protocol,
 		Source:     row.Source,
@@ -293,19 +292,6 @@ func modelToItem(row *entity.Model, capability *entity.ModelCapability) *ModelIt
 		CreatedAt:  row.CreatedAt,
 		UpdatedAt:  row.UpdatedAt,
 	}
-	if capability == nil {
-		return item
-	}
-	if capability.EndpointId > 0 {
-		item.EndpointId = capability.EndpointId
-	}
-	item.CapabilityType = capability.CapabilityType
-	item.CapabilityMethod = capability.CapabilityMethod
-	item.SupportsThinking = capability.SupportsThinking
-	item.SupportedEfforts = splitEfforts(capability.SupportedEfforts)
-	item.MaxInputTokens = capability.MaxInputTokens
-	item.MaxOutputTokens = capability.MaxOutputTokens
-	return item
 }
 
 // modelCapabilityKey builds an in-memory lookup key for one model capability method.
@@ -315,18 +301,16 @@ func modelCapabilityKey(modelID int64, capabilityType string, capabilityMethod s
 		normalizeCapabilityMethod(capabilityMethod)
 }
 
-// providerModelSummaryFromRows projects one model and method capability into provider summary shape.
-func providerModelSummaryFromRows(model *entity.Model, capability *entity.ModelCapability) *ProviderModelSummaryItem {
-	if model == nil || capability == nil {
+// providerModelSummaryFromRows projects one model into provider summary shape.
+func providerModelSummaryFromRows(model *entity.Model, _ *entity.ModelCapability) *ProviderModelSummaryItem {
+	if model == nil {
 		return nil
 	}
 	return &ProviderModelSummaryItem{
-		Id:               model.Id,
-		CapabilityType:   capability.CapabilityType,
-		CapabilityMethod: capability.CapabilityMethod,
-		ModelName:        model.ModelName,
-		Protocol:         model.Protocol,
-		Enabled:          model.Enabled,
+		Id:        model.Id,
+		ModelName: model.ModelName,
+		Protocol:  model.Protocol,
+		Enabled:   model.Enabled,
 	}
 }
 

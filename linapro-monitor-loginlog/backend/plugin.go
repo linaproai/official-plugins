@@ -3,9 +3,12 @@ package backend
 
 import (
 	"context"
+	"strconv"
+	"strings"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 
+	plugincontract "lina-core/pkg/plugin/capability/contract"
 	"lina-core/pkg/plugin/pluginhost"
 	monitorloginlogplugin "lina-plugin-linapro-monitor-loginlog"
 	loginlogcontroller "lina-plugin-linapro-monitor-loginlog/backend/internal/controller/loginlog"
@@ -16,7 +19,21 @@ import (
 const (
 	// pluginID is the immutable identifier published by the embedded source plugin.
 	pluginID = "linapro-monitor-loginlog"
+	// logRetentionDaysKey is the host protected runtime parameter shared by log cleanup jobs.
+	logRetentionDaysKey = "sys.log.retentionDays"
+	// loginLogCleanupCronName identifies the login-log cleanup cron declaration.
+	loginLogCleanupCronName = "login-log-cleanup"
+	// loginLogCleanupCronDisplayName is the English source title for the cleanup cron.
+	loginLogCleanupCronDisplayName = "Login Log Cleanup"
+	// loginLogCleanupCronDescription is the English source description for the cleanup cron.
+	loginLogCleanupCronDescription = "Cleans up expired login audit logs for the linapro-monitor-loginlog plugin."
 )
+
+// loginLogRetentionCleaner is the plugin service subset needed by the cleanup cron.
+type loginLogRetentionCleaner interface {
+	// CleanupExpired hard-deletes login logs older than the given retention period.
+	CleanupExpired(ctx context.Context, retentionDays int) (int, error)
+}
 
 // init registers the linapro-monitor-loginlog source plugin and its host callbacks.
 func init() {
@@ -47,6 +64,13 @@ func init() {
 		pluginhost.ExtensionPointAuthLogoutSucceeded,
 		pluginhost.CallbackExecutionModeAsync,
 		handleAuthEvent,
+	); err != nil {
+		panic(err)
+	}
+	if err := plugin.Cron().RegisterCron(
+		pluginhost.ExtensionPointCronRegister,
+		pluginhost.CallbackExecutionModeBlocking,
+		registerCleanupCron,
 	); err != nil {
 		panic(err)
 	}
@@ -109,4 +133,66 @@ func handleAuthEvent(ctx context.Context, payload pluginhost.HookPayload) error 
 		Os:       pluginhost.HookPayloadStringValue(values, pluginhost.HookPayloadKeyOS),
 		Msg:      message,
 	})
+}
+
+// registerCleanupCron contributes the plugin-owned login-log retention cleanup job.
+func registerCleanupCron(ctx context.Context, registrar pluginhost.CronRegistrar) error {
+	services := registrar.Services()
+	if services == nil || services.HostConfig() == nil {
+		return gerror.New("linapro-monitor-loginlog cleanup cron requires host config service")
+	}
+	cleaner := loginlogsvc.New(nil, nil)
+	return registrar.AddWithMetadata(
+		ctx,
+		"# 27 3 * * *",
+		loginLogCleanupCronName,
+		loginLogCleanupCronDisplayName,
+		loginLogCleanupCronDescription,
+		func(ctx context.Context) error {
+			return cleanupExpiredLoginLogs(ctx, registrar.IsPrimaryNode(), services.HostConfig(), cleaner)
+		},
+	)
+}
+
+// cleanupExpiredLoginLogs runs primary-node login-log retention cleanup.
+func cleanupExpiredLoginLogs(
+	ctx context.Context,
+	primaryNode bool,
+	hostConfigSvc plugincontract.HostConfigService,
+	cleaner loginLogRetentionCleaner,
+) error {
+	if !primaryNode {
+		return nil
+	}
+	if hostConfigSvc == nil {
+		return gerror.New("linapro-monitor-loginlog cleanup requires host config service")
+	}
+	if cleaner == nil {
+		return gerror.New("linapro-monitor-loginlog cleanup requires login-log service")
+	}
+	retentionDays, err := requiredLogRetentionDays(ctx, hostConfigSvc)
+	if err != nil {
+		return err
+	}
+	_, err = cleaner.CleanupExpired(ctx, retentionDays)
+	return err
+}
+
+// requiredLogRetentionDays reads the required host log-retention parameter.
+func requiredLogRetentionDays(ctx context.Context, hostConfigSvc plugincontract.HostConfigService) (int, error) {
+	value, err := hostConfigSvc.Get(ctx, logRetentionDaysKey)
+	if err != nil {
+		return 0, err
+	}
+	if value == nil || value.IsNil() || strings.TrimSpace(value.String()) == "" {
+		return 0, gerror.Newf("linapro-monitor-loginlog cleanup requires %s", logRetentionDaysKey)
+	}
+	retentionDays, err := strconv.Atoi(strings.TrimSpace(value.String()))
+	if err != nil {
+		return 0, gerror.Wrapf(err, "parse linapro-monitor-loginlog cleanup %s failed", logRetentionDaysKey)
+	}
+	if retentionDays <= 0 {
+		return 0, gerror.Newf("linapro-monitor-loginlog cleanup requires positive %s", logRetentionDaysKey)
+	}
+	return retentionDays, nil
 }

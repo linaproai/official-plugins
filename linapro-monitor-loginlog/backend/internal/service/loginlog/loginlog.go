@@ -64,6 +64,10 @@ type Service interface {
 	// Clean hard-deletes tenant-visible login logs within the optional time range.
 	// It returns the affected row count and any database error.
 	Clean(ctx context.Context, in CleanInput) (int, error)
+	// CleanupExpired hard-deletes login logs older than the global retention
+	// boundary. It bypasses request data scope because it is only used by
+	// plugin lifecycle governance cron jobs.
+	CleanupExpired(ctx context.Context, retentionDays int) (int, error)
 	// DeleteByIds hard-deletes tenant-visible login logs by ID list and returns
 	// the affected row count; rows outside data scope are ignored by the filter.
 	DeleteByIds(ctx context.Context, ids []int) (int, error)

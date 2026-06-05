@@ -43,6 +43,8 @@ const (
 	InvocationStatusSuccess = "success"
 	// InvocationStatusFailed identifies a failed AI invocation.
 	InvocationStatusFailed = "failed"
+	// InvocationPurposeTierTest identifies invocation logs emitted by tier tests.
+	InvocationPurposeTierTest = "linapro-ai-core.tier.test"
 )
 
 const (
@@ -99,7 +101,7 @@ type ProviderEndpointService interface {
 	CreateProviderEndpoint(ctx context.Context, in ProviderEndpointSaveInput) (int64, error)
 	// UpdateProviderEndpoint updates one provider protocol endpoint and keeps the stored secret when masked input is supplied.
 	UpdateProviderEndpoint(ctx context.Context, in ProviderEndpointSaveInput) error
-	// DeleteProviderEndpoint soft-deletes one endpoint after verifying model capability references.
+	// DeleteProviderEndpoint soft-deletes one endpoint after verifying model references.
 	DeleteProviderEndpoint(ctx context.Context, providerID int64, id int64) error
 }
 
@@ -110,11 +112,12 @@ type ModelService interface {
 	// ListAllModels returns one bounded platform model page with provider and endpoint
 	// projections batch-assembled for model-dimension management.
 	ListAllModels(ctx context.Context, in ModelGlobalListInput) (*ModelListOutput, error)
-	// CreateModel creates one provider-owned AI model identity row and its initial capability declaration.
+	// CreateModel creates one provider-owned AI model identity row.
 	CreateModel(ctx context.Context, in ModelSaveInput) (int64, error)
-	// UpdateModel updates one provider-owned AI model identity row. Capability declarations are maintained separately.
+	// UpdateModel updates one provider-owned AI model identity row.
 	UpdateModel(ctx context.Context, in ModelSaveInput) error
-	// DeleteModel soft-deletes one model after verifying no active tier binding references it.
+	// DeleteModel soft-deletes all provider-local rows sharing the target model name
+	// after verifying no active tier binding references any row in that group.
 	DeleteModel(ctx context.Context, id int64) error
 	// SyncModels imports public model metadata from enabled provider endpoints.
 	// Endpoint failures are tolerated when at least one endpoint returns models.
@@ -125,7 +128,7 @@ type ModelService interface {
 type ModelCapabilityService interface {
 	// ListModelCapabilities returns explicit method capability declarations for one model.
 	ListModelCapabilities(ctx context.Context, modelID int64) ([]*ModelCapabilityItem, error)
-	// UpsertModelCapabilities replaces or inserts explicit method capability declarations for one model.
+	// UpsertModelCapabilities replaces explicit method capability declarations for one model.
 	UpsertModelCapabilities(ctx context.Context, modelID int64, items []ModelCapabilitySaveInput) error
 }
 
@@ -155,6 +158,13 @@ type InvocationService interface {
 	// ListInvocations returns masked AI invocation logs with database-side
 	// filtering, sorting, and pagination.
 	ListInvocations(ctx context.Context, in InvocationListInput) (*InvocationListOutput, error)
+	// CleanInvocations hard-deletes masked AI invocation logs within an optional
+	// creation time range and returns the number of deleted rows.
+	CleanInvocations(ctx context.Context, in InvocationCleanInput) (int, error)
+	// CleanupExpiredInvocations hard-deletes invocation logs older than the
+	// global retention boundary. It bypasses platform request checks because it
+	// is only used by plugin lifecycle governance cron jobs.
+	CleanupExpiredInvocations(ctx context.Context, retentionDays int) (int, error)
 	// ListProviderOperations returns masked provider operation projections with database-side filters.
 	ListProviderOperations(ctx context.Context, in ProviderOperationListInput) (*ProviderOperationListOutput, error)
 	// GetProviderOperation returns one provider operation projection by opaque reference.
@@ -249,22 +259,18 @@ type ProviderEndpointItem struct {
 
 // ProviderModelSummaryItem defines the compact provider-list model projection.
 type ProviderModelSummaryItem struct {
-	Id               int64
-	CapabilityType   string
-	CapabilityMethod string
-	ModelName        string
-	Protocol         string
-	Enabled          int
+	Id        int64
+	ModelName string
+	Protocol  string
+	Enabled   int
 }
 
 // ModelListInput defines model list filters.
 type ModelListInput struct {
-	ProviderId       int64
-	PageNum          int
-	PageSize         int
-	CapabilityType   string
-	CapabilityMethod string
-	Enabled          *int
+	ProviderId int64
+	PageNum    int
+	PageSize   int
+	Enabled    *int
 }
 
 // ModelListOutput defines a bounded provider model list.
@@ -275,51 +281,37 @@ type ModelListOutput struct {
 
 // ModelGlobalListInput defines model-dimension list filters.
 type ModelGlobalListInput struct {
-	PageNum          int
-	PageSize         int
-	Keyword          string
-	ProviderId       int64
-	CapabilityType   string
-	CapabilityMethod string
-	Enabled          *int
+	PageNum    int
+	PageSize   int
+	Keyword    string
+	ProviderId int64
+	Enabled    *int
 }
 
-// ModelSaveInput defines model identity fields plus create-time initial capability fields.
+// ModelSaveInput defines model identity fields.
 type ModelSaveInput struct {
-	Id               int64
-	ProviderId       int64
-	EndpointId       int64
-	CapabilityType   string
-	CapabilityMethod string
-	ModelName        string
-	Protocol         string
-	Source           string
-	SupportsThinking int
-	SupportedEfforts []string
-	MaxInputTokens   int
-	MaxOutputTokens  int
-	Enabled          int
+	Id         int64
+	ProviderId int64
+	EndpointId int64
+	ModelName  string
+	Protocol   string
+	Source     string
+	Enabled    int
 }
 
 // ModelItem defines one model projection.
 type ModelItem struct {
-	Id               int64
-	ProviderId       int64
-	ProviderName     string
-	EndpointId       int64
-	EndpointBaseUrl  string
-	CapabilityType   string
-	CapabilityMethod string
-	ModelName        string
-	Protocol         string
-	Source           string
-	SupportsThinking int
-	SupportedEfforts []string
-	MaxInputTokens   int
-	MaxOutputTokens  int
-	Enabled          int
-	CreatedAt        *time.Time
-	UpdatedAt        *time.Time
+	Id              int64
+	ProviderId      int64
+	ProviderName    string
+	EndpointId      int64
+	EndpointBaseUrl string
+	ModelName       string
+	Protocol        string
+	Source          string
+	Enabled         int
+	CreatedAt       *time.Time
+	UpdatedAt       *time.Time
 }
 
 // ModelCapabilitySaveInput defines one explicit model method capability declaration.
@@ -419,14 +411,12 @@ type TierItem struct {
 
 // TierBindingItem defines one primary binding projection.
 type TierBindingItem struct {
-	ProviderId       int64
-	ProviderName     string
-	ModelId          int64
-	ModelName        string
-	Protocol         string
-	SupportsThinking int
-	SupportedEfforts []string
-	Enabled          int
+	ProviderId   int64
+	ProviderName string
+	ModelId      int64
+	ModelName    string
+	Protocol     string
+	Enabled      int
 }
 
 // TierUpdateInput defines tier update fields.
@@ -479,6 +469,12 @@ type InvocationListInput struct {
 	SourcePluginId   string
 	StartedAt        int64
 	EndedAt          int64
+}
+
+// InvocationCleanInput defines invocation log cleanup bounds.
+type InvocationCleanInput struct {
+	StartedAt int64
+	EndedAt   int64
 }
 
 // InvocationListOutput defines a paged masked invocation log list.

@@ -6,27 +6,22 @@ export const pluginPageMeta = {
 </script>
 
 <script setup lang="ts">
-import type { Model, Provider, ProviderModelSummary } from "./ai-client";
-
-import { ref } from "vue";
+import type { Provider, ProviderModelSummary } from "./ai-client";
 
 import { Page, useVbenDrawer } from "@vben/common-ui";
 import { IconifyIcon } from "@vben/icons";
 
-import { message, Popconfirm, Space, Tabs } from "ant-design-vue";
+import { message, Popconfirm, Space } from "ant-design-vue";
 
 import { useVbenVxeGrid } from "#/adapter/vxe-table";
 import { $t } from "#/locales";
 import {
   modelDelete,
-  modelList,
   modelSync,
   providerDelete,
   providerList,
 } from "./ai-client";
 import {
-  buildModelColumns,
-  buildModelQuerySchema,
   buildProviderColumns,
   buildProviderQuerySchema,
 } from "./ai-data";
@@ -40,20 +35,6 @@ const [ProviderDrawerRef, providerDrawerApi] = useVbenDrawer({
 const [ModelDrawerRef, modelDrawerApi] = useVbenDrawer({
   connectedComponent: ModelDrawer,
 });
-
-const TabPane = Tabs.TabPane;
-const activeTab = ref("providers");
-const providerTabIcons: Record<string, string> = {
-  models: "lucide:box",
-  providers: "lucide:building-2",
-};
-
-function providerTabLabel(tabKey: string, labelKey: string) {
-  return {
-    icon: providerTabIcons[tabKey] || "lucide:square",
-    label: $t(labelKey),
-  };
-}
 
 const [ProviderGrid, providerGridApi] = useVbenVxeGrid({
   formOptions: {
@@ -94,38 +75,6 @@ const [ProviderGrid, providerGridApi] = useVbenVxeGrid({
   },
 });
 
-const [ModelGrid, modelGridApi] = useVbenVxeGrid({
-  formOptions: {
-    schema: buildModelQuerySchema(),
-    commonConfig: {
-      labelWidth: 96,
-      componentProps: { allowClear: true },
-    },
-    wrapperClass: "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
-  },
-  gridOptions: {
-    columns: buildModelColumns(),
-    height: "100%",
-    keepSource: true,
-    pagerConfig: {},
-    proxyConfig: {
-      ajax: {
-        query: async (
-          { page }: { page: { currentPage: number; pageSize: number } },
-          formValues: Record<string, any> = {},
-        ) =>
-          await modelList({
-            pageNum: page.currentPage,
-            pageSize: page.pageSize,
-            ...formValues,
-          }),
-      },
-    },
-    rowConfig: { keyField: "id" },
-    id: "linapro-ai-core-model-index",
-  },
-});
-
 function handleAddProvider() {
   providerDrawerApi.setData({});
   providerDrawerApi.open();
@@ -141,18 +90,13 @@ function handleEdit(row: Provider) {
   providerDrawerApi.open();
 }
 
-function handleEditModel(row: Model) {
-  modelDrawerApi.setData({ model: row });
-  modelDrawerApi.open();
-}
-
 async function handleDelete(row: Provider) {
   await providerDelete(row.id);
   message.success($t("pages.common.deleteSuccess"));
   await reloadGrids();
 }
 
-async function handleDeleteModel(model: Model | ProviderModelSummary) {
+async function handleDeleteModel(model: ProviderModelSummary) {
   await modelDelete(model.id);
   message.success($t("pages.common.deleteSuccess"));
   await reloadGrids();
@@ -170,162 +114,66 @@ async function handleSync(row: Provider) {
 }
 
 async function reloadGrids() {
-  await Promise.all([providerGridApi.query(), modelGridApi.query()]);
+  await providerGridApi.query();
 }
 </script>
 
 <template>
   <Page :auto-content-height="true" content-class="min-h-0 overflow-hidden">
-    <Tabs
-      v-model:active-key="activeTab"
-      :tab-bar-gutter="28"
-      class="ai-provider-tabs"
-      data-testid="ai-provider-management-tabs"
+    <div
+      class="ai-provider-page"
+      data-testid="ai-provider-management-page"
     >
-      <TabPane key="providers">
-        <template #tab>
-          <span class="ai-provider-tab-label">
-            <IconifyIcon
-              :icon="
-                providerTabLabel(
-                  'providers',
-                  'plugin.linapro-ai-core.provider.tabs.providers',
-                ).icon
-              "
-              class="ai-provider-tab-icon"
-              data-testid="ai-provider-tab-icon-providers"
-            />
-            <span>
-              {{
-                providerTabLabel(
-                  "providers",
-                  "plugin.linapro-ai-core.provider.tabs.providers",
-                ).label
-              }}
-            </span>
-          </span>
+      <ProviderGrid
+        :table-title="$t('plugin.linapro-ai-core.provider.tableTitle')"
+      >
+        <template #toolbar-tools>
+          <Space>
+            <a-button type="primary" @click="handleAddProvider">
+              <template #icon>
+                <IconifyIcon icon="lucide:plus" />
+              </template>
+              {{ $t("plugin.linapro-ai-core.provider.actions.addProvider") }}
+            </a-button>
+            <a-button @click="handleAddModel()">
+              <template #icon>
+                <IconifyIcon icon="lucide:box" />
+              </template>
+              {{ $t("plugin.linapro-ai-core.model.actions.addModel") }}
+            </a-button>
+          </Space>
         </template>
 
-        <div
-          v-if="activeTab === 'providers'"
-          class="ai-provider-tab-content"
-          data-testid="ai-provider-tab-content-providers"
-        >
-          <ProviderGrid
-            :table-title="$t('plugin.linapro-ai-core.provider.tableTitle')"
-          >
-            <template #toolbar-tools>
-              <Space>
-                <a-button type="primary" @click="handleAddProvider">
-                  <template #icon>
-                    <IconifyIcon icon="lucide:plus" />
-                  </template>
-                  {{
-                    $t("plugin.linapro-ai-core.provider.actions.addProvider")
-                  }}
-                </a-button>
-                <a-button @click="handleAddModel()">
-                  <template #icon>
-                    <IconifyIcon icon="lucide:box" />
-                  </template>
-                  {{ $t("plugin.linapro-ai-core.model.actions.addModel") }}
-                </a-button>
-              </Space>
-            </template>
-
-            <template #action="{ row }">
-              <div class="ai-provider-action-list">
-                <div class="ai-provider-action-primary">
-                  <ghost-button @click.stop="handleEdit(row)">
-                    {{ $t("pages.common.edit") }}
-                  </ghost-button>
-                  <Popconfirm
-                    :title="$t('pages.common.deleteConfirm')"
-                    placement="left"
-                    @confirm="handleDelete(row)"
-                  >
-                    <ghost-button danger @click.stop="">
-                      {{ $t("pages.common.delete") }}
-                    </ghost-button>
-                  </Popconfirm>
-                </div>
-                <div class="ai-provider-action-row">
-                  <ghost-button @click.stop="handleAddModel(row)">
-                    {{ $t("plugin.linapro-ai-core.model.actions.addModel") }}
-                  </ghost-button>
-                </div>
-                <div class="ai-provider-action-row">
-                  <ghost-button @click.stop="handleSync(row)">
-                    {{ $t("plugin.linapro-ai-core.model.actions.syncModels") }}
-                  </ghost-button>
-                </div>
-              </div>
-            </template>
-          </ProviderGrid>
-        </div>
-      </TabPane>
-
-      <TabPane key="models">
-        <template #tab>
-          <span class="ai-provider-tab-label">
-            <IconifyIcon
-              :icon="
-                providerTabLabel(
-                  'models',
-                  'plugin.linapro-ai-core.provider.tabs.models',
-                ).icon
-              "
-              class="ai-provider-tab-icon"
-              data-testid="ai-provider-tab-icon-models"
-            />
-            <span>
-              {{
-                providerTabLabel(
-                  "models",
-                  "plugin.linapro-ai-core.provider.tabs.models",
-                ).label
-              }}
-            </span>
-          </span>
-        </template>
-
-        <div
-          v-if="activeTab === 'models'"
-          class="ai-provider-tab-content"
-          data-testid="ai-provider-tab-content-models"
-        >
-          <ModelGrid
-            :table-title="$t('plugin.linapro-ai-core.model.tableTitle')"
-          >
-            <template #toolbar-tools>
-              <a-button type="primary" @click="handleAddModel()">
-                <template #icon>
-                  <IconifyIcon icon="lucide:plus" />
-                </template>
-                {{ $t("plugin.linapro-ai-core.model.actions.addModel") }}
-              </a-button>
-            </template>
-
-            <template #modelAction="{ row }">
-              <Space>
-                <ghost-button @click.stop="handleEditModel(row)">
-                  {{ $t("pages.common.edit") }}
+        <template #action="{ row }">
+          <div class="ai-provider-action-list">
+            <div class="ai-provider-action-primary">
+              <ghost-button @click.stop="handleEdit(row)">
+                {{ $t("pages.common.edit") }}
+              </ghost-button>
+              <Popconfirm
+                :title="$t('pages.common.deleteConfirm')"
+                placement="left"
+                @confirm="handleDelete(row)"
+              >
+                <ghost-button danger @click.stop="">
+                  {{ $t("pages.common.delete") }}
                 </ghost-button>
-                <Popconfirm
-                  :title="$t('pages.common.deleteConfirm')"
-                  placement="left"
-                  @confirm="handleDeleteModel(row)"
-                >
-                  <ghost-button danger @click.stop="">
-                    {{ $t("pages.common.delete") }}
-                  </ghost-button>
-                </Popconfirm>
-              </Space>
-            </template>
-          </ModelGrid>
-        </div>
-      </TabPane>
-    </Tabs>
+              </Popconfirm>
+            </div>
+            <div class="ai-provider-action-row">
+              <ghost-button @click.stop="handleAddModel(row)">
+                {{ $t("plugin.linapro-ai-core.model.actions.addModel") }}
+              </ghost-button>
+            </div>
+            <div class="ai-provider-action-row">
+              <ghost-button @click.stop="handleSync(row)">
+                {{ $t("plugin.linapro-ai-core.model.actions.syncModels") }}
+              </ghost-button>
+            </div>
+          </div>
+        </template>
+      </ProviderGrid>
+    </div>
 
     <ProviderDrawerRef @reload="reloadGrids" />
     <ModelDrawerRef @reload="reloadGrids" />
@@ -333,84 +181,7 @@ async function reloadGrids() {
 </template>
 
 <style scoped>
-.ai-provider-tabs {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  margin-bottom: 0;
-  background: hsl(var(--background));
-  min-height: 0;
-}
-
-.ai-provider-tabs :deep(.ant-tabs-nav) {
-  flex: 0 0 auto;
-  margin-bottom: 0;
-}
-
-.ai-provider-tabs :deep(.ant-tabs-nav-wrap) {
-  padding: 0 20px;
-}
-
-.ai-provider-tabs :deep(.ant-tabs-nav::before) {
-  border-bottom-color: hsl(var(--border));
-}
-
-.ai-provider-tabs :deep(.ant-tabs-content-holder) {
-  flex: 1 1 auto;
-  background: hsl(var(--background));
-  border: 0;
-  min-height: 0;
-  overflow: hidden;
-  padding: 16px 20px 0;
-}
-
-.ai-provider-tabs :deep(.ant-tabs-content),
-.ai-provider-tabs :deep(.ant-tabs-tabpane) {
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.ai-provider-tabs :deep(.ant-tabs-tab) {
-  margin: 0;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  color: hsl(var(--muted-foreground));
-  padding: 14px 0 12px;
-  transition:
-    color 0.16s ease,
-    opacity 0.16s ease;
-}
-
-.ai-provider-tabs :deep(.ant-tabs-tab-active) {
-  color: hsl(var(--primary)) !important;
-}
-
-.ai-provider-tabs :deep(.ant-tabs-ink-bar) {
-  height: 3px;
-  border-radius: 999px 999px 0 0;
-  background: hsl(var(--primary));
-}
-
-.ai-provider-tabs :deep(.ant-tabs-tab-btn) {
-  color: inherit;
-  text-align: left;
-}
-
-.ai-provider-tab-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  line-height: 1;
-}
-
-.ai-provider-tab-icon {
-  color: inherit;
-  font-size: 16px;
-}
-
-.ai-provider-tab-content {
+.ai-provider-page {
   height: 100%;
   min-height: 0;
   overflow: hidden;

@@ -35,3 +35,4 @@ COMMENT ON COLUMN plugin_linapro_monitor_loginlog."login_time" IS 'Login time';
 CREATE INDEX IF NOT EXISTS idx_plugin_linapro_monitor_loginlog_tenant_time ON plugin_linapro_monitor_loginlog ("tenant_id", "login_time");
 CREATE INDEX IF NOT EXISTS idx_plugin_linapro_monitor_loginlog_tenant_user ON plugin_linapro_monitor_loginlog ("tenant_id", "user_name");
 CREATE INDEX IF NOT EXISTS idx_plugin_linapro_monitor_loginlog_impersonation ON plugin_linapro_monitor_loginlog ("tenant_id", "is_impersonation", "on_behalf_of_tenant_id");
+CREATE INDEX IF NOT EXISTS idx_plugin_linapro_monitor_loginlog_login_time ON plugin_linapro_monitor_loginlog ("login_time");

@@ -44,11 +44,7 @@ test.describe("TC-5 智能中心多模态档位", () => {
         api,
         fixture.providerId,
         {
-          capabilityMethod: "analyze",
-          capabilityType: "document",
           endpointId,
-          maxInputTokens: 8192,
-          maxOutputTokens: 2048,
           modelName: `e2e-document-model-${suffix}`,
           protocol: "openai-compatible",
         },

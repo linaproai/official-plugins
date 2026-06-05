@@ -13,6 +13,23 @@ import (
 	"lina-plugin-linapro-ai-core/backend/internal/model/entity"
 )
 
+// invocationWriteInput carries the already-masked invocation fields that are
+// safe to persist for both framework calls and management-side tier tests.
+type invocationWriteInput struct {
+	requestID        string
+	capabilityType   string
+	capabilityMethod string
+	purpose          string
+	tierCode         string
+	sourcePluginID   string
+	thinkingEffort   string
+	binding          *resolvedTierBinding
+	status           string
+	usage            aitext.Usage
+	latencyMs        int
+	err              error
+}
+
 // ListInvocations returns masked AI invocation logs with database-side filters.
 func (s *serviceImpl) ListInvocations(ctx context.Context, in InvocationListInput) (*InvocationListOutput, error) {
 	if err := s.ensurePlatform(ctx); err != nil {
@@ -66,6 +83,58 @@ func (s *serviceImpl) ListInvocations(ctx context.Context, in InvocationListInpu
 	return &InvocationListOutput{List: items, Total: total}, nil
 }
 
+// CleanInvocations hard-deletes masked AI invocation logs within an optional
+// creation time range. When no range is provided, all invocation logs are
+// deleted in one bounded SQL statement.
+func (s *serviceImpl) CleanInvocations(ctx context.Context, in InvocationCleanInput) (int, error) {
+	if err := s.ensurePlatform(ctx); err != nil {
+		return 0, err
+	}
+	cols := dao.Invocation.Columns()
+	model := dao.Invocation.Ctx(ctx)
+	hasFilter := false
+	if in.StartedAt > 0 {
+		model = model.WhereGTE(cols.CreatedAt, time.UnixMilli(in.StartedAt))
+		hasFilter = true
+	}
+	if in.EndedAt > 0 {
+		model = model.WhereLTE(cols.CreatedAt, time.UnixMilli(in.EndedAt))
+		hasFilter = true
+	}
+	if !hasFilter {
+		model = model.Where("1 = 1")
+	}
+	result, err := model.Delete()
+	if err != nil {
+		return 0, err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return int(affected), nil
+}
+
+// CleanupExpiredInvocations hard-deletes invocation logs older than the global retention boundary.
+func (s *serviceImpl) CleanupExpiredInvocations(ctx context.Context, retentionDays int) (int, error) {
+	if retentionDays <= 0 {
+		return 0, nil
+	}
+	cols := dao.Invocation.Columns()
+	cutoff := time.Now().AddDate(0, 0, -retentionDays)
+	result, err := dao.Invocation.Ctx(ctx).
+		WhereLT(cols.CreatedAt, cutoff).
+		Delete()
+	if err != nil {
+		return 0, err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return int(affected), nil
+}
+
 // writeInvocation stores one masked invocation record. It intentionally avoids
 // prompt, response, request body, response body, and secret content.
 func (s *serviceImpl) writeInvocation(
@@ -78,6 +147,30 @@ func (s *serviceImpl) writeInvocation(
 	latencyMs int,
 	err error,
 ) {
+	effort := ""
+	if request.ThinkingEffort != nil {
+		effort = string(*request.ThinkingEffort)
+	} else if binding != nil {
+		effort = binding.DefaultEffort
+	}
+	s.writeInvocationRecord(ctx, invocationWriteInput{
+		requestID:        requestID,
+		capabilityType:   string(request.CapabilityType()),
+		capabilityMethod: string(request.CapabilityMethod()),
+		purpose:          request.Purpose,
+		tierCode:         string(request.Tier),
+		sourcePluginID:   request.SourcePluginID,
+		thinkingEffort:   effort,
+		binding:          binding,
+		status:           status,
+		usage:            usage,
+		latencyMs:        latencyMs,
+		err:              err,
+	})
+}
+
+// writeInvocationRecord stores one already-classified masked invocation record.
+func (s *serviceImpl) writeInvocationRecord(ctx context.Context, input invocationWriteInput) {
 	current := contract.CurrentFromContext(ctx)
 	if s != nil && s.bizCtxSvc != nil {
 		current = s.bizCtxSvc.Current(ctx)
@@ -87,26 +180,20 @@ func (s *serviceImpl) writeInvocation(
 	providerName := ""
 	modelName := ""
 	protocol := ""
-	if binding != nil {
-		providerID = binding.ProviderId
-		modelID = binding.ModelId
-		providerName = binding.ProviderName
-		modelName = binding.ModelName
-		protocol = binding.Protocol
-	}
-	effort := ""
-	if request.ThinkingEffort != nil {
-		effort = string(*request.ThinkingEffort)
-	} else if binding != nil {
-		effort = binding.DefaultEffort
+	if input.binding != nil {
+		providerID = input.binding.ProviderId
+		modelID = input.binding.ModelId
+		providerName = input.binding.ProviderName
+		modelName = input.binding.ModelName
+		protocol = input.binding.Protocol
 	}
 	if _, insertErr := dao.Invocation.Ctx(ctx).Data(do.Invocation{
-		RequestId:            requestID,
-		CapabilityType:       string(request.CapabilityType()),
-		CapabilityMethod:     string(request.CapabilityMethod()),
-		Purpose:              request.Purpose,
-		TierCode:             string(request.Tier),
-		SourcePluginId:       request.SourcePluginID,
+		RequestId:            input.requestID,
+		CapabilityType:       input.capabilityType,
+		CapabilityMethod:     input.capabilityMethod,
+		Purpose:              input.purpose,
+		TierCode:             input.tierCode,
+		SourcePluginId:       input.sourcePluginID,
 		TenantId:             current.TenantID,
 		UserId:               current.UserID,
 		ProviderId:           providerID,
@@ -114,16 +201,16 @@ func (s *serviceImpl) writeInvocation(
 		ProviderName:         providerName,
 		ModelName:            modelName,
 		Protocol:             protocol,
-		ThinkingEffort:       effort,
-		Status:               status,
-		InputTokens:          usage.InputTokens,
-		OutputTokens:         usage.OutputTokens,
-		LatencyMs:            latencyMs,
+		ThinkingEffort:       input.thinkingEffort,
+		Status:               input.status,
+		InputTokens:          input.usage.InputTokens,
+		OutputTokens:         input.usage.OutputTokens,
+		LatencyMs:            input.latencyMs,
 		AssetSummaryJson:     "{}",
 		OperationSummaryJson: "{}",
 		MetadataSummaryJson:  "{}",
-		ErrorCode:            invocationErrorCode(err),
-		ErrorSummary:         sanitizeErrorSummary(err),
+		ErrorCode:            invocationErrorCode(input.err),
+		ErrorSummary:         sanitizeErrorSummary(input.err),
 	}).Insert(); insertErr != nil {
 		// Invocation logging is diagnostic and must not replace the provider error.
 		return

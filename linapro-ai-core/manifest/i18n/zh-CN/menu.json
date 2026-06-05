@@ -6,20 +6,38 @@
     "plugin:linapro-ai-core:invocations:query": {
       "title": "调用日志查询"
     },
+    "plugin:linapro-ai-core:invocations:clear": {
+      "title": "清理调用日志"
+    },
     "plugin:linapro-ai-core:providers": {
-      "title": "供应商"
+      "title": "渠道管理"
     },
     "plugin:linapro-ai-core:providers:create": {
-      "title": "新增供应商"
+      "title": "新增渠道"
     },
     "plugin:linapro-ai-core:providers:delete": {
-      "title": "删除供应商"
+      "title": "删除渠道"
     },
     "plugin:linapro-ai-core:providers:query": {
-      "title": "供应商查询"
+      "title": "渠道查询"
     },
     "plugin:linapro-ai-core:providers:update": {
-      "title": "修改供应商"
+      "title": "修改渠道"
+    },
+    "plugin:linapro-ai-core:models": {
+      "title": "模型管理"
+    },
+    "plugin:linapro-ai-core:models:create": {
+      "title": "新增模型"
+    },
+    "plugin:linapro-ai-core:models:delete": {
+      "title": "删除模型"
+    },
+    "plugin:linapro-ai-core:models:query": {
+      "title": "模型查询"
+    },
+    "plugin:linapro-ai-core:models:update": {
+      "title": "修改模型"
     },
     "plugin:linapro-ai-core:smart-center": {
       "title": "智能中心"

@@ -27,7 +27,12 @@
       "messages": {
         "clearConfirm": "Clear all login logs?",
         "clearSuccess": "Login logs cleared successfully",
-        "deleteSelectedConfirm": "Delete the selected {count} login log(s)?"
+        "deleteAllHint": "When selected, the date range is ignored and all login logs in the current permission scope are deleted.",
+        "deleteAllLabel": "Delete all login logs",
+        "deleteRangeDescription": "Select how to delete login logs. By default, logs are cleaned by date range; selecting all logs cleans every log in the current permission scope.",
+        "deleteRangeRequired": "Select a complete login log date range",
+        "deleteRangeSuccess": "Deleted {count} login log(s)",
+        "deleteRangeTitle": "Delete Login Logs"
       },
       "name": "Monitoring - Login Logs",
       "tableTitle": "Login Log List",

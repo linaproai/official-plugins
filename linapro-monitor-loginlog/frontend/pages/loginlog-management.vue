@@ -8,16 +8,22 @@ export const pluginPageMeta = {
 <script setup lang="ts">
 import type { LoginLog } from './loginlog-client';
 
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 
 import { Page, useVbenModal } from '@vben/common-ui';
 
-import { message, Modal, Space } from 'ant-design-vue';
+import {
+  Alert,
+  Checkbox,
+  DatePicker,
+  message,
+  Modal,
+  Space,
+} from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import {
   loginLogClean,
-  loginLogDelete,
   loginLogExport,
   loginLogList,
 } from './loginlog-client';
@@ -29,6 +35,7 @@ import { buildColumns, buildQuerySchema } from './data';
 import LoginlogDetailModal from './loginlog-detail-modal.vue';
 
 const dictStore = useDictStore();
+const RangePicker = DatePicker.RangePicker;
 
 onMounted(async () => {
   const statusOptions = await dictStore.getDictOptionsAsync('sys_login_status');
@@ -61,10 +68,6 @@ const [Grid, gridApi] = useVbenVxeGrid({
     wrapperClass: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
   },
   gridOptions: {
-    checkboxConfig: {
-      highlight: true,
-      reserve: true,
-    },
     columns: buildColumns(),
     height: 'auto',
     keepSource: true,
@@ -117,20 +120,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
     },
     id: 'linapro-monitor-loginlog-index',
   },
-  gridEvents: {
-    checkboxChange: () => {
-      checkedRows.value = (gridApi.grid?.getCheckboxRecords() ||
-        []) as LoginLog[];
-    },
-    checkboxAll: () => {
-      checkedRows.value = (gridApi.grid?.getCheckboxRecords() ||
-        []) as LoginLog[];
-    },
-  },
 });
 
-const checkedRows = ref<LoginLog[]>([]);
-const hasChecked = computed(() => checkedRows.value.length > 0);
+const deleteRange = ref<string[]>([]);
+const deleteAllLogs = ref(false);
+const deleteRangeModalOpen = ref(false);
+const deleteRangeSubmitting = ref(false);
 
 function handlePreview(row: LoginLog) {
   detailModalApi.setData(row);
@@ -151,27 +146,39 @@ function handleClean() {
 }
 
 function handleDelete() {
-  const rows = gridApi.grid.getCheckboxRecords() as LoginLog[];
-  const ids = rows.map((row) => row.id);
-  Modal.confirm({
-    title: $t('pages.common.confirmTitle'),
-    okType: 'danger',
-    content: $t('plugin.linapro-monitor-loginlog.messages.deleteSelectedConfirm', {
-      count: ids.length,
-    }),
-    onOk: async () => {
-      await loginLogDelete(ids);
-      message.success($t('pages.common.deleteSuccess'));
-      await gridApi.query();
-    },
-  });
+  deleteRange.value = [];
+  deleteAllLogs.value = false;
+  deleteRangeModalOpen.value = true;
+}
+
+async function handleDeleteRangeConfirm() {
+  const [beginTime, endTime] = deleteRange.value;
+  if (!deleteAllLogs.value && (!beginTime || !endTime)) {
+    message.warning(
+      $t('plugin.linapro-monitor-loginlog.messages.deleteRangeRequired'),
+    );
+    return;
+  }
+
+  deleteRangeSubmitting.value = true;
+  try {
+    const result = await loginLogClean(
+      deleteAllLogs.value ? undefined : { beginTime, endTime },
+    );
+    message.success(
+      $t('plugin.linapro-monitor-loginlog.messages.deleteRangeSuccess', {
+        count: result?.deleted ?? 0,
+      }),
+    );
+    deleteRangeModalOpen.value = false;
+    await gridApi.query();
+  } finally {
+    deleteRangeSubmitting.value = false;
+  }
 }
 
 async function handleExport() {
-  const content =
-    checkedRows.value.length > 0
-      ? $t('pages.exportConfirm.selected')
-      : $t('pages.exportConfirm.all');
+  const content = $t('pages.exportConfirm.all');
 
   Modal.confirm({
     title: $t('pages.common.confirmTitle'),
@@ -188,10 +195,6 @@ async function handleExport() {
           params.beginTime = params.loginTime[0];
           params.endTime = params.loginTime[1];
           delete params.loginTime;
-        }
-
-        if (checkedRows.value.length > 0) {
-          params.ids = checkedRows.value.map((row) => row.id);
         }
 
         const data = await loginLogExport(params);
@@ -213,7 +216,7 @@ async function handleExport() {
           <a-button @click="handleClean">{{ $t('pages.common.clear') }}</a-button>
           <a-button @click="handleExport">{{ $t('pages.common.export') }}</a-button>
           <a-button
-            :disabled="!hasChecked"
+            data-testid="loginlog-range-delete"
             danger
             type="primary"
             @click="handleDelete"
@@ -231,5 +234,50 @@ async function handleExport() {
     </Grid>
 
     <DetailModalRef />
+
+    <Modal
+      v-model:open="deleteRangeModalOpen"
+      :destroy-on-close="true"
+      :title="$t('plugin.linapro-monitor-loginlog.messages.deleteRangeTitle')"
+    >
+      <div>
+        <div data-testid="loginlog-delete-alert">
+          <Alert
+            :message="$t('plugin.linapro-monitor-loginlog.messages.deleteRangeDescription')"
+            show-icon
+            type="warning"
+          />
+        </div>
+        <div data-testid="loginlog-delete-all-option" style="margin-top: 16px">
+          <Checkbox v-model:checked="deleteAllLogs">
+            {{ $t('plugin.linapro-monitor-loginlog.messages.deleteAllLabel') }}
+          </Checkbox>
+          <div class="text-xs text-gray-500" style="margin-top: 4px">
+            {{ $t('plugin.linapro-monitor-loginlog.messages.deleteAllHint') }}
+          </div>
+        </div>
+        <div data-testid="loginlog-delete-range-section" style="margin-top: 16px">
+          <RangePicker
+            v-model:value="deleteRange"
+            :disabled="deleteAllLogs"
+            class="w-full"
+            value-format="YYYY-MM-DD"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <a-button @click="deleteRangeModalOpen = false">
+          {{ $t('pages.common.cancel') }}
+        </a-button>
+        <a-button
+          :loading="deleteRangeSubmitting"
+          danger
+          type="primary"
+          @click="handleDeleteRangeConfirm"
+        >
+          {{ $t('pages.common.confirm') }}
+        </a-button>
+      </template>
+    </Modal>
   </Page>
 </template>

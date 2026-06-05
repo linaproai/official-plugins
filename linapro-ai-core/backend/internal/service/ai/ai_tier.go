@@ -32,9 +32,6 @@ type resolvedTierBinding struct {
 	EndpointId        int64
 	EndpointBaseUrl   string
 	EndpointSecretRef string
-	SupportsThinking  int
-	SupportedEfforts  string
-	MaxOutputTokens   int
 }
 
 // ListTiers returns the fixed AI tier list for one capability method with binding projections.
@@ -75,14 +72,12 @@ func (s *serviceImpl) ListTiers(ctx context.Context, capabilityType string, capa
 		}
 		if binding := bindings[row.Id]; binding != nil {
 			item.Binding = &TierBindingItem{
-				ProviderId:       binding.ProviderId,
-				ProviderName:     binding.ProviderName,
-				ModelId:          binding.ModelId,
-				ModelName:        binding.ModelName,
-				Protocol:         binding.Protocol,
-				SupportsThinking: binding.SupportsThinking,
-				SupportedEfforts: splitEfforts(binding.SupportedEfforts),
-				Enabled:          enabledYes,
+				ProviderId:   binding.ProviderId,
+				ProviderName: binding.ProviderName,
+				ModelId:      binding.ModelId,
+				ModelName:    binding.ModelName,
+				Protocol:     binding.Protocol,
+				Enabled:      enabledYes,
 			}
 		}
 		items = append(items, item)
@@ -115,7 +110,7 @@ func (s *serviceImpl) UpdateTier(ctx context.Context, in TierUpdateInput) error 
 		return bizerr.NewCode(CodeRequestInvalid)
 	}
 	if bindingRequested {
-		model, _, _, err = s.validateModelBinding(ctx, in.ProviderId, in.ModelId, capabilityType, capabilityMethod, effort)
+		model, _, err = s.validateModelBinding(ctx, in.ProviderId, in.ModelId)
 		if err != nil {
 			return err
 		}
@@ -174,7 +169,7 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 	var binding *resolvedTierBinding
 	draftBindingRequested := in.ProviderId > 0 || in.ModelId > 0
 	if draftBindingRequested {
-		model, endpoint, capability, err := s.validateModelBinding(ctx, in.ProviderId, in.ModelId, capabilityType, capabilityMethod, effort)
+		model, endpoint, err := s.validateModelBinding(ctx, in.ProviderId, in.ModelId)
 		if err != nil {
 			return nil, err
 		}
@@ -182,7 +177,7 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 		if err != nil {
 			return nil, err
 		}
-		binding = resolvedBindingFromRows(tier, provider, model, capability, endpoint)
+		binding = resolvedBindingFromRows(tier, provider, model, endpoint)
 	} else {
 		binding, err = s.resolveTierBinding(ctx, capabilityType, capabilityMethod, code)
 		if err != nil {
@@ -206,6 +201,7 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 	callCtx, cancel := context.WithTimeout(ctx, normalizeTierTestTimeout(in.timeout))
 	defer cancel()
 	result, callErr := s.callProvider(callCtx, binding, messages, in.MaxOutputTokens, nil, effort)
+	usage := aitext.Usage{}
 	output := &TierTestOutput{
 		Status:         InvocationStatusSuccess,
 		ProviderName:   binding.ProviderName,
@@ -215,6 +211,7 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 		TestedAt:       &testedAt,
 	}
 	if result != nil {
+		usage = result.Usage
 		output.LatencyMs = result.LatencyMs
 		output.ThinkingEffort = result.ThinkingEffort
 	}
@@ -222,6 +219,24 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 		output.Status = InvocationStatusFailed
 		output.ErrorSummary = sanitizeErrorSummary(callErr)
 	}
+	invocationEffort := output.ThinkingEffort
+	if invocationEffort == "" {
+		invocationEffort = effort
+	}
+	s.writeInvocationRecord(ctx, invocationWriteInput{
+		requestID:        requestIDFromMetadata(nil),
+		capabilityType:   capabilityType,
+		capabilityMethod: capabilityMethod,
+		purpose:          InvocationPurposeTierTest,
+		tierCode:         code,
+		sourcePluginID:   aitext.ProviderPluginID,
+		thinkingEffort:   invocationEffort,
+		binding:          binding,
+		status:           output.Status,
+		usage:            usage,
+		latencyMs:        output.LatencyMs,
+		err:              callErr,
+	})
 	if !draftBindingRequested {
 		_, updateErr := dao.Tier.Ctx(ctx).
 			Where(do.Tier{Id: tier.Id}).
@@ -409,53 +424,32 @@ func (s *serviceImpl) getTier(ctx context.Context, capabilityType string, capabi
 	return row, nil
 }
 
-// validateModelBinding verifies provider/model existence, method scope, and effort support.
+// validateModelBinding verifies provider, model, and endpoint existence without
+// requiring model-side capability method declarations.
 func (s *serviceImpl) validateModelBinding(
 	ctx context.Context,
 	providerID int64,
 	modelID int64,
-	capabilityType string,
-	capabilityMethod string,
-	effort string,
-) (*entity.Model, *entity.ProviderEndpoint, *entity.ModelCapability, error) {
+) (*entity.Model, *entity.ProviderEndpoint, error) {
 	provider, err := s.getProvider(ctx, providerID)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	if provider.Enabled != enabledYes {
-		return nil, nil, nil, bizerr.NewCode(CodeProviderNotFound)
+		return nil, nil, bizerr.NewCode(CodeProviderNotFound)
 	}
 	model, err := s.getModel(ctx, modelID)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	if model.ProviderId != providerID || model.Enabled != enabledYes {
-		return nil, nil, nil, bizerr.NewCode(CodeModelNotFound)
+		return nil, nil, bizerr.NewCode(CodeModelNotFound)
 	}
-	var capability *entity.ModelCapability
-	if err := dao.ModelCapability.Ctx(ctx).Where(do.ModelCapability{
-		ModelId:          modelID,
-		CapabilityType:   normalizeCapabilityType(capabilityType),
-		CapabilityMethod: normalizeCapabilityMethod(capabilityMethod),
-		Enabled:          enabledYes,
-	}).Scan(&capability); err != nil {
-		return nil, nil, nil, err
-	}
-	if capability == nil {
-		return nil, nil, nil, bizerr.NewCode(CodeModelNotFound)
-	}
-	endpointID := model.EndpointId
-	if capability.EndpointId > 0 {
-		endpointID = capability.EndpointId
-	}
-	endpoint, err := s.requireProviderEndpoint(ctx, providerID, endpointID, model.Protocol)
+	endpoint, err := s.requireProviderEndpoint(ctx, providerID, model.EndpointId, model.Protocol)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	if !effortSupported(capability, effort) {
-		return nil, nil, nil, bizerr.NewCode(CodeThinkingEffortUnsupported)
-	}
-	return model, endpoint, capability, nil
+	return model, endpoint, nil
 }
 
 // upsertPrimaryBinding inserts or updates the active primary binding row.
@@ -512,31 +506,14 @@ func (s *serviceImpl) primaryBindingsByTier(ctx context.Context, tierIDs []int64
 	if err != nil {
 		return nil, err
 	}
-	capabilities, err := s.modelCapabilitiesByModel(ctx, modelIDs)
-	if err != nil {
-		return nil, err
-	}
-	capabilitiesByModelMethod := make(map[string]*entity.ModelCapability, len(capabilities))
-	for _, capability := range capabilities {
-		if capability != nil && capability.Enabled == enabledYes {
-			capabilitiesByModelMethod[modelCapabilityKey(capability.ModelId, capability.CapabilityType, capability.CapabilityMethod)] = capability
-		}
-	}
-	endpointIDs := make([]int64, 0, len(models)+len(capabilities))
+	endpointIDs := make([]int64, 0, len(models))
 	for _, row := range bindingRows {
 		tier := tiers[row.TierId]
 		model := models[row.ModelId]
 		if tier == nil || model == nil {
 			continue
 		}
-		capability := capabilitiesByModelMethod[modelCapabilityKey(model.Id, tier.CapabilityType, tier.CapabilityMethod)]
-		if capability == nil {
-			continue
-		}
 		endpointID := model.EndpointId
-		if capability.EndpointId > 0 {
-			endpointID = capability.EndpointId
-		}
 		if endpointID > 0 {
 			endpointIDs = append(endpointIDs, endpointID)
 		}
@@ -552,19 +529,12 @@ func (s *serviceImpl) primaryBindingsByTier(ctx context.Context, tierIDs []int64
 		if tier == nil || provider == nil || model == nil || provider.Enabled != enabledYes || model.Enabled != enabledYes {
 			continue
 		}
-		capability := capabilitiesByModelMethod[modelCapabilityKey(model.Id, tier.CapabilityType, tier.CapabilityMethod)]
-		if capability == nil {
-			continue
-		}
 		endpointID := model.EndpointId
-		if capability.EndpointId > 0 {
-			endpointID = capability.EndpointId
-		}
 		endpoint := endpoints[endpointID]
 		if endpoint == nil || endpoint.ProviderId != provider.Id || endpoint.Enabled != enabledYes || endpoint.Protocol != model.Protocol {
 			continue
 		}
-		result[row.TierId] = resolvedBindingFromRows(tier, provider, model, capability, endpoint)
+		result[row.TierId] = resolvedBindingFromRows(tier, provider, model, endpoint)
 	}
 	return result, nil
 }
@@ -574,7 +544,6 @@ func resolvedBindingFromRows(
 	tier *entity.Tier,
 	provider *entity.Provider,
 	model *entity.Model,
-	capability *entity.ModelCapability,
 	endpoint *entity.ProviderEndpoint,
 ) *resolvedTierBinding {
 	return &resolvedTierBinding{
@@ -591,9 +560,6 @@ func resolvedBindingFromRows(
 		EndpointId:        endpoint.Id,
 		EndpointBaseUrl:   endpoint.BaseUrl,
 		EndpointSecretRef: endpoint.SecretRef,
-		SupportsThinking:  capability.SupportsThinking,
-		SupportedEfforts:  capability.SupportedEfforts,
-		MaxOutputTokens:   capability.MaxOutputTokens,
 	}
 }
 
@@ -679,21 +645,11 @@ func tierCacheKey(capabilityType string, capabilityMethod string, tierCode strin
 		normalizeTierCode(tierCode)
 }
 
-// effortSupportedByBinding reports whether effort matches binding model capabilities.
+// effortSupportedByBinding only validates platform effort enum syntax. Model
+// support is intentionally not inferred from model management metadata.
 func effortSupportedByBinding(binding *resolvedTierBinding, effort string) bool {
 	normalized, err := normalizeEffort(effort)
-	if err != nil || normalized == "" {
-		return err == nil
-	}
-	if binding == nil || binding.SupportsThinking != enabledYes {
-		return false
-	}
-	for _, supported := range splitEfforts(binding.SupportedEfforts) {
-		if supported == normalized {
-			return true
-		}
-	}
-	return false
+	return binding != nil && err == nil && (normalized != "" || effort == "")
 }
 
 // defaultTierTestMessages returns a minimal connectivity test prompt.

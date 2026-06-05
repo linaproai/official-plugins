@@ -11,8 +11,6 @@ const pluginId = "linapro-ai-core";
 
 export type AiProviderModelFixture = {
   anthropicEndpointUrl?: string;
-  capabilityMethod?: string;
-  capabilityType?: string;
   endpointId: number;
   maskedApiKey: string;
   modelId: number;
@@ -31,6 +29,7 @@ export type AiInvocationFixture = {
   operationSummaryJson?: string;
   purpose: string;
   requestId: string;
+  sourcePluginId: string;
 };
 
 export type AiProviderOperationFixture = {
@@ -75,8 +74,6 @@ export async function createProviderWithModel(
     anthropicEndpointUrl?: string;
     openaiEndpointUrl?: string;
     secretRef?: string;
-    supportedEfforts?: string[];
-    supportsThinking?: number;
     websiteUrl?: string;
   },
 ): Promise<AiProviderModelFixture> {
@@ -96,7 +93,7 @@ export async function createProviderWithModel(
       },
     },
   );
-  await assertOk(providerResponse, "创建 AI 供应商失败");
+  await assertOk(providerResponse, "创建 AI 渠道失败");
   const provider = unwrapApiData(await providerResponse.json());
   const providerId = Number(provider?.id || 0);
   const endpointId = await createProviderEndpoint(api, providerId, {
@@ -116,16 +113,10 @@ export async function createProviderWithModel(
     pluginApiPath(pluginId, `ai/providers/${providerId}/models`),
     {
       data: {
-        capabilityMethod: "generate",
-        capabilityType: "text",
         enabled: 1,
         endpointId,
-        maxInputTokens: 4096,
-        maxOutputTokens: 512,
         modelName: input.modelName,
         protocol: "openai",
-        supportedEfforts: input.supportedEfforts ?? ["low", "medium", "high"],
-        supportsThinking: input.supportsThinking ?? 1,
       },
     },
   );
@@ -134,8 +125,6 @@ export async function createProviderWithModel(
 
   return {
     anthropicEndpointUrl: input.anthropicEndpointUrl,
-    capabilityMethod: "generate",
-    capabilityType: "text",
     endpointId,
     maskedApiKey: maskApiKeyForExpectation(secretRef),
     modelId: Number(model?.id || 0),
@@ -170,7 +159,7 @@ export async function createProviderEndpoint(
       },
     },
   );
-  await assertOk(response, "创建 AI 供应商端点失败");
+  await assertOk(response, "创建 AI 渠道端点失败");
   const endpoint = unwrapApiData(await response.json());
   return Number(endpoint?.id || 0);
 }
@@ -184,7 +173,7 @@ export async function listProviderEndpoints(
     pluginApiPath(pluginId, `ai/providers/${providerId}/endpoints`),
     { params },
   );
-  await assertOk(response, "查询 AI 供应商端点失败");
+  await assertOk(response, "查询 AI 渠道端点失败");
   const out = unwrapApiData(await response.json());
   return out?.list ?? [];
 }
@@ -206,38 +195,58 @@ export async function createProviderModel(
   api: APIRequestContext,
   providerId: number,
   input: {
-    capabilityMethod: string;
-    capabilityType: string;
     modelName: string;
     protocol: string;
     enabled?: number;
     endpointId: number;
-    maxInputTokens?: number;
-    maxOutputTokens?: number;
-    supportedEfforts?: string[];
-    supportsThinking?: number;
   },
 ) {
   const response = await api.post(
     pluginApiPath(pluginId, `ai/providers/${providerId}/models`),
     {
       data: {
-        capabilityMethod: input.capabilityMethod,
-        capabilityType: input.capabilityType,
         enabled: input.enabled ?? 1,
         endpointId: input.endpointId,
-        maxInputTokens: input.maxInputTokens ?? 0,
-        maxOutputTokens: input.maxOutputTokens ?? 0,
         modelName: input.modelName,
         protocol: input.protocol,
-        supportedEfforts: input.supportedEfforts ?? [],
-        supportsThinking: input.supportsThinking ?? 0,
       },
     },
   );
   await assertOk(response, "创建 AI 模型失败");
   const model = unwrapApiData(await response.json());
   return Number(model?.id || 0);
+}
+
+export function insertProviderModelIdentityOnly(input: {
+  endpointId: number;
+  modelName: string;
+  protocol: string;
+  providerId: number;
+}) {
+  const modelName = input.modelName.trim();
+  execPgSQLStatements([
+    `DELETE FROM plugin_linapro_ai_model_capability WHERE model_id IN (SELECT id FROM plugin_linapro_ai_model WHERE provider_id = ${Number(input.providerId)} AND protocol = '${pgEscapeLiteral(input.protocol)}' AND model_name = '${pgEscapeLiteral(modelName)}');`,
+    `DELETE FROM plugin_linapro_ai_model WHERE provider_id = ${Number(input.providerId)} AND protocol = '${pgEscapeLiteral(input.protocol)}' AND model_name = '${pgEscapeLiteral(modelName)}';`,
+    `INSERT INTO plugin_linapro_ai_model (
+      provider_id,
+      endpoint_id,
+      model_name,
+      protocol,
+      source,
+      enabled,
+      created_at,
+      updated_at
+    ) VALUES (
+      ${Number(input.providerId)},
+      ${Number(input.endpointId)},
+      '${pgEscapeLiteral(modelName)}',
+      '${pgEscapeLiteral(input.protocol)}',
+      'api',
+      1,
+      NOW(),
+      NOW()
+    );`,
+  ]);
 }
 
 export async function saveModelCapabilities(
@@ -396,7 +405,7 @@ export async function findProviderByName(api: APIRequestContext, name: string) {
       pageSize: 10,
     },
   });
-  await assertOk(response, "查询 AI 供应商失败");
+  await assertOk(response, "查询 AI 渠道失败");
   const out = unwrapApiData(await response.json());
   return (out?.list || []).find((item: any) => item?.name === name);
 }
@@ -404,15 +413,11 @@ export async function findProviderByName(api: APIRequestContext, name: string) {
 export async function listProviderModels(
   api: APIRequestContext,
   providerId: number,
-  capabilityType = "text",
-  capabilityMethod = "generate",
 ) {
   const response = await api.get(
     pluginApiPath(pluginId, `ai/providers/${providerId}/models`),
     {
       params: {
-        capabilityMethod,
-        capabilityType,
         pageNum: 1,
         pageSize: 100,
       },
@@ -459,8 +464,11 @@ export function insertInvocationLog(input: {
   assetSummaryJson?: string;
   capabilityMethod?: string;
   capabilityType?: string;
+  createdAtSql?: string;
   metadataSummaryJson?: string;
   operationSummaryJson?: string;
+  protocol?: string;
+  sourcePluginId?: string;
   status?: string;
 }): AiInvocationFixture {
   const purpose = input.purpose.trim();
@@ -470,7 +478,10 @@ export function insertInvocationLog(input: {
   const assetSummaryJson = input.assetSummaryJson ?? "{}";
   const operationSummaryJson = input.operationSummaryJson ?? "{}";
   const metadataSummaryJson = input.metadataSummaryJson ?? "{}";
+  const protocol = input.protocol ?? "openai";
+  const sourcePluginId = input.sourcePluginId ?? "e2e-ai-core";
   const status = input.status ?? "failed";
+  const createdAtSql = input.createdAtSql ?? "NOW()";
   execPgSQLStatements([
     `DELETE FROM plugin_linapro_ai_invocation WHERE request_id = '${pgEscapeLiteral(requestId)}';`,
     `INSERT INTO plugin_linapro_ai_invocation (
@@ -504,14 +515,14 @@ export function insertInvocationLog(input: {
       '${pgEscapeLiteral(capabilityMethod)}',
       '${pgEscapeLiteral(purpose)}',
       'standard',
-      'e2e-ai-core',
+      '${pgEscapeLiteral(sourcePluginId)}',
       0,
       1,
       0,
       0,
       'E2E Provider',
       'e2e-model',
-      'openai',
+      '${pgEscapeLiteral(protocol)}',
       'medium',
       '${pgEscapeLiteral(status)}',
       11,
@@ -522,7 +533,7 @@ export function insertInvocationLog(input: {
       '${pgEscapeLiteral(metadataSummaryJson)}',
       'AI_CORE_PROVIDER_HTTP_ERROR',
       'Provider returned a redacted error summary',
-      NOW()
+      ${createdAtSql}
     );`,
   ]);
   return {
@@ -533,6 +544,7 @@ export function insertInvocationLog(input: {
     operationSummaryJson,
     purpose,
     requestId,
+    sourcePluginId,
   };
 }
 
@@ -540,6 +552,17 @@ export function deleteInvocationLog(requestId: string) {
   execPgSQLStatements([
     `DELETE FROM plugin_linapro_ai_invocation WHERE request_id = '${pgEscapeLiteral(requestId)}';`,
   ]);
+}
+
+export async function listInvocations(
+  api: APIRequestContext,
+  params: Record<string, boolean | number | string>,
+) {
+  const response = await api.get(pluginApiPath(pluginId, "ai/invocations"), {
+    params,
+  });
+  await assertOk(response, "查询 AI 调用日志失败");
+  return unwrapApiData(await response.json());
 }
 
 export function insertProviderOperation(input: {
@@ -624,7 +647,7 @@ export async function deleteProvider(
   );
   if (!response.ok() && response.status() !== 404) {
     throw new Error(
-      `删除 AI 供应商失败, status=${response.status()}, body=${await response.text()}`,
+      `删除 AI 渠道失败, status=${response.status()}, body=${await response.text()}`,
     );
   }
 }

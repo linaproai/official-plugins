@@ -9,7 +9,7 @@ import { Descriptions, DescriptionsItem, Tag } from 'ant-design-vue';
 
 import { $t } from '#/locales';
 import { formatTimestamp } from '#/utils/time';
-import { joinCapabilityMethod, tierCodeLabel } from './ai-data';
+import { joinCapabilityMethod, protocolLabel, tierCodeLabel } from './ai-data';
 
 const record = ref<Invocation>();
 
@@ -39,7 +39,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
       <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.purpose')">
         {{ record.purpose || '-' }}
       </DescriptionsItem>
-      <DescriptionsItem :label="$t('plugin.linapro-ai-core.capability.method')">
+      <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.method')">
         {{ joinCapabilityMethod(record.capabilityType, record.capabilityMethod) }}
       </DescriptionsItem>
       <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.status')">
@@ -61,7 +61,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
         {{ record.modelName || '-' }}
       </DescriptionsItem>
       <DescriptionsItem :label="$t('plugin.linapro-ai-core.model.fields.protocol')">
-        {{ record.protocol || '-' }}
+        {{ record.protocol ? protocolLabel(record.protocol) : '-' }}
       </DescriptionsItem>
       <DescriptionsItem :label="$t('plugin.linapro-ai-core.tier.fields.defaultEffort')">
         {{ record.thinkingEffort || '-' }}

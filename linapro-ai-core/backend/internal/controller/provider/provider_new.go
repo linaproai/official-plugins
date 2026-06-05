@@ -102,12 +102,10 @@ func toAPIProviderModelSummaryItems(items []*aisvc.ProviderModelSummaryItem) []*
 			continue
 		}
 		list = append(list, &v1.ProviderModelSummaryItem{
-			Id:               item.Id,
-			CapabilityType:   item.CapabilityType,
-			CapabilityMethod: item.CapabilityMethod,
-			ModelName:        item.ModelName,
-			Protocol:         item.Protocol,
-			Enabled:          item.Enabled,
+			Id:        item.Id,
+			ModelName: item.ModelName,
+			Protocol:  item.Protocol,
+			Enabled:   item.Enabled,
 		})
 	}
 	return list
@@ -119,21 +117,15 @@ func toAPIModelItem(item *aisvc.ModelItem) *v1.ModelItem {
 		return nil
 	}
 	return &v1.ModelItem{
-		Id:               item.Id,
-		ProviderId:       item.ProviderId,
-		EndpointId:       item.EndpointId,
-		CapabilityType:   item.CapabilityType,
-		CapabilityMethod: item.CapabilityMethod,
-		ModelName:        item.ModelName,
-		Protocol:         item.Protocol,
-		Source:           item.Source,
-		SupportsThinking: item.SupportsThinking,
-		SupportedEfforts: item.SupportedEfforts,
-		MaxInputTokens:   item.MaxInputTokens,
-		MaxOutputTokens:  item.MaxOutputTokens,
-		Enabled:          item.Enabled,
-		CreatedAt:        milliValue(apitime.Milli(item.CreatedAt)),
-		UpdatedAt:        milliValue(apitime.Milli(item.UpdatedAt)),
+		Id:         item.Id,
+		ProviderId: item.ProviderId,
+		EndpointId: item.EndpointId,
+		ModelName:  item.ModelName,
+		Protocol:   item.Protocol,
+		Source:     item.Source,
+		Enabled:    item.Enabled,
+		CreatedAt:  milliValue(apitime.Milli(item.CreatedAt)),
+		UpdatedAt:  milliValue(apitime.Milli(item.UpdatedAt)),
 	}
 }
 

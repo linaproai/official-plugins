@@ -111,7 +111,7 @@ function updateSecretPlaceholder() {
 async function applyCreateDefaults() {
   resetEndpointState();
   await providerFormApi.setValues({
-    anthropicBaseUrl: "https://api.anthropic.com/v1",
+    anthropicBaseUrl: "",
     enabled: 1,
     openaiBaseUrl: "",
     secretRef: "",

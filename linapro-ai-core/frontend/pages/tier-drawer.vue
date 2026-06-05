@@ -11,7 +11,7 @@ import { message, Space } from "ant-design-vue";
 import { useVbenForm } from "#/adapter/form";
 import { $t } from "#/locales";
 import {
-  methodDefaults,
+  methodDefaultList,
   methodDefaultUpdate,
   providerList,
   providerModels,
@@ -21,7 +21,6 @@ import {
 import {
   buildEffortOptions,
   buildEnabledOptions,
-  capabilityTypeLabel,
   tierDisplayName,
 } from "./ai-data";
 import JsonHighlightEditor from "./json-highlight-editor.vue";
@@ -33,17 +32,13 @@ const providers = ref<Provider[]>([]);
 const models = ref<Model[]>([]);
 const testing = ref(false);
 const currentTestResult = ref<TierTestResult>();
+const defaultParamsJson = ref("{}");
+const defaultParamsCompact = ref("{}");
 const defaultParamsInvalid = ref(false);
-const methodDefaultParamsJson = ref("{}");
 const title = computed(tierDrawerTitle);
 const currentTestLatency = computed(() =>
   formatLatencyMs(currentTestResult.value?.latencyMs),
 );
-const methodDefaultScope = computed(() => {
-  const capabilityType = tier.value?.capabilityType || "text";
-  const capabilityMethod = tier.value?.capabilityMethod || "generate";
-  return `${capabilityTypeLabel(capabilityType)} / ${capabilityType}.${capabilityMethod}`;
-});
 
 function tierDrawerTitle() {
   return $t("plugin.linapro-ai-core.tier.drawer.editTitle", {
@@ -52,10 +47,7 @@ function tierDrawerTitle() {
 }
 
 function modelLabel(model: Model) {
-  const efforts = model.supportedEfforts?.length
-    ? model.supportedEfforts.join(",")
-    : $t("plugin.linapro-ai-core.effort.empty");
-  return `${model.modelName} / ${efforts}`;
+  return model.modelName;
 }
 
 function modelProtocolLabel(protocol: string) {
@@ -111,28 +103,28 @@ function supportsThinkingEffort() {
   );
 }
 
-function formatDefaultParamsJson(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return "{}";
-  }
+function formatDefaultParams(raw: string) {
   try {
-    return JSON.stringify(JSON.parse(trimmed), null, 2);
+    return JSON.stringify(JSON.parse(raw || "{}"), null, 2);
   } catch {
-    return trimmed;
+    return raw || "{}";
   }
 }
 
-function normalizeDefaultParamsJson(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return "{}";
+function normalizeDefaultParams(raw: string) {
+  try {
+    const parsed = JSON.parse(raw || "{}");
+    if (
+      parsed === null ||
+      Array.isArray(parsed) ||
+      typeof parsed !== "object"
+    ) {
+      return "";
+    }
+    return JSON.stringify(parsed);
+  } catch {
+    return "";
   }
-  const parsed = JSON.parse(trimmed);
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("default params must be a JSON object");
-  }
-  return JSON.stringify(parsed);
 }
 
 function buildSchema(): VbenFormSchema[] {
@@ -166,14 +158,6 @@ function buildSchema(): VbenFormSchema[] {
       label: $t("plugin.linapro-ai-core.tier.fields.model"),
       formItemClass: "col-span-2",
     },
-    {
-      component: "Input",
-      fieldName: "defaultParamsJson",
-      label: $t(
-        "plugin.linapro-ai-core.methodDefault.fields.defaultParamsJson",
-      ),
-      formItemClass: "col-span-2 items-start",
-    },
   ];
 }
 
@@ -189,14 +173,7 @@ const [Form, formApi] = useVbenForm({
 });
 
 async function refreshModelOptions(providerId: number, resetModel = false) {
-  models.value = providerId
-    ? await providerModels(
-        providerId,
-        1,
-        tier.value?.capabilityType || "text",
-        tier.value?.capabilityMethod || "generate",
-      )
-    : [];
+  models.value = providerId ? await providerModels(providerId, 1) : [];
   formApi.updateSchema([
     {
       fieldName: "modelId",
@@ -229,19 +206,42 @@ async function refreshProviderOptions() {
   ]);
 }
 
-async function refreshMethodDefaultParams() {
+async function refreshMethodDefault() {
   const capabilityType = tier.value?.capabilityType || "text";
   const capabilityMethod = tier.value?.capabilityMethod || "generate";
-  const rows = await methodDefaults();
-  const row = rows.find(
+  const items = await methodDefaultList();
+  const current = items.find(
     (item) =>
       item.capabilityType === capabilityType &&
       item.capabilityMethod === capabilityMethod,
   );
-  methodDefaultParamsJson.value = formatDefaultParamsJson(
-    row?.defaultParamsJson || "{}",
-  );
+  defaultParamsCompact.value =
+    normalizeDefaultParams(current?.defaultParamsJson || "{}") || "{}";
+  defaultParamsJson.value = formatDefaultParams(defaultParamsCompact.value);
   defaultParamsInvalid.value = false;
+}
+
+async function saveMethodDefaultIfChanged() {
+  const normalized = normalizeDefaultParams(defaultParamsJson.value);
+  if (!normalized) {
+    defaultParamsInvalid.value = true;
+    message.error(
+      $t("plugin.linapro-ai-core.methodDefault.messages.invalidJson"),
+    );
+    return false;
+  }
+  defaultParamsInvalid.value = false;
+  if (normalized === defaultParamsCompact.value) {
+    return true;
+  }
+  await methodDefaultUpdate(
+    tier.value?.capabilityType || "text",
+    tier.value?.capabilityMethod || "generate",
+    normalized,
+  );
+  defaultParamsCompact.value = normalized;
+  defaultParamsJson.value = formatDefaultParams(normalized);
+  return true;
 }
 
 async function currentValues() {
@@ -256,15 +256,6 @@ async function currentValues() {
   };
 }
 
-function effortSupported(model: Model | undefined, effort: string) {
-  if (!effort) {
-    return true;
-  }
-  return (
-    model?.supportsThinking === 1 && model.supportedEfforts?.includes(effort)
-  );
-}
-
 function validateBindingValues(
   values: Awaited<ReturnType<typeof currentValues>>,
   requireBinding: boolean,
@@ -276,18 +267,6 @@ function validateBindingValues(
   if (bindingRequired && (!hasProvider || !hasModel)) {
     message.error($t("plugin.linapro-ai-core.tier.messages.bindingRequired"));
     return false;
-  }
-  if (hasModel) {
-    const model = models.value.find((item) => item.id === values.modelId);
-    if (
-      supportsThinkingEffort() &&
-      !effortSupported(model, values.defaultEffort)
-    ) {
-      message.error(
-        $t("plugin.linapro-ai-core.tier.messages.unsupportedEffort"),
-      );
-      return false;
-    }
   }
   return true;
 }
@@ -345,7 +324,8 @@ const [Drawer, drawerApi] = useVbenDrawer({
       },
     ]);
     await formApi.resetForm();
-    await Promise.all([refreshProviderOptions(), refreshMethodDefaultParams()]);
+    await refreshProviderOptions();
+    await refreshMethodDefault();
     const providerId = tier.value?.binding?.providerId || undefined;
     await refreshModelOptions(Number(providerId || 0), false);
     await formApi.setValues({
@@ -367,25 +347,10 @@ const [Drawer, drawerApi] = useVbenDrawer({
       if (!validateBindingValues(values, false)) {
         return;
       }
-      let defaultParamsJson = "{}";
-      try {
-        defaultParamsJson = normalizeDefaultParamsJson(
-          methodDefaultParamsJson.value,
-        );
-      } catch {
-        defaultParamsInvalid.value = true;
-        message.error(
-          $t("plugin.linapro-ai-core.methodDefault.messages.invalidJson"),
-        );
+      if (!(await saveMethodDefaultIfChanged())) {
         return;
       }
-      await Promise.all([
-        tierUpdate(tier.value.code, values),
-        methodDefaultUpdate(values.capabilityType, values.capabilityMethod, {
-          defaultParamsJson,
-          enabled: 1,
-        }),
-      ]);
+      await tierUpdate(tier.value.code, values);
       message.success($t("pages.common.updateSuccess"));
       emit("reload");
       drawerApi.close();
@@ -399,24 +364,25 @@ const [Drawer, drawerApi] = useVbenDrawer({
 <template>
   <Drawer :title="title" class="w-[720px] max-w-[calc(100vw-32px)]">
     <div class="flex flex-col gap-[16px]">
-      <Form>
-        <template #defaultParamsJson>
-          <div class="tier-default-params">
-            <div class="tier-default-params__scope">
-              {{ methodDefaultScope }}
-            </div>
-            <JsonHighlightEditor
-              v-model="methodDefaultParamsJson"
-              :invalid="defaultParamsInvalid"
-              :placeholder="
-                $t('plugin.linapro-ai-core.methodDefault.placeholders.json')
-              "
-              testid="ai-tier-default-params-editor"
-              @update:model-value="defaultParamsInvalid = false"
-            />
-          </div>
-        </template>
-      </Form>
+      <Form />
+      <div class="tier-default-params-item relative flex">
+        <label class="tier-default-params-label">
+          {{
+            $t("plugin.linapro-ai-core.methodDefault.fields.defaultParamsJson")
+          }}
+        </label>
+        <div class="tier-default-params-control flex-auto">
+          <JsonHighlightEditor
+            v-model="defaultParamsJson"
+            :invalid="defaultParamsInvalid"
+            :placeholder="
+              $t('plugin.linapro-ai-core.methodDefault.placeholders.json')
+            "
+            testid="ai-tier-default-params-editor"
+            @update:model-value="defaultParamsInvalid = false"
+          />
+        </div>
+      </div>
       <div class="flex justify-end">
         <Space>
           <div
@@ -424,7 +390,9 @@ const [Drawer, drawerApi] = useVbenDrawer({
             class="tier-current-test-result"
             data-testid="ai-tier-current-test-result"
           >
-            <span>{{ $t("plugin.linapro-ai-core.invocation.fields.latencyMs") }}</span>
+            <span>{{
+              $t("plugin.linapro-ai-core.invocation.fields.latencyMs")
+            }}</span>
             <span>{{ currentTestLatency }}</span>
           </div>
           <a-button :disabled="testing" :loading="testing" @click="handleTest">
@@ -437,22 +405,6 @@ const [Drawer, drawerApi] = useVbenDrawer({
 </template>
 
 <style scoped>
-.tier-default-params {
-  display: flex;
-  width: 100%;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.tier-default-params__scope {
-  color: hsl(var(--muted-foreground));
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
-  font-size: 12px;
-  line-height: 20px;
-}
-
 .tier-current-test-result {
   align-items: center;
   border: 1px solid hsl(var(--border));
@@ -470,5 +422,26 @@ const [Drawer, drawerApi] = useVbenDrawer({
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
     "Courier New", monospace;
+}
+
+.tier-default-params-item {
+  align-items: flex-start;
+  column-gap: 8px;
+  width: 100%;
+}
+
+.tier-default-params-label {
+  flex: 0 0 132px;
+  width: 132px;
+  min-height: 32px;
+  padding-right: 12px;
+  color: hsl(var(--foreground));
+  font-size: 14px;
+  line-height: 32px;
+  text-align: right;
+}
+
+.tier-default-params-control {
+  min-width: 0;
 }
 </style>

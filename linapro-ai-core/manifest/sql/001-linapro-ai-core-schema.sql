@@ -2,7 +2,7 @@
 -- Creates the final Smart Center provider, model, capability, tier, invocation, and operation tables.
 
 -- Purpose: Stores AI provider metadata for Smart Center.
--- 用途：存储智能中心的 AI 供应商元数据。
+-- 用途：存储智能中心的 AI 渠道元数据。
 CREATE TABLE IF NOT EXISTS plugin_linapro_ai_provider (
     "id"          BIGSERIAL PRIMARY KEY,
     "name"        VARCHAR(128) NOT NULL,
@@ -32,7 +32,7 @@ CREATE INDEX IF NOT EXISTS idx_plugin_linapro_ai_provider_enabled_alive
     WHERE "deleted_at" IS NULL;
 
 -- Purpose: Stores extensible protocol endpoints owned by one AI provider.
--- 用途：存储单个 AI 供应商拥有的可扩展协议端点。
+-- 用途：存储单个 AI 渠道拥有的可扩展协议端点。
 CREATE TABLE IF NOT EXISTS plugin_linapro_ai_provider_endpoint (
     "id"            BIGSERIAL PRIMARY KEY,
     "provider_id"   BIGINT NOT NULL,
@@ -66,7 +66,7 @@ CREATE INDEX IF NOT EXISTS idx_plugin_linapro_ai_endpoint_provider_alive
     WHERE "deleted_at" IS NULL;
 
 -- Purpose: Stores provider model identity metadata for Smart Center binding.
--- 用途：存储用于智能中心绑定的供应商模型身份元数据。
+-- 用途：存储用于智能中心绑定的渠道模型身份元数据。
 CREATE TABLE IF NOT EXISTS plugin_linapro_ai_model (
     "id"          BIGSERIAL PRIMARY KEY,
     "provider_id" BIGINT NOT NULL,
@@ -103,7 +103,7 @@ CREATE INDEX IF NOT EXISTS idx_plugin_linapro_ai_model_endpoint_alive
     WHERE "deleted_at" IS NULL;
 
 -- Purpose: Stores explicit multimodal capability declarations for provider models.
--- 用途：存储供应商模型显式声明的多模态能力。
+-- 用途：存储渠道模型显式声明的多模态能力。
 CREATE TABLE IF NOT EXISTS plugin_linapro_ai_model_capability (
     "id"                  BIGSERIAL PRIMARY KEY,
     "model_id"            BIGINT NOT NULL,
@@ -178,7 +178,8 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_ai_tier (
     "last_test_error_summary" VARCHAR(512) NOT NULL DEFAULT '',
     "last_test_at"            TIMESTAMP,
     "created_at"              TIMESTAMP,
-    "updated_at"              TIMESTAMP
+    "updated_at"              TIMESTAMP,
+    CONSTRAINT uk_plugin_linapro_ai_tier_capability_code UNIQUE ("capability_type", "capability_method", "code")
 );
 
 COMMENT ON TABLE plugin_linapro_ai_tier IS 'AI capability tier table';
@@ -198,13 +199,11 @@ COMMENT ON COLUMN plugin_linapro_ai_tier."last_test_at" IS 'Last tier test time'
 COMMENT ON COLUMN plugin_linapro_ai_tier."created_at" IS 'Creation time';
 COMMENT ON COLUMN plugin_linapro_ai_tier."updated_at" IS 'Update time';
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_plugin_linapro_ai_tier_capability_code
-    ON plugin_linapro_ai_tier ("capability_type", "capability_method", "code");
 CREATE INDEX IF NOT EXISTS idx_plugin_linapro_ai_tier_sort
     ON plugin_linapro_ai_tier ("capability_type", "capability_method", "sort_order");
 
 -- Purpose: Stores provider-model bindings for each AI capability tier.
--- 用途：存储每个 AI 能力档位对应的供应商模型绑定关系。
+-- 用途：存储每个 AI 能力档位对应的渠道模型绑定关系。
 CREATE TABLE IF NOT EXISTS plugin_linapro_ai_tier_binding (
     "id"          BIGSERIAL PRIMARY KEY,
     "tier_id"     BIGINT NOT NULL,
@@ -305,7 +304,7 @@ CREATE INDEX IF NOT EXISTS idx_plugin_linapro_ai_invocation_purpose
     ON plugin_linapro_ai_invocation ("purpose", "created_at" DESC);
 CREATE INDEX IF NOT EXISTS idx_plugin_linapro_ai_invocation_source_plugin
     ON plugin_linapro_ai_invocation ("source_plugin_id", "created_at" DESC);
-CREATE INDEX IF NOT EXISTS idx_plugin_linapro_ai_invocation_multimodal_assets
+CREATE INDEX IF NOT EXISTS idx_plugin_linapro_ai_invocation_method_created
     ON plugin_linapro_ai_invocation ("capability_type", "capability_method", "created_at" DESC);
 
 -- Purpose: Stores method-specific default parameter templates for AI capability calls.
@@ -317,7 +316,8 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_ai_method_default_param (
     "default_params_json" TEXT NOT NULL DEFAULT '{}',
     "enabled"             SMALLINT NOT NULL DEFAULT 1,
     "created_at"          TIMESTAMP,
-    "updated_at"          TIMESTAMP
+    "updated_at"          TIMESTAMP,
+    CONSTRAINT uk_plugin_linapro_ai_method_default_identity UNIQUE ("capability_type", "capability_method")
 );
 
 COMMENT ON TABLE plugin_linapro_ai_method_default_param IS 'AI capability method default params table';
@@ -329,11 +329,8 @@ COMMENT ON COLUMN plugin_linapro_ai_method_default_param."enabled" IS 'Enabled f
 COMMENT ON COLUMN plugin_linapro_ai_method_default_param."created_at" IS 'Creation time';
 COMMENT ON COLUMN plugin_linapro_ai_method_default_param."updated_at" IS 'Update time';
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_plugin_linapro_ai_method_default_identity
-    ON plugin_linapro_ai_method_default_param ("capability_type", "capability_method");
-
 -- Purpose: Stores minimal provider operation projections without business task ownership.
--- 用途：存储不承载业务任务归属的最小供应商 Operation 投影。
+-- 用途：存储不承载业务任务归属的最小渠道 Operation 投影。
 CREATE TABLE IF NOT EXISTS plugin_linapro_ai_provider_operation (
     "id"                 BIGSERIAL PRIMARY KEY,
     "operation_ref"      VARCHAR(128) NOT NULL,
@@ -389,57 +386,9 @@ CREATE INDEX IF NOT EXISTS idx_plugin_linapro_ai_operation_provider_model_alive
     ON plugin_linapro_ai_provider_operation ("provider_id", "model_id", "created_at" DESC)
     WHERE "deleted_at" IS NULL;
 
-INSERT INTO plugin_linapro_ai_method_default_param (
-    "capability_type",
-    "capability_method",
-    "default_params_json",
-    "enabled"
-) VALUES
-    ('text', 'generate', '{"maxOutputTokens":1024}', 1),
-    ('image', 'generate', '{"count":1,"size":"1024x1024"}', 1),
-    ('image', 'edit', '{"count":1,"size":"1024x1024"}', 1),
-    ('embedding', 'create', '{"dimensions":0}', 1),
-    ('audio', 'transcribe', '{"language":""}', 1),
-    ('audio', 'synthesize', '{"format":"mp3"}', 1),
-    ('vision', 'analyze', '{"maxOutputTokens":1024}', 1),
-    ('document', 'analyze', '{"maxOutputTokens":2048}', 1),
-    ('document', 'cite', '{"maxOutputTokens":2048,"includeCitations":true}', 1),
-    ('safety', 'moderate', '{"categories":[]}', 1),
-    ('video', 'generate', '{"durationMs":5000,"aspectRatio":"16:9"}', 1),
-    ('video', 'edit', '{"durationMs":5000}', 1),
-    ('video', 'extend', '{"durationMs":5000}', 1),
-    ('video', 'operation.get', '{"nextPollAfterMs":5000}', 1),
-    ('video', 'operation.cancel', '{"allowCancel":false}', 1)
-ON CONFLICT ("capability_type", "capability_method") DO NOTHING;
-
-INSERT INTO plugin_linapro_ai_tier (
-    "capability_type",
-    "capability_method",
-    "code",
-    "display_name",
-    "description",
-    "default_effort",
-    "enabled",
-    "sort_order"
-) VALUES
-    ('text', 'generate', 'basic', 'Basic', 'Low-cost AI capability tier for simple text generation and commit message generation.', '', 1, 1),
-    ('text', 'generate', 'standard', 'Standard', 'Default AI capability tier for regular code generation and code optimization.', '', 1, 2),
-    ('text', 'generate', 'advanced', 'Advanced', 'High-capability AI tier for complex code generation and cross-file reasoning.', '', 1, 3)
-ON CONFLICT ("capability_type", "capability_method", "code") DO NOTHING;
-
-INSERT INTO plugin_linapro_ai_tier (
-    "capability_type",
-    "capability_method",
-    "code",
-    "display_name",
-    "description",
-    "default_effort",
-    "enabled",
-    "sort_order"
-)
-SELECT methods."capability_type", methods."capability_method", tiers."code", tiers."display_name", methods."description", '', 1, tiers."sort_order"
-FROM (
+WITH capability_methods("capability_type", "capability_method", "tier_description") AS (
     VALUES
+        ('text', 'generate', ''),
         ('image', 'generate', 'Image generation capability tier.'),
         ('image', 'edit', 'Image editing capability tier.'),
         ('embedding', 'create', 'Embedding creation capability tier.'),
@@ -454,11 +403,53 @@ FROM (
         ('video', 'extend', 'Video extension capability tier.'),
         ('video', 'operation.get', 'Provider operation lookup capability tier.'),
         ('video', 'operation.cancel', 'Provider operation cancellation capability tier.')
-) AS methods("capability_type", "capability_method", "description")
-CROSS JOIN (
+),
+tier_catalog("code", "display_name", "sort_order", "text_description") AS (
     VALUES
-        ('basic', 'Basic', 1),
-        ('standard', 'Standard', 2),
-        ('advanced', 'Advanced', 3)
-) AS tiers("code", "display_name", "sort_order")
+        ('basic', 'Basic', 1, 'Low-cost AI capability tier for simple text generation and commit message generation.'),
+        ('standard', 'Standard', 2, 'Default AI capability tier for regular code generation and code optimization.'),
+        ('advanced', 'Advanced', 3, 'High-capability AI tier for complex code generation and cross-file reasoning.')
+),
+method_default_insert AS (
+    INSERT INTO plugin_linapro_ai_method_default_param (
+        "capability_type",
+        "capability_method",
+        "enabled"
+    )
+    SELECT
+        methods."capability_type",
+        methods."capability_method",
+        1
+    FROM capability_methods AS methods
+    ON CONFLICT ("capability_type", "capability_method") DO NOTHING
+    RETURNING 1
+),
+method_default_insert_marker AS (
+    SELECT COUNT(*) AS "ignored" FROM method_default_insert
+)
+INSERT INTO plugin_linapro_ai_tier (
+    "capability_type",
+    "capability_method",
+    "code",
+    "display_name",
+    "description",
+    "default_effort",
+    "enabled",
+    "sort_order"
+)
+SELECT
+    methods."capability_type",
+    methods."capability_method",
+    tiers."code",
+    tiers."display_name",
+    CASE
+        WHEN methods."capability_type" = 'text' AND methods."capability_method" = 'generate' THEN tiers."text_description"
+        ELSE methods."tier_description"
+    END,
+    '',
+    1,
+    tiers."sort_order"
+FROM capability_methods AS methods
+CROSS JOIN tier_catalog AS tiers
+CROSS JOIN method_default_insert_marker AS marker
 ON CONFLICT ("capability_type", "capability_method", "code") DO NOTHING;
