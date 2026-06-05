@@ -457,6 +457,7 @@ export function joinCapabilityMethod(type = "text", method = "generate") {
 export function buildCapabilityQuerySchema(
   options: {
     componentProps?: Record<string, unknown>;
+    formItemClass?: string;
     label?: string;
     labelClass?: string;
     labelWidth?: number;
@@ -466,6 +467,9 @@ export function buildCapabilityQuerySchema(
     {
       component: "Select",
       fieldName: "capabilityKey",
+      ...(options.formItemClass
+        ? { formItemClass: options.formItemClass }
+        : {}),
       label: options.label ?? $t("plugin.linapro-ai-core.capability.method"),
       ...(options.labelClass ? { labelClass: options.labelClass } : {}),
       ...(options.labelWidth ? { labelWidth: options.labelWidth } : {}),
@@ -888,6 +892,7 @@ const invocationQueryLabelWidth = 112;
 const invocationQuerySourceLabelWidth = 96;
 const invocationQueryCompactLabelWidth = 48;
 const invocationQueryPrimaryControlWidth = "242px";
+const invocationQueryPrimaryFieldClass = "ai-invocation-primary-query-field";
 
 export function buildInvocationQuerySchema(): VbenFormSchema[] {
   return [
@@ -895,6 +900,7 @@ export function buildInvocationQuerySchema(): VbenFormSchema[] {
       componentProps: {
         style: { width: invocationQueryPrimaryControlWidth },
       },
+      formItemClass: invocationQueryPrimaryFieldClass,
       label: $t("plugin.linapro-ai-core.invocation.fields.method"),
       labelClass: "whitespace-nowrap",
       labelWidth: invocationQueryLabelWidth,
@@ -938,6 +944,7 @@ export function buildInvocationQuerySchema(): VbenFormSchema[] {
     {
       component: "RangePicker",
       fieldName: "createdAtRange",
+      formItemClass: invocationQueryPrimaryFieldClass,
       label: $t("pages.common.createdAt"),
       labelWidth: invocationQueryLabelWidth,
       componentProps: {

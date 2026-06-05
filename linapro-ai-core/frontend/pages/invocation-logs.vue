@@ -51,7 +51,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       componentProps: { allowClear: true },
     },
     wrapperClass:
-      "grid-cols-1 md:grid-cols-2 xl:grid-cols-[minmax(368px,1.45fr)_minmax(228px,1fr)_minmax(190px,0.95fr)_minmax(190px,0.95fr)] xl:gap-x-[4px]",
+      "grid-cols-1 md:grid-cols-2 xl:grid-cols-[minmax(384px,1.45fr)_minmax(228px,1fr)_minmax(190px,0.95fr)_minmax(190px,0.95fr)] xl:gap-x-0",
   },
   gridOptions: {
     columns: buildInvocationColumns(),
@@ -267,3 +267,10 @@ async function handleDeleteRangeConfirm() {
     </Modal>
   </Page>
 </template>
+
+<style scoped>
+:deep(.ai-invocation-primary-query-field) {
+  box-sizing: border-box;
+  padding-left: 16px;
+}
+</style>

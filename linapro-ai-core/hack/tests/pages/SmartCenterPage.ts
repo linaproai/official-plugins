@@ -2201,9 +2201,9 @@ export class SmartCenterPage {
       metrics.clippingParentRight + 1,
     );
     expect(metrics.pickerRight).toBeLessThanOrEqual(metrics.fieldRight + 1);
-    expect(metrics.sourcePluginLabelLeft - metrics.pickerRight).toBeGreaterThan(
-      6,
-    );
+    expect(
+      metrics.sourcePluginLabelLeft - metrics.pickerRight,
+    ).toBeGreaterThanOrEqual(5);
     expect(metrics.pickerRight).toBeLessThanOrEqual(metrics.viewportRight - 8);
     await expect(this.page.locator(".ant-picker-time-panel")).toHaveCount(0);
     expect(metrics.inputs).toHaveLength(2);
@@ -2267,6 +2267,10 @@ export class SmartCenterPage {
       return {
         capability: itemBox(/调用方法|Invocation Method/i),
         created: itemBox(/创建时间|Created/i),
+        searchFormLeft:
+          document
+            .querySelector(".vxe-grid--form-wrapper")
+            ?.getBoundingClientRect().left ?? 0,
         searchFormRight:
           document
             .querySelector(".vxe-grid--form-wrapper")
@@ -2325,6 +2329,18 @@ export class SmartCenterPage {
       Math.abs(metrics.created.controlLeft - metrics.capability.controlLeft),
     ).toBeLessThanOrEqual(1);
     expect(
+      metrics.capability.labelLeft - metrics.searchFormLeft,
+    ).toBeGreaterThanOrEqual(15);
+    expect(
+      metrics.created.labelLeft - metrics.searchFormLeft,
+    ).toBeGreaterThanOrEqual(15);
+    expect(metrics.capability.textLeft).toBeGreaterThanOrEqual(
+      metrics.searchFormLeft + 4,
+    );
+    expect(metrics.created.textLeft).toBeGreaterThanOrEqual(
+      metrics.searchFormLeft + 4,
+    );
+    expect(
       Math.abs(metrics.status.itemLeft - metrics.purpose.itemLeft),
     ).toBeGreaterThan(120);
     expect(
@@ -2360,12 +2376,27 @@ export class SmartCenterPage {
       status: 132,
       tier: 132,
     };
+    const maxControlWidths: Record<keyof typeof measuredItems, number> = {
+      capability: 243,
+      created: 243,
+      purpose: 124,
+      sourcePlugin: 124,
+      status: 136,
+      tier: 136,
+    };
     for (const [name, item] of Object.entries(measuredItems)) {
       const minControlWidth =
         minControlWidths[name as keyof typeof minControlWidths];
+      const maxControlWidth =
+        maxControlWidths[name as keyof typeof maxControlWidths];
       if (item.controlWidth < minControlWidth) {
         throw new Error(
           `${name} control width is too narrow: ${JSON.stringify(item)}`,
+        );
+      }
+      if (item.controlWidth > maxControlWidth) {
+        throw new Error(
+          `${name} control width changed unexpectedly: ${JSON.stringify(item)}`,
         );
       }
       expect(item.controlRight).toBeLessThanOrEqual(item.itemRight + 1);
