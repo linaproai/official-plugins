@@ -10,7 +10,6 @@ gfcli:
           plugin_linapro_org_core_post,
           plugin_linapro_org_core_user_dept,
           plugin_linapro_org_core_user_post,
-          sys_user,
         removePrefix: "plugin_linapro_org_core_"
         importPrefix: "lina-plugin-linapro-org-core/backend/internal"
         descriptionTag: true

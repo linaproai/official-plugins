@@ -6,23 +6,23 @@ import (
 	"context"
 	"testing"
 
-	plugincontract "lina-core/pkg/plugin/capability/contract"
-	tenantfilter "lina-core/pkg/plugin/capability/tenantfilter"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/tenantcap"
 )
 
 // testBizCtxService returns one configured plugin-visible context snapshot.
 type testBizCtxService struct {
-	current plugincontract.CurrentContext
+	current bizctxcap.CurrentContext
 }
 
 // Current returns the current plugin-visible business context.
-func (s testBizCtxService) Current(context.Context) plugincontract.CurrentContext {
+func (s testBizCtxService) Current(context.Context) bizctxcap.CurrentContext {
 	return s.current
 }
 
 // TestResolveAuditTenantContextReadsBizContext verifies tenant metadata comes from bizctx.
 func TestResolveAuditTenantContextReadsBizContext(t *testing.T) {
-	tenantFilter := newTenantFilterForTest(plugincontract.CurrentContext{
+	tenantFilter := newTenantFilterForTest(bizctxcap.CurrentContext{
 		UserID:   3,
 		TenantID: 12,
 	})
@@ -38,7 +38,7 @@ func TestResolveAuditTenantContextReadsBizContext(t *testing.T) {
 
 // TestResolveAuditTenantContextReadsImpersonation verifies impersonation metadata comes from bizctx.
 func TestResolveAuditTenantContextReadsImpersonation(t *testing.T) {
-	tenantFilter := newTenantFilterForTest(plugincontract.CurrentContext{
+	tenantFilter := newTenantFilterForTest(bizctxcap.CurrentContext{
 		UserID:          10,
 		TenantID:        12,
 		ActingUserID:    3,
@@ -57,7 +57,7 @@ func TestResolveAuditTenantContextReadsImpersonation(t *testing.T) {
 
 // TestResolveAuditTenantContextHonorsExplicitOverrides verifies callers can override context defaults.
 func TestResolveAuditTenantContextHonorsExplicitOverrides(t *testing.T) {
-	tenantFilter := newTenantFilterForTest(plugincontract.CurrentContext{})
+	tenantFilter := newTenantFilterForTest(bizctxcap.CurrentContext{})
 	tenantID := 21
 	actingUserID := 4
 	onBehalfOfTenantID := 22
@@ -77,8 +77,8 @@ func TestResolveAuditTenantContextHonorsExplicitOverrides(t *testing.T) {
 }
 
 // newTenantFilterForTest creates an explicitly injected tenant filter service.
-func newTenantFilterForTest(current plugincontract.CurrentContext) plugincontract.TenantFilterService {
-	service, err := tenantfilter.New(testBizCtxService{current: current}, nil)
+func newTenantFilterForTest(current bizctxcap.CurrentContext) tenantcap.PluginTableFilterService {
+	service, err := tenantcap.NewPluginTableFilter(testBizCtxService{current: current}, nil)
 	if err != nil {
 		panic(err)
 	}

@@ -37,6 +37,10 @@ export interface OperLogListParams {
   orderDirection?: string;
 }
 
+export interface OperLogExportParams extends OperLogListParams {
+  ids?: number[];
+}
+
 export interface OperLogListResult {
   items: OperLog[];
   total: number;
@@ -66,8 +70,9 @@ export function operLogDelete(ids: number[]) {
   return requestClient.delete(operLogApi(`operlog/${ids.join(',')}`));
 }
 
-export function operLogExport(params?: OperLogListParams) {
+export function operLogExport(params?: OperLogExportParams) {
   return requestClient.download<Blob>(operLogApi('operlog/export'), {
     params,
+    paramsSerializer: 'repeat',
   });
 }

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	pluginconfig "lina-core/pkg/plugin/capability/config"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/plugincap"
+	pluginconfig "lina-core/pkg/plugin/capability/plugincap"
 	monitorsvc "lina-plugin-linapro-monitor-server/backend/internal/service/monitor"
 )
 
@@ -98,10 +98,10 @@ monitor:
 }
 
 // newPluginTestConfigService builds a scoped plugin config service from artifact content.
-func newPluginTestConfigService(t *testing.T, content string) plugincontract.ConfigService {
+func newPluginTestConfigService(t *testing.T, content string) plugincap.ConfigService {
 	t.Helper()
 
-	return pluginconfig.NewFactory(t.TempDir(), t.TempDir()).
+	return pluginconfig.NewConfigFactory(t.TempDir(), t.TempDir()).
 		WithArtifactConfig("linapro-monitor-server", []byte(content)).
 		ForPlugin("linapro-monitor-server")
 }

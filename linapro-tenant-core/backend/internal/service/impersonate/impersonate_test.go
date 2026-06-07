@@ -4,17 +4,14 @@ package impersonate
 
 import (
 	"context"
-	"fmt"
 	"testing"
-	"time"
-
-	"github.com/gogf/gf/v2/database/gdb"
-	"github.com/gogf/gf/v2/frame/g"
 
 	"lina-core/pkg/bizerr"
-	_ "lina-core/pkg/dbdriver"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
-	pluginmodeldo "lina-plugin-linapro-tenant-core/backend/internal/model/do"
+	"lina-core/pkg/plugin/capability/authcap/token"
+	"lina-core/pkg/plugin/capability/authcap/authz"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/capmodel"
+	"lina-core/pkg/plugin/capability/usercap"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/shared"
 	tenantsvc "lina-plugin-linapro-tenant-core/backend/internal/service/tenant"
 )
@@ -56,15 +53,17 @@ func TestImpersonationBusinessErrorMetadata(t *testing.T) {
 // host auth service.
 func TestStartDelegatesTokenIssuanceToHostAuth(t *testing.T) {
 	ctx := context.Background()
-	configureImpersonationTestDB(t, ctx)
 
-	username := fmt.Sprintf("impersonation-auth-delegate-%d", time.Now().UnixNano())
-	userID := insertImpersonationTestPlatformAdmin(t, ctx, username)
+	userID := int64(42)
 	authSvc := &fakeImpersonationAuthService{}
 	svc := &serviceImpl{
 		authSvc:   authSvc,
-		bizCtxSvc: impersonateGuardBizCtx{current: plugincontract.CurrentContext{UserID: int(userID), PlatformBypass: true}},
+		authzSvc:  fakeImpersonationAuthz{platformAdmin: true},
+		bizCtxSvc: impersonateGuardBizCtx{current: bizctxcap.CurrentContext{UserID: int(userID), PlatformBypass: true}},
 		tenantSvc: fakeImpersonationTenantService{tenant: &tenantsvc.Entity{Id: 42, Status: string(shared.TenantStatusActive)}},
+		users: fakeImpersonationUsers{users: map[usercap.UserID]*usercap.UserProjection{
+			usercap.UserID("42"): &usercap.UserProjection{ID: usercap.UserID("42"), Username: "platform-admin"},
+		}},
 	}
 
 	out, err := svc.Start(ctx, StartInput{TenantID: 42, Reason: "unit test"})
@@ -104,27 +103,27 @@ type fakeImpersonationAuthService struct {
 // SelectTenant is unused by impersonation tests.
 func (s *fakeImpersonationAuthService) SelectTenant(
 	context.Context,
-	plugincontract.SelectTenantInput,
-) (*plugincontract.TenantTokenOutput, error) {
-	return &plugincontract.TenantTokenOutput{}, nil
+	token.SelectTenantInput,
+) (*token.TenantTokenOutput, error) {
+	return &token.TenantTokenOutput{}, nil
 }
 
 // SwitchTenant is unused by impersonation tests.
 func (s *fakeImpersonationAuthService) SwitchTenant(
 	context.Context,
-	plugincontract.SwitchTenantInput,
-) (*plugincontract.TenantTokenOutput, error) {
-	return &plugincontract.TenantTokenOutput{}, nil
+	token.SwitchTenantInput,
+) (*token.TenantTokenOutput, error) {
+	return &token.TenantTokenOutput{}, nil
 }
 
 // IssueImpersonationToken records the host auth impersonation request.
 func (s *fakeImpersonationAuthService) IssueImpersonationToken(
 	_ context.Context,
-	in plugincontract.ImpersonationTokenIssueInput,
-) (*plugincontract.ImpersonationTokenOutput, error) {
+	in token.ImpersonationTokenIssueInput,
+) (*token.ImpersonationTokenOutput, error) {
 	s.issuedActingUserID = in.ActingUserID
 	s.issuedTenantID = in.TenantID
-	return &plugincontract.ImpersonationTokenOutput{
+	return &token.ImpersonationTokenOutput{
 		AccessToken:  "host-impersonation-token",
 		TokenID:      "host-token-id",
 		TenantID:     in.TenantID,
@@ -135,7 +134,7 @@ func (s *fakeImpersonationAuthService) IssueImpersonationToken(
 // RevokeImpersonationToken records the host auth impersonation revoke request.
 func (s *fakeImpersonationAuthService) RevokeImpersonationToken(
 	_ context.Context,
-	in plugincontract.ImpersonationTokenRevokeInput,
+	in token.ImpersonationTokenRevokeInput,
 ) error {
 	s.revokedBearer = in.BearerToken
 	s.revokedTenantID = in.TenantID
@@ -177,116 +176,50 @@ func (s fakeImpersonationTenantService) Delete(context.Context, int64) error {
 	return nil
 }
 
-// insertImpersonationTestPlatformAdmin creates a platform all-data role binding.
-func insertImpersonationTestPlatformAdmin(t *testing.T, ctx context.Context, username string) int64 {
-	t.Helper()
-
-	userID, err := shared.Model(ctx, shared.TableSysUser).Data(pluginmodeldo.SysUser{
-		Username: username,
-		Password: "unused",
-		Nickname: username,
-		Status:   1,
-		TenantId: shared.PlatformTenantID,
-	}).InsertAndGetId()
-	if err != nil {
-		t.Fatalf("insert impersonation test user: %v", err)
-	}
-
-	roleKey := fmt.Sprintf("impersonation_admin_%d", time.Now().UnixNano())
-	roleID, err := g.DB().Model("sys_role").Safe().Ctx(ctx).Data(platformRoleData{
-		TenantID:  shared.PlatformTenantID,
-		Name:      roleKey,
-		Key:       roleKey,
-		Sort:      1,
-		DataScope: 1,
-		Status:    1,
-	}).InsertAndGetId()
-	if err != nil {
-		t.Fatalf("insert impersonation test role: %v", err)
-	}
-	if _, err = g.DB().Model("sys_user_role").Safe().Ctx(ctx).Data(platformUserRoleData{
-		TenantID: shared.PlatformTenantID,
-		UserID:   userID,
-		RoleID:   roleID,
-	}).Insert(); err != nil {
-		t.Fatalf("insert impersonation test user role: %v", err)
-	}
-
-	t.Cleanup(func() {
-		if _, err := g.DB().Model("sys_user_role").Safe().Ctx(ctx).Where(platformUserRoleData{
-			TenantID: shared.PlatformTenantID,
-			UserID:   userID,
-			RoleID:   roleID,
-		}).Delete(); err != nil {
-			t.Errorf("cleanup impersonation user role: %v", err)
-		}
-		if _, err := g.DB().Model("sys_role").Safe().Ctx(ctx).Unscoped().Where("id", roleID).Delete(); err != nil {
-			t.Errorf("cleanup impersonation role: %v", err)
-		}
-		if _, err := shared.Model(ctx, shared.TableSysUser).Unscoped().Where(pluginmodeldo.SysUser{Id: userID}).Delete(); err != nil {
-			t.Errorf("cleanup impersonation user: %v", err)
-		}
-	})
-	return userID
+// fakeImpersonationAuthz returns a configured platform-admin decision.
+type fakeImpersonationAuthz struct {
+	platformAdmin bool
 }
 
-// configureImpersonationTestDB points impersonation tests at the local
-// PostgreSQL database and creates the minimal host tables they need.
-func configureImpersonationTestDB(t *testing.T, ctx context.Context) {
-	t.Helper()
-
-	originalConfig := gdb.GetAllConfig()
-	if err := gdb.SetConfig(gdb.Config{
-		gdb.DefaultGroupName: gdb.ConfigGroup{{Link: "pgsql:postgres:postgres@tcp(127.0.0.1:5432)/linapro?sslmode=disable"}},
-	}); err != nil {
-		t.Fatalf("configure impersonation test database failed: %v", err)
-	}
-	db := g.DB()
-	ensureImpersonationTestTables(t, ctx)
-	t.Cleanup(func() {
-		if err := db.Close(ctx); err != nil {
-			t.Errorf("close impersonation test database failed: %v", err)
-		}
-		if err := gdb.SetConfig(originalConfig); err != nil {
-			t.Errorf("restore impersonation test database config failed: %v", err)
-		}
-	})
+// BatchGetPermissions is unused by impersonation tests.
+func (s fakeImpersonationAuthz) BatchGetPermissions(context.Context, capmodel.CapabilityContext, []authz.PermissionKey) (*capmodel.BatchResult[*authz.PermissionProjection, authz.PermissionKey], error) {
+	return &capmodel.BatchResult[*authz.PermissionProjection, authz.PermissionKey]{Items: map[authz.PermissionKey]*authz.PermissionProjection{}}, nil
 }
 
-// ensureImpersonationTestTables creates minimal host auth and role tables for
-// impersonation service tests when the repository DB has not been initialized.
-func ensureImpersonationTestTables(t *testing.T, ctx context.Context) {
-	t.Helper()
+// HasPermission is unused by impersonation tests.
+func (s fakeImpersonationAuthz) HasPermission(context.Context, capmodel.CapabilityContext, authz.PermissionKey) (bool, error) {
+	return false, nil
+}
 
-	statements := []string{
-		`CREATE TABLE IF NOT EXISTS sys_user (
-			"id" BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-			"tenant_id" BIGINT NOT NULL DEFAULT 0,
-			"username" VARCHAR(64) NOT NULL,
-			"password" VARCHAR(256) NOT NULL,
-			"nickname" VARCHAR(64) NOT NULL DEFAULT '',
-			"status" SMALLINT NOT NULL DEFAULT 1,
-			"deleted_at" TIMESTAMP
-		)`,
-		`CREATE TABLE IF NOT EXISTS sys_role (
-			"id" BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-			"tenant_id" BIGINT NOT NULL DEFAULT 0,
-			"name" VARCHAR(64) NOT NULL DEFAULT '',
-			"key" VARCHAR(64) NOT NULL DEFAULT '',
-			"sort" INT NOT NULL DEFAULT 0,
-			"data_scope" SMALLINT NOT NULL DEFAULT 2,
-			"status" SMALLINT NOT NULL DEFAULT 1,
-			"deleted_at" TIMESTAMP
-		)`,
-		`CREATE TABLE IF NOT EXISTS sys_user_role (
-			"tenant_id" BIGINT NOT NULL DEFAULT 0,
-			"user_id" BIGINT NOT NULL,
-			"role_id" BIGINT NOT NULL
-		)`,
-	}
-	for _, statement := range statements {
-		if _, err := g.DB().Exec(ctx, statement); err != nil {
-			t.Fatalf("ensure impersonation test table failed: %v", err)
+// IsPlatformAdmin returns the configured decision.
+func (s fakeImpersonationAuthz) IsPlatformAdmin(context.Context, capmodel.CapabilityContext, authz.UserID) (bool, error) {
+	return s.platformAdmin, nil
+}
+
+// fakeImpersonationUsers returns configured user projections.
+type fakeImpersonationUsers struct {
+	users map[usercap.UserID]*usercap.UserProjection
+}
+
+// BatchGetUsers returns configured user projections and opaque missing IDs.
+func (s fakeImpersonationUsers) BatchGetUsers(_ context.Context, _ capmodel.CapabilityContext, ids []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
+	out := &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{Items: map[usercap.UserID]*usercap.UserProjection{}}
+	for _, id := range ids {
+		if item := s.users[id]; item != nil {
+			out.Items[id] = item
+			continue
 		}
+		out.MissingIDs = append(out.MissingIDs, id)
 	}
+	return out, nil
+}
+
+// SearchUsers is unused by impersonation tests.
+func (s fakeImpersonationUsers) SearchUsers(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
+	return &capmodel.PageResult[*usercap.UserProjection]{Items: []*usercap.UserProjection{}}, nil
+}
+
+// EnsureUsersVisible is unused by impersonation tests.
+func (s fakeImpersonationUsers) EnsureUsersVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
+	return nil
 }

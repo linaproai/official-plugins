@@ -4,12 +4,12 @@ package demo
 
 import (
 	"context"
+
 	"io"
+	"lina-plugin-linapro-demo-source/backend/api/demo/v1"
 	"os"
 
 	"github.com/gogf/gf/v2/frame/g"
-
-	"lina-plugin-linapro-demo-source/backend/api/demo/v1"
 )
 
 // DownloadAttachment streams one plugin-owned attachment file to the client.

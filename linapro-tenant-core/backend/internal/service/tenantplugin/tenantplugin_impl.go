@@ -1,20 +1,17 @@
-// tenantplugin_impl.go implements tenant-plugin enablement projection and
-// mutation for the linapro-tenant-core plugin. It keeps plugin state tenant-scoped,
-// preserves mandatory bindings, and exposes rows used by host lifecycle
-// precondition checks.
+// tenantplugin_impl.go implements tenant-plugin enablement orchestration
+// through the host plugincap domain contract. Host plugin registry, tenant
+// state, and cache revision tables stay owned by lina-core adapters.
 
 package tenantplugin
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
-	"github.com/gogf/gf/v2/database/gdb"
-
 	"lina-core/pkg/bizerr"
-	"lina-plugin-linapro-tenant-core/backend/internal/dao"
-	"lina-plugin-linapro-tenant-core/backend/internal/model/do"
-	"lina-plugin-linapro-tenant-core/backend/internal/model/entity"
+	"lina-core/pkg/plugin/capability/capmodel"
+	"lina-core/pkg/plugin/capability/plugincap"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/shared"
 )
 
@@ -24,29 +21,22 @@ func (s *serviceImpl) List(ctx context.Context) (*ListOutput, error) {
 	if err != nil {
 		return nil, err
 	}
-	var rows []*entity.SysPlugin
-	err = dao.SysPlugin.Ctx(ctx).
-		Where(do.SysPlugin{
-			Installed:   pluginInstalledYes,
-			Status:      pluginStatusEnabled,
-			ScopeNature: pluginScopeNatureTenantAware,
-			InstallMode: pluginInstallModeTenantScoped,
-		}).
-		OrderAsc(dao.SysPlugin.Columns().PluginId).
-		Scan(&rows)
+	if err = s.requirePlugincap(); err != nil {
+		return nil, err
+	}
+	out, err := s.plugins.ListTenantPlugins(ctx, s.capabilityContext(ctx, tenantID, "tenant_plugin.list"))
 	if err != nil {
 		return nil, err
 	}
-	list := make([]*Entity, 0, len(rows))
-	for _, row := range rows {
-		if row == nil {
-			continue
+	list := make([]*Entity, 0)
+	if out != nil {
+		list = make([]*Entity, 0, len(out.Items))
+		for _, item := range out.Items {
+			if item == nil {
+				continue
+			}
+			list = append(list, pluginEntity(item))
 		}
-		enabled, err := s.tenantEnabled(ctx, row.PluginId, tenantID)
-		if err != nil {
-			return nil, err
-		}
-		list = append(list, pluginEntity(row, enabled))
 	}
 	return &ListOutput{List: list, Total: len(list)}, nil
 }
@@ -57,19 +47,24 @@ func (s *serviceImpl) SetEnabled(ctx context.Context, pluginID string, enabled b
 	if err != nil {
 		return err
 	}
+	if err = s.requirePlugincap(); err != nil {
+		return err
+	}
 	normalizedPluginID := strings.TrimSpace(pluginID)
 	if normalizedPluginID == "" {
 		return bizerr.NewCode(CodePluginNotFound)
-	}
-	if err = s.ensureTenantScopedPlugin(ctx, normalizedPluginID); err != nil {
-		return err
 	}
 	if !enabled && s.pluginLifecycleSvc != nil {
 		if err = s.pluginLifecycleSvc.EnsureTenantPluginDisableAllowed(ctx, normalizedPluginID, int(tenantID)); err != nil {
 			return err
 		}
 	}
-	if err = s.setTenantPluginEnabled(ctx, tenantID, normalizedPluginID, enabled); err != nil {
+	if err = s.pluginAdmin.SetPluginEnabled(
+		ctx,
+		s.capabilityContext(ctx, tenantID, "tenant_plugin.set_enabled"),
+		plugincap.PluginID(normalizedPluginID),
+		enabled,
+	); err != nil {
 		return err
 	}
 	if !enabled && s.pluginLifecycleSvc != nil {
@@ -79,152 +74,20 @@ func (s *serviceImpl) SetEnabled(ctx context.Context, pluginID string, enabled b
 }
 
 // ProvisionForTenant provisions missing default tenant-scoped plugin enablement
-// for a tenant. This is explicit domain orchestration rather than a lifecycle
-// event subscription: the project does not keep an outbox table or an
-// unfinished cross-plugin event bus for tenant creation. Startup callers may
-// also run it for existing tenants; existing rows are not overwritten so
-// tenant administrators' explicit disable choices remain authoritative.
+// for a tenant. Existing tenant-owned enablement rows are preserved by the
+// host plugincap owner.
 func (s *serviceImpl) ProvisionForTenant(ctx context.Context, tenantID int64) error {
 	if tenantID <= shared.PlatformTenantID {
 		return nil
 	}
-	var rows []*entity.SysPlugin
-	err := dao.SysPlugin.Ctx(ctx).
-		Where(do.SysPlugin{
-			Installed:               pluginInstalledYes,
-			Status:                  pluginStatusEnabled,
-			ScopeNature:             pluginScopeNatureTenantAware,
-			InstallMode:             pluginInstallModeTenantScoped,
-			AutoEnableForNewTenants: true,
-		}).
-		Scan(&rows)
-	if err != nil {
+	if err := s.requirePlugincap(); err != nil {
 		return err
 	}
-	for _, row := range rows {
-		if row == nil || strings.TrimSpace(row.PluginId) == "" {
-			continue
-		}
-		if err = s.setMissingTenantPluginEnabled(ctx, tenantID, row.PluginId, true); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// setMissingTenantPluginEnabled inserts one tenant plugin enablement row only
-// when the tenant has not already chosen an explicit state.
-func (s *serviceImpl) setMissingTenantPluginEnabled(ctx context.Context, tenantID int64, pluginID string, enabled bool) error {
-	identity := do.SysPluginState{
-		PluginId: pluginID,
-		TenantId: tenantID,
-		StateKey: tenantEnablementStateKey,
-	}
-	count, err := dao.SysPluginState.Ctx(ctx).Where(identity).Count()
-	if err != nil {
-		return err
-	}
-	if count > 0 {
-		return nil
-	}
-	return dao.SysPluginState.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
-		result, insertErr := tx.Model(dao.SysPluginState.Table()).Safe().Ctx(ctx).Data(do.SysPluginState{
-			PluginId:   identity.PluginId,
-			TenantId:   identity.TenantId,
-			StateKey:   identity.StateKey,
-			StateValue: enablementStateValue(enabled),
-			Enabled:    enabled,
-		}).InsertIgnore()
-		if insertErr != nil {
-			return insertErr
-		}
-		affected, affectedErr := result.RowsAffected()
-		if affectedErr != nil {
-			return affectedErr
-		}
-		if affected == 0 {
-			return nil
-		}
-		_, revisionErr := s.bumpPluginRuntimeCacheRevision(ctx, tx)
-		return revisionErr
-	})
-}
-
-// setTenantPluginEnabled upserts one tenant plugin enablement row.
-func (s *serviceImpl) setTenantPluginEnabled(ctx context.Context, tenantID int64, pluginID string, enabled bool) error {
-	identity := do.SysPluginState{
-		PluginId: pluginID,
-		TenantId: tenantID,
-		StateKey: tenantEnablementStateKey,
-	}
-	return dao.SysPluginState.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
-		_, insertErr := tx.Model(dao.SysPluginState.Table()).Safe().Ctx(ctx).Data(do.SysPluginState{
-			PluginId:   identity.PluginId,
-			TenantId:   identity.TenantId,
-			StateKey:   identity.StateKey,
-			StateValue: enablementStateValue(enabled),
-			Enabled:    enabled,
-		}).InsertIgnore()
-		if insertErr != nil {
-			return insertErr
-		}
-		_, updateErr := tx.Model(dao.SysPluginState.Table()).Safe().Ctx(ctx).
-			Where(identity).
-			Data(do.SysPluginState{
-				StateValue: enablementStateValue(enabled),
-				Enabled:    enabled,
-			}).
-			Update()
-		if updateErr != nil {
-			return updateErr
-		}
-		_, revisionErr := s.bumpPluginRuntimeCacheRevision(ctx, tx)
-		return revisionErr
-	})
-}
-
-// bumpPluginRuntimeCacheRevision publishes the host plugin-runtime cache revision.
-func (s *serviceImpl) bumpPluginRuntimeCacheRevision(ctx context.Context, tx gdb.TX) (int64, error) {
-	_, err := tx.Model(tableSysCacheRevision).Safe().Ctx(ctx).Data(pluginRuntimeCacheRevisionDO{
-		TenantId: shared.PlatformTenantID,
-		Domain:   pluginRuntimeCacheDomain,
-		Scope:    pluginRuntimeCacheScopeGlobal,
-		Revision: 0,
-		Reason:   tenantPluginRuntimeChangeReason,
-	}).InsertIgnore()
-	if err != nil {
-		return 0, err
-	}
-
-	var row *pluginRuntimeCacheRevisionRow
-	err = tx.Model(tableSysCacheRevision).Safe().Ctx(ctx).
-		Fields("id", "revision").
-		Where(pluginRuntimeCacheRevisionDO{
-			TenantId: shared.PlatformTenantID,
-			Domain:   pluginRuntimeCacheDomain,
-			Scope:    pluginRuntimeCacheScopeGlobal,
-		}).
-		LockUpdate().
-		Scan(&row)
-	if err != nil {
-		return 0, err
-	}
-	if row == nil {
-		return 0, bizerr.NewCode(CodePluginRuntimeRevisionUnavailable)
-	}
-
-	revision := row.Revision + 1
-	_, err = tx.Model(tableSysCacheRevision).Safe().Ctx(ctx).
-		Where(pluginRuntimeCacheRevisionDO{Id: row.Id}).
-		Data(pluginRuntimeCacheRevisionDO{
-			Revision: revision,
-			Reason:   tenantPluginRuntimeChangeReason,
-		}).
-		Update()
-	if err != nil {
-		return 0, err
-	}
-	return revision, nil
+	return s.pluginAdmin.ProvisionTenantDefaults(
+		ctx,
+		s.capabilityContext(ctx, tenantID, "tenant_plugin.provision"),
+		plugincapTenantID(tenantID),
+	)
 }
 
 // requireTenantID returns the current request tenant id or a stable bizerr.
@@ -237,65 +100,34 @@ func (s *serviceImpl) requireTenantID(ctx context.Context) (int64, error) {
 	return tenantID, nil
 }
 
-// ensureTenantScopedPlugin verifies the plugin exists and is tenant controllable.
-func (s *serviceImpl) ensureTenantScopedPlugin(ctx context.Context, pluginID string) error {
-	count, err := dao.SysPlugin.Ctx(ctx).
-		Where(do.SysPlugin{
-			PluginId:    pluginID,
-			Installed:   pluginInstalledYes,
-			Status:      pluginStatusEnabled,
-			ScopeNature: pluginScopeNatureTenantAware,
-			InstallMode: pluginInstallModeTenantScoped,
-		}).
-		Count()
-	if err != nil {
-		return err
-	}
-	if count == 0 {
-		return bizerr.NewCode(CodePluginNotFound)
-	}
-	return nil
-}
-
-// tenantEnabled reads one tenant plugin enablement row.
-func (s *serviceImpl) tenantEnabled(ctx context.Context, pluginID string, tenantID int64) (bool, error) {
-	value, err := dao.SysPluginState.Ctx(ctx).
-		Where(do.SysPluginState{
-			PluginId: pluginID,
-			TenantId: tenantID,
-			StateKey: tenantEnablementStateKey,
-		}).
-		Value(dao.SysPluginState.Columns().Enabled)
-	if err != nil {
-		return false, err
-	}
-	return value != nil && !value.IsNil() && value.Bool(), nil
-}
-
-// pluginEntity converts a registry row and tenant flag into service output.
-func pluginEntity(row *entity.SysPlugin, tenantEnabled bool) *Entity {
-	enabled := 0
-	if tenantEnabled {
-		enabled = 1
+// pluginEntity converts plugincap's tenant projection into this plugin's API shape.
+func pluginEntity(row *plugincap.TenantProjection) *Entity {
+	if row == nil {
+		return nil
 	}
 	return &Entity{
-		Id:            row.PluginId,
+		Id:            string(row.ID),
 		Name:          row.Name,
 		Version:       row.Version,
 		Type:          row.Type,
-		Description:   row.Remark,
-		Installed:     row.Installed,
-		Enabled:       row.Status,
+		Description:   row.Description,
+		Installed:     boolInt(row.Installed),
+		Enabled:       boolInt(row.Enabled),
 		ScopeNature:   row.ScopeNature,
 		InstallMode:   row.InstallMode,
-		TenantEnabled: enabled,
+		TenantEnabled: boolInt(row.TenantEnabled),
 	}
 }
 
-// enablementStateValue converts the enablement flag to the persisted text value.
-func enablementStateValue(enabled bool) string {
-	if enabled {
-		return tenantPluginEnabledValue
+// boolInt converts a boolean to the existing API's 0/1 response shape.
+func boolInt(value bool) int {
+	if value {
+		return 1
 	}
-	return tenantPluginDisabledValue
+	return 0
+}
+
+// plugincapTenantID encodes one tenant identifier for plugincap.
+func plugincapTenantID(tenantID int64) capmodel.DomainID {
+	return capmodel.DomainID(strconv.FormatInt(tenantID, 10))
 }

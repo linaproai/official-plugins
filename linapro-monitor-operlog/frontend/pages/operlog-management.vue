@@ -81,6 +81,10 @@ const [Grid, gridApi] = useVbenVxeGrid({
     wrapperClass: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
   },
   gridOptions: {
+    checkboxConfig: {
+      highlight: true,
+      reserve: true,
+    },
     columns: buildColumns(),
     height: 'auto',
     keepSource: true,
@@ -189,7 +193,13 @@ async function handleDeleteRangeConfirm() {
 }
 
 async function handleExport() {
-  const content = $t('pages.exportConfirm.all');
+  const selectedRows = (gridApi.grid?.getCheckboxRecords?.() ?? []) as OperLog[];
+  const selectedIds = selectedRows
+    .map((row) => Number(row.id))
+    .filter((id) => Number.isFinite(id) && id > 0);
+  const content = selectedIds.length > 0
+    ? $t('pages.exportConfirm.selected')
+    : $t('pages.exportConfirm.all');
 
   Modal.confirm({
     title: $t('pages.common.confirmTitle'),
@@ -206,6 +216,10 @@ async function handleExport() {
           params.beginTime = params.operTime[0];
           params.endTime = params.operTime[1];
           delete params.operTime;
+        }
+
+        if (selectedIds.length > 0) {
+          params.ids = selectedIds;
         }
 
         const data = await operLogExport(params);

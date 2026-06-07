@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"lina-core/pkg/bizerr"
-	"lina-core/pkg/plugin/capability/ai/aitext"
+	"lina-core/pkg/plugin/capability/aicap/aitext"
 	"lina-plugin-linapro-ai-core/backend/internal/model/entity"
 )
 

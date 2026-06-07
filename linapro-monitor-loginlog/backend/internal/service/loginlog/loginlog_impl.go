@@ -18,7 +18,9 @@ import (
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/excelutil"
 	"lina-core/pkg/gdbutil"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/capmodel"
+	"lina-core/pkg/plugin/capability/dictcap"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/pluginhost"
 	"lina-plugin-linapro-monitor-loginlog/backend/internal/dao"
 	"lina-plugin-linapro-monitor-loginlog/backend/internal/model/do"
@@ -205,7 +207,7 @@ func (s *serviceImpl) Export(ctx context.Context, in ExportInput) (data []byte, 
 		}
 	}
 
-	statusMap := buildIntDictLabelMap(ctx, DictTypeLoginStatus)
+	statusMap := s.buildIntDictLabelMap(ctx, DictTypeLoginStatus)
 	for index, log := range list {
 		row := index + 2
 		if setErr := excelutil.SetCellValue(file, sheet, 1, row, log.UserName); setErr != nil {
@@ -309,7 +311,7 @@ var defaultLoginStatusLabels = map[int]string{
 // resolveAuditTenantContext resolves tenant audit metadata from bizctx and explicit overrides.
 func resolveAuditTenantContext(
 	ctx context.Context,
-	tenantFilter plugincontract.TenantFilterService,
+	tenantFilter tenantcap.PluginTableFilterService,
 	tenantID *int,
 	actingUserID *int,
 	onBehalfOfTenantID *int,
@@ -376,28 +378,89 @@ func applyLoginLogFilters(model *gdb.Model, userName string, ip string, status *
 	return model
 }
 
-// buildIntDictLabelMap builds one integer-value dictionary label map.
-func buildIntDictLabelMap(ctx context.Context, dictType string) map[int]string {
-	rows := make([]*dictDataRow, 0)
-	err := dao.SysDictData.Ctx(ctx).
-		Fields(colDictValue, colDictLabel).
-		Where(colDictType, dictType).
-		Where(colStatus, 1).
-		OrderAsc(colDictSort).
-		Scan(&rows)
-	if err != nil || len(rows) == 0 {
-		return map[int]string{}
+// buildIntDictLabelMap builds one integer-value dictionary label map through
+// the host dictionary-domain capability.
+func (s *serviceImpl) buildIntDictLabelMap(ctx context.Context, dictType string) map[int]string {
+	values := make([]dictcap.Value, 0, len(defaultLoginStatusLabels))
+	labels := make(map[int]string, len(defaultLoginStatusLabels))
+	for value, fallback := range defaultLoginStatusLabels {
+		rawValue := strconv.Itoa(value)
+		values = append(values, dictcap.Value(rawValue))
+		labels[value] = s.translateDictLabel(ctx, dictType, rawValue, fallback)
 	}
 
-	labels := make(map[int]string, len(rows))
-	for _, row := range rows {
-		value, convErr := strconv.Atoi(row.Value)
+	result := s.resolveDictLabels(ctx, dictType, values)
+	for value, projection := range result {
+		parsed, convErr := strconv.Atoi(string(value))
 		if convErr != nil {
 			continue
 		}
-		labels[value] = row.Label
+		if projection != "" {
+			labels[parsed] = projection
+		}
 	}
 	return labels
+}
+
+// resolveDictLabels resolves dictionary labels through dictcap and leaves
+// missing values to the existing runtime i18n fallback path.
+func (s *serviceImpl) resolveDictLabels(ctx context.Context, dictType string, values []dictcap.Value) map[dictcap.Value]string {
+	if s == nil || s.dictSvc == nil || len(values) == 0 {
+		return map[dictcap.Value]string{}
+	}
+	output, err := s.dictSvc.ResolveLabels(ctx, s.dictionaryCapabilityContext(ctx, dictType), dictcap.ResolveInput{
+		Type:         dictcap.Type(dictType),
+		Values:       values,
+		IncludeLabel: true,
+	})
+	if err != nil || output == nil || len(output.Items) == 0 {
+		return map[dictcap.Value]string{}
+	}
+	labels := make(map[dictcap.Value]string, len(output.Items))
+	for value, projection := range output.Items {
+		if projection == nil || strings.TrimSpace(projection.Label) == "" {
+			continue
+		}
+		labels[value] = projection.Label
+	}
+	return labels
+}
+
+// dictionaryCapabilityContext builds the audited context required by dictcap.
+func (s *serviceImpl) dictionaryCapabilityContext(ctx context.Context, dictType string) capmodel.CapabilityContext {
+	current := tenantcap.TenantFilterContext{}
+	if s != nil && s.tenantFilter != nil {
+		current = s.tenantFilter.Context(ctx)
+	}
+	actorID := current.UserID
+	if current.ActingUserID > 0 {
+		actorID = current.ActingUserID
+	}
+	actor := capmodel.CapabilityActor{
+		Type:   capmodel.ActorTypeUser,
+		UserID: int64(actorID),
+	}
+	if actorID == 0 {
+		actor = capmodel.CapabilityActor{
+			Type:         capmodel.ActorTypeSystem,
+			Name:         pluginID,
+			SystemReason: "login-log dictionary label projection",
+		}
+	}
+	return capmodel.CapabilityContext{
+		PluginID:   pluginID,
+		Actor:      actor,
+		TenantID:   capmodel.DomainID(strconv.Itoa(current.TenantID)),
+		Source:     capmodel.CapabilitySourceHTTP,
+		SystemCall: actor.Type == capmodel.ActorTypeSystem,
+		Resource:   dictType,
+		AuditReason: strings.Join([]string{
+			pluginID,
+			"resolve dictionary labels",
+			dictType,
+		}, ":"),
+		RequestedAt: time.Now(),
+	}
 }
 
 // normalizeEndTime expands date-only end values to the end of day.

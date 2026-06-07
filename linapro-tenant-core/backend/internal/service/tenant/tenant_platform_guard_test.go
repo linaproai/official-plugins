@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"lina-core/pkg/bizerr"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/resolver"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/shared"
 )
@@ -16,7 +16,7 @@ import (
 // TestEnsurePlatformTenantGovernanceRejectsTenantContext verifies tenant CRUD
 // entry points fail closed when the caller is not platform bypass.
 func TestEnsurePlatformTenantGovernanceRejectsTenantContext(t *testing.T) {
-	svc := &serviceImpl{bizCtxSvc: tenantGuardBizCtx{current: plugincontract.CurrentContext{
+	svc := &serviceImpl{bizCtxSvc: tenantGuardBizCtx{current: bizctxcap.CurrentContext{
 		TenantID:       1001,
 		PlatformBypass: false,
 	}}}
@@ -30,7 +30,7 @@ func TestEnsurePlatformTenantGovernanceRejectsTenantContext(t *testing.T) {
 // TestEnsurePlatformTenantGovernanceAllowsPlatformBypass verifies platform
 // all-data context can manage platform tenant rows.
 func TestEnsurePlatformTenantGovernanceAllowsPlatformBypass(t *testing.T) {
-	svc := &serviceImpl{bizCtxSvc: tenantGuardBizCtx{current: plugincontract.CurrentContext{
+	svc := &serviceImpl{bizCtxSvc: tenantGuardBizCtx{current: bizctxcap.CurrentContext{
 		TenantID:       0,
 		PlatformBypass: true,
 	}}}
@@ -45,7 +45,7 @@ func TestEnsurePlatformTenantGovernanceAllowsPlatformBypass(t *testing.T) {
 // platform tenant CRUD service still rejects tenant context after route-level
 // system:tenant:* permission checks have already passed.
 func TestPlatformTenantMethodsRejectTenantContextAfterPermission(t *testing.T) {
-	svc := &serviceImpl{bizCtxSvc: tenantGuardBizCtx{current: plugincontract.CurrentContext{
+	svc := &serviceImpl{bizCtxSvc: tenantGuardBizCtx{current: bizctxcap.CurrentContext{
 		TenantID:       1001,
 		PlatformBypass: false,
 	}}}
@@ -89,10 +89,10 @@ func TestPlatformTenantMethodsRejectTenantContextAfterPermission(t *testing.T) {
 
 // tenantGuardBizCtx returns a fixed plugin-visible business context.
 type tenantGuardBizCtx struct {
-	current plugincontract.CurrentContext
+	current bizctxcap.CurrentContext
 }
 
 // Current returns the fixed context configured by the test.
-func (s tenantGuardBizCtx) Current(context.Context) plugincontract.CurrentContext {
+func (s tenantGuardBizCtx) Current(context.Context) bizctxcap.CurrentContext {
 	return s.current
 }

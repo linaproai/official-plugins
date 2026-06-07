@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"lina-core/pkg/bizerr"
-	"lina-core/pkg/plugin/capability/ai/aitext"
+	"lina-core/pkg/plugin/capability/aicap/aitext"
 )
 
 // GenerateText executes one framework text AI request.

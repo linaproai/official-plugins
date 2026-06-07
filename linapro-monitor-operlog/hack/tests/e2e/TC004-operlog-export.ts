@@ -46,8 +46,11 @@ test.describe('TC004 操作日志导出', () => {
     await adminPage.goto('/monitor/operlog');
     await waitForTableReady(adminPage);
 
-    // Select a row (click checkbox)
-    const firstCheckbox = adminPage.locator('.vxe-checkbox--icon').first();
+    // Select a body row, not the header "select all" checkbox.
+    const firstCheckbox = adminPage
+      .locator('.vxe-body--row .vxe-checkbox--icon')
+      .first();
+    await expect(firstCheckbox).toBeVisible({ timeout: 10000 });
     await firstCheckbox.click();
     await waitForBusyIndicatorsToClear(adminPage);
 
@@ -60,10 +63,13 @@ test.describe('TC004 操作日志导出', () => {
     await expect(modalContent.getByText(/是否导出选中的记录/)).toBeVisible();
 
     // Set up response listener
-    const responsePromise = adminPage.waitForResponse(
-      (resp) => resp.url().includes('operlog/export'),
-      { timeout: 15000 }
-    );
+    const responsePromise = adminPage.waitForResponse((resp) => {
+      const url = new URL(resp.url());
+      return (
+        url.pathname.includes('/x/linapro-monitor-operlog/api/v1/operlog/export') &&
+        url.searchParams.getAll('ids').length > 0
+      );
+    }, { timeout: 15000 });
 
     // Click confirm button
     const confirmBtn = modalContent.getByRole('button', { name: /确\s*认/ });

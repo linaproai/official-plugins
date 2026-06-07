@@ -18,7 +18,10 @@ import (
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/excelutil"
 	"lina-core/pkg/gdbutil"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/apidoccap"
+	"lina-core/pkg/plugin/capability/capmodel"
+	"lina-core/pkg/plugin/capability/dictcap"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-plugin-linapro-monitor-operlog/backend/internal/dao"
 	"lina-plugin-linapro-monitor-operlog/backend/internal/model/do"
 	"lina-plugin-linapro-monitor-operlog/backend/internal/model/operlogtype"
@@ -319,13 +322,13 @@ func (s *serviceImpl) localizeRecords(ctx context.Context, records []*OperLogEnt
 		return
 	}
 
-	inputs := make([]plugincontract.RouteTextInput, 0, len(records))
+	inputs := make([]apidoccap.RouteTextInput, 0, len(records))
 	targets := make([]*OperLogEntity, 0, len(records))
 	for _, record := range records {
 		if record == nil {
 			continue
 		}
-		inputs = append(inputs, plugincontract.RouteTextInput{
+		inputs = append(inputs, apidoccap.RouteTextInput{
 			OperationKey:    record.RouteDocKey,
 			Method:          record.RouteMethod,
 			Path:            record.RoutePath,
@@ -356,7 +359,7 @@ func (s *serviceImpl) localizeRecord(ctx context.Context, record *OperLogEntity)
 	if s == nil || s.apiDocSvc == nil {
 		return
 	}
-	text := s.apiDocSvc.ResolveRouteText(ctx, plugincontract.RouteTextInput{
+	text := s.apiDocSvc.ResolveRouteText(ctx, apidoccap.RouteTextInput{
 		OperationKey:    record.RouteDocKey,
 		Method:          record.RouteMethod,
 		Path:            record.RoutePath,
@@ -384,54 +387,124 @@ func (s *serviceImpl) findLocalizedRouteTitleOperationKeys(ctx context.Context, 
 	return s.apiDocSvc.FindRouteTitleOperationKeys(ctx, title)
 }
 
-// buildStringDictLabelMap builds one localized string-value dictionary label map.
+// buildStringDictLabelMap builds one localized string-value dictionary label map
+// through the host dictionary-domain capability.
 func (s *serviceImpl) buildStringDictLabelMap(ctx context.Context, dictType string) map[string]string {
-	rows := make([]*dictDataRow, 0)
-	err := dao.SysDictData.Ctx(ctx).
-		Fields(colDictValue, colDictLabel).
-		Where(colDictType, dictType).
-		Where(colStatus, 1).
-		OrderAsc(colDictSort).
-		Scan(&rows)
-	if err != nil || len(rows) == 0 {
-		return map[string]string{}
+	fallbacks := defaultOperTypeLabelFallbacks()
+	values := make([]dictcap.Value, 0, len(fallbacks))
+	labels := make(map[string]string, len(fallbacks))
+	for _, value := range operlogtype.PublishedValues() {
+		values = append(values, dictcap.Value(value))
+		labels[value] = s.localizeDictValue(ctx, dictType, value, fallbacks[value])
 	}
 
-	labels := make(map[string]string, len(rows))
-	for _, row := range rows {
-		labels[row.Value] = s.localizeDictValue(ctx, dictType, row.Value, row.Label)
+	result := s.resolveDictLabels(ctx, dictType, values)
+	for value, projection := range result {
+		if projection != "" {
+			labels[string(value)] = projection
+		}
 	}
 	return labels
 }
 
-// buildIntDictLabelMap builds one localized integer-value dictionary label map.
+// buildIntDictLabelMap builds one localized integer-value dictionary label map
+// through the host dictionary-domain capability.
 func (s *serviceImpl) buildIntDictLabelMap(ctx context.Context, dictType string) map[int]string {
-	rows := make([]*dictDataRow, 0)
-	err := dao.SysDictData.Ctx(ctx).
-		Fields(colDictValue, colDictLabel).
-		Where(colDictType, dictType).
-		Where(colStatus, 1).
-		OrderAsc(colDictSort).
-		Scan(&rows)
-	if err != nil || len(rows) == 0 {
-		return map[int]string{}
+	values := make([]dictcap.Value, 0, len(defaultOperStatusLabels))
+	labels := make(map[int]string, len(defaultOperStatusLabels))
+	for value, fallback := range defaultOperStatusLabels {
+		rawValue := strconv.Itoa(value)
+		values = append(values, dictcap.Value(rawValue))
+		labels[value] = s.localizeDictValue(ctx, dictType, rawValue, fallback)
 	}
 
-	labels := make(map[int]string, len(rows))
-	for _, row := range rows {
-		value, convErr := strconv.Atoi(row.Value)
+	result := s.resolveDictLabels(ctx, dictType, values)
+	for value, projection := range result {
+		parsed, convErr := strconv.Atoi(string(value))
 		if convErr != nil {
 			continue
 		}
-		labels[value] = s.localizeDictValue(ctx, dictType, row.Value, row.Label)
+		if projection != "" {
+			labels[parsed] = projection
+		}
 	}
 	return labels
+}
+
+// resolveDictLabels resolves dictionary labels through dictcap and falls back to
+// existing runtime i18n keys if the capability is unavailable or misses values.
+func (s *serviceImpl) resolveDictLabels(ctx context.Context, dictType string, values []dictcap.Value) map[dictcap.Value]string {
+	if s == nil || s.dictSvc == nil || len(values) == 0 {
+		return map[dictcap.Value]string{}
+	}
+	output, err := s.dictSvc.ResolveLabels(ctx, s.dictionaryCapabilityContext(ctx, dictType), dictcap.ResolveInput{
+		Type:         dictcap.Type(dictType),
+		Values:       values,
+		IncludeLabel: true,
+	})
+	if err != nil || output == nil || len(output.Items) == 0 {
+		return map[dictcap.Value]string{}
+	}
+	labels := make(map[dictcap.Value]string, len(output.Items))
+	for value, projection := range output.Items {
+		if projection == nil || strings.TrimSpace(projection.Label) == "" {
+			continue
+		}
+		labels[value] = projection.Label
+	}
+	return labels
+}
+
+// dictionaryCapabilityContext builds the audited context required by dictcap.
+func (s *serviceImpl) dictionaryCapabilityContext(ctx context.Context, dictType string) capmodel.CapabilityContext {
+	current := tenantcap.TenantFilterContext{}
+	if s != nil && s.tenantFilter != nil {
+		current = s.tenantFilter.Context(ctx)
+	}
+	actorID := current.UserID
+	if current.ActingUserID > 0 {
+		actorID = current.ActingUserID
+	}
+	actor := capmodel.CapabilityActor{
+		Type:   capmodel.ActorTypeUser,
+		UserID: int64(actorID),
+	}
+	if actorID == 0 {
+		actor = capmodel.CapabilityActor{
+			Type:         capmodel.ActorTypeSystem,
+			Name:         pluginID,
+			SystemReason: "operation-log dictionary label projection",
+		}
+	}
+	return capmodel.CapabilityContext{
+		PluginID:   pluginID,
+		Actor:      actor,
+		TenantID:   capmodel.DomainID(strconv.Itoa(current.TenantID)),
+		Source:     capmodel.CapabilitySourceHTTP,
+		SystemCall: actor.Type == capmodel.ActorTypeSystem,
+		Resource:   dictType,
+		AuditReason: strings.Join([]string{
+			pluginID,
+			"resolve dictionary labels",
+			dictType,
+		}, ":"),
+		RequestedAt: time.Now(),
+	}
 }
 
 // localizeDictValue translates one dictionary label by stable dictionary key.
 func (s *serviceImpl) localizeDictValue(ctx context.Context, dictType string, value string, fallback string) string {
 	key := strings.Join([]string{dictKeyPrefix, dictType, value, labelKeySuffix}, ".")
 	return s.translate(ctx, key, fallback)
+}
+
+// defaultOperTypeLabelFallbacks indexes stable operation-type fallback labels by value.
+func defaultOperTypeLabelFallbacks() map[string]string {
+	labels := make(map[string]string, len(defaultOperTypeLabels))
+	for value, label := range defaultOperTypeLabels {
+		labels[value.String()] = label
+	}
+	return labels
 }
 
 // defaultOperTypeLabels provides a stable fallback when the dictionary module
@@ -455,7 +528,7 @@ var defaultOperStatusLabels = map[int]string{
 // resolveAuditTenantContext resolves tenant audit metadata from bizctx and explicit overrides.
 func resolveAuditTenantContext(
 	ctx context.Context,
-	tenantFilter plugincontract.TenantFilterService,
+	tenantFilter tenantcap.PluginTableFilterService,
 	tenantID *int,
 	actingUserID *int,
 	onBehalfOfTenantID *int,

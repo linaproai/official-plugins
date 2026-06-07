@@ -7,22 +7,32 @@ package notice
 
 import (
 	"context"
+	"strconv"
 	"strings"
+	"time"
+
+	"github.com/gogf/gf/v2/errors/gerror"
 
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/logger"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/capmodel"
+	"lina-core/pkg/plugin/capability/notifycap"
+	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/usercap"
 	"lina-plugin-linapro-content-notice/backend/internal/dao"
 	"lina-plugin-linapro-content-notice/backend/internal/model/do"
-	entitymodel "lina-plugin-linapro-content-notice/backend/internal/model/entity"
+)
+
+const (
+	pluginID                        = "linapro-content-notice"
+	noticeCreatorCapabilityResource = "notice.creator"
+	noticeCreatorSearchLimit        = 200
 )
 
 // List queries notice list with pagination and filters.
 func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, error) {
-	var (
-		noticeColumns = dao.Notice.Columns()
-		userColumns   = dao.SysUser.Columns()
-	)
+	noticeColumns := dao.Notice.Columns()
 
 	m := s.tenantFilter.Apply(ctx, dao.Notice.Ctx(ctx), "")
 
@@ -33,12 +43,15 @@ func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, erro
 	if in.Type > 0 {
 		m = m.Where(noticeColumns.Type, in.Type)
 	}
-	if in.CreatedBy != "" {
-		// Filter by creator username via subquery on sys_user.
-		subQuery := s.tenantFilter.Apply(ctx, dao.SysUser.Ctx(ctx), "").
-			Fields(userColumns.Id).
-			WhereLike(userColumns.Username, "%"+in.CreatedBy+"%")
-		m = m.Where(noticeColumns.CreatedBy+" IN (?)", subQuery)
+	if createdBy := strings.TrimSpace(in.CreatedBy); createdBy != "" {
+		creatorIDs, err := s.searchCreatorUserIDs(ctx, createdBy)
+		if err != nil {
+			return nil, err
+		}
+		if len(creatorIDs) == 0 {
+			return &ListOutput{List: []*ListItem{}, Total: 0}, nil
+		}
+		m = m.WhereIn(noticeColumns.CreatedBy, creatorIDs)
 	}
 
 	// Get total count
@@ -56,29 +69,9 @@ func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, erro
 		return nil, err
 	}
 
-	// Collect unique creator IDs
-	userIds := make([]int64, 0, len(list))
-	seen := make(map[int64]bool)
-	for _, n := range list {
-		if n.CreatedBy > 0 && !seen[n.CreatedBy] {
-			userIds = append(userIds, n.CreatedBy)
-			seen[n.CreatedBy] = true
-		}
-	}
-
-	// Resolve creator usernames
-	userNameMap := make(map[int64]string)
-	if len(userIds) > 0 {
-		users := make([]*entitymodel.SysUser, 0)
-		err = s.tenantFilter.Apply(ctx, dao.SysUser.Ctx(ctx), "").
-			Fields(userColumns.Id, userColumns.Username).
-			WhereIn(userColumns.Id, userIds).
-			Scan(&users)
-		if err == nil {
-			for _, u := range users {
-				userNameMap[int64(u.Id)] = u.Username
-			}
-		}
+	userNameMap, err := s.resolveCreatorNameMap(ctx, list)
+	if err != nil {
+		return nil, err
 	}
 
 	// Build result
@@ -98,10 +91,7 @@ func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, erro
 
 // GetById retrieves notice by ID.
 func (s *serviceImpl) GetById(ctx context.Context, id int64) (*ListItem, error) {
-	var (
-		noticeColumns = dao.Notice.Columns()
-		userColumns   = dao.SysUser.Columns()
-	)
+	noticeColumns := dao.Notice.Columns()
 
 	var notice *NoticeEntity
 	err := s.tenantFilter.Apply(ctx, dao.Notice.Ctx(ctx), "").
@@ -118,13 +108,12 @@ func (s *serviceImpl) GetById(ctx context.Context, id int64) (*ListItem, error) 
 
 	// Resolve creator username
 	if notice.CreatedBy > 0 {
-		var user *entitymodel.SysUser
-		err = s.tenantFilter.Apply(ctx, dao.SysUser.Ctx(ctx), "").
-			Fields(userColumns.Id, userColumns.Username).
-			Where(userColumns.Id, notice.CreatedBy).
-			Scan(&user)
-		if err == nil && user != nil {
-			item.CreatedByName = user.Username
+		names, err := s.resolveCreatorNameMap(ctx, []*NoticeEntity{notice})
+		if err != nil {
+			return nil, err
+		}
+		if name := names[notice.CreatedBy]; name != "" {
+			item.CreatedByName = name
 		}
 	}
 
@@ -205,7 +194,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 
 	_, err = dao.Notice.Ctx(ctx).
 		OmitNilData().
-		Where(plugincontract.TenantFilterColumn, tenantID).
+		Where(tenantcap.TenantFilterColumn, tenantID).
 		Where(noticeColumns.Id, in.Id).
 		Data(data).
 		Update()
@@ -251,7 +240,7 @@ func (s *serviceImpl) Delete(ctx context.Context, ids string) error {
 		return err
 	}
 
-	if cascadeErr := s.notifySvc.DeleteBySource(ctx, plugincontract.SourceTypeNotice, idList); cascadeErr != nil {
+	if cascadeErr := s.notifySvc.DeleteBySource(ctx, s.capabilityContext(ctx, "notice.delete"), notifycap.SourceTypeNotice, idList); cascadeErr != nil {
 		logger.Errorf(ctx, "cascade delete notify deliveries failed for notice ids %s: %v", ids, cascadeErr)
 	}
 	return nil
@@ -270,4 +259,147 @@ func normalizeNoticeDeleteIDs(ids string) []string {
 		result = append(result, normalizedID)
 	}
 	return result
+}
+
+// searchCreatorUserIDs resolves a creator keyword through the host user domain
+// capability before filtering plugin-owned notice rows by creator ID.
+func (s *serviceImpl) searchCreatorUserIDs(ctx context.Context, keyword string) ([]int64, error) {
+	if s.userSvc == nil {
+		return nil, gerror.New("linapro-content-notice requires host user capability")
+	}
+	result, err := s.userSvc.SearchUsers(ctx, s.capabilityContext(ctx, noticeCreatorCapabilityResource), usercap.SearchInput{
+		Keyword: strings.TrimSpace(keyword),
+		Page: capmodel.PageRequest{
+			PageNum:  1,
+			PageSize: noticeCreatorSearchLimit,
+			Limit:    noticeCreatorSearchLimit,
+		},
+	})
+	if err != nil || result == nil {
+		return nil, err
+	}
+	return userProjectionStorageIDs(result.Items), nil
+}
+
+// resolveCreatorNameMap resolves current-page creator display names through one
+// user-domain batch call and leaves invisible or missing users blank.
+func (s *serviceImpl) resolveCreatorNameMap(ctx context.Context, notices []*NoticeEntity) (map[int64]string, error) {
+	names := make(map[int64]string)
+	userIDs := creatorDomainIDs(notices)
+	if len(userIDs) == 0 {
+		return names, nil
+	}
+	if s.userSvc == nil {
+		return nil, gerror.New("linapro-content-notice requires host user capability")
+	}
+	result, err := s.userSvc.BatchGetUsers(ctx, s.capabilityContext(ctx, noticeCreatorCapabilityResource), userIDs)
+	if err != nil || result == nil {
+		return names, err
+	}
+	for id, projection := range result.Items {
+		storageID, ok := userDomainIDStorageID(id)
+		if !ok {
+			continue
+		}
+		names[storageID] = userProjectionDisplayName(projection)
+	}
+	return names, nil
+}
+
+// capabilityContext builds the audited domain-call context used by host user
+// capabilities without exposing host-private request or storage objects.
+func (s *serviceImpl) capabilityContext(ctx context.Context, resource string) capmodel.CapabilityContext {
+	var current bizctxcap.CurrentContext
+	if s.bizCtxSvc != nil {
+		current = s.bizCtxSvc.Current(ctx)
+	}
+	tenantCtx := tenantcap.TenantFilterContext{TenantID: current.TenantID}
+	if s.tenantFilter != nil {
+		tenantCtx = s.tenantFilter.Context(ctx)
+	}
+	actorUserID := tenantCtx.ActingUserID
+	if actorUserID == 0 {
+		actorUserID = current.ActingUserID
+	}
+	if actorUserID == 0 {
+		actorUserID = tenantCtx.UserID
+	}
+	if actorUserID == 0 {
+		actorUserID = current.UserID
+	}
+	tenantID := tenantCtx.TenantID
+	if tenantID == 0 {
+		tenantID = current.TenantID
+	}
+	return capmodel.CapabilityContext{
+		PluginID: pluginID,
+		Actor: capmodel.CapabilityActor{
+			Type:   capmodel.ActorTypeUser,
+			UserID: int64(actorUserID),
+			Name:   current.Username,
+		},
+		TenantID:    capmodel.DomainID(strconv.Itoa(tenantID)),
+		Source:      capmodel.CapabilitySourceHTTP,
+		Resource:    resource,
+		RequestedAt: time.Now(),
+	}
+}
+
+// creatorDomainIDs converts plugin-owned notice creator storage values to
+// user-domain IDs for host capability calls while de-duplicating the current page.
+func creatorDomainIDs(notices []*NoticeEntity) []usercap.UserID {
+	ids := make([]usercap.UserID, 0, len(notices))
+	seen := make(map[int64]struct{}, len(notices))
+	for _, notice := range notices {
+		if notice == nil || notice.CreatedBy <= 0 {
+			continue
+		}
+		if _, ok := seen[notice.CreatedBy]; ok {
+			continue
+		}
+		seen[notice.CreatedBy] = struct{}{}
+		ids = append(ids, usercap.UserID(strconv.FormatInt(notice.CreatedBy, 10)))
+	}
+	return ids
+}
+
+// userProjectionStorageIDs converts visible user projections back to plugin
+// notice creator IDs for database-side notice filtering.
+func userProjectionStorageIDs(users []*usercap.UserProjection) []int64 {
+	ids := make([]int64, 0, len(users))
+	for _, user := range users {
+		if user == nil {
+			continue
+		}
+		id, ok := userDomainIDStorageID(user.ID)
+		if ok {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
+// userDomainIDStorageID parses the current host user-domain ID encoding used by
+// existing plugin-owned notice creator columns.
+func userDomainIDStorageID(id usercap.UserID) (int64, bool) {
+	storageID, err := strconv.ParseInt(strings.TrimSpace(string(id)), 10, 64)
+	return storageID, err == nil && storageID > 0
+}
+
+// userProjectionDisplayName keeps the legacy username field stable while still
+// tolerating richer user-domain projections.
+func userProjectionDisplayName(user *usercap.UserProjection) string {
+	if user == nil {
+		return ""
+	}
+	if user.Username != "" {
+		return user.Username
+	}
+	if user.Nickname != "" {
+		return user.Nickname
+	}
+	if user.Label != "" {
+		return user.Label
+	}
+	return string(user.ID)
 }

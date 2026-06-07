@@ -17,7 +17,7 @@ type HostCallDemoRes struct {
 	Runtime    *HostCallDemoRuntimeRes  `json:"runtime" dc:"Summary of basic information returned by the runtime hosting service" eg:"{\"now\":1776132000000,\"uuid\":\"0d63c6a3-ec9d-4e39-a14f-d9b165a21ef9\",\"node\":\"node-1\"}"`
 	Storage    *HostCallDemoStorageRes  `json:"storage" dc:"storage hosting service executive summary" eg:"{\"pathPrefix\":\"host-call-demo/\",\"objectPath\":\"host-call-demo/demo.json\",\"stored\":true,\"listedCount\":1,\"deleted\":true}"`
 	Network    *HostCallDemoNetworkRes  `json:"network" dc:"network hosting service executive summary" eg:"{\"url\":\"https://example.com\",\"skipped\":false,\"statusCode\":200,\"contentType\":\"text/html\"}"`
-	Data       *HostCallDemoDataRes     `json:"data" dc:"data host service executive summary" eg:"{\"table\":\"sys_plugin_node_state\",\"recordKey\":\"101\",\"listTotal\":1,\"countTotal\":1,\"updated\":true,\"deleted\":true}"`
+	Data       *HostCallDemoDataRes     `json:"data" dc:"data host service executive summary" eg:"{\"table\":\"plugin_linapro_demo_dynamic_record\",\"recordKey\":\"host-call-demo-0d63c6a3-ec9d-4e39-a14f-d9b165a21ef9\",\"listTotal\":1,\"countTotal\":1,\"updated\":true,\"deleted\":true}"`
 	Config     *HostCallDemoConfigRes   `json:"config" dc:"Plugin config and whitelisted public host config read summary" eg:"{\"plugin\":{\"greeting\":\"Hello from dynamic plugin\",\"greetingFound\":true,\"featureEnabled\":true,\"featureEnabledFound\":true},\"hostConfig\":{\"workspaceBasePath\":\"/opt/linapro\",\"workspaceBasePathFound\":true,\"i18nDefault\":\"zh-CN\",\"i18nDefaultFound\":true,\"i18nEnabled\":true,\"i18nEnabledFound\":true}}"`
 	Manifest   *HostCallDemoManifestRes `json:"manifest" dc:"Packaged manifest resource read summary for explicitly authorized manifest.get paths" eg:"{\"profilePath\":\"config/profile.yaml\",\"profileFound\":true,\"profileName\":\"demo-dynamic-profile\",\"profileTier\":\"sample\",\"profileOwner\":\"linapro\",\"configPath\":\"config/config.yaml\",\"configFound\":true,\"configBodyPreview\":\"demo:\\n  greeting: Hello from dynamic plugin\"}"`
 	Org        *HostCallDemoOrgRes      `json:"org" dc:"Organization capability host service read summary" eg:"{\"available\":true,\"capabilityId\":\"framework.org.v1\",\"activeProvider\":\"linapro-org-core\",\"assignmentCount\":1,\"currentUserDeptCount\":1,\"currentUserPostCount\":2}"`
@@ -53,8 +53,8 @@ type HostCallDemoNetworkRes struct {
 
 // HostCallDemoDataRes describes data service results.
 type HostCallDemoDataRes struct {
-	Table      string `json:"table" dc:"The host confirmation authorization data table name used this time" eg:"sys_plugin_node_state"`
-	RecordKey  string `json:"recordKey" dc:"The record primary key value returned by the host" eg:"101"`
+	Table      string `json:"table" dc:"The plugin-owned authorized data table name used this time" eg:"plugin_linapro_demo_dynamic_record"`
+	RecordKey  string `json:"recordKey" dc:"The record primary key value returned by the host" eg:"host-call-demo-0d63c6a3-ec9d-4e39-a14f-d9b165a21ef9"`
 	ListTotal  int    `json:"listTotal" dc:"Total number of records retrieved by paging according to filter conditions" eg:"1"`
 	CountTotal int    `json:"countTotal" dc:"The total number geted by executing count query based on the same filter conditions" eg:"1"`
 	Updated    bool   `json:"updated" dc:"Whether the update is successfully completed and the updated record is read back" eg:"true"`

@@ -6,6 +6,8 @@ import (
 	"context"
 	"testing"
 
+	"lina-core/pkg/plugin/capability/capmodel"
+	"lina-core/pkg/plugin/capability/dictcap"
 	"lina-plugin-linapro-monitor-operlog/backend/internal/model/operlogtype"
 )
 
@@ -30,6 +32,37 @@ func (s fakeI18nService) Translate(_ context.Context, key string, fallback strin
 // FindMessageKeys is unused by these tests and returns no matches.
 func (s fakeI18nService) FindMessageKeys(_ context.Context, _ string, _ string) []string {
 	return []string{}
+}
+
+// fakeDictService returns deterministic dictionary-domain labels.
+type fakeDictService struct {
+	labels       map[dictcap.Value]string
+	lastPluginID string
+	lastType     dictcap.Type
+}
+
+// ResolveLabels returns configured labels using dictcap batch semantics.
+func (s *fakeDictService) ResolveLabels(_ context.Context, capCtx capmodel.CapabilityContext, input dictcap.ResolveInput) (*capmodel.BatchResult[*dictcap.LabelProjection, dictcap.Value], error) {
+	s.lastPluginID = capCtx.PluginID
+	s.lastType = input.Type
+	result := &capmodel.BatchResult[*dictcap.LabelProjection, dictcap.Value]{
+		Items:      map[dictcap.Value]*dictcap.LabelProjection{},
+		MissingIDs: []dictcap.Value{},
+	}
+	for _, value := range input.Values {
+		label, ok := s.labels[value]
+		if !ok {
+			result.MissingIDs = append(result.MissingIDs, value)
+			continue
+		}
+		result.Items[value] = &dictcap.LabelProjection{
+			Type:     input.Type,
+			Value:    value,
+			LabelKey: "dict." + string(input.Type) + "." + string(value) + ".label",
+			Label:    label,
+		}
+	}
+	return result, nil
 }
 
 // TestExportHeadersUseRuntimeI18N verifies operation-log export headers resolve
@@ -80,5 +113,28 @@ func TestExportTypeAndStatusTextUseRuntimeI18N(t *testing.T) {
 	}
 	if actual := service.exportStatusText(context.Background(), OperStatusFail, nil); actual != "失败" {
 		t.Fatalf("expected failure status label, got %q", actual)
+	}
+}
+
+// TestExportTypeAndStatusTextUseDictCapability verifies backend export labels
+// are resolved through dictcap instead of a plugin-generated host dictionary DAO.
+func TestExportTypeAndStatusTextUseDictCapability(t *testing.T) {
+	dict := &fakeDictService{labels: map[dictcap.Value]string{
+		dictcap.Value(operlogtype.OperTypeExport.String()): "Domain Export",
+		dictcap.Value("0"): "Domain Success",
+	}}
+	service := &serviceImpl{dictSvc: dict}
+
+	operTypeMap := service.buildStringDictLabelMap(context.Background(), DictTypeOperType)
+	statusMap := service.buildIntDictLabelMap(context.Background(), DictTypeOperStatus)
+
+	if actual := service.exportOperTypeText(context.Background(), operlogtype.OperTypeExport.String(), operTypeMap); actual != "Domain Export" {
+		t.Fatalf("expected dictcap operation type label, got %q", actual)
+	}
+	if actual := service.exportStatusText(context.Background(), OperStatusSuccess, statusMap); actual != "Domain Success" {
+		t.Fatalf("expected dictcap status label, got %q", actual)
+	}
+	if dict.lastPluginID != pluginID || dict.lastType != dictcap.Type(DictTypeOperStatus) {
+		t.Fatalf("expected dictcap context plugin=%s type=%s, got plugin=%s type=%s", pluginID, DictTypeOperStatus, dict.lastPluginID, dict.lastType)
 	}
 }

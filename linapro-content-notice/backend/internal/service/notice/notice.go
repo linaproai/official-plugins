@@ -7,7 +7,10 @@ package notice
 import (
 	"context"
 
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/notifycap"
+	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/usercap"
 )
 
 // Dict types used in notice
@@ -56,21 +59,24 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	bizCtxSvc    plugincontract.BizCtxService       // Business context bridge
-	notifySvc    plugincontract.NotifyService       // Unified notify bridge
-	tenantFilter plugincontract.TenantFilterService // Tenant query filter bridge
+	bizCtxSvc    bizctxcap.Service                  // Business context bridge
+	notifySvc    notifycap.AdminService             // Notification management capability
+	tenantFilter tenantcap.PluginTableFilterService // Tenant query filter bridge
+	userSvc      usercap.Service                    // User domain projection capability
 }
 
 // New creates and returns a new Service instance.
 func New(
-	bizCtxSvc plugincontract.BizCtxService,
-	notifySvc plugincontract.NotifyService,
-	tenantFilter plugincontract.TenantFilterService,
+	bizCtxSvc bizctxcap.Service,
+	notifySvc notifycap.AdminService,
+	tenantFilter tenantcap.PluginTableFilterService,
+	userSvc usercap.Service,
 ) Service {
 	return &serviceImpl{
 		bizCtxSvc:    bizCtxSvc,
 		notifySvc:    notifySvc,
 		tenantFilter: tenantFilter,
+		userSvc:      userSvc,
 	}
 }
 

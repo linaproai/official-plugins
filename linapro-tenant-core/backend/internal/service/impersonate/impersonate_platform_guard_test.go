@@ -8,14 +8,14 @@ import (
 	"testing"
 
 	"lina-core/pkg/bizerr"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/bizctxcap"
 )
 
 // TestStartRejectsNonPlatformBypassBeforeRoleLookup verifies the impersonation
 // entry point fails closed for tenant or delegated contexts even if later role
 // checks might find platform-like grants.
 func TestStartRejectsNonPlatformBypassBeforeRoleLookup(t *testing.T) {
-	svc := &serviceImpl{bizCtxSvc: impersonateGuardBizCtx{current: plugincontract.CurrentContext{
+	svc := &serviceImpl{bizCtxSvc: impersonateGuardBizCtx{current: bizctxcap.CurrentContext{
 		UserID:         1,
 		TenantID:       1001,
 		PlatformBypass: false,
@@ -29,10 +29,10 @@ func TestStartRejectsNonPlatformBypassBeforeRoleLookup(t *testing.T) {
 
 // impersonateGuardBizCtx returns a fixed plugin-visible business context.
 type impersonateGuardBizCtx struct {
-	current plugincontract.CurrentContext
+	current bizctxcap.CurrentContext
 }
 
 // Current returns the fixed context configured by the test.
-func (s impersonateGuardBizCtx) Current(context.Context) plugincontract.CurrentContext {
+func (s impersonateGuardBizCtx) Current(context.Context) bizctxcap.CurrentContext {
 	return s.current
 }

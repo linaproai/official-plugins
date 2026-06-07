@@ -7,16 +7,23 @@ package membership
 
 import (
 	"context"
+	"strconv"
+	"time"
 
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/util/gconv"
 
 	"lina-core/pkg/bizerr"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/usercap"
 	"lina-plugin-linapro-tenant-core/backend/internal/dao"
 	"lina-plugin-linapro-tenant-core/backend/internal/model/do"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/shared"
 )
+
+const membershipCapabilityPluginID = "linapro-tenant-core"
 
 // List queries tenant members by page.
 func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, error) {
@@ -28,10 +35,13 @@ func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, erro
 	}
 	list := make([]*Entity, 0)
 	if err = membershipListModel(ctx, in).
-		Fields("m.*, u.username, u.nickname").
+		Fields("m.*").
 		Page(in.PageNum, in.PageSize).
 		OrderDesc("m.id").
 		Scan(&list); err != nil {
+		return nil, err
+	}
+	if err = s.hydrateUserLabels(ctx, list); err != nil {
 		return nil, err
 	}
 	return &ListOutput{List: list, Total: total}, nil
@@ -326,26 +336,39 @@ func (s *serviceImpl) EnsureUsersInTenant(
 
 // ValidateStartupConsistency returns user-membership startup consistency failures.
 func (s *serviceImpl) ValidateStartupConsistency(ctx context.Context) ([]string, error) {
-	rows := make([]struct {
-		Id       int    `json:"id" orm:"id"`
-		Username string `json:"username" orm:"username"`
-	}, 0)
-	err := shared.Model(ctx, shared.TableSysUser).
-		As("u").
-		Fields("u.id, u.username").
-		InnerJoin(
-			shared.TableMembership+" m",
-			"m.user_id = u.id AND m.deleted_at IS NULL AND m.status = 1",
-		).
-		Where("u.tenant_id", shared.PlatformTenantID).
-		Limit(10).
-		Scan(&rows)
+	if s == nil || s.users == nil {
+		return nil, bizerr.NewCode(capmodel.CodeCapabilityUnavailable, bizerr.P("capability", "user"))
+	}
+	memberRows := make([]*Entity, 0)
+	if err := shared.Model(ctx, shared.TableMembership).
+		Fields("user_id").
+		Where("status", shared.MembershipStatusEnabled).
+		Limit(200).
+		Scan(&memberRows); err != nil {
+		return nil, err
+	}
+	userIDs := make([]usercap.UserID, 0, len(memberRows))
+	for _, row := range memberRows {
+		if row != nil && row.UserID > 0 {
+			userIDs = append(userIDs, usercap.UserID(strconv.FormatInt(row.UserID, 10)))
+		}
+	}
+	out, err := s.users.BatchGetUsers(ctx, s.capabilityContext(ctx, "membership.startup_consistency"), userIDs)
 	if err != nil {
 		return nil, err
 	}
-	details := make([]string, 0, len(rows))
-	for _, row := range rows {
-		details = append(details, "platform user "+row.Username+"("+gconv.String(row.Id)+") must not have active tenant membership")
+	details := make([]string, 0)
+	if out != nil {
+		for _, row := range out.Items {
+			if row == nil || row.TenantID != capmodel.DomainID(strconv.FormatInt(shared.PlatformTenantID, 10)) {
+				continue
+			}
+			id, _ := strconv.Atoi(string(row.ID))
+			details = append(details, "platform user "+row.Username+"("+gconv.String(id)+") must not have active tenant membership")
+			if len(details) >= 10 {
+				break
+			}
+		}
 	}
 	return details, nil
 }
@@ -368,11 +391,22 @@ func (s *serviceImpl) ensureUserCanJoinTenant(
 	userID int64,
 	replacementTenantIDs []tenantcap.TenantID,
 ) error {
-	var user *sysUserTenantRow
-	if err := shared.Model(ctx, shared.TableSysUser).Fields("id", "tenant_id").Where("id", userID).Scan(&user); err != nil {
+	if s == nil || s.users == nil {
+		return bizerr.NewCode(capmodel.CodeCapabilityUnavailable, bizerr.P("capability", "user"))
+	}
+	userDomainID := usercap.UserID(strconv.FormatInt(userID, 10))
+	out, err := s.users.BatchGetUsers(ctx, s.capabilityContext(ctx, "membership.user_visibility"), []usercap.UserID{userDomainID})
+	if err != nil {
 		return err
 	}
-	if user != nil && user.TenantID == shared.PlatformTenantID && len(replacementTenantIDs) > 0 {
+	user := (*usercap.UserProjection)(nil)
+	if out != nil {
+		user = out.Items[userDomainID]
+	}
+	if user == nil {
+		return bizerr.NewCode(tenantcap.CodeTenantForbidden, bizerr.P("tenantId", int(firstTenantIDOrPlatform(replacementTenantIDs))))
+	}
+	if user.TenantID == capmodel.DomainID(strconv.FormatInt(shared.PlatformTenantID, 10)) && len(replacementTenantIDs) > 0 {
 		return bizerr.NewCode(CodePlatformMembershipForbidden)
 	}
 	if membershipCardinalityMode() != shared.SingleCardinality {
@@ -443,8 +477,7 @@ func membershipCardinalityMode() string {
 // membershipListModel builds the shared member list query without a projection
 // so Count can generate valid SQL.
 func membershipListModel(ctx context.Context, in ListInput) *gdb.Model {
-	model := shared.Model(ctx, shared.TableMembership).As("m").
-		LeftJoin(shared.TableSysUser+" u", "u.id = m.user_id")
+	model := shared.Model(ctx, shared.TableMembership).As("m")
 	if in.TenantID > 0 {
 		model = model.Where("m.tenant_id", in.TenantID)
 	}
@@ -455,6 +488,83 @@ func membershipListModel(ctx context.Context, in ListInput) *gdb.Model {
 		model = model.Where("m.status", in.Status)
 	}
 	return model
+}
+
+// hydrateUserLabels resolves current-page user names through usercap in one
+// batch and leaves labels empty for missing or invisible users.
+func (s *serviceImpl) hydrateUserLabels(ctx context.Context, list []*Entity) error {
+	if len(list) == 0 {
+		return nil
+	}
+	if s == nil || s.users == nil {
+		return bizerr.NewCode(capmodel.CodeCapabilityUnavailable, bizerr.P("capability", "user"))
+	}
+	ids := make([]usercap.UserID, 0, len(list))
+	seen := make(map[usercap.UserID]struct{}, len(list))
+	for _, item := range list {
+		if item == nil || item.UserID <= 0 {
+			continue
+		}
+		id := usercap.UserID(strconv.FormatInt(item.UserID, 10))
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	out, err := s.users.BatchGetUsers(ctx, s.capabilityContext(ctx, "membership.list"), ids)
+	if err != nil {
+		return err
+	}
+	if out == nil {
+		return nil
+	}
+	for _, item := range list {
+		if item == nil {
+			continue
+		}
+		projection := out.Items[usercap.UserID(strconv.FormatInt(item.UserID, 10))]
+		if projection == nil {
+			continue
+		}
+		item.Username = projection.Username
+		item.Nickname = projection.Nickname
+	}
+	return nil
+}
+
+// capabilityContext creates plugin-visible metadata for tenant membership
+// calls into host-owned domain capabilities.
+func (s *serviceImpl) capabilityContext(ctx context.Context, resource string) capmodel.CapabilityContext {
+	current := bizctxcap.CurrentContext{}
+	if s != nil && s.bizCtxSvc != nil {
+		current = s.bizCtxSvc.Current(ctx)
+	}
+	actorID := current.ActingUserID
+	if actorID == 0 {
+		actorID = current.UserID
+	}
+	actor := capmodel.CapabilityActor{
+		Type:   capmodel.ActorTypeUser,
+		UserID: int64(actorID),
+		Name:   current.Username,
+	}
+	if actorID == 0 {
+		actor = capmodel.CapabilityActor{
+			Type:         capmodel.ActorTypeSystem,
+			Name:         membershipCapabilityPluginID,
+			SystemReason: "tenant membership user projection",
+		}
+	}
+	return capmodel.CapabilityContext{
+		PluginID:    membershipCapabilityPluginID,
+		Actor:       actor,
+		TenantID:    capmodel.DomainID(strconv.Itoa(current.TenantID)),
+		Source:      capmodel.CapabilitySourceHTTP,
+		SystemCall:  actor.Type == capmodel.ActorTypeSystem,
+		Resource:    resource,
+		RequestedAt: time.Now(),
+	}
 }
 
 // activeMembershipUserModel returns the subquery for active users in one tenant.
@@ -482,7 +592,7 @@ func normalizeTenantIDs(tenantIDs []tenantcap.TenantID) []tenantcap.TenantID {
 	return normalized
 }
 
-// firstTenantIDOrPlatform returns the primary tenant for host sys_user writes.
+// firstTenantIDOrPlatform returns the primary tenant for user assignment plans.
 func firstTenantIDOrPlatform(tenantIDs []tenantcap.TenantID) tenantcap.TenantID {
 	if len(tenantIDs) == 0 {
 		return tenantcap.PLATFORM

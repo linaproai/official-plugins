@@ -6,6 +6,8 @@ import (
 	"context"
 	"testing"
 
+	"lina-core/pkg/plugin/capability/capmodel"
+	"lina-core/pkg/plugin/capability/dictcap"
 	"lina-core/pkg/plugin/pluginhost"
 )
 
@@ -30,6 +32,37 @@ func (s fakeI18nService) Translate(_ context.Context, key string, fallback strin
 // FindMessageKeys is unused by these tests and returns no matches.
 func (s fakeI18nService) FindMessageKeys(_ context.Context, _ string, _ string) []string {
 	return []string{}
+}
+
+// fakeDictService returns deterministic dictionary-domain labels.
+type fakeDictService struct {
+	labels       map[dictcap.Value]string
+	lastPluginID string
+	lastType     dictcap.Type
+}
+
+// ResolveLabels returns configured labels using dictcap batch semantics.
+func (s *fakeDictService) ResolveLabels(_ context.Context, capCtx capmodel.CapabilityContext, input dictcap.ResolveInput) (*capmodel.BatchResult[*dictcap.LabelProjection, dictcap.Value], error) {
+	s.lastPluginID = capCtx.PluginID
+	s.lastType = input.Type
+	result := &capmodel.BatchResult[*dictcap.LabelProjection, dictcap.Value]{
+		Items:      map[dictcap.Value]*dictcap.LabelProjection{},
+		MissingIDs: []dictcap.Value{},
+	}
+	for _, value := range input.Values {
+		label, ok := s.labels[value]
+		if !ok {
+			result.MissingIDs = append(result.MissingIDs, value)
+			continue
+		}
+		result.Items[value] = &dictcap.LabelProjection{
+			Type:     input.Type,
+			Value:    value,
+			LabelKey: "dict." + string(input.Type) + "." + string(value) + ".label",
+			Label:    label,
+		}
+	}
+	return result, nil
 }
 
 // TestTranslateLoginLogMessageResolvesStableReason verifies that login-log
@@ -93,5 +126,23 @@ func TestExportStatusTextUseRuntimeI18N(t *testing.T) {
 	}
 	if actual := service.exportStatusText(context.Background(), LoginStatusFail, nil); actual != "失败" {
 		t.Fatalf("expected failed label, got %q", actual)
+	}
+}
+
+// TestExportStatusTextUseDictCapability verifies backend export status labels
+// are resolved through dictcap instead of a plugin-generated host dictionary DAO.
+func TestExportStatusTextUseDictCapability(t *testing.T) {
+	dict := &fakeDictService{labels: map[dictcap.Value]string{
+		dictcap.Value("0"): "Domain Success",
+	}}
+	service := &serviceImpl{dictSvc: dict}
+
+	statusMap := service.buildIntDictLabelMap(context.Background(), DictTypeLoginStatus)
+
+	if actual := service.exportStatusText(context.Background(), LoginStatusSuccess, statusMap); actual != "Domain Success" {
+		t.Fatalf("expected dictcap login status label, got %q", actual)
+	}
+	if dict.lastPluginID != pluginID || dict.lastType != dictcap.Type(DictTypeLoginStatus) {
+		t.Fatalf("expected dictcap context plugin=%s type=%s, got plugin=%s type=%s", pluginID, DictTypeLoginStatus, dict.lastPluginID, dict.lastType)
 	}
 }

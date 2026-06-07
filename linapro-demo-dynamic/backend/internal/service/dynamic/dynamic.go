@@ -5,7 +5,7 @@ package dynamicservice
 import (
 	"context"
 
-	"lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/orgcap"
 	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/pluginbridge/protocol"
@@ -125,7 +125,7 @@ type hostConfigHostService interface {
 // sample service.
 type orgHostService interface {
 	// Status returns the current organization capability activation state.
-	Status(ctx context.Context) (contract.CapabilityStatus, error)
+	Status(ctx context.Context) (capmodel.CapabilityStatus, error)
 	// Available reports whether the organization capability has an active provider.
 	Available(ctx context.Context) (bool, error)
 	// ListUserDeptAssignments returns user-to-department projections for the provided users.
@@ -140,7 +140,7 @@ type orgHostService interface {
 // service.
 type tenantHostService interface {
 	// Status returns the current tenant capability activation state.
-	Status(ctx context.Context) (contract.CapabilityStatus, error)
+	Status(ctx context.Context) (capmodel.CapabilityStatus, error)
 	// Available reports whether the tenant capability has an active provider.
 	Available(ctx context.Context) (bool, error)
 	// Current returns the current request tenant.
@@ -155,30 +155,30 @@ type tenantHostService interface {
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	runtimeSvc    runtimeHostService
-	storageSvc    storageHostService
-	networkSvc    networkHostService
-	cronSvc       cronHostService
-	configSvc     configHostService
-	manifestSvc   manifestHostService
-	hostConfigSvc hostConfigHostService
-	orgSvc        orgHostService
-	tenantSvc     tenantHostService
-	dataSvc       dataService
+	runtimeSvc     runtimeHostService
+	storageSvc     storageHostService
+	networkSvc     networkHostService
+	cronSvc        cronHostService
+	configSvc      configHostService
+	manifestSvc    manifestHostService
+	hostConfigSvc  hostConfigHostService
+	orgSvc         orgHostService
+	tenantSvc      tenantHostService
+	recordStoreSvc recordStoreService
 }
 
 // New creates and returns a new dynamic plugin backend service.
 func New() Service {
 	return &serviceImpl{
-		runtimeSvc:    newRuntimeHostService(),
-		storageSvc:    newStorageHostService(),
-		networkSvc:    newNetworkHostService(),
-		cronSvc:       newCronHostService(),
-		configSvc:     newConfigHostService(),
-		manifestSvc:   newManifestHostService(),
-		hostConfigSvc: newHostConfigHostService(),
-		orgSvc:        newOrgHostService(),
-		tenantSvc:     newTenantHostService(),
-		dataSvc:       newDataService(),
+		runtimeSvc:     newRuntimeHostService(),
+		storageSvc:     newStorageHostService(),
+		networkSvc:     newNetworkHostService(),
+		cronSvc:        newCronHostService(),
+		configSvc:      newConfigHostService(),
+		manifestSvc:    newManifestHostService(),
+		hostConfigSvc:  newHostConfigHostService(),
+		orgSvc:         newOrgHostService(),
+		tenantSvc:      newTenantHostService(),
+		recordStoreSvc: newRecordStoreService(),
 	}
 }

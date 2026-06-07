@@ -6,8 +6,9 @@ package notice
 
 import (
 	"context"
+	"strconv"
 
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/notifycap"
 )
 
 // Plugin-local notify category codes. The host notify service treats category
@@ -16,9 +17,9 @@ import (
 // `notify.category.{code}.label` / `.color` in its own manifest/i18n bundles.
 const (
 	// noticeCategoryCodeNotice is the opaque category code for general notice messages dispatched by this plugin.
-	noticeCategoryCodeNotice plugincontract.CategoryCode = "notice"
+	noticeCategoryCodeNotice notifycap.CategoryCode = "notice"
 	// noticeCategoryCodeAnnouncement is the opaque category code for announcement messages dispatched by this plugin.
-	noticeCategoryCodeAnnouncement plugincontract.CategoryCode = "announcement"
+	noticeCategoryCodeAnnouncement notifycap.CategoryCode = "announcement"
 )
 
 // dispatchPublishedNotice delivers one published notice into the unified inbox
@@ -31,11 +32,12 @@ func (s *serviceImpl) dispatchPublishedNotice(
 	noticeType int,
 	senderUserID int64,
 ) error {
-	_, err := s.notifySvc.SendNoticePublication(ctx, plugincontract.NoticePublishInput{
-		NoticeID:     noticeID,
+	_, err := s.notifySvc.Send(ctx, s.capabilityContext(ctx, "notice.publish"), notifycap.SendInput{
+		SourceType:   notifycap.SourceTypeNotice,
+		SourceID:     strconv.FormatInt(noticeID, 10),
 		Title:        title,
 		Content:      content,
-		CategoryCode: s.noticeTypeToCategoryCode(noticeType),
+		Category:     s.noticeTypeToCategoryCode(noticeType),
 		SenderUserID: senderUserID,
 	})
 	return err
@@ -43,7 +45,7 @@ func (s *serviceImpl) dispatchPublishedNotice(
 
 // noticeTypeToCategoryCode maps plugin-owned notice types to plugin-owned
 // notify inbox category codes.
-func (s *serviceImpl) noticeTypeToCategoryCode(noticeType int) plugincontract.CategoryCode {
+func (s *serviceImpl) noticeTypeToCategoryCode(noticeType int) notifycap.CategoryCode {
 	switch noticeType {
 	case NoticeTypeAnnouncement:
 		return noticeCategoryCodeAnnouncement

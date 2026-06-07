@@ -13,8 +13,8 @@ import (
 	"github.com/gogf/gf/v2/os/grpool"
 
 	"lina-core/pkg/logger"
+	"lina-core/pkg/plugin/capability/apidoccap"
 	"lina-core/pkg/plugin/pluginhost"
-	hostapidoc "lina-core/pkg/plugin/capability/contract"
 	"lina-plugin-linapro-monitor-operlog/backend/internal/model/operlogtype"
 	operlogsvc "lina-plugin-linapro-monitor-operlog/backend/internal/service/operlog"
 )
@@ -151,7 +151,7 @@ func (s *serviceImpl) resolveAuditRouteMetadata(request *ghttp.Request) auditRou
 	if strings.TrimSpace(metadata.routePath) != "" {
 		// Dynamic routes use their final public path and method as the stable
 		// apidoc key source because route method + path is already unique.
-		metadata.routeDocKey = hostapidoc.BuildDynamicOperationKey(metadata.routePath, metadata.routeMethod)
+		metadata.routeDocKey = apidoccap.BuildDynamicOperationKey(metadata.routePath, metadata.routeMethod)
 	}
 	if dynamicMetadata.ResponseBody != "" {
 		// Dynamic route responses are written by the bridge dispatcher as raw
@@ -237,11 +237,11 @@ func buildStaticRouteAnchor(request *ghttp.Request, handler *ghttp.HandlerItemPa
 
 	routeMethod = strings.ToUpper(strings.TrimSpace(routeMethod))
 	routePath = normalizeRoutePath(routePath)
-	routeDocKey := hostapidoc.BuildOperationKeyFromHandler(handler)
+	routeDocKey := apidoccap.BuildOperationKeyFromHandler(handler)
 	if routeDocKey == "" {
 		// Some dynamic or projected routes do not have a handler-derived apidoc
 		// key, so fall back to the same path/method key shape used by apidoc.
-		routeDocKey = hostapidoc.BuildOperationKeyFromPath(routePath, routeMethod)
+		routeDocKey = apidoccap.BuildOperationKeyFromPath(routePath, routeMethod)
 	}
 	return routeOwner, routeMethod, routePath, routeDocKey
 }

@@ -6,6 +6,11 @@
       "path": "apps/lina-plugins/linapro-tenant-core/backend/plugin.go",
       "maxCalls": 11,
       "reason": "source-plugin registration boundary; constructs plugin-owned controllers/services from registrar HostServices."
+    },
+    {
+      "path": "apps/lina-plugins/linapro-tenant-core/backend/internal/provider/tenantadapter/tenantadapter.go",
+      "maxCalls": 5,
+      "reason": "source-plugin provider boundary; composes plugin-owned tenant capability sub-services from host-published services."
     }
   ]
 }

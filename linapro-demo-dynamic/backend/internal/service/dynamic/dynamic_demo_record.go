@@ -59,7 +59,7 @@ func IsDemoRecordNotFound(err error) bool {
 func (s *serviceImpl) ListDemoRecordsPayload(input *DemoRecordListInput) (*demoRecordListPayload, error) {
 	pageNum, pageSize, keyword := normalizeDemoRecordListInput(input)
 
-	query := s.dataSvc.Table(demoRecordTable).
+	query := s.recordStoreSvc.Table(demoRecordTable).
 		Fields("id", "title", "content", "attachmentName", "attachmentPath", "createdAt", "updatedAt").
 		OrderDesc("updatedAt").
 		OrderDesc("id").
@@ -134,7 +134,7 @@ func (s *serviceImpl) CreateDemoRecordPayload(input *DemoRecordMutationInput) (p
 	if err != nil {
 		return nil, err
 	}
-	if _, err = s.dataSvc.Table(demoRecordTable).Insert(recordMap); err != nil {
+	if _, err = s.recordStoreSvc.Table(demoRecordTable).Insert(recordMap); err != nil {
 		return nil, err
 	}
 	record, err := s.loadDemoRecord(recordID)
@@ -196,7 +196,7 @@ func (s *serviceImpl) UpdateDemoRecordPayload(recordID string, input *DemoRecord
 	if err != nil {
 		return nil, err
 	}
-	if _, err = s.dataSvc.Table(demoRecordTable).WhereKey(validatedRecordID).Update(recordMap); err != nil {
+	if _, err = s.recordStoreSvc.Table(demoRecordTable).WhereKey(validatedRecordID).Update(recordMap); err != nil {
 		return nil, err
 	}
 	if replacedAttachmentPath != "" && replacedAttachmentPath != newAttachmentPath {
@@ -223,7 +223,7 @@ func (s *serviceImpl) DeleteDemoRecordPayload(recordID string) (*demoRecordDelet
 	if err != nil {
 		return nil, err
 	}
-	if _, err = s.dataSvc.Table(demoRecordTable).WhereKey(recordID).Delete(); err != nil {
+	if _, err = s.recordStoreSvc.Table(demoRecordTable).WhereKey(recordID).Delete(); err != nil {
 		return nil, err
 	}
 	if err = s.deleteDemoRecordAttachment(record.AttachmentPath); err != nil {
@@ -270,7 +270,7 @@ func (s *serviceImpl) BuildDemoRecordAttachmentDownload(recordID string) (*demoR
 
 // loadDemoRecord loads one sample record entity by its logical ID.
 func (s *serviceImpl) loadDemoRecord(recordID string) (*demoRecordEntity, error) {
-	recordMap, found, err := s.dataSvc.Table(demoRecordTable).
+	recordMap, found, err := s.recordStoreSvc.Table(demoRecordTable).
 		Fields("id", "title", "content", "attachmentName", "attachmentPath", "createdAt", "updatedAt").
 		WhereKey(recordID).
 		One()

@@ -1,4 +1,5 @@
-// This file verifies tenant plugin-governance service behavior.
+// This file verifies tenant plugin governance delegates host-owned plugin state
+// reads and writes to plugincap instead of touching host plugin tables.
 
 package tenantplugin
 
@@ -7,442 +8,156 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gogf/gf/v2/database/gdb"
-	"github.com/gogf/gf/v2/frame/g"
-
-	_ "lina-core/pkg/dbdriver"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
-	"lina-plugin-linapro-tenant-core/backend/internal/dao"
-	"lina-plugin-linapro-tenant-core/backend/internal/model/do"
-	"lina-plugin-linapro-tenant-core/backend/internal/service/shared"
+	"lina-core/pkg/bizerr"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/capmodel"
+	"lina-core/pkg/plugin/capability/plugincap"
 )
 
-// fakePluginLifecycleService records host lifecycle calls made by tenant plugin tests.
-type fakePluginLifecycleService struct {
-	disableErr             error
-	ensureDisablePluginID  string
-	ensureDisableTenantID  int
-	notifyDisablePluginID  string
-	notifyDisableTenantID  int
-	ensureDisableCallCount int
-	notifyDisableCallCount int
-}
-
-// EnsureTenantPluginDisableAllowed records tenant plugin disable preconditions.
-func (s *fakePluginLifecycleService) EnsureTenantPluginDisableAllowed(ctx context.Context, pluginID string, tenantID int) error {
-	s.ensureDisableCallCount++
-	s.ensureDisablePluginID = pluginID
-	s.ensureDisableTenantID = tenantID
-	return s.disableErr
-}
-
-// NotifyTenantPluginDisabled records tenant plugin disable notifications.
-func (s *fakePluginLifecycleService) NotifyTenantPluginDisabled(ctx context.Context, pluginID string, tenantID int) {
-	s.notifyDisableCallCount++
-	s.notifyDisablePluginID = pluginID
-	s.notifyDisableTenantID = tenantID
-}
-
-// EnsureTenantDeleteAllowed is unused by tenant plugin tests.
-func (s *fakePluginLifecycleService) EnsureTenantDeleteAllowed(ctx context.Context, tenantID int) error {
-	return nil
-}
-
-// NotifyTenantDeleted is unused by tenant plugin tests.
-func (s *fakePluginLifecycleService) NotifyTenantDeleted(ctx context.Context, tenantID int) {}
-
-// testBizContextService returns a stable plugin-visible business context.
-type testBizContextService struct {
-	current plugincontract.CurrentContext
-}
-
-// Current returns the configured business context snapshot.
-func (s testBizContextService) Current(context.Context) plugincontract.CurrentContext {
-	return s.current
-}
-
-// TestTenantPluginListFiltersTenantScopedPlugins verifies tenant admins only
-// see installed tenant-aware tenant-scoped plugins.
-func TestTenantPluginListFiltersTenantScopedPlugins(t *testing.T) {
-	ctx := context.Background()
-	configureTenantPluginTestDB(t, ctx)
-
-	const (
-		tenantID         = 424261
-		tenantPluginID   = "tc-tenant-plugin-list"
-		globalPluginID   = "tc-tenant-plugin-global"
-		platformPluginID = "tc-tenant-plugin-platform"
-	)
-	insertTenantPluginRegistry(t, ctx, tenantPluginID, pluginScopeNatureTenantAware, pluginInstallModeTenantScoped)
-	insertTenantPluginRegistry(t, ctx, globalPluginID, pluginScopeNatureTenantAware, pluginInstallModeGlobal)
-	insertTenantPluginRegistry(t, ctx, platformPluginID, pluginScopeNaturePlatformOnly, pluginInstallModeGlobal)
-	t.Cleanup(func() {
-		cleanupTenantPluginRows(t, ctx, tenantPluginID, globalPluginID, platformPluginID)
-	})
-
-	service := newTenantPluginTestService(tenantID)
-	if err := service.SetEnabled(ctx, tenantPluginID, true); err != nil {
-		t.Fatalf("enable tenant plugin failed: %v", err)
+// TestListUsesPlugincapProjection verifies tenant plugin list projection is
+// assembled from the host plugincap service.
+func TestListUsesPlugincapProjection(t *testing.T) {
+	plugins := &fakePlugincap{
+		list: []*plugincap.TenantProjection{
+			{
+				ID:            "demo-plugin",
+				Name:          "Demo Plugin",
+				Version:       "v1.0.0",
+				Type:          "source",
+				Description:   "Demo",
+				Installed:     true,
+				Enabled:       true,
+				ScopeNature:   "tenant_aware",
+				InstallMode:   "tenant_scoped",
+				TenantEnabled: true,
+			},
+		},
 	}
-	out, err := service.List(ctx)
+	svc := New(testBizContextService{tenantID: 1001}, nil, plugins, plugins)
+
+	out, err := svc.List(context.Background())
 	if err != nil {
 		t.Fatalf("list tenant plugins failed: %v", err)
 	}
-	var found *Entity
-	for _, item := range out.List {
-		if item.Id == globalPluginID || item.Id == platformPluginID {
-			t.Fatalf("non tenant-scoped plugin leaked into tenant list: %#v", item)
-		}
-		if item.Id == tenantPluginID {
-			found = item
-		}
+	if out.Total != 1 || len(out.List) != 1 {
+		t.Fatalf("unexpected list output: %#v", out)
 	}
-	if found == nil {
-		t.Fatalf("expected tenant-scoped plugin %s in list, got %#v", tenantPluginID, out.List)
+	item := out.List[0]
+	if item.Id != "demo-plugin" || item.Installed != 1 || item.Enabled != 1 || item.TenantEnabled != 1 {
+		t.Fatalf("unexpected plugin projection: %#v", item)
 	}
-	if found.TenantEnabled != 1 {
-		t.Fatalf("expected tenant plugin enabled projection, got %#v", found)
+	if plugins.lastListTenantID != capmodel.DomainID("1001") {
+		t.Fatalf("expected tenant context 1001, got %q", plugins.lastListTenantID)
 	}
 }
 
-// TestTenantPluginSetEnabledRequiresTenantContext verifies platform context
-// cannot mutate tenant-scoped enablement rows.
-func TestTenantPluginSetEnabledRequiresTenantContext(t *testing.T) {
-	ctx := context.Background()
-	configureTenantPluginTestDB(t, ctx)
+// TestSetEnabledRunsLifecycleBeforePlugincap verifies disable preconditions run
+// before tenant plugin state mutation.
+func TestSetEnabledRunsLifecycleBeforePlugincap(t *testing.T) {
+	vetoErr := errors.New("disable vetoed")
+	plugins := &fakePlugincap{}
+	lifecycle := &fakeLifecycle{disableErr: vetoErr}
+	svc := New(testBizContextService{tenantID: 1002}, lifecycle, plugins, plugins)
 
-	err := New(testBizContextService{}, nil).SetEnabled(ctx, "missing", true)
-	if err == nil {
-		t.Fatal("expected tenant context error")
-	}
-}
-
-// TestTenantPluginSetEnabledBumpsPluginRuntimeRevision verifies tenant
-// enablement mutations publish a shared plugin-runtime cache revision.
-func TestTenantPluginSetEnabledBumpsPluginRuntimeRevision(t *testing.T) {
-	ctx := context.Background()
-	configureTenantPluginTestDB(t, ctx)
-
-	const (
-		tenantID       = 424263
-		tenantPluginID = "tc-tenant-plugin-runtime-revision"
-	)
-	insertTenantPluginRegistry(t, ctx, tenantPluginID, pluginScopeNatureTenantAware, pluginInstallModeTenantScoped)
-	t.Cleanup(func() {
-		cleanupTenantPluginRows(t, ctx, tenantPluginID)
-	})
-
-	beforeRevision := pluginRuntimeRevisionForTest(t, ctx)
-	service := newTenantPluginTestService(tenantID)
-
-	if err := service.SetEnabled(ctx, tenantPluginID, false); err != nil {
-		t.Fatalf("disable tenant plugin failed: %v", err)
-	}
-	if err := service.SetEnabled(ctx, tenantPluginID, false); err != nil {
-		t.Fatalf("repeat disable tenant plugin failed: %v", err)
-	}
-	if enabled := tenantPluginEnabledForTest(t, ctx, tenantPluginID, tenantID); enabled {
-		t.Fatalf("expected plugin %s disabled for tenant %d", tenantPluginID, tenantID)
-	}
-
-	if err := service.SetEnabled(ctx, tenantPluginID, true); err != nil {
-		t.Fatalf("enable tenant plugin failed: %v", err)
-	}
-	if err := service.SetEnabled(ctx, tenantPluginID, true); err != nil {
-		t.Fatalf("repeat enable tenant plugin failed: %v", err)
-	}
-	if enabled := tenantPluginEnabledForTest(t, ctx, tenantPluginID, tenantID); !enabled {
-		t.Fatalf("expected plugin %s enabled for tenant %d", tenantPluginID, tenantID)
-	}
-
-	afterRevision := pluginRuntimeRevisionForTest(t, ctx)
-	if afterRevision < beforeRevision+4 {
-		t.Fatalf("expected plugin-runtime revision to increase at least 4 times from %d, got %d", beforeRevision, afterRevision)
-	}
-}
-
-// TestTenantPluginSetEnabledRunsLifecycleAroundDisable verifies tenant plugin
-// disable asks the host lifecycle service before mutation and notifies after.
-func TestTenantPluginSetEnabledRunsLifecycleAroundDisable(t *testing.T) {
-	ctx := context.Background()
-	configureTenantPluginTestDB(t, ctx)
-
-	const (
-		tenantID       = 424265
-		tenantPluginID = "tc-tenant-plugin-disable-lifecycle"
-	)
-	insertTenantPluginRegistry(t, ctx, tenantPluginID, pluginScopeNatureTenantAware, pluginInstallModeTenantScoped)
-	t.Cleanup(func() {
-		cleanupTenantPluginRows(t, ctx, tenantPluginID)
-	})
-
-	lifecycleSvc := &fakePluginLifecycleService{}
-	service := &serviceImpl{
-		bizCtxSvc:          testBizContextService{current: plugincontract.CurrentContext{TenantID: tenantID}},
-		pluginLifecycleSvc: lifecycleSvc,
-	}
-	if err := service.SetEnabled(ctx, tenantPluginID, false); err != nil {
-		t.Fatalf("disable tenant plugin failed: %v", err)
-	}
-	if lifecycleSvc.ensureDisableCallCount != 1 ||
-		lifecycleSvc.ensureDisablePluginID != tenantPluginID ||
-		lifecycleSvc.ensureDisableTenantID != tenantID {
-		t.Fatalf("expected one lifecycle precondition call for tenant plugin disable, got %#v", lifecycleSvc)
-	}
-	if lifecycleSvc.notifyDisableCallCount != 1 ||
-		lifecycleSvc.notifyDisablePluginID != tenantPluginID ||
-		lifecycleSvc.notifyDisableTenantID != tenantID {
-		t.Fatalf("expected one lifecycle notification after tenant plugin disable, got %#v", lifecycleSvc)
-	}
-	if enabled := tenantPluginEnabledForTest(t, ctx, tenantPluginID, tenantID); enabled {
-		t.Fatalf("expected plugin %s disabled for tenant %d", tenantPluginID, tenantID)
-	}
-}
-
-// TestTenantPluginSetEnabledVetoPreservesEnablement verifies lifecycle vetoes
-// stop tenant plugin disable before state mutation or notification.
-func TestTenantPluginSetEnabledVetoPreservesEnablement(t *testing.T) {
-	ctx := context.Background()
-	configureTenantPluginTestDB(t, ctx)
-
-	const (
-		tenantID       = 424266
-		tenantPluginID = "tc-tenant-plugin-disable-veto"
-	)
-	insertTenantPluginRegistry(t, ctx, tenantPluginID, pluginScopeNatureTenantAware, pluginInstallModeTenantScoped)
-	t.Cleanup(func() {
-		cleanupTenantPluginRows(t, ctx, tenantPluginID)
-	})
-
-	service := newTenantPluginTestService(tenantID)
-	if err := service.SetEnabled(ctx, tenantPluginID, true); err != nil {
-		t.Fatalf("enable tenant plugin before veto failed: %v", err)
-	}
-
-	vetoErr := errors.New("tenant plugin disable vetoed")
-	lifecycleSvc := &fakePluginLifecycleService{disableErr: vetoErr}
-	vetoingService := &serviceImpl{
-		bizCtxSvc:          testBizContextService{current: plugincontract.CurrentContext{TenantID: tenantID}},
-		pluginLifecycleSvc: lifecycleSvc,
-	}
-	err := vetoingService.SetEnabled(ctx, tenantPluginID, false)
+	err := svc.SetEnabled(context.Background(), "demo-plugin", false)
 	if !errors.Is(err, vetoErr) {
-		t.Fatalf("expected lifecycle veto error, got %v", err)
+		t.Fatalf("expected lifecycle veto, got %v", err)
 	}
-	if lifecycleSvc.ensureDisableCallCount != 1 || lifecycleSvc.notifyDisableCallCount != 0 {
-		t.Fatalf("expected veto to run precondition only, got %#v", lifecycleSvc)
-	}
-	if enabled := tenantPluginEnabledForTest(t, ctx, tenantPluginID, tenantID); !enabled {
-		t.Fatalf("expected plugin %s to remain enabled for tenant %d after veto", tenantPluginID, tenantID)
+	if plugins.setCalls != 0 {
+		t.Fatalf("expected plugincap not called after veto, got %d", plugins.setCalls)
 	}
 }
 
-// TestProvisionForTenantAutoEnablesPolicyEnabledTenantPlugins verifies new tenants
-// receive enablement rows for tenant-scoped plugins allowed by platform policy.
-func TestProvisionForTenantAutoEnablesPolicyEnabledTenantPlugins(t *testing.T) {
-	ctx := context.Background()
-	configureTenantPluginTestDB(t, ctx)
+// TestProvisionForTenantDelegatesToPlugincap verifies startup provisioning only
+// delegates tenant IDs to the host plugin-governance owner.
+func TestProvisionForTenantDelegatesToPlugincap(t *testing.T) {
+	plugins := &fakePlugincap{}
+	svc := New(testBizContextService{}, nil, plugins, plugins)
 
-	const (
-		tenantID        = 424262
-		defaultPluginID = "tc-default-for-new-tenant"
-		manualPluginID  = "tc-manual-for-new-tenant"
-	)
-	insertTenantPluginRegistryWithDefault(t, ctx, defaultPluginID, pluginScopeNatureTenantAware, pluginInstallModeTenantScoped, true)
-	insertTenantPluginRegistryWithDefault(t, ctx, manualPluginID, pluginScopeNatureTenantAware, pluginInstallModeTenantScoped, false)
-	t.Cleanup(func() {
-		cleanupTenantPluginRows(t, ctx, defaultPluginID, manualPluginID)
-	})
-
-	if err := New(testBizContextService{}, nil).ProvisionForTenant(ctx, tenantID); err != nil {
-		t.Fatalf("provision default tenant plugins failed: %v", err)
+	if err := svc.ProvisionForTenant(context.Background(), 1003); err != nil {
+		t.Fatalf("provision tenant plugins failed: %v", err)
 	}
-
-	if enabled := tenantPluginEnabledForTest(t, ctx, defaultPluginID, tenantID); !enabled {
-		t.Fatalf("expected default plugin %s enabled for tenant %d", defaultPluginID, tenantID)
-	}
-	if enabled := tenantPluginEnabledForTest(t, ctx, manualPluginID, tenantID); enabled {
-		t.Fatalf("expected manual plugin %s to remain disabled for tenant %d", manualPluginID, tenantID)
+	if plugins.provisionTenantID != capmodel.DomainID("1003") {
+		t.Fatalf("expected provision tenant 1003, got %q", plugins.provisionTenantID)
 	}
 }
 
-// TestProvisionForTenantPreservesExistingTenantChoice verifies startup
-// reconciliation does not overwrite tenant-owned enablement decisions.
-func TestProvisionForTenantPreservesExistingTenantChoice(t *testing.T) {
-	ctx := context.Background()
-	configureTenantPluginTestDB(t, ctx)
+// TestRequireTenantRejectsPlatform verifies tenant plugin governance requires a tenant context.
+func TestRequireTenantRejectsPlatform(t *testing.T) {
+	plugins := &fakePlugincap{}
+	svc := New(testBizContextService{}, nil, plugins, plugins)
 
-	const (
-		tenantID = 424267
-		pluginID = "tc-default-existing-tenant-choice"
-	)
-	insertTenantPluginRegistryWithDefault(t, ctx, pluginID, pluginScopeNatureTenantAware, pluginInstallModeTenantScoped, true)
-	t.Cleanup(func() {
-		cleanupTenantPluginRows(t, ctx, pluginID)
-	})
-
-	service := newTenantPluginTestService(tenantID)
-	if err := service.SetEnabled(ctx, pluginID, false); err != nil {
-		t.Fatalf("prepare tenant plugin explicit disable failed: %v", err)
-	}
-	if err := New(testBizContextService{}, nil).ProvisionForTenant(ctx, tenantID); err != nil {
-		t.Fatalf("provision default tenant plugins failed: %v", err)
-	}
-
-	if enabled := tenantPluginEnabledForTest(t, ctx, pluginID, tenantID); enabled {
-		t.Fatalf("expected explicit disabled plugin %s to remain disabled for tenant %d", pluginID, tenantID)
-	}
-	if count := tenantPluginStateCountForTest(t, ctx, pluginID, tenantID); count != 1 {
-		t.Fatalf("expected one preserved tenant state row, got %d", count)
+	_, err := svc.List(context.Background())
+	if !bizerr.Is(err, CodeTenantRequired) {
+		t.Fatalf("expected tenant required error, got %v", err)
 	}
 }
 
-// TestProvisionForTenantSkipsAutoEnablePolicyWhenPluginDisabled verifies the policy
-// does not install or enable host-disabled plugins for new tenants.
-func TestProvisionForTenantSkipsAutoEnablePolicyWhenPluginDisabled(t *testing.T) {
-	ctx := context.Background()
-	configureTenantPluginTestDB(t, ctx)
-
-	const (
-		tenantID = 424264
-		pluginID = "tc-auto-policy-disabled-host-plugin"
-	)
-	insertTenantPluginRegistryWithDefault(t, ctx, pluginID, pluginScopeNatureTenantAware, pluginInstallModeTenantScoped, true)
-	if _, err := dao.SysPlugin.Ctx(ctx).
-		Where(do.SysPlugin{PluginId: pluginID}).
-		Data(do.SysPlugin{Status: 0}).
-		Update(); err != nil {
-		t.Fatalf("disable plugin registry %s failed: %v", pluginID, err)
-	}
-	t.Cleanup(func() {
-		cleanupTenantPluginRows(t, ctx, pluginID)
-	})
-
-	if err := New(testBizContextService{}, nil).ProvisionForTenant(ctx, tenantID); err != nil {
-		t.Fatalf("provision default tenant plugins failed: %v", err)
-	}
-
-	if enabled := tenantPluginEnabledForTest(t, ctx, pluginID, tenantID); enabled {
-		t.Fatalf("expected disabled host plugin %s to remain disabled for tenant %d", pluginID, tenantID)
-	}
+type testBizContextService struct {
+	tenantID int
+	userID   int
 }
 
-// configureTenantPluginTestDB points the package test at local PostgreSQL.
-func configureTenantPluginTestDB(t *testing.T, ctx context.Context) {
-	t.Helper()
-
-	originalConfig := gdb.GetAllConfig()
-	if err := gdb.SetConfig(gdb.Config{
-		gdb.DefaultGroupName: gdb.ConfigGroup{{Link: "pgsql:postgres:postgres@tcp(127.0.0.1:5432)/linapro?sslmode=disable"}},
-	}); err != nil {
-		t.Fatalf("configure tenant plugin test database failed: %v", err)
-	}
-	db := g.DB()
-	t.Cleanup(func() {
-		if err := db.Close(ctx); err != nil {
-			t.Errorf("close tenant plugin test database failed: %v", err)
-		}
-		if err := gdb.SetConfig(originalConfig); err != nil {
-			t.Errorf("restore tenant plugin test database config failed: %v", err)
-		}
-	})
+func (s testBizContextService) Current(context.Context) bizctxcap.CurrentContext {
+	return bizctxcap.CurrentContext{TenantID: s.tenantID, UserID: s.userID}
 }
 
-// insertTenantPluginRegistry creates one host plugin registry row for tests.
-func insertTenantPluginRegistry(t *testing.T, ctx context.Context, pluginID string, scopeNature string, installMode string) {
-	t.Helper()
-	insertTenantPluginRegistryWithDefault(t, ctx, pluginID, scopeNature, installMode, false)
+type fakePlugincap struct {
+	list              []*plugincap.TenantProjection
+	lastListTenantID  capmodel.DomainID
+	setCalls          int
+	setPluginID       plugincap.PluginID
+	setEnabled        bool
+	provisionTenantID capmodel.DomainID
 }
 
-// newTenantPluginTestService creates a service with a fixed tenant context.
-func newTenantPluginTestService(tenantID int) Service {
-	return &serviceImpl{
-		bizCtxSvc: testBizContextService{current: plugincontract.CurrentContext{TenantID: tenantID}},
-	}
+func (s *fakePlugincap) BatchGetPlugins(context.Context, capmodel.CapabilityContext, []plugincap.PluginID) (*capmodel.BatchResult[*plugincap.Projection, plugincap.PluginID], error) {
+	return &capmodel.BatchResult[*plugincap.Projection, plugincap.PluginID]{Items: map[plugincap.PluginID]*plugincap.Projection{}}, nil
 }
 
-// insertTenantPluginRegistryWithDefault creates one host plugin registry row for tests.
-func insertTenantPluginRegistryWithDefault(t *testing.T, ctx context.Context, pluginID string, scopeNature string, installMode string, autoEnableForNewTenants bool) {
-	t.Helper()
-	if _, err := dao.SysPlugin.Ctx(ctx).Unscoped().Where(do.SysPlugin{PluginId: pluginID}).Delete(); err != nil {
-		t.Fatalf("cleanup stale plugin registry %s failed: %v", pluginID, err)
-	}
-	_, err := dao.SysPlugin.Ctx(ctx).OmitEmptyData().Data(do.SysPlugin{
-		PluginId:                pluginID,
-		Name:                    pluginID,
-		Version:                 "v0.1.0",
-		Type:                    pluginTypeSource,
-		Installed:               pluginInstalledYes,
-		Status:                  pluginStatusEnabled,
-		DesiredState:            pluginHostStateEnabled,
-		CurrentState:            pluginHostStateEnabled,
-		ScopeNature:             scopeNature,
-		InstallMode:             installMode,
-		AutoEnableForNewTenants: autoEnableForNewTenants,
-	}).InsertIgnore()
-	if err != nil {
-		t.Fatalf("insert plugin registry %s failed: %v", pluginID, err)
-	}
+func (s *fakePlugincap) Config() plugincap.ConfigService {
+	return nil
 }
 
-// tenantPluginEnabledForTest reads one tenant enablement row.
-func tenantPluginEnabledForTest(t *testing.T, ctx context.Context, pluginID string, tenantID int64) bool {
-	t.Helper()
-	value, err := dao.SysPluginState.Ctx(ctx).
-		Where(do.SysPluginState{
-			PluginId: pluginID,
-			TenantId: tenantID,
-			StateKey: tenantEnablementStateKey,
-		}).
-		Value(dao.SysPluginState.Columns().Enabled)
-	if err != nil {
-		t.Fatalf("read tenant plugin state failed: %v", err)
-	}
-	return value != nil && !value.IsNil() && value.Bool()
+func (s *fakePlugincap) State() plugincap.StateService {
+	return nil
 }
 
-// tenantPluginStateCountForTest counts tenant enablement rows.
-func tenantPluginStateCountForTest(t *testing.T, ctx context.Context, pluginID string, tenantID int64) int {
-	t.Helper()
-	count, err := dao.SysPluginState.Ctx(ctx).
-		Where(do.SysPluginState{
-			PluginId: pluginID,
-			TenantId: tenantID,
-			StateKey: tenantEnablementStateKey,
-		}).
-		Count()
-	if err != nil {
-		t.Fatalf("count tenant plugin state failed: %v", err)
-	}
-	return count
+func (s *fakePlugincap) Lifecycle() plugincap.LifecycleService {
+	return nil
 }
 
-// pluginRuntimeRevisionForTest reads the shared plugin-runtime revision row.
-func pluginRuntimeRevisionForTest(t *testing.T, ctx context.Context) int64 {
-	t.Helper()
-	value, err := g.DB().Model(tableSysCacheRevision).Safe().Ctx(ctx).
-		Where(pluginRuntimeCacheRevisionDO{
-			TenantId: shared.PlatformTenantID,
-			Domain:   pluginRuntimeCacheDomain,
-			Scope:    pluginRuntimeCacheScopeGlobal,
-		}).
-		Value("revision")
-	if err != nil {
-		t.Fatalf("read plugin-runtime cache revision failed: %v", err)
-	}
-	if value == nil || value.IsNil() {
-		return 0
-	}
-	return value.Int64()
+func (s *fakePlugincap) Registry() plugincap.RegistryService {
+	return s
 }
 
-// cleanupTenantPluginRows removes host plugin registry and enablement rows.
-func cleanupTenantPluginRows(t *testing.T, ctx context.Context, pluginIDs ...string) {
-	t.Helper()
-	if _, err := dao.SysPluginState.Ctx(ctx).Unscoped().WhereIn(dao.SysPluginState.Columns().PluginId, pluginIDs).Delete(); err != nil {
-		t.Errorf("cleanup tenant plugin state failed: %v", err)
-	}
-	if _, err := dao.SysPlugin.Ctx(ctx).Unscoped().WhereIn(dao.SysPlugin.Columns().PluginId, pluginIDs).Delete(); err != nil {
-		t.Errorf("cleanup tenant plugin registry failed: %v", err)
-	}
+func (s *fakePlugincap) ListTenantPlugins(_ context.Context, capCtx capmodel.CapabilityContext) (*capmodel.PageResult[*plugincap.TenantProjection], error) {
+	s.lastListTenantID = capCtx.TenantID
+	return &capmodel.PageResult[*plugincap.TenantProjection]{Items: s.list, Total: len(s.list)}, nil
 }
+
+func (s *fakePlugincap) SetPluginEnabled(_ context.Context, _ capmodel.CapabilityContext, id plugincap.PluginID, enabled bool) error {
+	s.setCalls++
+	s.setPluginID = id
+	s.setEnabled = enabled
+	return nil
+}
+
+func (s *fakePlugincap) ProvisionTenantDefaults(_ context.Context, _ capmodel.CapabilityContext, tenantID capmodel.DomainID) error {
+	s.provisionTenantID = tenantID
+	return nil
+}
+
+type fakeLifecycle struct {
+	disableErr error
+}
+
+func (s *fakeLifecycle) EnsureTenantPluginDisableAllowed(context.Context, string, int) error {
+	return s.disableErr
+}
+
+func (s *fakeLifecycle) NotifyTenantPluginDisabled(context.Context, string, int) {}
+
+func (s *fakeLifecycle) EnsureTenantDeleteAllowed(context.Context, int) error { return nil }
+
+func (s *fakeLifecycle) NotifyTenantDeleted(context.Context, int) {}

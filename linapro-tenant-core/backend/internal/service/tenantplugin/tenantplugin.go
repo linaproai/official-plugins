@@ -3,43 +3,18 @@ package tenantplugin
 
 import (
 	"context"
+	"strconv"
+	"time"
 
-	"github.com/gogf/gf/v2/frame/g"
-
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/bizerr"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/capmodel"
+	"lina-core/pkg/plugin/capability/plugincap"
 )
 
 const (
-	// pluginInstalledYes is the host sys_plugin installed flag for installed plugins.
-	pluginInstalledYes = 1
-	// pluginStatusEnabled is the host sys_plugin status flag for enabled plugins.
-	pluginStatusEnabled = 1
-	// pluginTypeSource is the host sys_plugin type for source plugins.
-	pluginTypeSource = "source"
-	// pluginHostStateEnabled is the stable enabled lifecycle state name.
-	pluginHostStateEnabled = "enabled"
-	// pluginScopeNaturePlatformOnly marks platform-only plugins.
-	pluginScopeNaturePlatformOnly = "platform_only"
-	// pluginScopeNatureTenantAware marks tenant-aware plugins.
-	pluginScopeNatureTenantAware = "tenant_aware"
-	// pluginInstallModeGlobal marks globally enabled plugins.
-	pluginInstallModeGlobal = "global"
-	// pluginInstallModeTenantScoped marks tenant-controlled plugins.
-	pluginInstallModeTenantScoped = "tenant_scoped"
-	// tenantEnablementStateKey is the sys_plugin_state key for tenant plugin enablement.
-	tenantEnablementStateKey = "__tenant_enabled__"
-	// tenantPluginEnabledValue stores enabled tenant plugin state for diagnostics.
-	tenantPluginEnabledValue = "enabled"
-	// tenantPluginDisabledValue stores disabled tenant plugin state for diagnostics.
-	tenantPluginDisabledValue = "disabled"
-	// tableSysCacheRevision is the host shared cache-revision table.
-	tableSysCacheRevision = "sys_cache_revision"
-	// pluginRuntimeCacheDomain coordinates plugin runtime and menu derived caches.
-	pluginRuntimeCacheDomain = "plugin-runtime"
-	// pluginRuntimeCacheScopeGlobal invalidates every plugin-runtime cache scope.
-	pluginRuntimeCacheScopeGlobal = "global"
-	// tenantPluginRuntimeChangeReason records tenant plugin enablement changes.
-	tenantPluginRuntimeChangeReason = "tenant_plugin_enablement_changed"
+	// tenantPluginCapabilityPluginID is the caller identifier used in plugincap contexts.
+	tenantPluginCapabilityPluginID = "linapro-tenant-core"
 )
 
 // Service defines tenant plugin-governance operations and cache revision updates.
@@ -62,18 +37,24 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	bizCtxSvc          plugincontract.BizCtxService
-	pluginLifecycleSvc plugincontract.PluginLifecycleService
+	bizCtxSvc          bizctxcap.Service
+	pluginLifecycleSvc plugincap.LifecycleService
+	plugins            plugincap.Service
+	pluginAdmin        plugincap.AdminService
 }
 
 // New creates and returns a tenant plugin governance service.
 func New(
-	bizCtxSvc plugincontract.BizCtxService,
-	pluginLifecycleSvc plugincontract.PluginLifecycleService,
+	bizCtxSvc bizctxcap.Service,
+	pluginLifecycleSvc plugincap.LifecycleService,
+	plugins plugincap.Service,
+	pluginAdmin plugincap.AdminService,
 ) Service {
 	return &serviceImpl{
 		bizCtxSvc:          bizCtxSvc,
 		pluginLifecycleSvc: pluginLifecycleSvc,
+		plugins:            plugins,
+		pluginAdmin:        pluginAdmin,
 	}
 }
 
@@ -97,19 +78,47 @@ type ListOutput struct {
 	Total int
 }
 
-// pluginRuntimeCacheRevisionDO is the local DO payload for sys_cache_revision writes.
-type pluginRuntimeCacheRevisionDO struct {
-	g.Meta   `orm:"table:sys_cache_revision, do:true"`
-	Id       any // Primary key ID
-	TenantId any // Revision tenant scope, 0 means platform/global
-	Domain   any // Cache domain
-	Scope    any // Cache invalidation scope
-	Revision any // Monotonic shared revision
-	Reason   any // Latest change reason
+// capabilityContext builds plugin-visible metadata for tenant plugin
+// governance calls into host-owned plugincap.
+func (s *serviceImpl) capabilityContext(ctx context.Context, tenantID int64, resource string) capmodel.CapabilityContext {
+	current := bizctxcap.CurrentContext{}
+	if s != nil && s.bizCtxSvc != nil {
+		current = s.bizCtxSvc.Current(ctx)
+	}
+	if tenantID <= 0 {
+		tenantID = int64(current.TenantID)
+	}
+	actorID := current.ActingUserID
+	if actorID == 0 {
+		actorID = current.UserID
+	}
+	actor := capmodel.CapabilityActor{
+		Type:   capmodel.ActorTypeUser,
+		UserID: int64(actorID),
+		Name:   current.Username,
+	}
+	if actorID == 0 {
+		actor = capmodel.CapabilityActor{
+			Type:         capmodel.ActorTypeSystem,
+			Name:         tenantPluginCapabilityPluginID,
+			SystemReason: "tenant plugin governance",
+		}
+	}
+	return capmodel.CapabilityContext{
+		PluginID:    tenantPluginCapabilityPluginID,
+		Actor:       actor,
+		TenantID:    capmodel.DomainID(strconv.FormatInt(tenantID, 10)),
+		Source:      capmodel.CapabilitySourceHTTP,
+		SystemCall:  actor.Type == capmodel.ActorTypeSystem,
+		Resource:    resource,
+		RequestedAt: time.Now(),
+	}
 }
 
-// pluginRuntimeCacheRevisionRow projects one sys_cache_revision row.
-type pluginRuntimeCacheRevisionRow struct {
-	Id       int64 `json:"id" orm:"id"`
-	Revision int64 `json:"revision" orm:"revision"`
+// requirePlugincap verifies tenant plugin governance dependencies.
+func (s *serviceImpl) requirePlugincap() error {
+	if s == nil || s.plugins == nil || s.pluginAdmin == nil {
+		return bizerr.NewCode(capmodel.CodeCapabilityUnavailable, bizerr.P("capability", "plugin"))
+	}
+	return nil
 }

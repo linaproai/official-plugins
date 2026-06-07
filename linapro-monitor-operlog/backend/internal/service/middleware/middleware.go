@@ -3,9 +3,11 @@
 package middleware
 
 import (
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/routecap"
+
 	"github.com/gogf/gf/v2/net/ghttp"
 
-	plugincontract "lina-core/pkg/plugin/capability/contract"
 	operlogsvc "lina-plugin-linapro-monitor-operlog/backend/internal/service/operlog"
 )
 
@@ -20,15 +22,15 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	routeMetaSvc plugincontract.RouteService  // dynamic-route metadata reader
-	bizCtxSvc    plugincontract.BizCtxService // authenticated operator identity reader
-	operLogSvc   operlogsvc.Service           // plugin-owned operation-log persistence service
+	routeMetaSvc routecap.Service   // dynamic-route metadata reader
+	bizCtxSvc    bizctxcap.Service  // authenticated operator identity reader
+	operLogSvc   operlogsvc.Service // plugin-owned operation-log persistence service
 }
 
 // New creates and returns a new linapro-monitor-operlog middleware service instance.
 func New(
-	routeMetaSvc plugincontract.RouteService,
-	bizCtxSvc plugincontract.BizCtxService,
+	routeMetaSvc routecap.Service,
+	bizCtxSvc bizctxcap.Service,
 	operLogSvc operlogsvc.Service,
 ) Service {
 	return &serviceImpl{

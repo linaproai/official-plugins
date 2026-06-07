@@ -148,11 +148,24 @@ export async function addTenantMember(
   if (membershipColumns.has("updated_at")) {
     updateClauses.push('"updated_at" = NOW()');
   }
+  const membershipPredicate = `
+        "user_id" = ${payload.userId}
+        AND "tenant_id" = ${payload.tenantId}
+  `;
   execPgSQL(`
+    BEGIN;
+    LOCK TABLE plugin_linapro_tenant_core_user_membership IN SHARE ROW EXCLUSIVE MODE;
+    UPDATE plugin_linapro_tenant_core_user_membership
+    SET ${updateClauses.join(",\n        ")}
+    WHERE ${membershipPredicate};
     INSERT INTO plugin_linapro_tenant_core_user_membership (${insertColumns.join(", ")})
-    VALUES (${insertValues.join(", ")})
-    ON CONFLICT ("user_id", "tenant_id") DO UPDATE SET
-      ${updateClauses.join(",\n      ")};
+    SELECT ${insertValues.join(", ")}
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM plugin_linapro_tenant_core_user_membership
+      WHERE ${membershipPredicate}
+    );
+    COMMIT;
   `);
   return {
     id: Number(

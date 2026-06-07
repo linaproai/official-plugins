@@ -55,6 +55,7 @@ export function buildQuerySchema(): VbenFormSchema[] {
 /** 表格列定义 */
 export function buildColumns(): VxeGridProps["columns"] {
   return [
+    { type: "checkbox", width: 60 },
     {
       field: "id",
       title: $t("plugin.linapro-monitor-operlog.fields.logId"),

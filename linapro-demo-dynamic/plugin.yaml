@@ -201,9 +201,6 @@ hostServices:
       # List of tables allowed for access.
       # 允许访问的数据表名单。
       tables:
-        # Host plugin node state table.
-        # 宿主插件节点状态表。
-        - sys_plugin_node_state
         # Dynamic plugin demo record table.
         # 动态插件示例记录表。
         - plugin_linapro_demo_dynamic_record
@@ -237,21 +234,21 @@ hostServices:
   # 宿主服务枚举。`org` 用于读取当前用户相关的宿主组织能力投影。
   - service: org
     methods:
-      - status
-      - available
-      - user_dept_assignments.list
-      - user_dept_ids.get
-      - user_post_ids.get
+      - capability.status
+      - capability.available
+      - users.dept_assignments.list
+      - users.dept_ids.get
+      - users.post_ids.get
   # Host service enum. `tenant` reads and validates tenant capability context for the current user.
   # 宿主服务枚举。`tenant` 用于读取并校验当前用户相关的租户能力上下文。
   - service: tenant
     methods:
-      - status
-      - available
-      - current
-      - platform_bypass
-      - visible.ensure
-      - user_tenants.list
+      - capability.status
+      - capability.available
+      - tenants.current
+      - tenants.platform_bypass
+      - tenants.visible.ensure
+      - users.tenants.list
 # Plugin menu declaration list; the host syncs menus, button permissions, and route entries from it.
 # 插件菜单声明列表，宿主按该列表同步菜单、按钮权限和路由入口。
 menus:

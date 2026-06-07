@@ -8,10 +8,7 @@ gfcli:
         tables: >-
           plugin_linapro_tenant_core_tenant,
           plugin_linapro_tenant_core_user_membership,
-          plugin_linapro_tenant_core_config_override,
-          sys_user,
-          sys_plugin,
-          sys_plugin_state
+          plugin_linapro_tenant_core_config_override
         removePrefix: "plugin_linapro_tenant_core_"
         importPrefix: "lina-plugin-linapro-tenant-core/backend/internal"
         descriptionTag: true

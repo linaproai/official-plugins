@@ -5,6 +5,12 @@ go 1.25.0
 require (
 	github.com/gogf/gf/v2 v2.10.1
 	github.com/shirou/gopsutil/v4 v4.26.3
+	lina-core v0.0.0
+)
+
+require (
+	github.com/gogf/gf/contrib/drivers/pgsql/v2 v2.10.0 // indirect
+	github.com/lib/pq v1.10.9 // indirect
 )
 
 require (
@@ -43,3 +49,5 @@ require (
 	golang.org/x/text v0.35.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace lina-core => ../../lina-core

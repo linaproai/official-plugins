@@ -7,8 +7,9 @@ import (
 
 	"github.com/gogf/gf/v2/database/gdb"
 
+	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/tenantcap"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/usercap"
 )
 
 // Service defines tenant membership operations and the host user-scope provider seam.
@@ -62,12 +63,13 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	bizCtxSvc plugincontract.BizCtxService
+	bizCtxSvc bizctxcap.Service
+	users     usercap.Service
 }
 
 // New creates and returns a new membership Service instance.
-func New(bizCtxSvc plugincontract.BizCtxService) Service {
-	return &serviceImpl{bizCtxSvc: bizCtxSvc}
+func New(bizCtxSvc bizctxcap.Service, users usercap.Service) Service {
+	return &serviceImpl{bizCtxSvc: bizCtxSvc, users: users}
 }
 
 // Entity is the service-layer membership projection.
@@ -131,10 +133,4 @@ type AddInput struct {
 type UpdateInput struct {
 	Id     int64
 	Status *int
-}
-
-// sysUserTenantRow is the sys_user tenant projection needed by membership rules.
-type sysUserTenantRow struct {
-	Id       int64 `json:"id" orm:"id"`
-	TenantID int64 `json:"tenantId" orm:"tenant_id"`
 }

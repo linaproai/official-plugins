@@ -6,8 +6,8 @@ import (
 	"context"
 	"time"
 
-	"lina-core/pkg/plugin/capability/ai/aitext"
-	"lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/aicap/aitext"
+	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-plugin-linapro-ai-core/backend/internal/dao"
 	"lina-plugin-linapro-ai-core/backend/internal/model/do"
 	"lina-plugin-linapro-ai-core/backend/internal/model/entity"
@@ -171,7 +171,7 @@ func (s *serviceImpl) writeInvocation(
 
 // writeInvocationRecord stores one already-classified masked invocation record.
 func (s *serviceImpl) writeInvocationRecord(ctx context.Context, input invocationWriteInput) {
-	current := contract.CurrentFromContext(ctx)
+	current := bizctxcap.CurrentFromContext(ctx)
 	if s != nil && s.bizCtxSvc != nil {
 		current = s.bizCtxSvc.Current(ctx)
 	}

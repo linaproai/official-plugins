@@ -5,11 +5,16 @@ package orgcapadapter
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/gogf/gf/v2/database/gdb"
 
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/bizerr"
+	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/orgcap"
+	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/usercap"
 	"lina-plugin-linapro-org-core/backend/internal/dao"
 	"lina-plugin-linapro-org-core/backend/internal/model/do"
 	entitymodel "lina-plugin-linapro-org-core/backend/internal/model/entity"
@@ -27,24 +32,20 @@ const (
 // Provider implements the stable host organization-capability contract.
 type Provider struct {
 	deptSvc      deptsvc.Service                    // deptSvc resolves department tree relationships.
-	tenantFilter plugincontract.TenantFilterService // tenantFilter constrains organization provider queries.
+	tenantFilter tenantcap.PluginTableFilterService // tenantFilter constrains organization provider queries.
+	users        usercap.Service                    // users resolves host-owned user projections.
 }
 
 // Ensure Provider implements the published organization-capability provider.
 var _ orgcap.Provider = (*Provider)(nil)
 
 // New creates and returns a new provider instance.
-func New(tenantFilter plugincontract.TenantFilterService) *Provider {
+func New(tenantFilter tenantcap.PluginTableFilterService, users usercap.Service) *Provider {
 	return &Provider{
-		deptSvc:      deptsvc.New(tenantFilter),
+		deptSvc:      deptsvc.New(tenantFilter, users),
 		tenantFilter: tenantFilter,
+		users:        users,
 	}
-}
-
-// deptCountRow is the grouped user-count projection keyed by department.
-type deptCountRow struct {
-	DeptID int `json:"deptId"`
-	Cnt    int `json:"cnt"`
 }
 
 // ListUserDeptAssignments returns user -> department projections for the provided users.
@@ -274,14 +275,14 @@ func (p *Provider) ReplaceUserAssignments(ctx context.Context, userID int, deptI
 	return dao.UserDept.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 		if _, err := tx.Model(dao.UserDept.Table()).
 			Ctx(ctx).
-			Where(plugincontract.TenantFilterColumn, tenantID).
+			Where(tenantcap.TenantFilterColumn, tenantID).
 			Where(dao.UserDept.Columns().UserId, userID).
 			Delete(); err != nil {
 			return err
 		}
 		if _, err := tx.Model(dao.UserPost.Table()).
 			Ctx(ctx).
-			Where(plugincontract.TenantFilterColumn, tenantID).
+			Where(tenantcap.TenantFilterColumn, tenantID).
 			Where(dao.UserPost.Columns().UserId, userID).
 			Delete(); err != nil {
 			return err
@@ -313,14 +314,14 @@ func (p *Provider) CleanupUserAssignments(ctx context.Context, userID int) error
 	return dao.UserDept.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 		if _, err := tx.Model(dao.UserDept.Table()).
 			Ctx(ctx).
-			Where(plugincontract.TenantFilterColumn, tenantID).
+			Where(tenantcap.TenantFilterColumn, tenantID).
 			Where(dao.UserDept.Columns().UserId, userID).
 			Delete(); err != nil {
 			return err
 		}
 		if _, err := tx.Model(dao.UserPost.Table()).
 			Ctx(ctx).
-			Where(plugincontract.TenantFilterColumn, tenantID).
+			Where(tenantcap.TenantFilterColumn, tenantID).
 			Where(dao.UserPost.Columns().UserId, userID).
 			Delete(); err != nil {
 			return err
@@ -331,39 +332,70 @@ func (p *Provider) CleanupUserAssignments(ctx context.Context, userID int) error
 
 // UserDeptTree returns the optional department tree used by host user management.
 func (p *Provider) UserDeptTree(ctx context.Context) ([]*orgcap.DeptTreeNode, error) {
+	if p == nil || p.users == nil {
+		return nil, bizerr.NewCode(capmodel.CodeCapabilityUnavailable, bizerr.P("capability", "user"))
+	}
 	plainTree, err := p.deptSvc.Tree(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	counts := make([]deptCountRow, 0)
-	if err = p.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx), dao.UserDept.Table()).
-		Fields("dept_id, COUNT(*) AS cnt").
-		InnerJoin(
-			dao.SysUser.Table(),
-			fmt.Sprintf(
-				"%s.%s = %s.%s",
-				dao.UserDept.Table(), dao.UserDept.Columns().UserId,
-				dao.SysUser.Table(), dao.SysUser.Columns().Id,
-			),
-		).
-		Where(fmt.Sprintf("%s.%s", dao.SysUser.Table(), plugincontract.TenantFilterColumn), p.tenantFilter.Context(ctx).TenantID).
-		Group("dept_id").
-		Scan(&counts); err != nil {
+	var userDepts []*entitymodel.UserDept
+	if err = p.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx), "").
+		Fields(dao.UserDept.Columns().DeptId, dao.UserDept.Columns().UserId).
+		Scan(&userDepts); err != nil {
 		return nil, err
 	}
 
-	countMap := make(map[int]int, len(counts))
-	for _, item := range counts {
-		countMap[item.DeptID] = item.Cnt
+	userIDs := make([]usercap.UserID, 0, len(userDepts))
+	seenUsers := make(map[int]struct{}, len(userDepts))
+	for _, item := range userDepts {
+		if item == nil || item.UserId <= 0 {
+			continue
+		}
+		if _, ok := seenUsers[item.UserId]; ok {
+			continue
+		}
+		seenUsers[item.UserId] = struct{}{}
+		userIDs = append(userIDs, usercap.UserID(strconv.Itoa(item.UserId)))
+	}
+	visibleUsers, err := p.users.BatchGetUsers(ctx, p.capabilityContext(ctx, "org.user_dept_tree"), userIDs)
+	if err != nil {
+		return nil, err
+	}
+	visibleUserIDs := make(map[int]struct{}, len(userIDs))
+	if visibleUsers != nil {
+		for id := range visibleUsers.Items {
+			parsedID, parseErr := strconv.Atoi(string(id))
+			if parseErr == nil && parsedID > 0 {
+				visibleUserIDs[parsedID] = struct{}{}
+			}
+		}
+	}
+
+	countMap := make(map[int]int, len(userDepts))
+	for _, item := range userDepts {
+		if item == nil {
+			continue
+		}
+		if _, ok := visibleUserIDs[item.UserId]; !ok {
+			continue
+		}
+		countMap[item.DeptId]++
 	}
 
 	nodes := convertDeptTreeNodes(plainTree)
 	applyDeptUserCount(nodes, countMap)
 
-	totalUsers, err := p.tenantFilter.Apply(ctx, dao.SysUser.Ctx(ctx), "").Count()
+	totalOut, err := p.users.SearchUsers(ctx, p.capabilityContext(ctx, "org.user_dept_tree"), usercap.SearchInput{
+		Page: capmodel.PageRequest{PageSize: 1},
+	})
 	if err != nil {
 		return nil, err
+	}
+	totalUsers := 0
+	if totalOut != nil {
+		totalUsers = totalOut.Total
 	}
 
 	assignedUsers := 0
@@ -372,6 +404,39 @@ func (p *Provider) UserDeptTree(ctx context.Context) ([]*orgcap.DeptTreeNode, er
 	}
 
 	return append(nodes, newUnassignedDeptNode(totalUsers, assignedUsers)), nil
+}
+
+// capabilityContext creates provider-call metadata for usercap calls made by
+// the organization provider.
+func (p *Provider) capabilityContext(ctx context.Context, resource string) capmodel.CapabilityContext {
+	tenantCtx := tenantcap.TenantFilterContext{}
+	if p != nil && p.tenantFilter != nil {
+		tenantCtx = p.tenantFilter.Context(ctx)
+	}
+	actorID := tenantCtx.ActingUserID
+	if actorID == 0 {
+		actorID = tenantCtx.UserID
+	}
+	actor := capmodel.CapabilityActor{
+		Type:   capmodel.ActorTypeUser,
+		UserID: int64(actorID),
+	}
+	if actorID == 0 {
+		actor = capmodel.CapabilityActor{
+			Type:         capmodel.ActorTypeSystem,
+			Name:         orgcap.ProviderPluginID,
+			SystemReason: "organization provider user projection",
+		}
+	}
+	return capmodel.CapabilityContext{
+		PluginID:    orgcap.ProviderPluginID,
+		Actor:       actor,
+		TenantID:    capmodel.DomainID(strconv.Itoa(tenantCtx.TenantID)),
+		Source:      capmodel.CapabilitySourceProvider,
+		SystemCall:  actor.Type == capmodel.ActorTypeSystem,
+		Resource:    resource,
+		RequestedAt: time.Now(),
+	}
 }
 
 // ListPostOptions returns selectable post options for one department subtree.

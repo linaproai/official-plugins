@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	configsvc "lina-core/pkg/plugin/capability/config"
-	"lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/plugincap"
+	configsvc "lina-core/pkg/plugin/capability/plugincap"
 )
 
 // TestLoadUsesDefaultsWhenUnset verifies monitor config defaults when config is absent.
@@ -90,10 +90,10 @@ monitor:
 }
 
 // newTestConfigService builds a scoped plugin config reader from artifact content.
-func newTestConfigService(t *testing.T, content string) contract.ConfigService {
+func newTestConfigService(t *testing.T, content string) plugincap.ConfigService {
 	t.Helper()
 
-	return configsvc.NewFactory(t.TempDir(), t.TempDir()).
+	return configsvc.NewConfigFactory(t.TempDir(), t.TempDir()).
 		WithArtifactConfig("linapro-monitor-server", []byte(content)).
 		ForPlugin("linapro-monitor-server")
 }

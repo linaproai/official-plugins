@@ -43,11 +43,9 @@ test.describe('TC005 操作日志范围删除', () => {
     await ensureSourcePluginEnabled(adminPage, 'linapro-monitor-operlog');
   });
 
-  test('TC005a: 页面不显示多选框且空范围删除被阻止', async ({ adminPage }) => {
+  test('TC005a: 空范围删除被阻止且范围删除入口独立可用', async ({ adminPage }) => {
     await adminPage.goto('/monitor/operlog');
     await waitForTableReady(adminPage);
-
-    await expect(adminPage.locator('.vxe-checkbox--icon')).toHaveCount(0);
 
     const deleteBtn = adminPage.getByTestId('operlog-range-delete');
     await expect(deleteBtn).toBeEnabled();

@@ -7,7 +7,7 @@ import (
 
 	"github.com/gogf/gf/v2/errors/gerror"
 
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/plugincap"
 	"lina-core/pkg/plugin/pluginhost"
 	monitorserverplugin "lina-plugin-linapro-monitor-server"
 	servercontroller "lina-plugin-linapro-monitor-server/backend/internal/controller/monitor"
@@ -99,11 +99,15 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 func registerBuiltinCrons(ctx context.Context, registrar pluginhost.CronRegistrar) error {
 	services := registrar.Services()
 	if services == nil {
-		return gerror.New("linapro-monitor-server cron requires host config service")
+		return gerror.New("linapro-monitor-server cron requires plugin config service")
 	}
-	configSvc := services.Config()
+	plugins := services.Plugins()
+	if plugins == nil {
+		return gerror.New("linapro-monitor-server cron requires plugin config service")
+	}
+	configSvc := plugins.Config()
 	if configSvc == nil {
-		return gerror.New("linapro-monitor-server cron requires host config service")
+		return gerror.New("linapro-monitor-server cron requires plugin config service")
 	}
 	monitorCfg, err := monitorconfig.Load(ctx, configSvc)
 	if err != nil {
@@ -151,7 +155,7 @@ func collectSnapshot(ctx context.Context, monitorSvc monitorsvc.Service) error {
 func cleanupSnapshots(
 	ctx context.Context,
 	primaryNode bool,
-	configSvc plugincontract.ConfigService,
+	configSvc plugincap.ConfigService,
 	monitorSvc monitorsvc.Service,
 ) error {
 	if !primaryNode {

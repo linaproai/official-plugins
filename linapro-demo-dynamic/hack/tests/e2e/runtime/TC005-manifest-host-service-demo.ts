@@ -58,7 +58,7 @@ const dynamicHostServiceAuthorization = {
     {
       service: "data",
       methods: ["list", "get", "create", "update", "delete", "transaction"],
-      tables: ["sys_plugin_node_state", "plugin_linapro_demo_dynamic_record"],
+      tables: ["plugin_linapro_demo_dynamic_record"],
     },
     {
       service: "manifest",

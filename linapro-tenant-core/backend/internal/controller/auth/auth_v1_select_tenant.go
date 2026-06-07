@@ -4,14 +4,14 @@ package auth
 
 import (
 	"context"
+	"lina-core/pkg/plugin/capability/authcap/token"
 
-	pluginauth "lina-core/pkg/plugin/capability/contract"
 	v1 "lina-plugin-linapro-tenant-core/backend/api/auth/v1"
 )
 
 // SelectTenant validates tenant selection and requests a host-signed token.
 func (c *ControllerV1) SelectTenant(ctx context.Context, req *v1.SelectTenantReq) (res *v1.SelectTenantRes, err error) {
-	out, err := c.authSvc.SelectTenant(ctx, pluginauth.SelectTenantInput{
+	out, err := c.authSvc.SelectTenant(ctx, token.SelectTenantInput{
 		PreToken: req.PreToken,
 		TenantID: int(req.TenantId),
 	})

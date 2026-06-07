@@ -4,9 +4,10 @@ package tenant
 
 import (
 	"context"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/plugincap"
 	"time"
 
-	plugincontract "lina-core/pkg/plugin/capability/contract"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/resolverconfig"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/shared"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/tenantplugin"
@@ -46,18 +47,18 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	bizCtxSvc          plugincontract.BizCtxService
+	bizCtxSvc          bizctxcap.Service
 	resolverConfigSvc  resolverconfig.Service
 	tenantPluginSvc    tenantplugin.Service
-	pluginLifecycleSvc plugincontract.PluginLifecycleService
+	pluginLifecycleSvc plugincap.LifecycleService
 }
 
 // New creates and returns a new tenant Service instance.
 func New(
-	bizCtxSvc plugincontract.BizCtxService,
+	bizCtxSvc bizctxcap.Service,
 	resolverConfigSvc resolverconfig.Service,
 	tenantPluginSvc tenantplugin.Service,
-	pluginLifecycleSvc plugincontract.PluginLifecycleService,
+	pluginLifecycleSvc plugincap.LifecycleService,
 ) Service {
 	return &serviceImpl{
 		bizCtxSvc:          bizCtxSvc,

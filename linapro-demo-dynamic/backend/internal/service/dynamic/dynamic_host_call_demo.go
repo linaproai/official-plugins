@@ -24,10 +24,8 @@ const (
 	hostCallDemoStorageContentType  = "application/json"
 	hostCallDemoNetworkURL          = "https://example.com"
 	hostCallDemoNetworkMethodGet    = "GET"
-	hostCallDemoDataTable           = "sys_plugin_node_state"
-	hostCallDemoDesiredState        = "running"
-	hostCallDemoCurrentStateNew     = "pending"
-	hostCallDemoCurrentStateReady   = "running"
+	hostCallDemoDataTable           = demoRecordTable
+	hostCallDemoRecordTitlePrefix   = "Host call demo"
 	hostCallDemoAnonymousUser       = "anonymous"
 	hostCallDemoSummaryMessage      = "Host service demo executed through runtime, storage, network, data, config, manifest, hostConfig, org, and tenant services."
 	hostCallDemoNetworkPreview      = 120
@@ -200,19 +198,18 @@ func (s *serviceImpl) runHostCallDemoData(
 	pluginID string,
 	demoKey string,
 ) (payload *hostCallDemoDataPayload, err error) {
-	createRecord, err := buildRecordMap(&hostCallDemoDataCreateRecord{
-		PluginID:     pluginID,
-		ReleaseID:    0,
-		NodeKey:      "host-call-demo-" + demoKey,
-		DesiredState: hostCallDemoDesiredState,
-		CurrentState: hostCallDemoCurrentStateNew,
-		Generation:   1,
-		ErrorMessage: "",
+	recordID := "host-call-demo-" + demoKey
+	createRecord, err := buildRecordMap(&demoRecordCreateRecord{
+		Id:             recordID,
+		Title:          hostCallDemoRecordTitlePrefix + " " + demoKey,
+		Content:        "Temporary plugin-owned record created by " + pluginID + " host-call demo.",
+		AttachmentName: "",
+		AttachmentPath: "",
 	})
 	if err != nil {
 		return nil, err
 	}
-	createResult, err := s.dataSvc.Table(hostCallDemoDataTable).Insert(createRecord)
+	createResult, err := s.recordStoreSvc.Table(hostCallDemoDataTable).Insert(createRecord)
 	if err != nil {
 		return nil, err
 	}
@@ -224,17 +221,16 @@ func (s *serviceImpl) runHostCallDemoData(
 	deleted := false
 	defer func() {
 		if !deleted {
-			if _, cleanupErr := s.dataSvc.Table(hostCallDemoDataTable).WhereKey(recordKey).Delete(); cleanupErr != nil && err == nil {
+			if _, cleanupErr := s.recordStoreSvc.Table(hostCallDemoDataTable).WhereKey(recordKey).Delete(); cleanupErr != nil && err == nil {
 				err = cleanupErr
 			}
 		}
 	}()
 
-	listRecords, listTotal, err := s.dataSvc.Table(hostCallDemoDataTable).
-		Fields("id", "nodeKey", "currentState").
-		WhereEq("pluginId", pluginID).
-		WhereLike("nodeKey", demoKey).
-		WhereIn("currentState", []string{hostCallDemoCurrentStateNew, hostCallDemoCurrentStateReady}).
+	listRecords, listTotal, err := s.recordStoreSvc.Table(hostCallDemoDataTable).
+		Fields("id", "title", "content").
+		WhereEq("id", recordID).
+		WhereLike("title", hostCallDemoRecordTitlePrefix).
 		OrderDesc("id").
 		Page(1, 10).
 		All()
@@ -244,25 +240,27 @@ func (s *serviceImpl) runHostCallDemoData(
 	if listTotal < 1 || len(listRecords) == 0 {
 		return nil, gerror.New("data demo list did not find the created record")
 	}
-	countTotal, err := s.dataSvc.Table(hostCallDemoDataTable).
-		WhereEq("pluginId", pluginID).
-		WhereLike("nodeKey", demoKey).
+	countTotal, err := s.recordStoreSvc.Table(hostCallDemoDataTable).
+		WhereEq("id", recordID).
+		WhereLike("title", hostCallDemoRecordTitlePrefix).
 		Count()
 	if err != nil {
 		return nil, err
 	}
-	updateRecord, err := buildRecordMap(&hostCallDemoDataUpdateRecord{
-		CurrentState: hostCallDemoCurrentStateReady,
-		ErrorMessage: "",
+	updateRecord, err := buildRecordMap(&demoRecordUpdateRecord{
+		Title:          hostCallDemoRecordTitlePrefix + " updated " + demoKey,
+		Content:        "Updated temporary plugin-owned record created by " + pluginID + " host-call demo.",
+		AttachmentName: "",
+		AttachmentPath: "",
 	})
 	if err != nil {
 		return nil, err
 	}
-	if _, err = s.dataSvc.Table(hostCallDemoDataTable).WhereKey(recordKey).Update(updateRecord); err != nil {
+	if _, err = s.recordStoreSvc.Table(hostCallDemoDataTable).WhereKey(recordKey).Update(updateRecord); err != nil {
 		return nil, err
 	}
 
-	if _, err = s.dataSvc.Table(hostCallDemoDataTable).WhereKey(recordKey).Delete(); err != nil {
+	if _, err = s.recordStoreSvc.Table(hostCallDemoDataTable).WhereKey(recordKey).Delete(); err != nil {
 		return nil, err
 	}
 	deleted = true

@@ -12,11 +12,12 @@ import (
 	"testing"
 	"time"
 
+	_ "lina-core/pkg/dbdriver"
+
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gcfg"
-	_ "lina-core/pkg/dbdriver"
 
 	"lina-plugin-linapro-monitor-loginlog/backend/internal/dao"
 	"lina-plugin-linapro-monitor-loginlog/backend/internal/model/do"
@@ -32,7 +33,7 @@ var (
 func TestCleanupExpiredDeletesOnlyLogsOlderThanRetention(t *testing.T) {
 	ctx := context.Background()
 	prepareLoginLogDatabase(t, ctx)
-	svc := New(nil, nil)
+	svc := New(nil, nil, nil)
 
 	const rollbackMessage = "rollback login-log retention cleanup test transaction"
 	err := dao.Loginlog.Transaction(ctx, func(txCtx context.Context, _ gdb.TX) error {

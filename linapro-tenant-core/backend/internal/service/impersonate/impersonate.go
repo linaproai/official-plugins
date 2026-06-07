@@ -4,7 +4,10 @@ package impersonate
 import (
 	"context"
 
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/authcap/token"
+	"lina-core/pkg/plugin/capability/authcap/authz"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/usercap"
 	tenantsvc "lina-plugin-linapro-tenant-core/backend/internal/service/tenant"
 )
 
@@ -25,21 +28,27 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	authSvc   plugincontract.AuthService
-	bizCtxSvc plugincontract.BizCtxService
+	authSvc   token.Service
+	authzSvc  authz.Service
+	bizCtxSvc bizctxcap.Service
 	tenantSvc tenantsvc.Service
+	users     usercap.Service
 }
 
 // New creates and returns an impersonation service.
 func New(
-	authSvc plugincontract.AuthService,
-	bizCtxSvc plugincontract.BizCtxService,
+	authSvc token.Service,
+	authzSvc authz.Service,
+	bizCtxSvc bizctxcap.Service,
 	tenantSvc tenantsvc.Service,
+	users usercap.Service,
 ) Service {
 	return &serviceImpl{
 		authSvc:   authSvc,
+		authzSvc:  authzSvc,
 		bizCtxSvc: bizCtxSvc,
 		tenantSvc: tenantSvc,
+		users:     users,
 	}
 }
 
@@ -61,30 +70,6 @@ type StartOutput struct {
 type StopInput struct {
 	TenantID int64
 	Token    string
-}
-
-// userRow is the sys_user projection needed for compatible token claims.
-type userRow struct {
-	Id       int64  `json:"id" orm:"id"`
-	Username string `json:"username" orm:"username"`
-	Status   int    `json:"status" orm:"status"`
-}
-
-// platformRoleData is a typed insert payload for sys_role.
-type platformRoleData struct {
-	TenantID  int64  `orm:"tenant_id"`
-	Name      string `orm:"name"`
-	Key       string `orm:"key"`
-	Sort      int    `orm:"sort"`
-	DataScope int    `orm:"data_scope"`
-	Status    int    `orm:"status"`
-}
-
-// platformUserRoleData is a typed insert payload for sys_user_role.
-type platformUserRoleData struct {
-	TenantID int64 `orm:"tenant_id"`
-	UserID   int64 `orm:"user_id"`
-	RoleID   int64 `orm:"role_id"`
 }
 
 // loginLogData is a typed insert payload for plugin_linapro_monitor_loginlog.

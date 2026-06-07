@@ -7,7 +7,10 @@ package operlog
 import (
 	"context"
 
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/apidoccap"
+	"lina-core/pkg/plugin/capability/dictcap"
+	"lina-core/pkg/plugin/capability/i18ncap"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	entitymodel "lina-plugin-linapro-monitor-operlog/backend/internal/model/entity"
 	"lina-plugin-linapro-monitor-operlog/backend/internal/model/operlogtype"
 )
@@ -33,11 +36,6 @@ const (
 	colErrorMsg      = "error_msg"
 	colCostTime      = "cost_time"
 	colOperTime      = "oper_time"
-
-	colDictType  = "dict_type"
-	colDictValue = "value"
-	colDictLabel = "label"
-	colDictSort  = "sort"
 )
 
 // Operation-log runtime i18n key fragments.
@@ -48,6 +46,7 @@ const (
 
 // Operation-log export limit and dictionary constants.
 const (
+	pluginID           = "linapro-monitor-operlog"
 	MaxExportRows      = 10000
 	DictTypeOperType   = "sys_oper_type"
 	DictTypeOperStatus = "sys_oper_status"
@@ -86,19 +85,22 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	apiDocSvc    plugincontract.APIDocService       // host apidoc translation service
-	i18nSvc      plugincontract.I18nService         // host runtime translation service
-	tenantFilter plugincontract.TenantFilterService // tenantFilter constrains plugin-owned operation-log rows.
+	apiDocSvc    apidoccap.Service                  // host apidoc translation service
+	dictSvc      dictcap.Service                    // host dictionary-domain label projection service
+	i18nSvc      i18ncap.Service                    // host runtime translation service
+	tenantFilter tenantcap.PluginTableFilterService // tenantFilter constrains plugin-owned operation-log rows.
 }
 
 // New creates and returns a new linapro-monitor-operlog service instance.
 func New(
-	apiDocSvc plugincontract.APIDocService,
-	i18nSvc plugincontract.I18nService,
-	tenantFilter plugincontract.TenantFilterService,
+	apiDocSvc apidoccap.Service,
+	dictSvc dictcap.Service,
+	i18nSvc i18ncap.Service,
+	tenantFilter tenantcap.PluginTableFilterService,
 ) Service {
 	return &serviceImpl{
 		apiDocSvc:    apiDocSvc,
+		dictSvc:      dictSvc,
 		i18nSvc:      i18nSvc,
 		tenantFilter: tenantFilter,
 	}
@@ -106,9 +108,6 @@ func New(
 
 // OperLogEntity mirrors the plugin-local generated plugin_linapro_monitor_operlog entity.
 type OperLogEntity = entitymodel.Operlog
-
-// dictDataRow reuses the plugin-local generated sys_dict_data entity.
-type dictDataRow = entitymodel.SysDictData
 
 // CreateInput defines the operation-log create input.
 type CreateInput struct {

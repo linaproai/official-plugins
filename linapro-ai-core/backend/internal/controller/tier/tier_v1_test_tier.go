@@ -5,9 +5,10 @@ package tier
 import (
 	"context"
 
-	"lina-core/pkg/apitime"
-	"lina-core/pkg/plugin/capability/ai/aitext"
 	"lina-plugin-linapro-ai-core/backend/api/tier/v1"
+
+	"lina-core/pkg/apitime"
+	"lina-core/pkg/plugin/capability/aicap/aitext"
 	aisvc "lina-plugin-linapro-ai-core/backend/internal/service/ai"
 )
 

@@ -4,6 +4,7 @@ package membership
 
 import (
 	"context"
+	"strconv"
 	"testing"
 
 	"github.com/gogf/gf/v2/database/gdb"
@@ -11,30 +12,106 @@ import (
 
 	"lina-core/pkg/bizerr"
 	_ "lina-core/pkg/dbdriver"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/usercap"
 	"lina-plugin-linapro-tenant-core/backend/internal/model/do"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/shared"
 )
 
+const membershipTestTableSysUser = "sys_user"
+
+type membershipTestSysUser struct {
+	g.Meta   `orm:"table:sys_user, do:true"`
+	Id       any
+	TenantId any
+	Username any
+	Password any
+	Nickname any
+	Status   any
+}
+
 // membershipTestBizCtxService returns a fixed business context snapshot for
 // membership tests that need tenant-scoped behavior.
 type membershipTestBizCtxService struct {
-	current plugincontract.CurrentContext
+	current bizctxcap.CurrentContext
 }
 
 // Current returns the configured test business context snapshot.
-func (s membershipTestBizCtxService) Current(context.Context) plugincontract.CurrentContext {
+func (s membershipTestBizCtxService) Current(context.Context) bizctxcap.CurrentContext {
 	return s.current
+}
+
+// membershipTestUsers resolves users from the test-only sys_user fixture table.
+type membershipTestUsers struct{}
+
+// BatchGetUsers returns user projections from the test fixture table.
+func (membershipTestUsers) BatchGetUsers(ctx context.Context, _ capmodel.CapabilityContext, ids []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
+	out := &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{
+		Items:      make(map[usercap.UserID]*usercap.UserProjection, len(ids)),
+		MissingIDs: []usercap.UserID{},
+	}
+	intIDs := make([]int64, 0, len(ids))
+	requested := make(map[int64]usercap.UserID, len(ids))
+	for _, id := range ids {
+		parsedID, err := strconv.ParseInt(string(id), 10, 64)
+		if err != nil || parsedID <= 0 {
+			out.MissingIDs = append(out.MissingIDs, id)
+			continue
+		}
+		requested[parsedID] = id
+		intIDs = append(intIDs, parsedID)
+	}
+	if len(intIDs) == 0 {
+		return out, nil
+	}
+	rows := make([]struct {
+		Id       int64  `json:"id" orm:"id"`
+		TenantID int64  `json:"tenantId" orm:"tenant_id"`
+		Username string `json:"username" orm:"username"`
+		Nickname string `json:"nickname" orm:"nickname"`
+	}, 0)
+	if err := shared.Model(ctx, membershipTestTableSysUser).
+		Fields("id", "tenant_id", "username", "nickname").
+		WhereIn("id", intIDs).
+		Scan(&rows); err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		requestID := requested[row.Id]
+		out.Items[requestID] = &usercap.UserProjection{
+			ID:       requestID,
+			TenantID: capmodel.DomainID(strconv.FormatInt(row.TenantID, 10)),
+			Username: row.Username,
+			Nickname: row.Nickname,
+		}
+	}
+	for _, id := range ids {
+		if _, ok := out.Items[id]; !ok {
+			out.MissingIDs = append(out.MissingIDs, id)
+		}
+	}
+	return out, nil
+}
+
+// SearchUsers is unused by membership tests.
+func (membershipTestUsers) SearchUsers(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
+	return &capmodel.PageResult[*usercap.UserProjection]{Items: []*usercap.UserProjection{}}, nil
+}
+
+// EnsureUsersVisible is unused by membership tests.
+func (membershipTestUsers) EnsureUsersVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
+	return nil
 }
 
 // membershipTestService creates a membership service with an explicit request
 // context snapshot, avoiding host-internal context-key dependencies in plugin tests.
 func membershipTestService(tenantID int, userID int) Service {
-	return &serviceImpl{bizCtxSvc: membershipTestBizCtxService{current: plugincontract.CurrentContext{
+	return &serviceImpl{bizCtxSvc: membershipTestBizCtxService{current: bizctxcap.CurrentContext{
 		TenantID: tenantID,
 		UserID:   userID,
-	}}}
+	}}, users: membershipTestUsers{}}
 }
 
 // TestListCountsWithoutProjectedColumns verifies the member list count query
@@ -50,7 +127,7 @@ func TestListCountsWithoutProjectedColumns(t *testing.T) {
 	)
 
 	var userID int64
-	value, err := shared.Model(ctx, shared.TableSysUser).
+	value, err := shared.Model(ctx, membershipTestTableSysUser).
 		Where("username", username).
 		Value("id")
 	if err != nil {
@@ -60,7 +137,7 @@ func TestListCountsWithoutProjectedColumns(t *testing.T) {
 		userID = value.Int64()
 	}
 	if userID == 0 {
-		userID, err = shared.Model(ctx, shared.TableSysUser).Data(do.SysUser{
+		userID, err = shared.Model(ctx, membershipTestTableSysUser).Data(membershipTestSysUser{
 			Username: username,
 			Password: password,
 			Nickname: "Membership Count Projection",
@@ -75,7 +152,7 @@ func TestListCountsWithoutProjectedColumns(t *testing.T) {
 		if _, err := shared.Model(ctx, shared.TableMembership).Unscoped().Where("user_id", userID).Delete(); err != nil {
 			t.Errorf("cleanup test membership failed: %v", err)
 		}
-		if _, err := shared.Model(ctx, shared.TableSysUser).Unscoped().Where("id", userID).Delete(); err != nil {
+		if _, err := shared.Model(ctx, membershipTestTableSysUser).Unscoped().Where("id", userID).Delete(); err != nil {
 			t.Errorf("cleanup test user failed: %v", err)
 		}
 	})
@@ -88,7 +165,7 @@ func TestListCountsWithoutProjectedColumns(t *testing.T) {
 		t.Fatalf("insert test membership failed: %v", err)
 	}
 
-	out, err := New(membershipTestBizCtxService{}).List(ctx, ListInput{
+	out, err := New(membershipTestBizCtxService{}, membershipTestUsers{}).List(ctx, ListInput{
 		PageNum:  1,
 		PageSize: 10,
 		TenantID: tenantID,
@@ -125,7 +202,7 @@ func TestListUsesCurrentTenantOverRequestedTenant(t *testing.T) {
 		if _, err := shared.Model(ctx, shared.TableMembership).Unscoped().WhereIn("user_id", []int64{userAID, userBID}).Delete(); err != nil {
 			t.Errorf("cleanup scoped memberships failed: %v", err)
 		}
-		if _, err := shared.Model(ctx, shared.TableSysUser).Unscoped().WhereIn("id", []int64{userAID, userBID}).Delete(); err != nil {
+		if _, err := shared.Model(ctx, membershipTestTableSysUser).Unscoped().WhereIn("id", []int64{userAID, userBID}).Delete(); err != nil {
 			t.Errorf("cleanup scoped users failed: %v", err)
 		}
 	})
@@ -174,7 +251,7 @@ func TestAddRejectsUnavailableTenant(t *testing.T) {
 		if _, err := shared.Model(ctx, shared.TableMembership).Unscoped().Where("user_id", userID).Delete(); err != nil {
 			t.Errorf("cleanup unavailable tenant memberships failed: %v", err)
 		}
-		if _, err := shared.Model(ctx, shared.TableSysUser).Unscoped().Where("id", userID).Delete(); err != nil {
+		if _, err := shared.Model(ctx, membershipTestTableSysUser).Unscoped().Where("id", userID).Delete(); err != nil {
 			t.Errorf("cleanup unavailable tenant user failed: %v", err)
 		}
 		if _, err := shared.Model(ctx, shared.TableTenant).Unscoped().Where("id", suspendedTenantID).Delete(); err != nil {
@@ -182,7 +259,7 @@ func TestAddRejectsUnavailableTenant(t *testing.T) {
 		}
 	})
 
-	_, err := New(membershipTestBizCtxService{}).Add(ctx, AddInput{TenantID: suspendedTenantID, UserID: userID})
+	_, err := New(membershipTestBizCtxService{}, membershipTestUsers{}).Add(ctx, AddInput{TenantID: suspendedTenantID, UserID: userID})
 	if !bizerr.Is(err, CodeTenantUnavailable) {
 		t.Fatalf("expected unavailable tenant error, got %v", err)
 	}
@@ -217,7 +294,7 @@ func TestUpdateRejectsOtherTenantMembership(t *testing.T) {
 		if _, err := shared.Model(ctx, shared.TableMembership).Unscoped().Where("user_id", userBID).Delete(); err != nil {
 			t.Errorf("cleanup update scoped membership failed: %v", err)
 		}
-		if _, err := shared.Model(ctx, shared.TableSysUser).Unscoped().Where("id", userBID).Delete(); err != nil {
+		if _, err := shared.Model(ctx, membershipTestTableSysUser).Unscoped().Where("id", userBID).Delete(); err != nil {
 			t.Errorf("cleanup update scoped user failed: %v", err)
 		}
 	})
@@ -259,7 +336,7 @@ func TestRemoveRejectsOtherTenantMembership(t *testing.T) {
 		if _, err := shared.Model(ctx, shared.TableMembership).Unscoped().Where("user_id", userBID).Delete(); err != nil {
 			t.Errorf("cleanup remove scoped membership failed: %v", err)
 		}
-		if _, err := shared.Model(ctx, shared.TableSysUser).Unscoped().Where("id", userBID).Delete(); err != nil {
+		if _, err := shared.Model(ctx, membershipTestTableSysUser).Unscoped().Where("id", userBID).Delete(); err != nil {
 			t.Errorf("cleanup remove scoped user failed: %v", err)
 		}
 	})
@@ -299,7 +376,7 @@ func TestTenantAuthorizationOnlyAllowsActiveTenants(t *testing.T) {
 		if _, err := shared.Model(ctx, shared.TableMembership).Unscoped().Where("user_id", userID).Delete(); err != nil {
 			t.Errorf("cleanup lifecycle memberships failed: %v", err)
 		}
-		if _, err := shared.Model(ctx, shared.TableSysUser).Unscoped().Where("id", userID).Delete(); err != nil {
+		if _, err := shared.Model(ctx, membershipTestTableSysUser).Unscoped().Where("id", userID).Delete(); err != nil {
 			t.Errorf("cleanup lifecycle user failed: %v", err)
 		}
 		if _, err := shared.Model(ctx, shared.TableTenant).Unscoped().WhereIn("id", []int64{activeTenantID, suspendedTenantID}).Delete(); err != nil {
@@ -310,7 +387,7 @@ func TestTenantAuthorizationOnlyAllowsActiveTenants(t *testing.T) {
 	insertMembershipTestRow(t, ctx, userID, activeTenantID)
 	insertMembershipTestRow(t, ctx, userID, suspendedTenantID)
 
-	svc := New(membershipTestBizCtxService{})
+	svc := New(membershipTestBizCtxService{}, membershipTestUsers{})
 	tenants, err := svc.ListUserTenants(ctx, userID)
 	if err != nil {
 		t.Fatalf("list user tenants failed: %v", err)
@@ -344,7 +421,7 @@ func TestGetByUserAndTenantHonorsRequestedTenant(t *testing.T) {
 		if _, err := shared.Model(ctx, shared.TableMembership).Unscoped().Where("user_id", userID).Delete(); err != nil {
 			t.Errorf("cleanup requested-tenant memberships failed: %v", err)
 		}
-		if _, err := shared.Model(ctx, shared.TableSysUser).Unscoped().Where("id", userID).Delete(); err != nil {
+		if _, err := shared.Model(ctx, membershipTestTableSysUser).Unscoped().Where("id", userID).Delete(); err != nil {
 			t.Errorf("cleanup requested-tenant user failed: %v", err)
 		}
 		if _, err := shared.Model(ctx, shared.TableTenant).Unscoped().WhereIn("id", []int64{tenantAID, tenantBID}).Delete(); err != nil {
@@ -383,7 +460,7 @@ func TestCurrentUsesContextIdentity(t *testing.T) {
 		if _, err := shared.Model(ctx, shared.TableMembership).Unscoped().WhereIn("user_id", []int64{userAID, userBID}).Delete(); err != nil {
 			t.Errorf("cleanup current scoped memberships failed: %v", err)
 		}
-		if _, err := shared.Model(ctx, shared.TableSysUser).Unscoped().WhereIn("id", []int64{userAID, userBID}).Delete(); err != nil {
+		if _, err := shared.Model(ctx, membershipTestTableSysUser).Unscoped().WhereIn("id", []int64{userAID, userBID}).Delete(); err != nil {
 			t.Errorf("cleanup current scoped users failed: %v", err)
 		}
 		if _, err := shared.Model(ctx, shared.TableTenant).Unscoped().Where("id", tenantAID).Delete(); err != nil {
@@ -423,7 +500,7 @@ func TestReplaceUserTenantAssignmentsCanClearPlatformUserMembership(t *testing.T
 		if _, err := shared.Model(ctx, shared.TableMembership).Unscoped().Where("user_id", userID).Delete(); err != nil {
 			t.Errorf("cleanup clear platform membership failed: %v", err)
 		}
-		if _, err := shared.Model(ctx, shared.TableSysUser).Unscoped().Where("id", userID).Delete(); err != nil {
+		if _, err := shared.Model(ctx, membershipTestTableSysUser).Unscoped().Where("id", userID).Delete(); err != nil {
 			t.Errorf("cleanup clear platform user failed: %v", err)
 		}
 		if _, err := shared.Model(ctx, shared.TableTenant).Unscoped().Where("id", tenantID).Delete(); err != nil {
@@ -431,7 +508,7 @@ func TestReplaceUserTenantAssignmentsCanClearPlatformUserMembership(t *testing.T
 		}
 	})
 
-	err := New(membershipTestBizCtxService{}).ReplaceUserTenantAssignments(ctx, int(userID), &tenantcap.UserTenantAssignmentPlan{
+	err := New(membershipTestBizCtxService{}, membershipTestUsers{}).ReplaceUserTenantAssignments(ctx, int(userID), &tenantcap.UserTenantAssignmentPlan{
 		ShouldReplace: true,
 		PrimaryTenant: tenantcap.PLATFORM,
 	})
@@ -469,7 +546,7 @@ func TestReplaceUserTenantAssignmentsDefaultMultiModeAllowsMultipleTenants(t *te
 		if _, err := shared.Model(ctx, shared.TableMembership).Unscoped().Where("user_id", userID).Delete(); err != nil {
 			t.Errorf("cleanup default multi memberships failed: %v", err)
 		}
-		if _, err := shared.Model(ctx, shared.TableSysUser).Unscoped().Where("id", userID).Delete(); err != nil {
+		if _, err := shared.Model(ctx, membershipTestTableSysUser).Unscoped().Where("id", userID).Delete(); err != nil {
 			t.Errorf("cleanup default multi user failed: %v", err)
 		}
 		if _, err := shared.Model(ctx, shared.TableTenant).Unscoped().WhereIn("id", []int64{tenantAID, tenantBID}).Delete(); err != nil {
@@ -477,7 +554,7 @@ func TestReplaceUserTenantAssignmentsDefaultMultiModeAllowsMultipleTenants(t *te
 		}
 	})
 
-	svc := New(membershipTestBizCtxService{})
+	svc := New(membershipTestBizCtxService{}, membershipTestUsers{})
 	err := svc.ReplaceUserTenantAssignments(ctx, int(userID), &tenantcap.UserTenantAssignmentPlan{
 		TenantIDs: []tenantcap.TenantID{
 			tenantcap.TenantID(tenantAID),
@@ -525,6 +602,15 @@ func configureMembershipTestDB(t *testing.T, ctx context.Context) {
 func ensureMembershipTestTables(t *testing.T, ctx context.Context) {
 	t.Helper()
 	statements := []string{
+		`CREATE TABLE IF NOT EXISTS sys_user (
+			id BIGSERIAL PRIMARY KEY,
+			tenant_id BIGINT NOT NULL DEFAULT 0,
+			username VARCHAR(64) NOT NULL,
+			password VARCHAR(256) NOT NULL,
+			nickname VARCHAR(64) NOT NULL DEFAULT '',
+			status SMALLINT NOT NULL DEFAULT 1,
+			deleted_at TIMESTAMP NULL
+		)`,
 		`CREATE TABLE IF NOT EXISTS plugin_linapro_tenant_core_tenant (
 			id BIGSERIAL PRIMARY KEY,
 			code VARCHAR(64) NOT NULL UNIQUE,
@@ -553,7 +639,7 @@ func ensureMembershipTestTables(t *testing.T, ctx context.Context) {
 // insertMembershipTestUser creates one sys_user test row and returns its id.
 func insertMembershipTestUser(t *testing.T, ctx context.Context, username string, password string, tenantID int64) int64 {
 	t.Helper()
-	userID, err := shared.Model(ctx, shared.TableSysUser).Data(do.SysUser{
+	userID, err := shared.Model(ctx, membershipTestTableSysUser).Data(membershipTestSysUser{
 		Username: username,
 		Password: password,
 		Nickname: username,

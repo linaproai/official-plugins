@@ -115,6 +115,14 @@ async function mockPluginLifecycleApis(page: Page) {
       return;
     }
 
+    const detailRow = rows.find((row) => path.endsWith(`/plugins/${row.id}`));
+    if (request.method() === 'GET' && detailRow) {
+      await route.fulfill({
+        json: apiEnvelope(detailRow),
+      });
+      return;
+    }
+
     if (
       request.method() === 'GET' &&
       path.endsWith(`/plugins/${installPluginID}/dependencies`)

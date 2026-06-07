@@ -4,16 +4,15 @@ package backend
 
 import (
 	"context"
+	"lina-core/pkg/plugin/capability/hostconfigcap"
 	"testing"
 
 	"github.com/gogf/gf/v2/container/gvar"
-
-	plugincontract "lina-core/pkg/plugin/capability/contract"
 )
 
 // loginLogCleanupHostConfigStub returns a deterministic retention value.
 type loginLogCleanupHostConfigStub struct {
-	plugincontract.HostConfigService
+	hostconfigcap.Service
 	value *gvar.Var
 	err   error
 }

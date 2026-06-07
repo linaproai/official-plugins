@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "description": "Plugin-owned service dependency baseline for linapro-ai-core registration, provider, and shared Smart Center boundaries.",
+  "entries": [
+    {
+      "path": "apps/lina-plugins/linapro-ai-core/backend/plugin.go",
+      "maxCalls": 5,
+      "reason": "source-plugin registration and provider boundary; constructs plugin-owned controllers and one shared Smart Center service from registrar HostServices."
+    }
+  ]
+}

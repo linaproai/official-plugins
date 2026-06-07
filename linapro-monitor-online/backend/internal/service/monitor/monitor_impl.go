@@ -8,22 +8,30 @@ package monitor
 import (
 	"context"
 
-	sessionsvc "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/capmodel"
+	"lina-core/pkg/plugin/capability/sessioncap"
 )
 
 // List returns one paginated online-user list.
 func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, error) {
-	out, err := s.sessionSvc.ListPage(ctx, &sessionsvc.ListFilter{
+	out, err := s.sessionSvc.SearchSessions(ctx, s.capabilityContext(ctx, monitorOnlineSessionResource), sessioncap.SearchInput{
 		Username: in.Username,
-		Ip:       in.Ip,
-	}, in.PageNum, in.PageSize)
+		IP:       in.Ip,
+		Page: capmodel.PageRequest{
+			PageNum:  in.PageNum,
+			PageSize: in.PageSize,
+		},
+	})
 	if err != nil {
 		return nil, err
+	}
+	if out == nil {
+		return &ListOutput{Items: []*sessioncap.Projection{}}, nil
 	}
 	return &ListOutput{Items: out.Items, Total: out.Total}, nil
 }
 
 // ForceLogout invalidates one online-user session by token ID.
 func (s *serviceImpl) ForceLogout(ctx context.Context, tokenID string) error {
-	return s.sessionSvc.Revoke(ctx, tokenID)
+	return s.sessionAdminSvc.RevokeSession(ctx, s.capabilityContext(ctx, monitorOnlineSessionResource), sessioncap.SessionID(tokenID))
 }

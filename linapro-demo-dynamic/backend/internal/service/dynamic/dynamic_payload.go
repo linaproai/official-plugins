@@ -70,11 +70,11 @@ type demoRecordEntity struct {
 }
 
 // demoRecordTimestampLayouts lists database timestamp encodings observed from
-// governed data capability responses for the dynamic sample table.
+// governed record store capability responses for the dynamic sample table.
 const demoRecordTimestampLayoutPrefix = "2006-01-02 15:04:05"
 
 // demoRecordCreateRecord defines the typed insert payload used for sample
-// records. Keeping data capability mutation input typed avoids Go's wasm JSON encoder
+// records. Keeping record store capability mutation input typed avoids Go's wasm JSON encoder
 // edge cases with directly constructed map[string]any values.
 type demoRecordCreateRecord struct {
 	Id             string `json:"id"`
@@ -139,25 +139,6 @@ type hostCallDemoDataPayload struct {
 	CountTotal int    `json:"countTotal"`
 	Updated    bool   `json:"updated"`
 	Deleted    bool   `json:"deleted"`
-}
-
-// hostCallDemoDataCreateRecord defines the sample record inserted during the
-// structured-data demo.
-type hostCallDemoDataCreateRecord struct {
-	PluginID     string `json:"pluginId"`
-	ReleaseID    int    `json:"releaseId"`
-	NodeKey      string `json:"nodeKey"`
-	DesiredState string `json:"desiredState"`
-	CurrentState string `json:"currentState"`
-	Generation   int    `json:"generation"`
-	ErrorMessage string `json:"errorMessage"`
-}
-
-// hostCallDemoDataUpdateRecord defines the sample fields updated during the
-// structured-data demo.
-type hostCallDemoDataUpdateRecord struct {
-	CurrentState string `json:"currentState"`
-	ErrorMessage string `json:"errorMessage"`
 }
 
 // hostCallDemoNetworkPayload summarizes outbound network host-call results.

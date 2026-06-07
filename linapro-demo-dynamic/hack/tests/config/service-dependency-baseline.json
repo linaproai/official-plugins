@@ -11,6 +11,11 @@
       "path": "apps/lina-plugins/linapro-demo-dynamic/backend/plugin.go",
       "maxCalls": 1,
       "reason": "source-plugin registration boundary; constructs plugin-owned controllers/services from registrar HostServices."
+    },
+    {
+      "path": "apps/lina-plugins/linapro-demo-dynamic/backend/plugin_host_dispatcher.go",
+      "maxCalls": 1,
+      "reason": "host-build dynamic plugin bridge dispatcher boundary; constructs the plugin-owned guest controller for Go tests and tooling only."
     }
   ]
 }

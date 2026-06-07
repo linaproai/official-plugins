@@ -5,18 +5,18 @@
 package dynamicservice
 
 import (
-	plugindata "lina-core/pkg/plugin/capability/data"
-	"lina-core/pkg/plugin/capability/guest"
+	"lina-core/pkg/plugin/capability/recordstore"
+	"lina-core/pkg/plugin/pluginbridge/guest"
 )
 
 var guestServices = guest.Default()
 
-// dataService abstracts the governed data facade used by the sample service.
-type dataService interface {
-	// Table starts one single-table governed data query builder.
-	Table(table string) *plugindata.Query
+// recordStoreService abstracts the governed record store facade used by the sample service.
+type recordStoreService interface {
+	// Table starts one single-table governed record store query builder.
+	Table(table string) *recordstore.Query
 	// Transaction executes one governed structured mutation transaction.
-	Transaction(fn func(tx *plugindata.Tx) error) error
+	Transaction(fn func(tx *recordstore.Tx) error) error
 }
 
 // newRuntimeHostService returns the guest-side runtime host client.
@@ -34,9 +34,9 @@ func newNetworkHostService() networkHostService {
 	return guestServices.Network()
 }
 
-// newDataService returns the guest-side governed data facade.
-func newDataService() dataService {
-	return guestServices.Data()
+// newRecordStoreService returns the guest-side governed record store facade.
+func newRecordStoreService() recordStoreService {
+	return guestServices.RecordStore()
 }
 
 // newCronHostService returns the guest-side cron registration host client.
@@ -46,7 +46,7 @@ func newCronHostService() cronHostService {
 
 // newConfigHostService returns the guest-side plugin config host client.
 func newConfigHostService() configHostService {
-	return guestServices.Config()
+	return guestServices.Plugins().Config()
 }
 
 // newManifestHostService returns the guest-side plugin manifest resource

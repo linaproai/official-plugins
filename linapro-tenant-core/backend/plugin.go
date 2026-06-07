@@ -63,7 +63,7 @@ func provideTenant(_ context.Context, env tenantcap.ProviderEnv) (tenantcap.Prov
 	if env.BizCtx == nil {
 		return nil, gerror.New("linapro-tenant-core provider requires host bizctx service")
 	}
-	return tenantadapter.New(env.BizCtx, env.PluginLifecycle)
+	return tenantadapter.New(env.BizCtx, env.PluginLifecycle, env.Users, env.Plugins, env.PluginAdmin)
 }
 
 // beforeDisable enforces linapro-tenant-core plugin disable preconditions.
@@ -111,14 +111,24 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 	)
 	if services == nil ||
 		services.Auth() == nil ||
-		services.BizCtx() == nil {
-		return gerror.New("linapro-tenant-core routes require host auth and bizctx services")
+		services.Auth().Token() == nil ||
+		services.Auth().Authz() == nil ||
+		services.BizCtx() == nil ||
+		services.Users() == nil ||
+		services.Plugins() == nil ||
+		services.Admin() == nil ||
+		services.Admin().Plugins() == nil {
+		return gerror.New("linapro-tenant-core routes require host auth, authz, bizctx, user, and plugin capability services")
+	}
+	pluginLifecycleSvc := services.Plugins().Lifecycle()
+	if pluginLifecycleSvc == nil {
+		return gerror.New("linapro-tenant-core routes require host plugin lifecycle service")
 	}
 	var (
-		membershipSvc     = membership.New(services.BizCtx())
+		membershipSvc     = membership.New(services.BizCtx(), services.Users())
 		resolverConfigSvc = resolverconfig.New()
-		tenantPluginSvc   = tenantplugin.New(services.BizCtx(), services.PluginLifecycle())
-		tenantSvc         = tenantsvc.New(services.BizCtx(), resolverConfigSvc, tenantPluginSvc, services.PluginLifecycle())
+		tenantPluginSvc   = tenantplugin.New(services.BizCtx(), pluginLifecycleSvc, services.Plugins(), services.Admin().Plugins())
+		tenantSvc         = tenantsvc.New(services.BizCtx(), resolverConfigSvc, tenantPluginSvc, pluginLifecycleSvc)
 		resolverSvc       = resolver.New(services.BizCtx(), membershipSvc)
 	)
 	providerSvc, err := provider.New(membershipSvc, resolverSvc, resolverConfigSvc, tenantPluginSvc)
@@ -126,8 +136,8 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		return err
 	}
 	var (
-		impersonateSvc = impersonate.New(services.Auth(), services.BizCtx(), tenantSvc)
-		authCtrl       = authcontroller.NewV1(services.Auth(), membershipSvc, providerSvc)
+		impersonateSvc = impersonate.New(services.Auth().Token(), services.Auth().Authz(), services.BizCtx(), tenantSvc, services.Users())
+		authCtrl       = authcontroller.NewV1(services.Auth().Token(), membershipSvc, providerSvc)
 	)
 	routes.Group(routes.APIPrefix(), func(group pluginhost.RouteGroup) {
 		group.Group("/api/v1", func(group pluginhost.RouteGroup) {

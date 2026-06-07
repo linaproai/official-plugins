@@ -263,6 +263,21 @@ func TestMultiTenantMockDataDocumentsBlocksAndNicknames(t *testing.T) {
 	}
 }
 
+// TestMultiTenantMembershipSchemaBackfillsBusinessUniqueIndex ensures existing
+// plugin installations can acquire the membership business key even when the
+// table was created before the inline unique constraint existed.
+func TestMultiTenantMembershipSchemaBackfillsBusinessUniqueIndex(t *testing.T) {
+	schemaSQL, err := os.ReadFile(filepath.Join(pluginRootDir(t), "manifest", "sql", "001-linapro-tenant-core-schema.sql"))
+	if err != nil {
+		t.Fatalf("read linapro-tenant-core schema SQL: %v", err)
+	}
+	normalized := strings.Join(strings.Fields(string(schemaSQL)), " ")
+	expected := `CREATE UNIQUE INDEX IF NOT EXISTS uk_plugin_linapro_tenant_core_membership_user_tenant ON plugin_linapro_tenant_core_user_membership ("user_id", "tenant_id")`
+	if !strings.Contains(normalized, expected) {
+		t.Fatalf("membership schema must backfill standalone business unique index %q", expected)
+	}
+}
+
 // TestMultiTenantMockDataContainsTenantUserIsolationAccount keeps the dedicated
 // tenant-user demo account wired for tenant-local data-scope demonstrations.
 func TestMultiTenantMockDataContainsTenantUserIsolationAccount(t *testing.T) {

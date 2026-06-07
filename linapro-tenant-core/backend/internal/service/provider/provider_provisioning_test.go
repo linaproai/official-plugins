@@ -11,7 +11,9 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 
 	_ "lina-core/pkg/dbdriver"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/capmodel"
+	"lina-core/pkg/plugin/capability/usercap"
 	"lina-plugin-linapro-tenant-core/backend/internal/dao"
 	"lina-plugin-linapro-tenant-core/backend/internal/model/do"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/membership"
@@ -29,24 +31,19 @@ func TestProvisionAutoEnabledTenantPluginsAppliesExistingActiveTenants(t *testin
 	configureProviderProvisioningTestDB(t, ctx)
 
 	const (
-		pluginID        = "provider-existing-tenant-default-plugin"
 		activeTenant    = "provider-active-tenant"
-		disabledTenant  = "provider-disabled-tenant"
 		suspendedTenant = "provider-suspended-tenant"
 	)
 	activeTenantID := insertProviderProvisioningTenant(t, ctx, activeTenant, shared.TenantStatusActive)
-	disabledTenantID := insertProviderProvisioningTenant(t, ctx, disabledTenant, shared.TenantStatusActive)
 	suspendedTenantID := insertProviderProvisioningTenant(t, ctx, suspendedTenant, shared.TenantStatusSuspended)
-	insertProviderProvisioningPlugin(t, ctx, pluginID, true)
-	setProviderProvisioningPluginState(t, ctx, pluginID, disabledTenantID, false)
 	t.Cleanup(func() {
-		cleanupProviderProvisioningRows(t, ctx, pluginID, activeTenantID, disabledTenantID, suspendedTenantID)
+		cleanupProviderProvisioningRows(t, ctx, activeTenantID, suspendedTenantID)
 	})
 
 	bizCtxSvc := providerProvisioningBizCtxService{}
-	membershipSvc := membership.New(bizCtxSvc)
+	membershipSvc := membership.New(bizCtxSvc, providerProvisioningUsers{})
 	resolverConfigSvc := resolverconfig.New()
-	tenantPluginSvc := tenantplugin.New(bizCtxSvc, nil)
+	tenantPluginSvc := &providerProvisioningTenantPlugins{}
 	resolverSvc := resolver.New(bizCtxSvc, membershipSvc)
 	providerSvc, err := New(membershipSvc, resolverSvc, resolverConfigSvc, tenantPluginSvc)
 	if err != nil {
@@ -56,14 +53,11 @@ func TestProvisionAutoEnabledTenantPluginsAppliesExistingActiveTenants(t *testin
 		t.Fatalf("provision existing tenants failed: %v", err)
 	}
 
-	if enabled := providerProvisioningPluginEnabled(t, ctx, pluginID, activeTenantID); !enabled {
-		t.Fatalf("expected active tenant %d to receive plugin %s enablement", activeTenantID, pluginID)
+	if !containsProvisionedTenantID(tenantPluginSvc.provisionedTenantIDs, activeTenantID) {
+		t.Fatalf("expected active tenant %d to be provisioned, got %v", activeTenantID, tenantPluginSvc.provisionedTenantIDs)
 	}
-	if enabled := providerProvisioningPluginEnabled(t, ctx, pluginID, disabledTenantID); enabled {
-		t.Fatalf("expected explicit disabled tenant %d to preserve plugin %s disablement", disabledTenantID, pluginID)
-	}
-	if enabled := providerProvisioningPluginEnabled(t, ctx, pluginID, suspendedTenantID); enabled {
-		t.Fatalf("expected suspended tenant %d to skip plugin %s enablement", suspendedTenantID, pluginID)
+	if containsProvisionedTenantID(tenantPluginSvc.provisionedTenantIDs, suspendedTenantID) {
+		t.Fatalf("expected suspended tenant %d to be skipped, got %v", suspendedTenantID, tenantPluginSvc.provisionedTenantIDs)
 	}
 }
 
@@ -72,8 +66,47 @@ func TestProvisionAutoEnabledTenantPluginsAppliesExistingActiveTenants(t *testin
 type providerProvisioningBizCtxService struct{}
 
 // Current returns an empty plugin-visible business context.
-func (providerProvisioningBizCtxService) Current(context.Context) plugincontract.CurrentContext {
-	return plugincontract.CurrentContext{}
+func (providerProvisioningBizCtxService) Current(context.Context) bizctxcap.CurrentContext {
+	return bizctxcap.CurrentContext{}
+}
+
+// providerProvisioningUsers is unused by the provisioning path.
+type providerProvisioningUsers struct{}
+
+// BatchGetUsers returns an empty projection map for provisioning-only tests.
+func (providerProvisioningUsers) BatchGetUsers(context.Context, capmodel.CapabilityContext, []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
+	return &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{Items: map[usercap.UserID]*usercap.UserProjection{}}, nil
+}
+
+// SearchUsers returns an empty page because startup provisioning never searches users.
+func (providerProvisioningUsers) SearchUsers(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
+	return &capmodel.PageResult[*usercap.UserProjection]{Items: []*usercap.UserProjection{}}, nil
+}
+
+// EnsureUsersVisible accepts all inputs because this fixture is construction-only.
+func (providerProvisioningUsers) EnsureUsersVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
+	return nil
+}
+
+// providerProvisioningTenantPlugins records provisioning calls.
+type providerProvisioningTenantPlugins struct {
+	provisionedTenantIDs []int64
+}
+
+// List returns no tenant plugin rows because this test only verifies provisioning calls.
+func (s *providerProvisioningTenantPlugins) List(context.Context) (*tenantplugin.ListOutput, error) {
+	return &tenantplugin.ListOutput{}, nil
+}
+
+// SetEnabled accepts updates without mutating state because it is outside this test path.
+func (s *providerProvisioningTenantPlugins) SetEnabled(context.Context, string, bool) error {
+	return nil
+}
+
+// ProvisionForTenant records the tenant targeted by startup provisioning.
+func (s *providerProvisioningTenantPlugins) ProvisionForTenant(_ context.Context, tenantID int64) error {
+	s.provisionedTenantIDs = append(s.provisionedTenantIDs, tenantID)
+	return nil
 }
 
 // configureProviderProvisioningTestDB points the provider package test at local PostgreSQL.
@@ -120,98 +153,22 @@ func insertProviderProvisioningTenant(
 	return id
 }
 
-// insertProviderProvisioningPlugin creates one tenant-scoped plugin registry row.
-func insertProviderProvisioningPlugin(
-	t *testing.T,
-	ctx context.Context,
-	pluginID string,
-	autoEnableForNewTenants bool,
-) {
-	t.Helper()
-	if _, err := dao.SysPlugin.Ctx(ctx).Unscoped().Where(do.SysPlugin{PluginId: pluginID}).Delete(); err != nil {
-		t.Fatalf("cleanup stale plugin registry %s failed: %v", pluginID, err)
-	}
-	_, err := dao.SysPlugin.Ctx(ctx).OmitEmptyData().Data(do.SysPlugin{
-		PluginId:                pluginID,
-		Name:                    pluginID,
-		Version:                 "v0.1.0",
-		Type:                    "source",
-		Installed:               1,
-		Status:                  1,
-		DesiredState:            "enabled",
-		CurrentState:            "enabled",
-		ScopeNature:             "tenant_aware",
-		InstallMode:             "tenant_scoped",
-		AutoEnableForNewTenants: autoEnableForNewTenants,
-	}).InsertIgnore()
-	if err != nil {
-		t.Fatalf("insert plugin registry %s failed: %v", pluginID, err)
-	}
-}
-
-// providerProvisioningPluginEnabled reads one tenant enablement row.
-func providerProvisioningPluginEnabled(t *testing.T, ctx context.Context, pluginID string, tenantID int64) bool {
-	t.Helper()
-	value, err := dao.SysPluginState.Ctx(ctx).
-		Where(do.SysPluginState{
-			PluginId: pluginID,
-			TenantId: tenantID,
-			StateKey: "__tenant_enabled__",
-		}).
-		Value(dao.SysPluginState.Columns().Enabled)
-	if err != nil {
-		t.Fatalf("read tenant plugin state failed: %v", err)
-	}
-	return value != nil && !value.IsNil() && value.Bool()
-}
-
-// setProviderProvisioningPluginState writes one explicit tenant plugin state.
-func setProviderProvisioningPluginState(
-	t *testing.T,
-	ctx context.Context,
-	pluginID string,
-	tenantID int64,
-	enabled bool,
-) {
-	t.Helper()
-	if _, err := dao.SysPluginState.Ctx(ctx).
-		Unscoped().
-		Where(do.SysPluginState{
-			PluginId: pluginID,
-			TenantId: tenantID,
-			StateKey: "__tenant_enabled__",
-		}).
-		Delete(); err != nil {
-		t.Fatalf("cleanup explicit tenant plugin state failed: %v", err)
-	}
-	stateValue := "disabled"
-	if enabled {
-		stateValue = "enabled"
-	}
-	_, err := dao.SysPluginState.Ctx(ctx).OmitEmptyData().Data(do.SysPluginState{
-		PluginId:   pluginID,
-		TenantId:   tenantID,
-		StateKey:   "__tenant_enabled__",
-		StateValue: stateValue,
-		Enabled:    enabled,
-	}).Insert()
-	if err != nil {
-		t.Fatalf("insert explicit tenant plugin state failed: %v", err)
-	}
-}
-
 // cleanupProviderProvisioningRows removes rows created by provider provisioning tests.
-func cleanupProviderProvisioningRows(t *testing.T, ctx context.Context, pluginID string, tenantIDs ...int64) {
+func cleanupProviderProvisioningRows(t *testing.T, ctx context.Context, tenantIDs ...int64) {
 	t.Helper()
-	if _, err := dao.SysPluginState.Ctx(ctx).Unscoped().Where(do.SysPluginState{PluginId: pluginID}).Delete(); err != nil {
-		t.Errorf("cleanup tenant plugin state failed: %v", err)
-	}
-	if _, err := dao.SysPlugin.Ctx(ctx).Unscoped().Where(do.SysPlugin{PluginId: pluginID}).Delete(); err != nil {
-		t.Errorf("cleanup plugin registry failed: %v", err)
-	}
 	if len(tenantIDs) > 0 {
 		if _, err := dao.Tenant.Ctx(ctx).Unscoped().WhereIn(dao.Tenant.Columns().Id, tenantIDs).Delete(); err != nil {
 			t.Errorf("cleanup tenant rows failed: %v", err)
 		}
 	}
+}
+
+// containsProvisionedTenantID reports whether a provisioning call targeted tenantID.
+func containsProvisionedTenantID(values []int64, tenantID int64) bool {
+	for _, value := range values {
+		if value == tenantID {
+			return true
+		}
+	}
+	return false
 }

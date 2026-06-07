@@ -8,16 +8,26 @@ package dept
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/text/gstr"
 	"github.com/gogf/gf/v2/util/gconv"
 
 	"lina-core/pkg/bizerr"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/capmodel"
+	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/usercap"
 	"lina-plugin-linapro-org-core/backend/internal/dao"
 	"lina-plugin-linapro-org-core/backend/internal/model/do"
 	entitymodel "lina-plugin-linapro-org-core/backend/internal/model/entity"
+)
+
+const (
+	deptCapabilityPluginID = "linapro-org-core"
+	deptUserDefaultLimit   = 10
+	deptUserMaxLimit       = 200
 )
 
 // List queries the department list with optional filters.
@@ -165,7 +175,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 				childAncestors := gstr.Replace(child.Ancestors, oldPrefix, newPrefix, 1)
 				_, err = tx.Model(dao.Dept.Table()).Safe().Ctx(ctx).
 					OmitNilData().
-					Where(plugincontract.TenantFilterColumn, tenantID).
+					Where(tenantcap.TenantFilterColumn, tenantID).
 					Where(colDeptID, child.Id).
 					Data(do.Dept{Ancestors: childAncestors}).
 					Update()
@@ -179,7 +189,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 			}
 			_, err = tx.Model(dao.Dept.Table()).Safe().Ctx(ctx).
 				OmitNilData().
-				Where(plugincontract.TenantFilterColumn, tenantID).
+				Where(tenantcap.TenantFilterColumn, tenantID).
 				Where(colDeptID, in.Id).
 				Data(data).
 				Update()
@@ -195,7 +205,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 	tenantID := s.tenantFilter.Context(ctx).TenantID
 	_, err = dao.Dept.Ctx(ctx).
 		OmitNilData().
-		Where(plugincontract.TenantFilterColumn, tenantID).
+		Where(tenantcap.TenantFilterColumn, tenantID).
 		Where(colDeptID, in.Id).
 		Data(data).
 		Update()
@@ -286,32 +296,35 @@ func (s *serviceImpl) Exclude(ctx context.Context, in ExcludeInput) ([]*DeptEnti
 
 // Users returns selectable users for one department subtree.
 func (s *serviceImpl) Users(ctx context.Context, deptID int, keyword string, limit int) ([]*DeptUser, error) {
+	if s == nil || s.users == nil {
+		return nil, bizerr.NewCode(capmodel.CodeCapabilityUnavailable, bizerr.P("capability", "user"))
+	}
+	limit = normalizeDeptUserLimit(limit)
 	if deptID == 0 {
-		model := s.tenantFilter.Apply(ctx, dao.SysUser.Ctx(ctx), "").Fields(colUserID, colUserUsername, colUserNickname)
-		if keyword != "" {
-			model = model.Where(
-				fmt.Sprintf("(%s LIKE ? OR %s LIKE ?)", colUserUsername, colUserNickname),
-				"%"+keyword+"%", "%"+keyword+"%",
-			)
-		}
-		if limit > 0 {
-			model = model.Limit(limit)
-		}
-		rows := make([]*userRow, 0)
-		if err := model.Scan(&rows); err != nil {
+		out, err := s.users.SearchUsers(ctx, s.capabilityContext(ctx, "dept.users"), usercap.SearchInput{
+			Keyword: keyword,
+			Page:    capmodel.PageRequest{PageSize: limit},
+		})
+		if err != nil {
 			return nil, err
 		}
-		return toDeptUsers(rows), nil
+		return toDeptUsers(out.Items, limit), nil
 	}
 
 	deptIDs, err := s.DescendantDeptIDs(ctx, deptID)
 	if err != nil {
 		return nil, err
 	}
+	if keyword != "" {
+		return s.usersByKeywordAndDeptIDs(ctx, keyword, limit, deptIDs)
+	}
 
 	userDeptRows := make([]*entitymodel.UserDept, 0)
 	err = s.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx), "").
+		Fields(colUserUserID).
 		WhereIn(colUserDeptID, deptIDs).
+		Group(colUserUserID).
+		Limit(limit).
 		Scan(&userDeptRows)
 	if err != nil {
 		return nil, err
@@ -333,25 +346,11 @@ func (s *serviceImpl) Users(ctx context.Context, deptID int, keyword string, lim
 		userIDs = append(userIDs, row.UserId)
 	}
 
-	tenantID := s.tenantFilter.Context(ctx).TenantID
-	model := dao.SysUser.Ctx(ctx).
-		Fields(colUserID, colUserUsername, colUserNickname).
-		Where(plugincontract.TenantFilterColumn, tenantID).
-		WhereIn(colUserID, userIDs)
-	if keyword != "" {
-		model = model.Where(
-			fmt.Sprintf("(%s LIKE ? OR %s LIKE ?)", colUserUsername, colUserNickname),
-			"%"+keyword+"%", "%"+keyword+"%",
-		)
-	}
-	if limit > 0 {
-		model = model.Limit(limit)
-	}
-	rows := make([]*userRow, 0)
-	if err := model.Scan(&rows); err != nil {
+	projections, err := s.batchGetUsers(ctx, userIDs)
+	if err != nil {
 		return nil, err
 	}
-	return toDeptUsers(rows), nil
+	return toDeptUsers(projections, limit), nil
 }
 
 // DescendantDeptIDs returns the given department plus all descendants.
@@ -389,14 +388,160 @@ func (s *serviceImpl) checkCodeUnique(ctx context.Context, code string, excludeI
 	return nil
 }
 
-// toDeptUsers converts narrow user projections into selectable user rows.
-func toDeptUsers(rows []*userRow) []*DeptUser {
+// usersByKeywordAndDeptIDs searches visible users through usercap and intersects
+// the bounded result with plugin-owned department assignments.
+func (s *serviceImpl) usersByKeywordAndDeptIDs(ctx context.Context, keyword string, limit int, deptIDs []int) ([]*DeptUser, error) {
+	searchLimit := deptUserMaxLimit
+	out, err := s.users.SearchUsers(ctx, s.capabilityContext(ctx, "dept.users"), usercap.SearchInput{
+		Keyword: keyword,
+		Page:    capmodel.PageRequest{PageSize: searchLimit},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if out == nil || len(out.Items) == 0 {
+		return []*DeptUser{}, nil
+	}
+	candidateIDs := make([]int, 0, len(out.Items))
+	projectionsByID := make(map[int]*usercap.UserProjection, len(out.Items))
+	for _, projection := range out.Items {
+		userID, ok := parseUserProjectionID(projection)
+		if !ok {
+			continue
+		}
+		candidateIDs = append(candidateIDs, userID)
+		projectionsByID[userID] = projection
+	}
+	if len(candidateIDs) == 0 {
+		return []*DeptUser{}, nil
+	}
+
+	userDeptRows := make([]*entitymodel.UserDept, 0)
+	err = s.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx), "").
+		Fields(colUserUserID).
+		WhereIn(colUserDeptID, deptIDs).
+		WhereIn(colUserUserID, candidateIDs).
+		Group(colUserUserID).
+		Scan(&userDeptRows)
+	if err != nil {
+		return nil, err
+	}
+	assigned := make(map[int]struct{}, len(userDeptRows))
+	for _, row := range userDeptRows {
+		if row != nil {
+			assigned[row.UserId] = struct{}{}
+		}
+	}
+	filtered := make([]*usercap.UserProjection, 0, limit)
+	for _, userID := range candidateIDs {
+		if _, ok := assigned[userID]; !ok {
+			continue
+		}
+		filtered = append(filtered, projectionsByID[userID])
+		if len(filtered) >= limit {
+			break
+		}
+	}
+	return toDeptUsers(filtered, limit), nil
+}
+
+// batchGetUsers resolves user projections through usercap while preserving
+// assignment order and hiding missing or invisible users.
+func (s *serviceImpl) batchGetUsers(ctx context.Context, userIDs []int) ([]*usercap.UserProjection, error) {
+	ids := make([]usercap.UserID, 0, len(userIDs))
+	for _, userID := range userIDs {
+		if userID > 0 {
+			ids = append(ids, usercap.UserID(strconv.Itoa(userID)))
+		}
+	}
+	out, err := s.users.BatchGetUsers(ctx, s.capabilityContext(ctx, "dept.users"), ids)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*usercap.UserProjection, 0, len(ids))
+	if out == nil {
+		return result, nil
+	}
+	for _, id := range ids {
+		if item := out.Items[id]; item != nil {
+			result = append(result, item)
+		}
+	}
+	return result, nil
+}
+
+// capabilityContext creates the plugin-visible metadata for organization HTTP
+// reads without exposing host request internals.
+func (s *serviceImpl) capabilityContext(ctx context.Context, resource string) capmodel.CapabilityContext {
+	tenantCtx := tenantcap.TenantFilterContext{}
+	if s != nil && s.tenantFilter != nil {
+		tenantCtx = s.tenantFilter.Context(ctx)
+	}
+	actorID := tenantCtx.ActingUserID
+	if actorID == 0 {
+		actorID = tenantCtx.UserID
+	}
+	actor := capmodel.CapabilityActor{
+		Type:   capmodel.ActorTypeUser,
+		UserID: int64(actorID),
+	}
+	if actorID == 0 {
+		actor = capmodel.CapabilityActor{
+			Type:         capmodel.ActorTypeSystem,
+			Name:         deptCapabilityPluginID,
+			SystemReason: "department user projection",
+		}
+	}
+	return capmodel.CapabilityContext{
+		PluginID:    deptCapabilityPluginID,
+		Actor:       actor,
+		TenantID:    capmodel.DomainID(strconv.Itoa(tenantCtx.TenantID)),
+		Source:      capmodel.CapabilitySourceHTTP,
+		SystemCall:  actor.Type == capmodel.ActorTypeSystem,
+		Resource:    resource,
+		RequestedAt: time.Now(),
+	}
+}
+
+// normalizeDeptUserLimit applies the bounded selector contract.
+func normalizeDeptUserLimit(limit int) int {
+	if limit <= 0 {
+		return deptUserDefaultLimit
+	}
+	if limit > deptUserMaxLimit {
+		return deptUserMaxLimit
+	}
+	return limit
+}
+
+// toDeptUsers converts usercap projections into selectable user rows.
+func toDeptUsers(rows []*usercap.UserProjection, limit int) []*DeptUser {
 	result := make([]*DeptUser, 0, len(rows))
 	for _, row := range rows {
 		if row == nil {
 			continue
 		}
-		result = append(result, &DeptUser{Id: row.Id, Username: row.Username, Nickname: row.Nickname})
+		id, ok := parseUserProjectionID(row)
+		if !ok {
+			continue
+		}
+		result = append(result, &DeptUser{Id: id, Username: row.Username, Nickname: row.Nickname})
+		if limit > 0 && len(result) >= limit {
+			break
+		}
 	}
 	return result
+}
+
+// parseUserProjectionID decodes the domain string ID back to the API's legacy
+// numeric response shape at the controller boundary.
+func parseUserProjectionID(row *usercap.UserProjection) (int, bool) {
+	if row == nil {
+		return 0, false
+	}
+	id, err := strconv.Atoi(string(row.ID))
+	if err != nil || id <= 0 {
+		return 0, false
+	}
+	return id, true
 }

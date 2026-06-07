@@ -21,8 +21,9 @@ import (
 
 	"lina-core/pkg/bizerr"
 	_ "lina-core/pkg/dbdriver"
-	"lina-core/pkg/plugin/capability/ai/aitext"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/aicap/aitext"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/cachecap"
 	"lina-plugin-linapro-ai-core/backend/internal/dao"
 	"lina-plugin-linapro-ai-core/backend/internal/model/do"
 	"lina-plugin-linapro-ai-core/backend/internal/model/entity"
@@ -1265,8 +1266,8 @@ func TestMultimodalMetadataManagementFlow(t *testing.T) {
 
 type testBizCtx struct{}
 
-func (testBizCtx) Current(context.Context) plugincontract.CurrentContext {
-	return plugincontract.CurrentContext{UserID: 1, TenantID: 0, PlatformBypass: true}
+func (testBizCtx) Current(context.Context) bizctxcap.CurrentContext {
+	return bizctxcap.CurrentContext{UserID: 1, TenantID: 0, PlatformBypass: true}
 }
 
 func providerEndpointsByProtocol(items []*ProviderEndpointItem) map[string]*ProviderEndpointItem {
@@ -1282,18 +1283,18 @@ func providerEndpointsByProtocol(items []*ProviderEndpointItem) map[string]*Prov
 
 type memoryCacheService struct {
 	mu    sync.Mutex
-	items map[string]*plugincontract.CacheItem
+	items map[string]*cachecap.CacheItem
 }
 
 func newMemoryCacheService() *memoryCacheService {
-	return &memoryCacheService{items: make(map[string]*plugincontract.CacheItem)}
+	return &memoryCacheService{items: make(map[string]*cachecap.CacheItem)}
 }
 
 func (s *memoryCacheService) Get(
 	_ context.Context,
 	namespace string,
 	key string,
-) (*plugincontract.CacheItem, bool, error) {
+) (*cachecap.CacheItem, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	item, ok := s.items[memoryCacheKey(namespace, key)]
@@ -1310,12 +1311,12 @@ func (s *memoryCacheService) Set(
 	key string,
 	value string,
 	ttl time.Duration,
-) (*plugincontract.CacheItem, error) {
+) (*cachecap.CacheItem, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	item := &plugincontract.CacheItem{
+	item := &cachecap.CacheItem{
 		Key:       key,
-		ValueKind: plugincontract.CacheValueKindString,
+		ValueKind: cachecap.CacheValueKindString,
 		Value:     value,
 		ExpireAt:  memoryCacheExpireAt(ttl),
 	}
@@ -1337,13 +1338,13 @@ func (s *memoryCacheService) Incr(
 	key string,
 	delta int64,
 	ttl time.Duration,
-) (*plugincontract.CacheItem, error) {
+) (*cachecap.CacheItem, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	cacheKey := memoryCacheKey(namespace, key)
 	item := s.items[cacheKey]
 	if item == nil {
-		item = &plugincontract.CacheItem{Key: key, ValueKind: plugincontract.CacheValueKindInt}
+		item = &cachecap.CacheItem{Key: key, ValueKind: cachecap.CacheValueKindInt}
 		s.items[cacheKey] = item
 	}
 	item.IntValue += delta

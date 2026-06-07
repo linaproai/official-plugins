@@ -7,16 +7,25 @@ package impersonate
 
 import (
 	"context"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/mssola/useragent"
 
 	"lina-core/pkg/bizerr"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/authcap/token"
+	"lina-core/pkg/plugin/capability/authcap/authz"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/capmodel"
+	"lina-core/pkg/plugin/capability/usercap"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/shared"
 )
+
+const impersonateCapabilityPluginID = "linapro-tenant-core"
 
 // Start validates an impersonation request and returns token metadata.
 func (s *serviceImpl) Start(ctx context.Context, in StartInput) (*StartOutput, error) {
@@ -52,7 +61,7 @@ func (s *serviceImpl) Start(ctx context.Context, in StartInput) (*StartOutput, e
 	if s.authSvc == nil {
 		return nil, bizerr.NewCode(CodeImpersonationTokenUnavailable)
 	}
-	tokenOut, err := s.authSvc.IssueImpersonationToken(ctx, plugincontract.ImpersonationTokenIssueInput{
+	tokenOut, err := s.authSvc.IssueImpersonationToken(ctx, token.ImpersonationTokenIssueInput{
 		ActingUserID: int(actingUserID),
 		TenantID:     int(in.TenantID),
 	})
@@ -86,38 +95,72 @@ func (s *serviceImpl) Stop(ctx context.Context, in StopInput) error {
 	if s.authSvc == nil {
 		return bizerr.NewCode(CodeImpersonationTokenUnavailable)
 	}
-	return s.authSvc.RevokeImpersonationToken(ctx, plugincontract.ImpersonationTokenRevokeInput{
+	return s.authSvc.RevokeImpersonationToken(ctx, token.ImpersonationTokenRevokeInput{
 		BearerToken: tokenString,
 		TenantID:    int(in.TenantID),
 	})
 }
 
 // currentUser returns the current platform user projection.
-func (s *serviceImpl) currentUser(ctx context.Context, userID int64) (*userRow, error) {
-	var user *userRow
-	err := shared.Model(ctx, shared.TableSysUser).
-		Fields("id", "username", "status").
-		Where("id", userID).
-		Scan(&user)
-	return user, err
+func (s *serviceImpl) currentUser(ctx context.Context, userID int64) (*usercap.UserProjection, error) {
+	if s == nil || s.users == nil {
+		return nil, bizerr.NewCode(capmodel.CodeCapabilityUnavailable, bizerr.P("capability", "user"))
+	}
+	userDomainID := usercap.UserID(strconv.FormatInt(userID, 10))
+	out, err := s.users.BatchGetUsers(ctx, s.capabilityContext(ctx, "impersonate.current_user"), []usercap.UserID{userDomainID})
+	if err != nil || out == nil {
+		return nil, err
+	}
+	return out.Items[userDomainID], nil
 }
 
 // isPlatformAdmin reports whether userID is bound to an all-data role in platform context.
 func (s *serviceImpl) isPlatformAdmin(ctx context.Context, userID int64) (bool, error) {
-	count, err := shared.Model(ctx, "sys_user_role").As("ur").
-		InnerJoin("sys_role r", "r.id = ur.role_id").
-		Where("ur.user_id", userID).
-		Where("ur.tenant_id", shared.PlatformTenantID).
-		Where("r.data_scope", 1).
-		Count()
-	if err != nil {
-		return false, err
+	if s == nil || s.authzSvc == nil {
+		return false, bizerr.NewCode(capmodel.CodeCapabilityUnavailable, bizerr.P("capability", "authz"))
 	}
-	return count > 0, nil
+	return s.authzSvc.IsPlatformAdmin(ctx, s.capabilityContext(ctx, "impersonate.platform_admin"), authz.UserID(strconv.FormatInt(userID, 10)))
+}
+
+// capabilityContext creates plugin-visible metadata for impersonation domain
+// calls into host-owned capabilities.
+func (s *serviceImpl) capabilityContext(ctx context.Context, resource string) capmodel.CapabilityContext {
+	current := bizctxcap.CurrentContext{}
+	if s != nil && s.bizCtxSvc != nil {
+		current = s.bizCtxSvc.Current(ctx)
+	}
+	actorID := current.ActingUserID
+	if actorID == 0 {
+		actorID = current.UserID
+	}
+	actor := capmodel.CapabilityActor{
+		Type:   capmodel.ActorTypeUser,
+		UserID: int64(actorID),
+		Name:   current.Username,
+	}
+	if actorID == 0 {
+		actor = capmodel.CapabilityActor{
+			Type:         capmodel.ActorTypeSystem,
+			Name:         impersonateCapabilityPluginID,
+			SystemReason: "tenant impersonation domain call",
+		}
+	}
+	return capmodel.CapabilityContext{
+		PluginID:    impersonateCapabilityPluginID,
+		Actor:       actor,
+		TenantID:    capmodel.DomainID(strconv.Itoa(current.TenantID)),
+		Source:      capmodel.CapabilitySourceHTTP,
+		SystemCall:  actor.Type == capmodel.ActorTypeSystem,
+		Resource:    resource,
+		RequestedAt: time.Now(),
+	}
 }
 
 // writeAuditLogs writes optional login and operation log rows when monitor tables exist.
 func (s *serviceImpl) writeAuditLogs(ctx context.Context, in auditInput) error {
+	if _, ok := gdb.GetAllConfig()[gdb.DefaultGroupName]; !ok {
+		return nil
+	}
 	tables, err := g.DB().Tables(ctx)
 	if err != nil {
 		return err

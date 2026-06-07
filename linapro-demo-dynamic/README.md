@@ -7,7 +7,7 @@
 - one menu entry rendered inside the default management workspace
 - one standalone static page that does not depend on the host UI framework
 - demo backend routes executed through the dynamic plugin bridge
-- governed access to `runtime`, `storage`, `network`, `data`, `config`, `manifest`, `hostConfig`, `org`, and `tenant` host services through `pkg/plugin/capability/guest`
+- governed access to `runtime`, `storage`, `network`, `data`, `config`, `manifest`, `hostConfig`, `org`, and `tenant` host services through `pkg/plugin/pluginbridge/guest`
 - source-compatible `Before*` precondition handlers and `After*` notification handlers are auto-discovered from backend controller methods, then write runtime debug logs for lifecycle flow inspection
 
 ## Directory Layout
@@ -73,7 +73,7 @@ The sample requests the following host services in `plugin.yaml`:
 
 These declarations are reviewed and authorized by the host during plugin lifecycle operations.
 
-Guest business host-service clients are imported from `lina-core/pkg/plugin/capability/guest`. The `pluginbridge` root package is only used by the sample's bridge files for protocol envelopes, route dispatch, lifecycle contracts, cron contracts, and response helpers.
+Guest business host-service clients are imported from `lina-core/pkg/plugin/pluginbridge/guest`. The same package is also used by the sample's bridge files for protocol envelopes, route dispatch, lifecycle contracts, cron contracts, and response helpers.
 
 The `manifest` host service example authorizes only `config/profile.yaml` and `config/config.yaml`. The `/api/v1/manifest-demo` route reads those two packaged files through `manifest.get` and the embedded page displays the returned profile and config preview, so the sample shows the full declaration-to-use flow. Runtime-effective configuration is still read through the dedicated `config` host service; SQL and i18n lifecycle resources are not included in this manifest host-service authorization example.
 

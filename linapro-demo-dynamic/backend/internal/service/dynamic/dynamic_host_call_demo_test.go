@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/orgcap"
 	"lina-core/pkg/plugin/capability/tenantcap"
 )
@@ -101,8 +101,8 @@ func (s *fakeManifestHostService) Scan(path string, key string, target any) (boo
 type fakeOrgHostService struct{}
 
 // Status returns a deterministic organization capability status.
-func (s *fakeOrgHostService) Status(_ context.Context) (contract.CapabilityStatus, error) {
-	return contract.CapabilityStatus{
+func (s *fakeOrgHostService) Status(_ context.Context) (capmodel.CapabilityStatus, error) {
+	return capmodel.CapabilityStatus{
 		CapabilityID:   orgcap.CapabilityOrgV1,
 		Available:      true,
 		ActiveProvider: orgcap.ProviderPluginID,
@@ -141,8 +141,8 @@ func (s *fakeOrgHostService) GetUserPostIDs(_ context.Context, _ int) ([]int, er
 type fakeTenantHostService struct{}
 
 // Status returns a deterministic tenant capability status.
-func (s *fakeTenantHostService) Status(_ context.Context) (contract.CapabilityStatus, error) {
-	return contract.CapabilityStatus{
+func (s *fakeTenantHostService) Status(_ context.Context) (capmodel.CapabilityStatus, error) {
+	return capmodel.CapabilityStatus{
 		CapabilityID:   tenantcap.CapabilityTenantV1,
 		Available:      true,
 		ActiveProvider: tenantcap.ProviderPluginID,

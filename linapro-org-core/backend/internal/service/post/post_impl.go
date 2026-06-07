@@ -17,7 +17,7 @@ import (
 
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/excelutil"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-plugin-linapro-org-core/backend/internal/dao"
 	"lina-plugin-linapro-org-core/backend/internal/model/do"
 )
@@ -122,7 +122,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 	tenantID := s.tenantFilter.Context(ctx).TenantID
 	_, err := dao.Post.Ctx(ctx).
 		OmitNilData().
-		Where(plugincontract.TenantFilterColumn, tenantID).
+		Where(tenantcap.TenantFilterColumn, tenantID).
 		Where(colPostID, in.Id).
 		Data(data).
 		Update()

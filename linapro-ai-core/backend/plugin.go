@@ -11,8 +11,10 @@ import (
 
 	"github.com/gogf/gf/v2/errors/gerror"
 
-	"lina-core/pkg/plugin/capability/ai/aitext"
-	"lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/aicap/aitext"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/cachecap"
+	"lina-core/pkg/plugin/capability/hostconfigcap"
 	"lina-core/pkg/plugin/pluginhost"
 	aicore "lina-plugin-linapro-ai-core"
 	invocationcontroller "lina-plugin-linapro-ai-core/backend/internal/controller/invocation"
@@ -146,7 +148,7 @@ func registerCleanupCron(ctx context.Context, registrar pluginhost.CronRegistrar
 func cleanupExpiredInvocations(
 	ctx context.Context,
 	primaryNode bool,
-	hostConfigSvc contract.HostConfigService,
+	hostConfigSvc hostconfigcap.Service,
 	cleaner invocationRetentionCleaner,
 ) error {
 	if !primaryNode {
@@ -167,7 +169,7 @@ func cleanupExpiredInvocations(
 }
 
 // requiredLogRetentionDays reads the required host log-retention parameter.
-func requiredLogRetentionDays(ctx context.Context, hostConfigSvc contract.HostConfigService) (int, error) {
+func requiredLogRetentionDays(ctx context.Context, hostConfigSvc hostconfigcap.Service) (int, error) {
 	value, err := hostConfigSvc.Get(ctx, logRetentionDaysKey)
 	if err != nil {
 		return 0, err
@@ -187,7 +189,7 @@ func requiredLogRetentionDays(ctx context.Context, hostConfigSvc contract.HostCo
 
 // smartCenter returns the shared Smart Center service so management writes and
 // framework provider calls observe the same tier-resolution cache.
-func smartCenter(bizCtxSvc contract.BizCtxService, cacheSvc contract.CacheService) aisvc.Service {
+func smartCenter(bizCtxSvc bizctxcap.Service, cacheSvc cachecap.Service) aisvc.Service {
 	smartCenterMu.Lock()
 	defer smartCenterMu.Unlock()
 	if smartCenterService == nil {

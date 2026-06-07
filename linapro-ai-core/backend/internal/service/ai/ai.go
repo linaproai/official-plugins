@@ -10,8 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"lina-core/pkg/plugin/capability/ai/aitext"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/aicap/aitext"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/cachecap"
 )
 
 const (
@@ -537,8 +538,8 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	bizCtxSvc        plugincontract.BizCtxService
-	cacheSvc         plugincontract.CacheService
+	bizCtxSvc        bizctxcap.Service
+	cacheSvc         cachecap.Service
 	httpClient       *http.Client
 	cacheMu          sync.RWMutex
 	tierCache        map[string]tierCacheEntry
@@ -549,8 +550,8 @@ type serviceImpl struct {
 
 // New creates and returns a Smart Center service with explicit host dependencies.
 func New(
-	bizCtxSvc plugincontract.BizCtxService,
-	cacheSvc plugincontract.CacheService,
+	bizCtxSvc bizctxcap.Service,
+	cacheSvc cachecap.Service,
 	httpClient *http.Client,
 ) Service {
 	if httpClient == nil {

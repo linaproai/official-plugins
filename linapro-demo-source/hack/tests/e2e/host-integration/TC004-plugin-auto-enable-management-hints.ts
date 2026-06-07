@@ -21,13 +21,25 @@ function unwrapApiData(payload: any) {
 }
 
 async function mockAutoEnableManagedPlugin(page: Page, targetPluginID: string) {
+  const patchManagedPlugin = (item: Record<string, unknown>) => ({
+    ...item,
+    autoEnableManaged: item.id === targetPluginID ? 1 : 0,
+    name:
+      item.id === targetPluginID
+        ? "内容管理插件-通知公告中心"
+        : item.name,
+  });
+
   await page.route("**/api/v1/plugins**", async (route) => {
     const requestURL = new URL(route.request().url());
     if (route.request().method() !== "GET") {
       await route.continue();
       return;
     }
-    if (requestURL.pathname !== "/api/v1/plugins") {
+    if (
+      requestURL.pathname !== "/api/v1/plugins" &&
+      requestURL.pathname !== `/api/v1/plugins/${targetPluginID}`
+    ) {
       await route.continue();
       return;
     }
@@ -36,14 +48,11 @@ async function mockAutoEnableManagedPlugin(page: Page, targetPluginID: string) {
     const payload = await response.json();
     const data = unwrapApiData(payload);
     if (Array.isArray(data?.list)) {
-      data.list = data.list.map((item: Record<string, unknown>) => ({
-        ...item,
-        autoEnableManaged: item.id === targetPluginID ? 1 : 0,
-        name:
-          item.id === targetPluginID
-            ? "内容管理插件-通知公告中心"
-            : item.name,
-      }));
+      data.list = data.list.map((item: Record<string, unknown>) =>
+        patchManagedPlugin(item),
+      );
+    } else if (data && typeof data === "object") {
+      Object.assign(data, patchManagedPlugin(data as Record<string, unknown>));
     }
 
     await route.fulfill({

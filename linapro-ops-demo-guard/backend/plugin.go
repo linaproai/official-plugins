@@ -48,9 +48,9 @@ func beforeInstall(_ context.Context, input pluginhost.SourcePluginLifecycleInpu
 // system request chain published to source plugins.
 func registerGlobalMiddleware(_ context.Context, registrar pluginhost.HTTPRegistrar) error {
 	services := registrar.Services()
-	if services == nil || services.I18n() == nil || services.PluginState() == nil {
+	if services == nil || services.I18n() == nil || services.Plugins() == nil || services.Plugins().State() == nil {
 		return gerror.New("linapro-ops-demo-guard middleware requires host i18n and plugin-state services")
 	}
-	guardSvc := middlewaresvc.New(services.I18n(), services.PluginState())
+	guardSvc := middlewaresvc.New(services.I18n(), services.Plugins().State())
 	return registrar.GlobalMiddlewares().Bind("/*", guardSvc.Guard)
 }

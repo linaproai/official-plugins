@@ -2,26 +2,4 @@
 # https://goframe.org/docs/cli
 gfcli:
   gen:
-    dao:
-      - link: "pgsql:postgres:postgres@tcp(127.0.0.1:5432)/linapro?sslmode=disable"
-        path: "internal"
-        tables: >-
-          sys_online_session,
-          sys_user
-        importPrefix: "lina-plugin-linapro-monitor-online/backend/internal"
-        descriptionTag: true
-        noModelComment: true
-        stdTime: true
-        typeMapping:
-          timestamp:
-            type: "*time.Time"
-            import: time
-          "timestamp without time zone":
-            type: "*time.Time"
-            import: time
-          timestamptz:
-            type: "*time.Time"
-            import: time
-          "timestamp with time zone":
-            type: "*time.Time"
-            import: time
+    dao: []

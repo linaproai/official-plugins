@@ -3,9 +3,10 @@ package platform
 import (
 	"context"
 
+	"lina-plugin-linapro-tenant-core/backend/api/platform/v1"
+
 	"github.com/gogf/gf/v2/frame/g"
 
-	"lina-plugin-linapro-tenant-core/backend/api/platform/v1"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/impersonate"
 )
 

@@ -7,7 +7,9 @@ package loginlog
 import (
 	"context"
 
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/dictcap"
+	"lina-core/pkg/plugin/capability/i18ncap"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	entitymodel "lina-plugin-linapro-monitor-loginlog/backend/internal/model/entity"
 )
 
@@ -21,15 +23,11 @@ const (
 	colOS        = "os"
 	colMsg       = "msg"
 	colLoginTime = "login_time"
-
-	colDictType  = "dict_type"
-	colDictValue = "value"
-	colDictLabel = "label"
-	colDictSort  = "sort"
 )
 
 // Login-log export and dictionary constants.
 const (
+	pluginID            = "linapro-monitor-loginlog"
 	MaxExportRows       = 10000
 	DictTypeLoginStatus = "sys_login_status"
 )
@@ -81,13 +79,15 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	i18nSvc      plugincontract.I18nService         // i18nSvc resolves host runtime translations for plugin data.
-	tenantFilter plugincontract.TenantFilterService // tenantFilter constrains plugin-owned login-log rows.
+	dictSvc      dictcap.Service                    // dictSvc resolves host dictionary-domain labels.
+	i18nSvc      i18ncap.Service                    // i18nSvc resolves host runtime translations for plugin data.
+	tenantFilter tenantcap.PluginTableFilterService // tenantFilter constrains plugin-owned login-log rows.
 }
 
 // New creates and returns a new linapro-monitor-loginlog service instance.
-func New(i18nSvc plugincontract.I18nService, tenantFilter plugincontract.TenantFilterService) Service {
+func New(dictSvc dictcap.Service, i18nSvc i18ncap.Service, tenantFilter tenantcap.PluginTableFilterService) Service {
 	return &serviceImpl{
+		dictSvc:      dictSvc,
 		i18nSvc:      i18nSvc,
 		tenantFilter: tenantFilter,
 	}
@@ -95,9 +95,6 @@ func New(i18nSvc plugincontract.I18nService, tenantFilter plugincontract.TenantF
 
 // LoginLogEntity mirrors the plugin-local generated plugin_linapro_monitor_loginlog entity.
 type LoginLogEntity = entitymodel.Loginlog
-
-// dictDataRow reuses the plugin-local generated sys_dict_data entity.
-type dictDataRow = entitymodel.SysDictData
 
 // CreateInput defines the login-log create input.
 type CreateInput struct {

@@ -47,7 +47,10 @@ func provideOrg(_ context.Context, env orgcap.ProviderEnv) (orgcap.Provider, err
 	if env.TenantFilter == nil {
 		return nil, gerror.New("linapro-org-core provider requires host tenant-filter service")
 	}
-	return orgcapadapter.New(env.TenantFilter), nil
+	if env.Users == nil {
+		return nil, gerror.New("linapro-org-core provider requires host user capability service")
+	}
+	return orgcapadapter.New(env.TenantFilter, env.Users), nil
 }
 
 // registerRoutes binds department and post management routes through the published host middleware set.
@@ -57,10 +60,10 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		middlewares = routes.Middlewares()
 		services    = registrar.Services()
 	)
-	if services == nil || services.I18n() == nil || services.TenantFilter() == nil {
-		return gerror.New("linapro-org-core routes require host i18n and tenant-filter services")
+	if services == nil || services.I18n() == nil || services.TenantFilter() == nil || services.Users() == nil {
+		return gerror.New("linapro-org-core routes require host i18n, tenant-filter, and user capability services")
 	}
-	deptSvc := deptsvc.New(services.TenantFilter())
+	deptSvc := deptsvc.New(services.TenantFilter(), services.Users())
 	postSvc := postsvc.New(services.I18n(), services.TenantFilter())
 	routes.Group(routes.APIPrefix(), func(group pluginhost.RouteGroup) {
 		group.Group("/api/v1", func(group pluginhost.RouteGroup) {

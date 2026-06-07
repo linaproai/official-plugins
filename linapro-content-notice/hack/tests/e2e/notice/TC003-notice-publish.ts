@@ -1,168 +1,134 @@
-import { test, expect } from '@host-tests/fixtures/auth';
-import { ensureSourcePluginEnabled } from '@host-tests/fixtures/plugin';
-import { NoticePage } from '../../pages/NoticePage';
-import { config, pluginApiPath } from '@host-tests/fixtures/config';
+import { test, expect } from "@host-tests/fixtures/auth";
+import { ensureSourcePluginEnabled } from "@host-tests/fixtures/plugin";
+import { NoticePage } from "../../pages/NoticePage";
+import { pluginApiPath } from "@host-tests/fixtures/config";
+import {
+  createAdminApiContext,
+  expectSuccess,
+} from "@host-tests/support/api/job";
 
-const PLUGIN_ID = 'linapro-content-notice';
-const HOST_API_BASE = config.apiBaseURL.replace(/\/$/, '');
-const PLUGIN_API_BASE = `${config.publicBaseURL.replace(/\/$/, '')}${pluginApiPath(PLUGIN_ID)}`;
+import {
+  createMessageRecipient,
+  unreadCount,
+} from "../../support/message-recipient";
 
-/** Login via API and return accessToken */
-async function apiLogin(
-  username: string,
-  password: string,
-): Promise<string> {
-  const resp = await fetch(`${HOST_API_BASE}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password, clientType: 'web' }),
-    redirect: 'manual',
-  });
-  const data = await resp.json();
-  return data.data.accessToken;
-}
+const PLUGIN_ID = "linapro-content-notice";
 
-/** Get unread message count via API */
-async function apiUnreadCount(token: string): Promise<number> {
-  const resp = await fetch(`${HOST_API_BASE}/user/message/count`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const data = await resp.json();
-  return data.data.count;
-}
-
-/** Clear all messages via API */
-async function apiClearMessages(token: string): Promise<void> {
-  await fetch(`${HOST_API_BASE}/user/message/clear`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-test.describe('TC003 通知公告发布与消息分发', () => {
+test.describe("TC003 通知公告发布与消息分发", () => {
   test.beforeEach(async ({ adminPage }) => {
-    await ensureSourcePluginEnabled(adminPage, 'linapro-content-notice');
+    await ensureSourcePluginEnabled(adminPage, "linapro-content-notice");
   });
 
-  const publishTitle = `发布测试_${Date.now()}`;
-
-  test('TC003a: 创建已发布通知后铃铛显示未读', async ({ adminPage }) => {
+  test("TC003a: 创建已发布通知后铃铛显示未读", async ({ adminPage }) => {
     const noticePage = new NoticePage(adminPage);
+    const publishTitle = `发布测试_${Date.now()}`;
     await noticePage.goto();
 
-    // Create a published notice
-    await noticePage.createNotice(publishTitle, '通知', '已发布', '发布测试内容');
+    try {
+      // Create a published notice
+      await noticePage.createNotice(
+        publishTitle,
+        "通知",
+        "已发布",
+        "发布测试内容",
+      );
 
-    await expect(
-      adminPage.getByText(/新增成功|创建成功|success/i),
-    ).toBeVisible({ timeout: 5000 });
+      await expect(
+        adminPage.getByText(/新增成功|创建成功|success/i),
+      ).toBeVisible({ timeout: 5000 });
 
-    // Note: The admin user is excluded from message distribution (they are the creator),
-    // so we just verify the notice was created successfully
-    const hasNotice = await noticePage.hasNotice(publishTitle);
-    expect(hasNotice).toBeTruthy();
+      // Note: The admin user is excluded from message distribution (they are the creator),
+      // so we just verify the notice was created successfully
+      const hasNotice = await noticePage.hasNotice(publishTitle);
+      expect(hasNotice).toBeTruthy();
+    } finally {
+      await noticePage.deleteNoticeIfExists(publishTitle);
+    }
   });
 
-  test('TC003b: 发布后其他用户收到消息通知', async () => {
-    // Clear user001's messages first
-    const userToken = await apiLogin('user001', config.adminPass);
-    await apiClearMessages(userToken);
+  test("TC003b: 发布后其他用户收到消息通知", async () => {
+    const adminApi = await createAdminApiContext();
+    const recipient = await createMessageRecipient("tc003b");
+    let noticeId = 0;
 
-    // Verify user001 has 0 unread messages
-    const countBefore = await apiUnreadCount(userToken);
-    expect(countBefore).toBe(0);
+    try {
+      expect(await unreadCount(recipient.api)).toBe(0);
 
-    // Admin creates a published notice
-    const adminToken = await apiLogin(config.adminUser, config.adminPass);
-    const resp = await fetch(`${PLUGIN_API_BASE}/notice`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${adminToken}`,
-      },
-      body: JSON.stringify({
-        title: `消息分发测试_${Date.now()}`,
-        type: 1,
-        content: '验证消息分发',
-        status: 1,
-      }),
-    });
-    const createData = await resp.json();
-    expect(createData.code).toBe(0);
+      const createData = await expectSuccess<{ id: number }>(
+        await adminApi.post(pluginApiPath(PLUGIN_ID, "notice"), {
+          data: {
+            title: `消息分发测试_${Date.now()}`,
+            type: 1,
+            content: "验证消息分发",
+            status: 1,
+          },
+        }),
+      );
+      noticeId = createData.id;
 
-    // Verify user001 now has 1 unread message
-    const countAfter = await apiUnreadCount(userToken);
-    expect(countAfter).toBe(1);
-
-    // Clean up: clear user001's messages and delete the notice
-    await apiClearMessages(userToken);
-    const noticeId = createData.data.id;
-    await fetch(`${PLUGIN_API_BASE}/notice/${noticeId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${adminToken}` },
-    });
+      expect(await unreadCount(recipient.api)).toBe(1);
+    } finally {
+      if (noticeId > 0) {
+        await adminApi
+          .delete(pluginApiPath(PLUGIN_ID, `notice/${noticeId}`))
+          .catch(() => {});
+      }
+      await recipient.cleanup();
+      await adminApi.dispose();
+    }
   });
 
-  test('TC003d: 草稿发布后其他用户收到消息通知', async () => {
-    // Clear user001's messages first
-    const userToken = await apiLogin('user001', config.adminPass);
-    await apiClearMessages(userToken);
+  test("TC003d: 草稿发布后其他用户收到消息通知", async () => {
+    const adminApi = await createAdminApiContext();
+    const recipient = await createMessageRecipient("tc003d");
+    let noticeId = 0;
 
-    // Verify user001 has 0 unread messages
-    const countBefore = await apiUnreadCount(userToken);
-    expect(countBefore).toBe(0);
+    try {
+      expect(await unreadCount(recipient.api)).toBe(0);
 
-    // Admin creates a DRAFT notice
-    const adminToken = await apiLogin(config.adminUser, config.adminPass);
-    const createResp = await fetch(`${PLUGIN_API_BASE}/notice`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${adminToken}`,
-      },
-      body: JSON.stringify({
-        title: `草稿发布测试_${Date.now()}`,
-        type: 1,
-        content: '草稿内容',
-        status: 0,
-      }),
-    });
-    const createData = await createResp.json();
-    expect(createData.code).toBe(0);
-    const noticeId = createData.data.id;
+      const createData = await expectSuccess<{ id: number }>(
+        await adminApi.post(pluginApiPath(PLUGIN_ID, "notice"), {
+          data: {
+            title: `草稿发布测试_${Date.now()}`,
+            type: 1,
+            content: "草稿内容",
+            status: 0,
+          },
+        }),
+      );
+      noticeId = createData.id;
 
-    // Verify user001 still has 0 unread messages (draft should not fan-out)
-    const countAfterDraft = await apiUnreadCount(userToken);
-    expect(countAfterDraft).toBe(0);
+      expect(await unreadCount(recipient.api)).toBe(0);
 
-    // Now publish the draft by updating status to 1
-    const updateResp = await fetch(`${PLUGIN_API_BASE}/notice/${noticeId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${adminToken}`,
-      },
-      body: JSON.stringify({ status: 1 }),
-    });
-    const updateData = await updateResp.json();
-    expect(updateData.code).toBe(0);
+      await expectSuccess(
+        await adminApi.put(pluginApiPath(PLUGIN_ID, `notice/${noticeId}`), {
+          data: { status: 1 },
+        }),
+      );
 
-    // Verify user001 now has 1 unread message
-    const countAfterPublish = await apiUnreadCount(userToken);
-    expect(countAfterPublish).toBe(1);
-
-    // Clean up
-    await apiClearMessages(userToken);
-    await fetch(`${PLUGIN_API_BASE}/notice/${noticeId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${adminToken}` },
-    });
+      expect(await unreadCount(recipient.api)).toBe(1);
+    } finally {
+      if (noticeId > 0) {
+        await adminApi
+          .delete(pluginApiPath(PLUGIN_ID, `notice/${noticeId}`))
+          .catch(() => {});
+      }
+      await recipient.cleanup();
+      await adminApi.dispose();
+    }
   });
 
-  test('TC003c: 清理 - 删除测试通知', async ({ adminPage }) => {
+  test("TC003c: 已发布测试通知可删除", async ({ adminPage }) => {
     const noticePage = new NoticePage(adminPage);
+    const title = `删除测试_${Date.now()}`;
     await noticePage.goto();
-    await noticePage.deleteNotice(publishTitle);
+
+    await noticePage.createNotice(title, "通知", "已发布", "删除测试内容");
+    await expect(adminPage.getByText(/新增成功|创建成功|success/i)).toBeVisible(
+      { timeout: 5000 },
+    );
+
+    await noticePage.deleteNotice(title);
 
     await expect(adminPage.getByText(/删除成功|success/i)).toBeVisible({
       timeout: 5000,

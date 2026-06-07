@@ -3,10 +3,10 @@ package resolver
 
 import (
 	"context"
+	"lina-core/pkg/plugin/capability/bizctxcap"
 
 	"github.com/gogf/gf/v2/net/ghttp"
 
-	plugincontract "lina-core/pkg/plugin/capability/contract"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/membership"
 )
 
@@ -61,13 +61,13 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	bizCtxSvc     plugincontract.BizCtxService
+	bizCtxSvc     bizctxcap.Service
 	membershipSvc membership.Service
 	resolvers     map[string]Resolver
 }
 
 // New creates and returns a resolver service with the built-in resolver set.
-func New(bizCtxSvc plugincontract.BizCtxService, membershipSvc membership.Service) Service {
+func New(bizCtxSvc bizctxcap.Service, membershipSvc membership.Service) Service {
 	s := &serviceImpl{
 		bizCtxSvc:     bizCtxSvc,
 		membershipSvc: membershipSvc,

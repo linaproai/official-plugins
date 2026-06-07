@@ -5,8 +5,9 @@ package post
 
 import (
 	"context"
+	"lina-core/pkg/plugin/capability/i18ncap"
+	"lina-core/pkg/plugin/capability/tenantcap"
 
-	plugincontract "lina-core/pkg/plugin/capability/contract"
 	entitymodel "lina-plugin-linapro-org-core/backend/internal/model/entity"
 )
 
@@ -71,12 +72,12 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	i18nSvc      plugincontract.I18nService         // i18nSvc resolves plugin runtime translations.
-	tenantFilter plugincontract.TenantFilterService // tenantFilter constrains plugin-owned post rows.
+	i18nSvc      i18ncap.Service                    // i18nSvc resolves plugin runtime translations.
+	tenantFilter tenantcap.PluginTableFilterService // tenantFilter constrains plugin-owned post rows.
 }
 
 // New creates and returns a new post service instance.
-func New(i18nSvc plugincontract.I18nService, tenantFilter plugincontract.TenantFilterService) Service {
+func New(i18nSvc i18ncap.Service, tenantFilter tenantcap.PluginTableFilterService) Service {
 	return &serviceImpl{
 		i18nSvc:      i18nSvc,
 		tenantFilter: tenantFilter,

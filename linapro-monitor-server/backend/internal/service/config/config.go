@@ -3,11 +3,10 @@ package config
 
 import (
 	"context"
+	"lina-core/pkg/plugin/capability/plugincap"
 	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
-
-	"lina-core/pkg/plugin/capability/contract"
 )
 
 // Monitor-server configuration keys and defaults.
@@ -37,7 +36,7 @@ type rawConfig struct {
 }
 
 // Load reads and validates linapro-monitor-server configuration through an explicit host reader.
-func Load(ctx context.Context, reader contract.ConfigService) (*Config, error) {
+func Load(ctx context.Context, reader plugincap.ConfigService) (*Config, error) {
 	if reader == nil {
 		return nil, gerror.New("monitor server config reader cannot be nil")
 	}

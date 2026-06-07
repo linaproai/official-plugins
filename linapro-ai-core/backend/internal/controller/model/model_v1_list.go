@@ -6,6 +6,7 @@ import (
 	"context"
 
 	"lina-plugin-linapro-ai-core/backend/api/model/v1"
+
 	aisvc "lina-plugin-linapro-ai-core/backend/internal/service/ai"
 )
 

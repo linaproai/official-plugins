@@ -17,6 +17,7 @@ import { request as playwrightRequest, expect } from "@host-tests/support/playwr
 
 import { test } from '@host-tests/fixtures/auth';
 import { config } from '@host-tests/fixtures/config';
+import { refreshPluginProjection } from '@host-tests/fixtures/plugin';
 import { LoginPage } from '@host-tests/pages/LoginPage';
 import { DemoDynamicPage } from '../../pages/DemoDynamicPage';
 import {
@@ -66,6 +67,13 @@ type PluginListItem = {
   id: string;
   enabled?: number;
   installed?: number;
+};
+
+type PluginDynamicStateItem = {
+  id: string;
+  enabled?: number;
+  installed?: number;
+  runtimeState?: string;
 };
 
 type JobListItem = {
@@ -177,6 +185,70 @@ async function findPlugin(adminApi: APIRequestContext, id = pluginID) {
   return list.find((item) => item.id === id) ?? null;
 }
 
+async function listPluginDynamicStates(
+  adminApi: APIRequestContext,
+): Promise<PluginDynamicStateItem[]> {
+  const response = await adminApi.get("plugins/dynamic");
+  assertOk(response, "查询插件运行时状态失败");
+  const payload = unwrapApiData(await response.json());
+  return payload?.list ?? [];
+}
+
+async function findPluginDynamicState(
+  adminApi: APIRequestContext,
+  id = pluginID,
+) {
+  const list = await listPluginDynamicStates(adminApi);
+  return list.find((item) => item.id === id) ?? null;
+}
+
+async function expectPluginDynamicStateReady(
+  adminApi: APIRequestContext,
+  id: string,
+  enabled: boolean,
+) {
+  await expect
+    .poll(
+      async () => {
+        const state = await findPluginDynamicState(adminApi, id);
+        return [
+          state?.installed ?? 0,
+          state?.enabled ?? 0,
+          state?.runtimeState ?? "",
+        ].join(":");
+      },
+      {
+        message: enabled
+          ? `${id} dynamic state should allow frontend entries`
+          : `${id} dynamic state should hide frontend entries`,
+        timeout: 20_000,
+      },
+    )
+    .toBe(enabled ? "1:1:normal" : "1:0:normal");
+}
+
+async function waitForPluginDiscovered(
+  adminApi: APIRequestContext,
+  id = pluginID,
+): Promise<PluginListItem> {
+  await expect
+    .poll(
+      async () => {
+        const discoveredPlugin = await findPlugin(adminApi, id);
+        return discoveredPlugin?.id ?? "";
+      },
+      {
+        message: `上传后应发现动态插件: ${id}`,
+        timeout: 15_000,
+      },
+    )
+    .toBe(id);
+
+  const discoveredPlugin = await findPlugin(adminApi, id);
+  expect(discoveredPlugin, `上传后应发现动态插件: ${id}`).toBeTruthy();
+  return discoveredPlugin!;
+}
+
 async function fetchCurrentUserRoutes(
   adminApi: APIRequestContext,
 ): Promise<UserRouteNode[]> {
@@ -235,12 +307,16 @@ function tempDir() {
   return path.join(repoRoot(), "temp");
 }
 
+function runtimeFixtureDir() {
+  return path.join(tempDir(), "e2e-runtime-wasm", String(process.pid));
+}
+
 function runtimeStorageDir() {
   return path.join(tempDir(), "output");
 }
 
 function tempWasmPath() {
-  return path.join(tempDir(), `${pluginID}.wasm`);
+  return path.join(runtimeFixtureDir(), `${pluginID}.wasm`);
 }
 
 function runtimeStorageArtifactPath() {
@@ -260,8 +336,19 @@ function bundledRuntimeStorageRootDir() {
   );
 }
 
+function bundledRuntimeAttachmentFixtureDir() {
+  return path.join(tempDir(), "e2e-linapro-demo-dynamic", String(process.pid));
+}
+
 function bundledRuntimeAttachmentFixturePath() {
-  return path.join(tempDir(), "linapro-demo-dynamic-note.txt");
+  return path.join(
+    bundledRuntimeAttachmentFixtureDir(),
+    "linapro-demo-dynamic-note.txt",
+  );
+}
+
+function cleanupBundledRuntimeAttachmentFixture() {
+  rmSync(bundledRuntimeAttachmentFixtureDir(), { force: true, recursive: true });
 }
 
 function bundledRuntimeUploadProbePath() {
@@ -278,7 +365,7 @@ function pluginAssetURL(relativePath = "index.html") {
 
 function cleanupRuntimePluginWorkspace() {
   rmSync(runtimePluginDir(), { force: true, recursive: true });
-  rmSync(tempWasmPath(), { force: true });
+  rmSync(runtimeFixtureDir(), { force: true, recursive: true });
   rmSync(runtimeStorageArtifactPath(), { force: true });
 }
 
@@ -302,7 +389,7 @@ function cleanupBundledRuntimeDemoData() {
     `DELETE FROM sys_plugin_state WHERE plugin_id = '${pgEscapeLiteral(bundledRuntimePluginID)}' AND state_key = '${pgEscapeLiteral(bundledRuntimeCronStateKey)}';`,
   ]);
   rmSync(bundledRuntimeStorageRootDir(), { force: true, recursive: true });
-  rmSync(bundledRuntimeAttachmentFixturePath(), { force: true });
+  cleanupBundledRuntimeAttachmentFixture();
 }
 
 function runtimeUploadMaxSizeMB() {
@@ -507,7 +594,7 @@ function bundledRuntimeStoredFileCount() {
 }
 
 function ensureBundledRuntimeAttachmentFixture() {
-  mkdirSync(tempDir(), { recursive: true });
+  mkdirSync(bundledRuntimeAttachmentFixtureDir(), { recursive: true });
   writeFileSync(
     bundledRuntimeAttachmentFixturePath(),
     "linapro-demo-dynamic attachment fixture",
@@ -689,7 +776,7 @@ function buildRuntimeWasmFixture() {
 }
 
 function ensureRuntimeWasmFixture() {
-  mkdirSync(tempDir(), { recursive: true });
+  mkdirSync(runtimeFixtureDir(), { recursive: true });
   writeFileSync(tempWasmPath(), buildRuntimeWasmFixture());
   return tempWasmPath();
 }
@@ -828,6 +915,9 @@ async function resetBundledRuntimePlugin(adminApi: APIRequestContext) {
   if (!plugin) {
     return;
   }
+  if (plugin.enabled === 1 || plugin.installed === 1) {
+    ensureBundledRuntimePluginArtifact();
+  }
   if (plugin.enabled === 1) {
     await setPluginEnabled(adminApi, false, bundledRuntimePluginID);
   }
@@ -847,6 +937,15 @@ function ensureBundledRuntimePluginArtifact() {
   );
   rmSync(bundledRuntimeLegacyArtifactPath, { force: true });
   return bundledRuntimeStorageArtifactPath();
+}
+
+async function ensureBundledRuntimePluginSynchronized(
+  adminApi: APIRequestContext,
+) {
+  ensureBundledRuntimePluginArtifact();
+  const response = await adminApi.post("plugins/sync");
+  assertOk(response, `同步 ${bundledRuntimePluginID} 插件失败`);
+  await waitForPluginDiscovered(adminApi, bundledRuntimePluginID);
 }
 
 function ensureBundledRuntimeUploadFixture() {
@@ -877,7 +976,6 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
   let adminApi: APIRequestContext | null = null;
 
   test.beforeAll(async () => {
-    ensureBundledRuntimePluginArtifact();
     adminApi = await createAdminApiContext();
   });
 
@@ -899,6 +997,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     cleanupBundledRuntimeDemoData();
     rmSync(bundledRuntimeUploadProbePath(), { force: true });
     await resetBundledRuntimePlugin(adminApi!);
+    rmSync(bundledRuntimeStorageArtifactPath(), { force: true });
   });
 
   test.afterEach(async () => {
@@ -907,6 +1006,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     cleanupBundledRuntimeDemoData();
     rmSync(bundledRuntimeUploadProbePath(), { force: true });
     await resetBundledRuntimePlugin(adminApi!);
+    rmSync(bundledRuntimeStorageArtifactPath(), { force: true });
   });
 
   test("TC-1a: 上传入口展示非白底主按钮和精简文案", async ({ page }) => {
@@ -942,7 +1042,10 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
         "插件包上传成功",
       );
 
-      const pluginAfterUpload = await findPlugin(adminApi!);
+      const pluginAfterUpload = await waitForPluginDiscovered(
+        adminApi!,
+        pluginID,
+      );
       expect(pluginAfterUpload, "上传后应发现动态插件").toBeTruthy();
       expect(pluginAfterUpload?.installed, "上传后默认仍未安装").toBe(0);
       expect(pluginAfterUpload?.enabled ?? 0, "上传后默认仍未启用").toBe(0);
@@ -957,6 +1060,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
       // the UI still validates the resulting registry and switch status.
       await installPlugin(adminApi!, pluginID);
       await page.reload();
+      await pluginPage.searchByPluginId(pluginID);
       await pluginPage.setPluginEnabled(pluginID, true);
 
       const pluginAfterEnable = await findPlugin(adminApi!);
@@ -1044,6 +1148,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
 
     await test.step("TC-1d: 禁用并卸载后回到未安装状态且资源不可访问", async () => {
       await pluginPage.gotoManage();
+      await pluginPage.searchByPluginId(pluginID);
       await pluginPage.setPluginEnabled(pluginID, false);
       await expectPluginAssetStatus(page, 404);
       await uninstallPlugin(adminApi!, pluginID);
@@ -1062,11 +1167,12 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
   test("TC-1h: 独立的 linapro-demo-dynamic 菜单页会展示按钮并打开纯静态独立页面", async ({
     page,
   }) => {
+    await ensureBundledRuntimePluginSynchronized(adminApi!);
     await loginAsAdmin(page);
 
     const pluginPage = new DemoDynamicPage(page);
     await pluginPage.gotoManage();
-    await expect(pluginPage.pluginRow(bundledRuntimePluginID)).toBeVisible();
+    await pluginPage.searchByPluginId(bundledRuntimePluginID);
 
     await ensureBundledRuntimeDependencyInstalled(adminApi!);
     await pluginPage.openInstallAuthorization(bundledRuntimePluginID);
@@ -1170,6 +1276,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     const pluginPage = new DemoDynamicPage(page);
     await pluginPage.gotoManage();
     await pluginPage.uploadDynamicPlugin(wasmPath);
+    await waitForPluginDiscovered(adminApi!, pluginID);
     await installPlugin(adminApi!, pluginID);
     await page.reload();
     await pluginPage.setPluginEnabled(pluginID, true);
@@ -1178,6 +1285,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     rmSync(runtimeStorageArtifactPath(), { force: true });
 
     await page.reload();
+    await pluginPage.searchByPluginId(pluginID);
     await expect(pluginPage.pluginRow(pluginID)).toBeVisible();
     await pluginPage.expectSidebarMenuHidden(iframeMenuName);
     await pluginPage.expectSidebarMenuHidden(embeddedMenuName);
@@ -1222,11 +1330,12 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
   test("TC-1j: 启用 linapro-demo-dynamic 后固定前缀动态路由返回真实 Wasm bridge 响应", async ({
     page,
   }) => {
+    await ensureBundledRuntimePluginSynchronized(adminApi!);
     await loginAsAdmin(page);
 
     const pluginPage = new DemoDynamicPage(page);
     await pluginPage.gotoManage();
-    await expect(pluginPage.pluginRow(bundledRuntimePluginID)).toBeVisible();
+    await pluginPage.searchByPluginId(bundledRuntimePluginID);
 
     await installPlugin(adminApi!, bundledRuntimePluginID);
     await page.reload();
@@ -1262,11 +1371,12 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
   test("TC-1o: linapro-demo-dynamic 安装后其内置定时任务立即出现在任务管理中，启用后可手动执行", async ({
     page,
   }) => {
+    await ensureBundledRuntimePluginSynchronized(adminApi!);
     await loginAsAdmin(page);
 
     const pluginPage = new DemoDynamicPage(page);
     await pluginPage.gotoManage();
-    await expect(pluginPage.pluginRow(bundledRuntimePluginID)).toBeVisible();
+    await pluginPage.searchByPluginId(bundledRuntimePluginID);
 
     await ensureBundledRuntimeDependencyInstalled(adminApi!);
     await pluginPage.openInstallAuthorization(bundledRuntimePluginID);
@@ -1319,8 +1429,17 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     expect(enabledJob, "启用后应保留动态插件内置定时任务").toBeTruthy();
     expect(enabledJob?.status).toBe("enabled");
 
+    const cronStateBeforeTrigger = bundledRuntimeCronStateCount();
     await triggerJob(adminApi!, enabledJob!.id);
-    await expect.poll(() => bundledRuntimeCronStateCount()).toBe(1);
+    await expect
+      .poll(
+        () => bundledRuntimeCronStateCount(),
+        {
+          message: "手动执行后动态插件心跳计数应增长",
+          timeout: 20_000,
+        },
+      )
+      .toBeGreaterThan(cronStateBeforeTrigger);
   });
 
   test("TC-1k: linapro-demo-dynamic 示例记录支持 CRUD，并在禁用与卸载时按选项保留或清理数据附件", async ({
@@ -1329,7 +1448,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     // The CRUD + dual-uninstall lifecycle runs three full install/enable
     // cycles plus a file upload, well past the default 60s test budget.
     test.setTimeout(300_000);
-    const attachmentPath = ensureBundledRuntimeAttachmentFixture();
+    await ensureBundledRuntimePluginSynchronized(adminApi!);
     const recordTitle = `动态插件示例记录-${Date.now()}`;
     const updatedRecordTitle = `${recordTitle}-更新`;
     const cleanupRecordTitle = `${recordTitle}-清理`;
@@ -1337,12 +1456,35 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
 
     const pluginPage = new DemoDynamicPage(page);
     await pluginPage.gotoManage();
-    await expect(pluginPage.pluginRow(bundledRuntimePluginID)).toBeVisible();
+    await pluginPage.searchByPluginId(bundledRuntimePluginID);
 
     const confirmBundledRuntimeInstall = async () => {
       await ensureBundledRuntimeDependencyInstalled(adminApi!);
       await pluginPage.openInstallAuthorization(bundledRuntimePluginID);
       await pluginPage.confirmHostServiceAuthorization();
+    };
+
+    const setBundledRuntimeEnabled = async (enabled: boolean) => {
+      await pluginPage.gotoManage();
+      await pluginPage.searchByPluginId(bundledRuntimePluginID);
+      await pluginPage.setPluginEnabled(bundledRuntimePluginID, enabled);
+      await expect
+        .poll(
+          async () =>
+            (await findPlugin(adminApi!, bundledRuntimePluginID))?.enabled ?? 0,
+        )
+        .toBe(enabled ? 1 : 0);
+      await expectPluginDynamicStateReady(
+        adminApi!,
+        bundledRuntimePluginID,
+        enabled,
+      );
+      await expectCurrentUserRouteVisible(
+        adminApi!,
+        bundledRuntimeMenuName,
+        enabled,
+      );
+      await refreshPluginProjection(page);
     };
 
     await confirmBundledRuntimeInstall();
@@ -1352,9 +1494,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
           (await findPlugin(adminApi!, bundledRuntimePluginID))?.installed ?? 0,
       )
       .toBe(1);
-    await page.reload();
-    await pluginPage.setPluginEnabled(bundledRuntimePluginID, true);
-    await page.reload();
+    await setBundledRuntimeEnabled(true);
     await waitForBundledRuntimeDemoRecord(
       adminApi!,
       "Dynamic Plugin SQL Demo Record",
@@ -1370,7 +1510,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     await pluginPage.createPluginDemoDynamicRecord({
       title: recordTitle,
       content: "首次创建的动态插件示例记录",
-      attachmentPath,
+      attachmentPath: ensureBundledRuntimeAttachmentFixture(),
     });
     expect(bundledRuntimeRecordCountByTitle(recordTitle)).toBe(1);
     expect(bundledRuntimeStoredFileCount()).toBeGreaterThan(0);
@@ -1383,23 +1523,11 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     expect(bundledRuntimeRecordCountByTitle(updatedRecordTitle)).toBe(1);
 
     await pluginPage.gotoManage();
-    await pluginPage.setPluginEnabled(bundledRuntimePluginID, false);
-    await expectCurrentUserRouteVisible(
-      adminApi!,
-      bundledRuntimeMenuName,
-      false,
-    );
-    await page.reload();
+    await setBundledRuntimeEnabled(false);
     await pluginPage.expectSidebarMenuHidden(bundledRuntimeMenuName);
     expect(bundledRuntimeRecordCountByTitle(updatedRecordTitle)).toBe(1);
 
-    await pluginPage.setPluginEnabled(bundledRuntimePluginID, true);
-    await expectCurrentUserRouteVisible(
-      adminApi!,
-      bundledRuntimeMenuName,
-      true,
-    );
-    await page.reload();
+    await setBundledRuntimeEnabled(true);
     await pluginPage.clickSidebarMenuItem(bundledRuntimeMenuName);
     await expect(
       pluginPage.pluginDemoDynamicRecordRow(updatedRecordTitle),
@@ -1417,14 +1545,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
           (await findPlugin(adminApi!, bundledRuntimePluginID))?.installed ?? 0,
       )
       .toBe(1);
-    await page.reload();
-    await pluginPage.setPluginEnabled(bundledRuntimePluginID, true);
-    await expectCurrentUserRouteVisible(
-      adminApi!,
-      bundledRuntimeMenuName,
-      true,
-    );
-    await page.reload();
+    await setBundledRuntimeEnabled(true);
     await waitForBundledRuntimeDemoRecord(adminApi!, updatedRecordTitle);
     await pluginPage.clickSidebarMenuItem(bundledRuntimeMenuName);
     await expect(
@@ -1438,7 +1559,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     await pluginPage.createPluginDemoDynamicRecord({
       title: cleanupRecordTitle,
       content: "用于验证卸载清理的数据与附件",
-      attachmentPath,
+      attachmentPath: ensureBundledRuntimeAttachmentFixture(),
     });
     expect(bundledRuntimeRecordCountByTitle(cleanupRecordTitle)).toBe(1);
     expect(bundledRuntimeStoredFileCount()).toBeGreaterThan(0);
@@ -1455,14 +1576,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
           (await findPlugin(adminApi!, bundledRuntimePluginID))?.installed ?? 0,
       )
       .toBe(1);
-    await page.reload();
-    await pluginPage.setPluginEnabled(bundledRuntimePluginID, true);
-    await expectCurrentUserRouteVisible(
-      adminApi!,
-      bundledRuntimeMenuName,
-      true,
-    );
-    await page.reload();
+    await setBundledRuntimeEnabled(true);
     await waitForBundledRuntimeDemoRecord(
       adminApi!,
       "Dynamic Plugin SQL Demo Record",
@@ -1479,13 +1593,14 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
   test("TC-1l: linapro-demo-dynamic 示例记录列表支持分页浏览并同步更新区间摘要", async ({
     page,
   }) => {
+    await ensureBundledRuntimePluginSynchronized(adminApi!);
     const paginationRecordKey = `${Date.now()}`;
     let seededTitles: string[] = [];
     await loginAsAdmin(page);
 
     const pluginPage = new DemoDynamicPage(page);
     await pluginPage.gotoManage();
-    await expect(pluginPage.pluginRow(bundledRuntimePluginID)).toBeVisible();
+    await pluginPage.searchByPluginId(bundledRuntimePluginID);
 
     await ensureBundledRuntimeDependencyInstalled(adminApi!);
     await pluginPage.openInstallAuthorization(bundledRuntimePluginID);

@@ -7,7 +7,7 @@
 - 一个在默认管理工作台中渲染的菜单入口
 - 一个不依赖宿主 UI 框架的独立静态页面
 - 通过动态插件桥执行的后端演示路由
-- 通过`pkg/plugin/capability/guest`受治理访问`runtime`、`storage`、`network`、`data`、`config`、`manifest`、`hostConfig`、`org`、`tenant`宿主服务
+- 通过`pkg/plugin/pluginbridge/guest`受治理访问`runtime`、`storage`、`network`、`data`、`config`、`manifest`、`hostConfig`、`org`、`tenant`宿主服务
 - 后端 controller 方法会被自动发现为与源码插件一致命名的 `Before*` 前置处理器和 `After*` 通知处理器，并通过运行时日志展示生命周期流程
 
 ## 目录结构
@@ -73,7 +73,7 @@ public_assets:
 
 这些声明会在插件生命周期流程中由宿主进行审查和授权。
 
-`guest`业务宿主服务 client 从`lina-core/pkg/plugin/capability/guest`导入。`pluginbridge`根包只在样例桥接文件中用于协议 envelope、路由分发、生命周期契约、定时任务契约和响应 helper。
+`guest`业务宿主服务 client 从`lina-core/pkg/plugin/pluginbridge/guest`导入。同一包也用于样例桥接文件中的协议 envelope、路由分发、生命周期契约、定时任务契约和响应 helper。
 
 `manifest`宿主服务示例仅授权`config/profile.yaml`和`config/config.yaml`。`/api/v1/manifest-demo`路由会通过`manifest.get`读取这两个打包文件，并在内嵌页面展示返回的 profile 与配置预览，从而完整演示从声明到使用的流程。运行期实际生效配置仍通过专用`config`宿主服务读取；SQL 和 i18n 生命周期资源不放入本次`manifest`宿主服务授权示例。
 

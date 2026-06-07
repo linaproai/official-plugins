@@ -6,7 +6,8 @@ package dept
 import (
 	"context"
 
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/usercap"
 	entitymodel "lina-plugin-linapro-org-core/backend/internal/model/entity"
 )
 
@@ -24,11 +25,8 @@ const (
 	colDeptStatus    = "status"
 	colDeptRemark    = "remark"
 
-	colUserID       = "id"
-	colUserUsername = "username"
-	colUserNickname = "nickname"
-	colUserDeptID   = "dept_id"
-	colUserUserID   = "user_id"
+	colUserDeptID = "dept_id"
+	colUserUserID = "user_id"
 )
 
 // Service defines tenant-scoped department management for the linapro-org-core plugin.
@@ -63,12 +61,13 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	tenantFilter plugincontract.TenantFilterService // tenantFilter constrains plugin-owned department rows.
+	tenantFilter tenantcap.PluginTableFilterService // tenantFilter constrains plugin-owned department rows.
+	users        usercap.Service                    // users resolves host-owned user projections through usercap.
 }
 
 // New creates and returns a new department service instance.
-func New(tenantFilter plugincontract.TenantFilterService) Service {
-	return &serviceImpl{tenantFilter: tenantFilter}
+func New(tenantFilter tenantcap.PluginTableFilterService, users usercap.Service) Service {
+	return &serviceImpl{tenantFilter: tenantFilter, users: users}
 }
 
 // DeptEntity mirrors the plugin-local generated plugin_linapro_org_core_dept entity.
@@ -130,6 +129,3 @@ type DeptUser struct {
 	Username string `json:"username"`
 	Nickname string `json:"nickname"`
 }
-
-// userRow reuses the plugin-local generated sys_user entity.
-type userRow = entitymodel.SysUser

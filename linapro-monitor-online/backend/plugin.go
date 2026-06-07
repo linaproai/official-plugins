@@ -41,10 +41,20 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		middlewares = routes.Middlewares()
 		services    = registrar.Services()
 	)
-	if services == nil || services.Session() == nil {
-		return gerror.New("linapro-monitor-online routes require host session service")
+	if services == nil ||
+		services.BizCtx() == nil ||
+		services.Sessions() == nil ||
+		services.Admin() == nil ||
+		services.Admin().Sessions() == nil ||
+		services.TenantFilter() == nil {
+		return gerror.New("linapro-monitor-online routes require host bizctx, session domain, session admin, and tenant-filter services")
 	}
-	monitorSvc := monitorsvc.New(services.Session())
+	monitorSvc := monitorsvc.New(
+		services.BizCtx(),
+		services.TenantFilter(),
+		services.Sessions(),
+		services.Admin().Sessions(),
+	)
 	routes.Group(routes.APIPrefix(), func(group pluginhost.RouteGroup) {
 		group.Group("/api/v1", func(group pluginhost.RouteGroup) {
 			group.Middleware(

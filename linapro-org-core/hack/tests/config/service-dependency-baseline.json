@@ -8,7 +8,7 @@
       "reason": "source-plugin registration boundary; constructs plugin-owned controllers/services from registrar HostServices."
     },
     {
-      "path": "apps/lina-plugins/linapro-org-core/backend/provider/orgcapadapter/orgcapadapter.go",
+      "path": "apps/lina-plugins/linapro-org-core/backend/internal/provider/orgcapadapter/orgcapadapter.go",
       "maxCalls": 1,
       "reason": "source-plugin provider boundary; constructs plugin-owned DAO service from host-published tenant filter."
     }

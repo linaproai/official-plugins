@@ -10,8 +10,9 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 
 	"lina-core/pkg/bizerr"
-	"lina-core/pkg/plugin/capability/ai/aitext"
-	plugincontract "lina-core/pkg/plugin/capability/contract"
+	"lina-core/pkg/plugin/capability/aicap/aitext"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/cachecap"
 	"lina-plugin-linapro-ai-core/backend/internal/dao"
 	"lina-plugin-linapro-ai-core/backend/internal/model/do"
 	"lina-plugin-linapro-ai-core/backend/internal/model/entity"
@@ -340,7 +341,7 @@ func (s *serviceImpl) clearLocalTierCache(revision int64, capabilityType string,
 }
 
 // cacheRevisionValue extracts the integer revision published through host cache.
-func cacheRevisionValue(item *plugincontract.CacheItem) int64 {
+func cacheRevisionValue(item *cachecap.CacheItem) int64 {
 	if item == nil {
 		return 0
 	}
@@ -385,7 +386,7 @@ func (s *serviceImpl) tierCacheEnabled(ctx context.Context) bool {
 	if s == nil {
 		return false
 	}
-	current := plugincontract.CurrentFromContext(ctx)
+	current := bizctxcap.CurrentFromContext(ctx)
 	if s.bizCtxSvc != nil {
 		current = s.bizCtxSvc.Current(ctx)
 	}

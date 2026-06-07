@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	github.com/gogf/gf/v2 v2.10.1
 	github.com/xuri/excelize/v2 v2.10.1
+	lina-core v0.0.0
 )
 
 require (
@@ -42,3 +43,5 @@ require (
 	golang.org/x/text v0.35.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace lina-core => ../../lina-core

@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_tenant_core_user_membership (
     CONSTRAINT uk_plugin_linapro_tenant_core_membership_user_tenant UNIQUE ("user_id", "tenant_id")
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS uk_plugin_linapro_tenant_core_membership_user_tenant
+    ON plugin_linapro_tenant_core_user_membership ("user_id", "tenant_id");
 CREATE INDEX IF NOT EXISTS idx_plugin_linapro_tenant_core_membership_tenant
     ON plugin_linapro_tenant_core_user_membership ("tenant_id", "status");
 CREATE INDEX IF NOT EXISTS idx_plugin_linapro_tenant_core_membership_user

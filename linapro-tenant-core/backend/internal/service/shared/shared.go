@@ -13,7 +13,6 @@ import (
 const (
 	TableTenant     = "plugin_linapro_tenant_core_tenant"
 	TableMembership = "plugin_linapro_tenant_core_user_membership"
-	TableSysUser    = "sys_user"
 )
 
 // TenantStatus is the tenant lifecycle status stored by the plugin.

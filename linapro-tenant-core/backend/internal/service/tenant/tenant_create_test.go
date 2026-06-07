@@ -8,7 +8,7 @@ import (
 
 	"github.com/gogf/gf/v2/errors/gerror"
 
-	"lina-core/pkg/plugin/capability/bizctx"
+	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/resolverconfig"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/shared"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/tenantplugin"
@@ -47,7 +47,7 @@ func TestCreateRollsBackTenantWhenProvisioningFails(t *testing.T) {
 	}
 
 	svc := &serviceImpl{
-		bizCtxSvc:         bizctx.New(nil),
+		bizCtxSvc:         bizctxcap.New(nil),
 		resolverConfigSvc: resolverconfig.New(),
 		tenantPluginSvc:   failingTenantPluginService{err: gerror.New("tenant plugin provisioning failed")},
 	}

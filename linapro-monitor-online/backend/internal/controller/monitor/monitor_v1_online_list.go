@@ -23,14 +23,14 @@ func (c *ControllerV1) OnlineList(ctx context.Context, req *v1.OnlineListReq) (r
 	items := make([]*v1.OnlineUserItem, 0, len(out.Items))
 	for _, session := range out.Items {
 		items = append(items, &v1.OnlineUserItem{
-			TokenId:    session.TokenId,
+			TokenId:    string(session.ID),
 			Username:   session.Username,
 			ClientType: session.ClientType,
 			DeptName:   session.DeptName,
 			Ip:         session.Ip,
 			Browser:    session.Browser,
 			Os:         session.Os,
-			LoginTime:  apitime.Milli(session.LoginTime),
+			LoginTime:  apitime.Milli(session.LoginAt),
 		})
 	}
 
