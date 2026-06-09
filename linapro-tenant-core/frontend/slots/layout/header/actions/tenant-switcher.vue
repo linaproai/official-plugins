@@ -163,11 +163,12 @@ watch(
   max-width: 220px;
   padding: 0 10px;
   margin-right: 8px;
-  color: rgb(185 28 28);
+  color: var(--tenant-impersonation-banner-color, rgb(185 28 28));
   font-size: 12px;
   font-weight: 500;
-  background: rgb(254 242 242);
-  border: 1px solid rgb(252 165 165);
+  background: var(--tenant-impersonation-banner-bg, rgb(254 242 242));
+  border: 1px solid
+    var(--tenant-impersonation-banner-border, rgb(252 165 165));
   border-radius: 4px;
 }
 
@@ -178,9 +179,9 @@ watch(
 }
 
 :global(.dark) .tenant-impersonation-banner {
-  color: rgb(254 202 202);
-  background: rgb(239 68 68 / 15%);
-  border-color: rgb(239 68 68 / 60%);
+  --tenant-impersonation-banner-color: rgb(254 202 202);
+  --tenant-impersonation-banner-bg: rgb(239 68 68 / 15%);
+  --tenant-impersonation-banner-border: rgb(239 68 68 / 60%);
 }
 
 .tenant-impersonation-banner__text {
