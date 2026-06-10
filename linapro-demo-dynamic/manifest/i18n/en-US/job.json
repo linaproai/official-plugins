@@ -3,7 +3,7 @@
     "handler": {
       "plugin": {
         "linapro-demo-dynamic": {
-          "cron": {
+          "jobs": {
             "heartbeat": {
               "description": "Runs the dynamic plugin built-in job through the Wasm bridge and accumulates heartbeat executions.",
               "name": "Dynamic Plugin Heartbeat"

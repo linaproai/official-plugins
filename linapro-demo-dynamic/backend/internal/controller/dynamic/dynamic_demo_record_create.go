@@ -11,10 +11,10 @@ import (
 
 // CreateDemoRecord creates one plugin-owned demo record.
 func (c *Controller) CreateDemoRecord(
-	_ context.Context,
+	ctx context.Context,
 	req *v1.CreateDemoRecordReq,
 ) (res *v1.CreateDemoRecordRes, err error) {
-	payload, err := c.dynamicSvc.CreateDemoRecordPayload(&dynamicservice.DemoRecordMutationInput{
+	payload, err := c.dynamicSvc.CreateDemoRecordPayload(ctx, &dynamicservice.DemoRecordMutationInput{
 		Title:                   req.Title,
 		Content:                 req.Content,
 		AttachmentName:          req.AttachmentName,

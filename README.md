@@ -89,7 +89,7 @@ must not hard-code `apps/lina-plugins/<plugin-id>/backend`. Run `make ctrl` or
 `backend/hack/config.yaml`, or run `make ctrl p=<plugin-id>` and
 `make dao p=<plugin-id>` from `apps/lina-plugins/`.
 
-`backend/internal/service/` is the only valid location for plugin business services. Do not create `backend/service/`. Dynamic plugins keep the same `backend/api/`, `backend/plugin.go`, `backend/internal/controller/`, and `backend/internal/service/` shape; their bridge files only adapt `WASM` and `pluginbridge` protocols. Guest business capability clients must come from `lina-core/pkg/plugin/capability/guest`, not from the `pluginbridge` root package.
+`backend/internal/service/` is the only valid location for plugin business services. Do not create `backend/service/`. Dynamic plugins keep the same `backend/api/`, `backend/plugin.go`, `backend/internal/controller/`, and `backend/internal/service/` shape; their bridge files only adapt `WASM` and `pluginbridge` protocols. Guest business capability clients must come from `lina-core/pkg/plugin/pluginbridge`, not from the `pluginbridge` root package.
 
 ## Source Plugins
 
@@ -114,13 +114,13 @@ make -C apps/lina-plugins wasm
 make -C apps/lina-plugins wasm p=linapro-demo-dynamic
 ```
 
-Dynamic plugins must declare `type: dynamic` in `plugin.yaml`, keep `main.go` and `go.mod` as the guest build entry, use `hostServices` to describe runtime capabilities and resource boundaries, and import runtime, storage, data, cache, config, notify, cron, and related business host-service clients from `lina-core/pkg/plugin/capability/guest`.
+Dynamic plugins must declare `type: dynamic` in `plugin.yaml`, keep `main.go` and `go.mod` as the guest build entry, use `hostServices` to describe runtime capabilities and resource boundaries, and import runtime, storage, data, cache, users, notifications, plugins, and related business host-service clients from `lina-core/pkg/plugin/pluginbridge`. Plugin-local configuration is consumed through `Plugins().Config()` and authorized as `plugins.config.get`; notification sends use `Notifications().Send()` and `notifications.messages.send`; scheduled jobs are managed by the `jobs` domain instead of a separate dynamic `cron` host service.
 
 ## Host and Plugin Boundary
 
 The host owns stable framework surfaces and top-level catalogs such as `dashboard`, `platform`, `org`, `content`, `monitor`, `setting`, `scheduler`, `extension`, and `developer`. Plugins choose their own mount points through `plugin.yaml` `parent_key`; the host only resolves declared parents during sync and rejects missing parents to avoid orphaned menu trees.
 
-Plugin-owned tables, menus, pages, hooks, cron jobs, public assets, and lifecycle resources stay in the plugin directory. Host code should depend on stable plugin service seams and published packages rather than hard-coding plugin-specific page structures or menu composition details.
+Plugin-owned tables, menus, pages, hooks, scheduled jobs, public assets, and lifecycle resources stay in the plugin directory. Host code should depend on stable plugin service seams and published packages rather than hard-coding plugin-specific page structures or menu composition details.
 
 ## Routes and Public Assets
 

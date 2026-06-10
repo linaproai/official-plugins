@@ -9,7 +9,7 @@ import (
 	v1 "lina-plugin-linapro-demo-dynamic/backend/api/dynamic/v1"
 	dynamicservice "lina-plugin-linapro-demo-dynamic/backend/internal/service/dynamic"
 
-	bridgeguest "lina-core/pkg/plugin/pluginbridge/guest"
+	bridgeplugin "lina-core/pkg/plugin/pluginbridge"
 	"lina-core/pkg/plugin/pluginbridge/protocol"
 )
 
@@ -21,7 +21,7 @@ func (c *Controller) HostCallDemo(
 ) (res *v1.HostCallDemoRes, err error) {
 	payload, err := c.dynamicSvc.BuildHostCallDemoPayload(
 		ctx,
-		buildHostCallDemoRouteInput(bridgeguest.RequestEnvelopeFromContext(ctx), req),
+		buildHostCallDemoRouteInput(bridgeplugin.RequestEnvelopeFromContext(ctx), req),
 	)
 	if err != nil {
 		return nil, err

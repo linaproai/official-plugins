@@ -150,7 +150,7 @@ func assertNoRouteGroupPrefixConst(t *testing.T, root string) {
 			}
 			for _, name := range spec.Names {
 				if name != nil && name.Name == "RouteGroupPrefix" {
-					t.Fatalf("plugin API file %s must not declare RouteGroupPrefix; use backend RegisterRoutes instead", slashPath(root, file))
+					t.Fatalf("plugin API file %s must not declare RouteGroupPrefix; use backend RegisterPlugin Routes instead", slashPath(root, file))
 				}
 			}
 			return true

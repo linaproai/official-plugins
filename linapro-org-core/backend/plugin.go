@@ -24,7 +24,7 @@ const (
 
 // init registers the linapro-org-core source plugin and its host callbacks.
 func init() {
-	plugin := pluginhost.NewSourcePlugin(pluginID)
+	plugin := pluginhost.NewDeclarations(pluginID)
 	plugin.Assets().UseEmbeddedFiles(orgcenter.EmbeddedFiles)
 	if err := orgcap.Provide(pluginID, provideOrg); err != nil {
 		panic(err)

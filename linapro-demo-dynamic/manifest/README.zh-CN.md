@@ -9,4 +9,4 @@
 - `sql/mock-data/001-linapro-demo-dynamic-mock-data.sql`：提供本地样例数据使用的可选演示记录。
 - `i18n/`：存放插件自有运行时翻译资源。
 
-动态插件会在`plugin.yaml`中声明`manifest`宿主服务，并仅授权读取`config/profile.yaml`和`config/config.yaml`。`manifest.get`只读取这些打包文件的原始资源，不替代专用的配置、SQL 或 i18n 生命周期管线。
+动态插件会在`plugin.yaml`中声明`manifest`宿主服务，并仅授权读取`config/profile.yaml`和`config/config.yaml`。`manifest.get`只读取这些打包文件的原始资源，不替代`Plugins().Config()`、SQL 或 i18n 生命周期管线。

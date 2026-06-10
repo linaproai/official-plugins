@@ -19,7 +19,7 @@ import {
 test.describe('TC-4 Built-in job execution boundary', () => {
   const pluginID = 'linapro-demo-source';
   const pluginJobName = '源码插件回显巡检';
-  const pluginHandlerRef = `plugin:${pluginID}/cron:source-plugin-echo-inspection`;
+  const pluginHandlerRef = `plugin:${pluginID}/jobs:source-plugin-echo-inspection`;
 
   let api: APIRequestContext;
   let hostJobId = 0;

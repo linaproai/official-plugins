@@ -10,10 +10,10 @@ import (
 
 // DeleteDemoRecord deletes one plugin-owned demo record.
 func (c *Controller) DeleteDemoRecord(
-	_ context.Context,
+	ctx context.Context,
 	req *v1.DeleteDemoRecordReq,
 ) (res *v1.DeleteDemoRecordRes, err error) {
-	payload, err := c.dynamicSvc.DeleteDemoRecordPayload(req.Id)
+	payload, err := c.dynamicSvc.DeleteDemoRecordPayload(ctx, req.Id)
 	if err != nil {
 		return nil, wrapDynamicError(err)
 	}

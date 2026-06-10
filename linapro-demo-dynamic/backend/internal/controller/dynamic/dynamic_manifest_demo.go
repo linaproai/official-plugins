@@ -11,10 +11,10 @@ import (
 // ManifestDemo returns values read through the plugin-scoped manifest host
 // service without executing the broader host-call side-effect demo.
 func (c *Controller) ManifestDemo(
-	_ context.Context,
+	ctx context.Context,
 	_ *v1.ManifestDemoReq,
 ) (res *v1.ManifestDemoRes, err error) {
-	payload, err := c.dynamicSvc.BuildManifestDemoPayload()
+	payload, err := c.dynamicSvc.BuildManifestDemoPayload(ctx)
 	if err != nil {
 		return nil, err
 	}

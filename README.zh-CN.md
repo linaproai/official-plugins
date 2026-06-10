@@ -83,7 +83,7 @@ apps/lina-plugins/<plugin-id>/
 
 插件根目录`Makefile`是根目录共享`hack/makefiles/plugin.codegen.mk`片段的薄包装。共享片段会根据引入它的插件目录推导目标后端目录，因此插件`Makefile`不得硬编码`apps/lina-plugins/<plugin-id>/backend`。在插件目录内执行`make ctrl`或`make dao`会使用该插件的`backend/hack/config.yaml`；也可以在`apps/lina-plugins/`下执行`make ctrl p=<plugin-id>`和`make dao p=<plugin-id>`。
 
-`backend/internal/service/`是插件业务服务的唯一合法目录，禁止创建`backend/service/`。动态插件保持同样的`backend/api/`、`backend/plugin.go`、`backend/internal/controller/`和`backend/internal/service/`结构；桥接文件只负责适配`WASM`与`pluginbridge`协议。`guest`业务能力 client 必须来自`lina-core/pkg/plugin/capability/guest`，不得从`pluginbridge`根包获取。
+`backend/internal/service/`是插件业务服务的唯一合法目录，禁止创建`backend/service/`。动态插件保持同样的`backend/api/`、`backend/plugin.go`、`backend/internal/controller/`和`backend/internal/service/`结构；桥接文件只负责适配`WASM`与`pluginbridge`协议。`guest`业务能力 client 必须来自`lina-core/pkg/plugin/pluginbridge`，不得从`pluginbridge`根包获取。
 
 ## 源码插件
 
@@ -108,7 +108,7 @@ make -C apps/lina-plugins wasm
 make -C apps/lina-plugins wasm p=linapro-demo-dynamic
 ```
 
-动态插件必须在`plugin.yaml`中声明`type: dynamic`，使用`main.go`和`go.mod`作为`guest`构建入口，通过`hostServices`描述运行时能力和资源边界，并从`lina-core/pkg/plugin/capability/guest`导入 runtime、storage、data、cache、config、notify、cron 等业务宿主服务 client。
+动态插件必须在`plugin.yaml`中声明`type: dynamic`，使用`main.go`和`go.mod`作为`guest`构建入口，通过`hostServices`描述运行时能力和资源边界，并从`lina-core/pkg/plugin/pluginbridge`导入 runtime、storage、data、cache、users、notifications、plugins 等业务宿主服务 client。插件本地配置通过`Plugins().Config()`消费，并授权为`plugins.config.get`；通知发送使用`Notifications().Send()`和`notifications.messages.send`；定时任务由`jobs`领域管理，不再通过独立动态`cron`host service 声明。
 
 ## 宿主与插件边界
 

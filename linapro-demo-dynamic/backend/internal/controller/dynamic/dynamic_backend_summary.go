@@ -9,7 +9,7 @@ import (
 	v1 "lina-plugin-linapro-demo-dynamic/backend/api/dynamic/v1"
 	dynamicservice "lina-plugin-linapro-demo-dynamic/backend/internal/service/dynamic"
 
-	bridgeguest "lina-core/pkg/plugin/pluginbridge/guest"
+	bridgeplugin "lina-core/pkg/plugin/pluginbridge"
 	"lina-core/pkg/plugin/pluginbridge/protocol"
 )
 
@@ -20,12 +20,12 @@ func (c *Controller) BackendSummary(
 	_ *v1.BackendSummaryReq,
 ) (res *v1.BackendSummaryRes, err error) {
 	payload := c.dynamicSvc.BuildBackendSummaryPayload(
-		buildBackendSummaryRouteInput(bridgeguest.RequestEnvelopeFromContext(ctx)),
+		buildBackendSummaryRouteInput(bridgeplugin.RequestEnvelopeFromContext(ctx)),
 	)
-	if err = bridgeguest.SetResponseHeader(ctx, "X-Lina-Plugin-Bridge", "linapro-demo-dynamic"); err != nil {
+	if err = bridgeplugin.SetResponseHeader(ctx, "X-Lina-Plugin-Bridge", "linapro-demo-dynamic"); err != nil {
 		return nil, err
 	}
-	if err = bridgeguest.SetResponseHeader(ctx, "X-Lina-Plugin-Middleware", "backend-summary"); err != nil {
+	if err = bridgeplugin.SetResponseHeader(ctx, "X-Lina-Plugin-Middleware", "backend-summary"); err != nil {
 		return nil, err
 	}
 	return &v1.BackendSummaryRes{

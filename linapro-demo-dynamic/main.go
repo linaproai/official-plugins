@@ -3,12 +3,12 @@ package main
 import (
 	dynamicbackend "lina-plugin-linapro-demo-dynamic/backend"
 
-	bridgeguest "lina-core/pkg/plugin/pluginbridge/guest"
+	bridgeplugin "lina-core/pkg/plugin/pluginbridge"
 	"lina-core/pkg/plugin/pluginbridge/protocol"
 )
 
 // guestRuntime owns the wasm guest bridge buffers and request execution helpers.
-var guestRuntime = bridgeguest.NewGuestRuntime(dynamicbackend.HandleRequest)
+var guestRuntime = bridgeplugin.NewGuestRuntime(dynamicbackend.HandleRequest)
 
 //go:wasmexport lina_dynamic_route_alloc
 func linaDynamicRouteAlloc(size uint32) uint32 {

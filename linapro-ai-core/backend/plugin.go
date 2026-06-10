@@ -29,12 +29,12 @@ const (
 	pluginID = aitext.ProviderPluginID
 	// logRetentionDaysKey is the host protected runtime parameter shared by log cleanup jobs.
 	logRetentionDaysKey = "sys.log.retentionDays"
-	// invocationLogCleanupCronName identifies the AI invocation-log cleanup cron declaration.
-	invocationLogCleanupCronName = "ai-invocation-log-cleanup"
-	// invocationLogCleanupCronDisplayName is the English source title for the cleanup cron.
-	invocationLogCleanupCronDisplayName = "AI Invocation Log Cleanup"
-	// invocationLogCleanupCronDescription is the English source description for the cleanup cron.
-	invocationLogCleanupCronDescription = "Cleans up expired AI invocation logs for the linapro-ai-core plugin."
+	// invocationLogCleanupJobName identifies the AI invocation-log cleanup job declaration.
+	invocationLogCleanupJobName = "ai-invocation-log-cleanup"
+	// invocationLogCleanupJobDisplayName is the English source title for the cleanup job.
+	invocationLogCleanupJobDisplayName = "AI Invocation Log Cleanup"
+	// invocationLogCleanupJobDescription is the English source description for the cleanup job.
+	invocationLogCleanupJobDescription = "Cleans up expired AI invocation logs for the linapro-ai-core plugin."
 )
 
 var (
@@ -43,7 +43,7 @@ var (
 	smartCenterHTTPClient = &http.Client{Timeout: 60 * time.Second}
 )
 
-// invocationRetentionCleaner is the Smart Center service subset needed by the cleanup cron.
+// invocationRetentionCleaner is the Smart Center service subset needed by the cleanup job.
 type invocationRetentionCleaner interface {
 	// CleanupExpiredInvocations hard-deletes invocation logs older than the retention period.
 	CleanupExpiredInvocations(ctx context.Context, retentionDays int) (int, error)
@@ -51,7 +51,7 @@ type invocationRetentionCleaner interface {
 
 // init registers the linapro-ai-core source plugin, route bindings, and text AI provider.
 func init() {
-	plugin := pluginhost.NewSourcePlugin(pluginID)
+	plugin := pluginhost.NewDeclarations(pluginID)
 	plugin.Assets().UseEmbeddedFiles(aicore.EmbeddedFiles)
 	if err := aitext.Provide(pluginID, provideAIText); err != nil {
 		panic(err)
@@ -63,10 +63,10 @@ func init() {
 	); err != nil {
 		panic(err)
 	}
-	if err := plugin.Cron().RegisterCron(
-		pluginhost.ExtensionPointCronRegister,
+	if err := plugin.Jobs().RegisterJobs(
+		pluginhost.ExtensionPointJobsRegister,
 		pluginhost.CallbackExecutionModeBlocking,
-		registerCleanupCron,
+		registerCleanupJob,
 	); err != nil {
 		panic(err)
 	}
@@ -122,22 +122,22 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 	return nil
 }
 
-// registerCleanupCron contributes the plugin-owned AI invocation retention cleanup job.
-func registerCleanupCron(ctx context.Context, registrar pluginhost.CronRegistrar) error {
+// registerCleanupJob contributes the plugin-owned AI invocation retention cleanup job.
+func registerCleanupJob(ctx context.Context, registrar pluginhost.JobsRegistrar) error {
 	services := registrar.Services()
 	if services == nil ||
 		services.HostConfig() == nil ||
 		services.BizCtx() == nil ||
 		services.Cache() == nil {
-		return gerror.New("linapro-ai-core cleanup cron requires host config, biz-context, and cache services")
+		return gerror.New("linapro-ai-core cleanup job requires host config, biz-context, and cache services")
 	}
 	aiService := smartCenter(services.BizCtx(), services.Cache())
 	return registrar.AddWithMetadata(
 		ctx,
 		"# 37 3 * * *",
-		invocationLogCleanupCronName,
-		invocationLogCleanupCronDisplayName,
-		invocationLogCleanupCronDescription,
+		invocationLogCleanupJobName,
+		invocationLogCleanupJobDisplayName,
+		invocationLogCleanupJobDescription,
 		func(ctx context.Context) error {
 			return cleanupExpiredInvocations(ctx, registrar.IsPrimaryNode(), services.HostConfig(), aiService)
 		},

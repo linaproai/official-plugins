@@ -4,8 +4,11 @@
 package dynamicservice
 
 import (
+	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -13,6 +16,7 @@ import (
 	"time"
 
 	"lina-core/pkg/bizerr"
+	"lina-core/pkg/plugin/capability/storagecap"
 )
 
 // Demo-record constants define the sample table name, paging defaults, and
@@ -101,7 +105,7 @@ func (s *serviceImpl) GetDemoRecordPayload(recordID string) (*demoRecordPayload,
 }
 
 // CreateDemoRecordPayload creates one demo record and stores its optional attachment.
-func (s *serviceImpl) CreateDemoRecordPayload(input *DemoRecordMutationInput) (payload *demoRecordPayload, err error) {
+func (s *serviceImpl) CreateDemoRecordPayload(ctx context.Context, input *DemoRecordMutationInput) (payload *demoRecordPayload, err error) {
 	normalizedInput, err := normalizeDemoRecordMutationInput(input)
 	if err != nil {
 		return nil, err
@@ -110,7 +114,7 @@ func (s *serviceImpl) CreateDemoRecordPayload(input *DemoRecordMutationInput) (p
 	if err != nil {
 		return nil, err
 	}
-	attachmentName, attachmentPath, err := s.saveDemoRecordAttachment(normalizedInput)
+	attachmentName, attachmentPath, err := s.saveDemoRecordAttachment(ctx, normalizedInput)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +123,7 @@ func (s *serviceImpl) CreateDemoRecordPayload(input *DemoRecordMutationInput) (p
 			if err == nil {
 				return
 			}
-			if cleanupErr := s.deleteDemoRecordAttachment(attachmentPath); cleanupErr != nil {
+			if cleanupErr := s.deleteDemoRecordAttachment(ctx, attachmentPath); cleanupErr != nil {
 				err = bizerr.WrapCode(cleanupErr, CodeDynamicDemoRecordAttachmentRollbackFailed)
 			}
 		}()
@@ -146,7 +150,7 @@ func (s *serviceImpl) CreateDemoRecordPayload(input *DemoRecordMutationInput) (p
 }
 
 // UpdateDemoRecordPayload updates one demo record and replaces or removes its optional attachment.
-func (s *serviceImpl) UpdateDemoRecordPayload(recordID string, input *DemoRecordMutationInput) (payload *demoRecordPayload, err error) {
+func (s *serviceImpl) UpdateDemoRecordPayload(ctx context.Context, recordID string, input *DemoRecordMutationInput) (payload *demoRecordPayload, err error) {
 	validatedRecordID, validateErr := validateDemoRecordID(recordID)
 	if validateErr != nil {
 		return nil, validateErr
@@ -170,7 +174,7 @@ func (s *serviceImpl) UpdateDemoRecordPayload(recordID string, input *DemoRecord
 	}
 
 	if strings.TrimSpace(normalizedInput.AttachmentContentBase64) != "" {
-		uploadedName, uploadedPath, uploadErr := s.saveDemoRecordAttachment(normalizedInput)
+		uploadedName, uploadedPath, uploadErr := s.saveDemoRecordAttachment(ctx, normalizedInput)
 		if uploadErr != nil {
 			return nil, uploadErr
 		}
@@ -181,7 +185,7 @@ func (s *serviceImpl) UpdateDemoRecordPayload(recordID string, input *DemoRecord
 			if err == nil || uploadedPath == "" {
 				return
 			}
-			if cleanupErr := s.deleteDemoRecordAttachment(uploadedPath); cleanupErr != nil {
+			if cleanupErr := s.deleteDemoRecordAttachment(ctx, uploadedPath); cleanupErr != nil {
 				err = bizerr.WrapCode(cleanupErr, CodeDynamicDemoRecordAttachmentRollbackFailed)
 			}
 		}()
@@ -200,7 +204,7 @@ func (s *serviceImpl) UpdateDemoRecordPayload(recordID string, input *DemoRecord
 		return nil, err
 	}
 	if replacedAttachmentPath != "" && replacedAttachmentPath != newAttachmentPath {
-		if err = s.deleteDemoRecordAttachment(replacedAttachmentPath); err != nil {
+		if err = s.deleteDemoRecordAttachment(ctx, replacedAttachmentPath); err != nil {
 			return nil, err
 		}
 	}
@@ -214,7 +218,7 @@ func (s *serviceImpl) UpdateDemoRecordPayload(recordID string, input *DemoRecord
 }
 
 // DeleteDemoRecordPayload deletes one demo record and its optional attachment.
-func (s *serviceImpl) DeleteDemoRecordPayload(recordID string) (*demoRecordDeletePayload, error) {
+func (s *serviceImpl) DeleteDemoRecordPayload(ctx context.Context, recordID string) (*demoRecordDeletePayload, error) {
 	recordID, err := validateDemoRecordID(recordID)
 	if err != nil {
 		return nil, err
@@ -226,7 +230,7 @@ func (s *serviceImpl) DeleteDemoRecordPayload(recordID string) (*demoRecordDelet
 	if _, err = s.recordStoreSvc.Table(demoRecordTable).WhereKey(recordID).Delete(); err != nil {
 		return nil, err
 	}
-	if err = s.deleteDemoRecordAttachment(record.AttachmentPath); err != nil {
+	if err = s.deleteDemoRecordAttachment(ctx, record.AttachmentPath); err != nil {
 		return nil, err
 	}
 	return &demoRecordDeletePayload{
@@ -236,7 +240,7 @@ func (s *serviceImpl) DeleteDemoRecordPayload(recordID string) (*demoRecordDelet
 }
 
 // BuildDemoRecordAttachmentDownload returns one attachment download descriptor.
-func (s *serviceImpl) BuildDemoRecordAttachmentDownload(recordID string) (*demoRecordAttachmentDownloadPayload, error) {
+func (s *serviceImpl) BuildDemoRecordAttachmentDownload(ctx context.Context, recordID string) (*demoRecordAttachmentDownloadPayload, error) {
 	recordID, err := validateDemoRecordID(recordID)
 	if err != nil {
 		return nil, err
@@ -249,17 +253,26 @@ func (s *serviceImpl) BuildDemoRecordAttachmentDownload(recordID string) (*demoR
 		return nil, bizerr.NewCode(CodeDynamicDemoRecordAttachmentNotFound)
 	}
 
-	body, object, found, err := s.storageSvc.Get(record.AttachmentPath)
+	output, err := s.storageSvc.Get(ctx, storagecap.GetInput{Path: record.AttachmentPath})
 	if err != nil {
 		return nil, err
 	}
-	if !found {
+	if output == nil || !output.Found {
 		return nil, bizerr.NewCode(CodeDynamicDemoRecordAttachmentNotFound)
+	}
+	body, err := io.ReadAll(output.Body)
+	if err != nil {
+		return nil, err
+	}
+	if output.Body != nil {
+		if closeErr := output.Body.Close(); closeErr != nil {
+			return nil, closeErr
+		}
 	}
 
 	contentType := "application/octet-stream"
-	if object != nil && strings.TrimSpace(object.ContentType) != "" {
-		contentType = strings.TrimSpace(object.ContentType)
+	if output.Object != nil && strings.TrimSpace(output.Object.ContentType) != "" {
+		contentType = strings.TrimSpace(output.Object.ContentType)
 	}
 	return &demoRecordAttachmentDownloadPayload{
 		OriginalName: record.AttachmentName,
@@ -526,7 +539,7 @@ func normalizeDemoRecordMutationInput(input *DemoRecordMutationInput) (*DemoReco
 
 // saveDemoRecordAttachment decodes and stores one optional Base64 attachment
 // into the governed plugin storage area.
-func (s *serviceImpl) saveDemoRecordAttachment(input *DemoRecordMutationInput) (string, string, error) {
+func (s *serviceImpl) saveDemoRecordAttachment(ctx context.Context, input *DemoRecordMutationInput) (string, string, error) {
 	if input == nil || strings.TrimSpace(input.AttachmentContentBase64) == "" {
 		return "", "", nil
 	}
@@ -561,7 +574,13 @@ func (s *serviceImpl) saveDemoRecordAttachment(input *DemoRecordMutationInput) (
 	if contentType == "" {
 		contentType = http.DetectContentType(body)
 	}
-	if _, err = s.storageSvc.Put(objectPath, body, contentType, true); err != nil {
+	if _, err = s.storageSvc.Put(ctx, storagecap.PutInput{
+		Path:        objectPath,
+		Body:        bytes.NewReader(body),
+		Size:        int64(len(body)),
+		ContentType: contentType,
+		Overwrite:   true,
+	}); err != nil {
 		return "", "", err
 	}
 	return attachmentName, objectPath, nil
@@ -569,11 +588,11 @@ func (s *serviceImpl) saveDemoRecordAttachment(input *DemoRecordMutationInput) (
 
 // deleteDemoRecordAttachment removes one governed attachment object when its
 // logical path is present.
-func (s *serviceImpl) deleteDemoRecordAttachment(objectPath string) error {
+func (s *serviceImpl) deleteDemoRecordAttachment(ctx context.Context, objectPath string) error {
 	if strings.TrimSpace(objectPath) == "" {
 		return nil
 	}
-	return s.storageSvc.Delete(objectPath)
+	return s.storageSvc.Delete(ctx, storagecap.DeleteInput{Path: objectPath})
 }
 
 // validateDemoRecordID validates the logical record identifier used by sample

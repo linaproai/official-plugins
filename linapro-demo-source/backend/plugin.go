@@ -19,17 +19,17 @@ import (
 const (
 	// pluginID is the immutable identifier published by the embedded demo plugin.
 	pluginID = "linapro-demo-source"
-	// sourcePluginEchoInspectionName identifies the demo source-plugin cron.
+	// sourcePluginEchoInspectionName identifies the demo source-plugin job.
 	sourcePluginEchoInspectionName = "source-plugin-echo-inspection"
-	// sourcePluginEchoInspectionDisplayName is the English source title for the demo cron.
+	// sourcePluginEchoInspectionDisplayName is the English source title for the demo job.
 	sourcePluginEchoInspectionDisplayName = "Source Plugin Echo Inspection"
-	// sourcePluginEchoInspectionDescription is the English source description for the demo cron.
+	// sourcePluginEchoInspectionDescription is the English source description for the demo job.
 	sourcePluginEchoInspectionDescription = "Runs a lightweight source-plugin inspection task for scheduler integration validation."
 )
 
 // init registers the embedded source demo plugin and its host callbacks.
 func init() {
-	plugin := pluginhost.NewSourcePlugin(pluginID)
+	plugin := pluginhost.NewDeclarations(pluginID)
 	plugin.Assets().UseEmbeddedFiles(plugindemosource.EmbeddedFiles)
 	if err := registerLifecycleDebugHandlers(plugin); err != nil {
 		panic(err)
@@ -52,10 +52,10 @@ func init() {
 	); err != nil {
 		panic(err)
 	}
-	if err := plugin.Cron().RegisterCron(
-		pluginhost.ExtensionPointCronRegister,
+	if err := plugin.Jobs().RegisterJobs(
+		pluginhost.ExtensionPointJobsRegister,
 		pluginhost.CallbackExecutionModeBlocking,
-		registerBuiltinCrons,
+		registerBuiltinJobs,
 	); err != nil {
 		panic(err)
 	}
@@ -66,7 +66,7 @@ func init() {
 
 // registerLifecycleDebugHandlers wires source-plugin lifecycle callbacks for
 // demonstrating the host lifecycle flow in development logs.
-func registerLifecycleDebugHandlers(plugin pluginhost.SourcePlugin) error {
+func registerLifecycleDebugHandlers(plugin pluginhost.Declarations) error {
 	if err := plugin.Lifecycle().RegisterBeforeInstallHandler(
 		func(ctx context.Context, input pluginhost.SourcePluginLifecycleInput) (bool, string, error) {
 			logSourceLifecycle(ctx, pluginhost.LifecycleHookBeforeInstall, input)
@@ -322,10 +322,10 @@ func servePortalPing(request *ghttp.Request) {
 	request.Response.Write("linapro-demo-source-public-pong")
 }
 
-// registerBuiltinCrons contributes one plugin-owned builtin scheduled job so
-// the host can project source-plugin cron registrations into unified
+// registerBuiltinJobs contributes one plugin-owned builtin scheduled job so
+// the host can project source-plugin job registrations into unified
 // scheduled-job management.
-func registerBuiltinCrons(ctx context.Context, registrar pluginhost.CronRegistrar) error {
+func registerBuiltinJobs(ctx context.Context, registrar pluginhost.JobsRegistrar) error {
 	return registrar.AddWithMetadata(
 		ctx,
 		"# */15 * * * *",

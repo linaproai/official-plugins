@@ -31,7 +31,7 @@ const (
 
 // init registers the linapro-tenant-core source plugin and its host callbacks.
 func init() {
-	plugin := pluginhost.NewSourcePlugin(pluginID)
+	plugin := pluginhost.NewDeclarations(pluginID)
 	plugin.Assets().UseEmbeddedFiles(multitenant.EmbeddedFiles)
 	if err := tenantcap.Provide(pluginID, provideTenant); err != nil {
 		panic(err)

@@ -11,10 +11,10 @@ import (
 
 // UpdateDemoRecord updates one plugin-owned demo record.
 func (c *Controller) UpdateDemoRecord(
-	_ context.Context,
+	ctx context.Context,
 	req *v1.UpdateDemoRecordReq,
 ) (res *v1.UpdateDemoRecordRes, err error) {
-	payload, err := c.dynamicSvc.UpdateDemoRecordPayload(req.Id, &dynamicservice.DemoRecordMutationInput{
+	payload, err := c.dynamicSvc.UpdateDemoRecordPayload(ctx, req.Id, &dynamicservice.DemoRecordMutationInput{
 		Title:                   req.Title,
 		Content:                 req.Content,
 		AttachmentName:          req.AttachmentName,
