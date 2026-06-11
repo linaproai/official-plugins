@@ -6,7 +6,7 @@ package dept
 import (
 	"context"
 
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/capability/usercap"
 	entitymodel "lina-plugin-linapro-org-core/backend/internal/model/entity"
 )
@@ -61,12 +61,12 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	tenantFilter tenantcap.PluginTableFilterService // tenantFilter constrains plugin-owned department rows.
+	tenantFilter tenantspi.PluginTableFilterService // tenantFilter constrains plugin-owned department rows.
 	users        usercap.Service                    // users resolves host-owned user projections through usercap.
 }
 
 // New creates and returns a new department service instance.
-func New(tenantFilter tenantcap.PluginTableFilterService, users usercap.Service) Service {
+func New(tenantFilter tenantspi.PluginTableFilterService, users usercap.Service) Service {
 	return &serviceImpl{tenantFilter: tenantFilter, users: users}
 }
 

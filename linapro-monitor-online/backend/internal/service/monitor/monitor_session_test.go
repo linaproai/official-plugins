@@ -12,7 +12,7 @@ import (
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/sessioncap"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 )
 
 // TestListDelegatesToSessionDomain verifies online-user listing goes through
@@ -137,8 +137,8 @@ func (monitorBizCtxService) Current(context.Context) bizctxcap.CurrentContext {
 type monitorTenantFilterService struct{}
 
 // Context returns a request-scoped tenant and actor projection.
-func (monitorTenantFilterService) Context(context.Context) tenantcap.TenantFilterContext {
-	return tenantcap.TenantFilterContext{UserID: 7, TenantID: 3}
+func (monitorTenantFilterService) Context(context.Context) tenantspi.TenantFilterContext {
+	return tenantspi.TenantFilterContext{UserID: 7, TenantID: 3}
 }
 
 // Apply is unused by these service tests.

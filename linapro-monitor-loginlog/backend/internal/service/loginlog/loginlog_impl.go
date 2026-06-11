@@ -20,7 +20,7 @@ import (
 	"lina-core/pkg/gdbutil"
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/dictcap"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/pluginhost"
 	"lina-plugin-linapro-monitor-loginlog/backend/internal/dao"
 	"lina-plugin-linapro-monitor-loginlog/backend/internal/model/do"
@@ -311,7 +311,7 @@ var defaultLoginStatusLabels = map[int]string{
 // resolveAuditTenantContext resolves tenant audit metadata from bizctx and explicit overrides.
 func resolveAuditTenantContext(
 	ctx context.Context,
-	tenantFilter tenantcap.PluginTableFilterService,
+	tenantFilter tenantspi.PluginTableFilterService,
 	tenantID *int,
 	actingUserID *int,
 	onBehalfOfTenantID *int,
@@ -428,7 +428,7 @@ func (s *serviceImpl) resolveDictLabels(ctx context.Context, dictType string, va
 
 // dictionaryCapabilityContext builds the audited context required by dictcap.
 func (s *serviceImpl) dictionaryCapabilityContext(ctx context.Context, dictType string) capmodel.CapabilityContext {
-	current := tenantcap.TenantFilterContext{}
+	current := tenantspi.TenantFilterContext{}
 	if s != nil && s.tenantFilter != nil {
 		current = s.tenantFilter.Context(ctx)
 	}

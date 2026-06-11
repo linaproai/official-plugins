@@ -4,7 +4,7 @@ package provider
 import (
 	"github.com/gogf/gf/v2/errors/gerror"
 
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/membership"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/resolver"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/resolverconfig"
@@ -21,9 +21,9 @@ type Provider struct {
 }
 
 // Ensure Provider implements the host tenant capability provider contract.
-var _ tenantcap.Provider = (*Provider)(nil)
-var _ tenantcap.UserMembershipProvider = (*Provider)(nil)
-var _ tenantcap.PluginProvisioningProvider = (*Provider)(nil)
+var _ tenantspi.Provider = (*Provider)(nil)
+var _ tenantspi.UserMembershipProvider = (*Provider)(nil)
+var _ tenantspi.PluginProvisioningProvider = (*Provider)(nil)
 
 // New creates and returns a Provider instance.
 func New(

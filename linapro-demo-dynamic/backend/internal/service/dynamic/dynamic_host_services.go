@@ -7,7 +7,7 @@ package dynamicservice
 import (
 	"lina-core/pkg/plugin/capability/hostconfigcap"
 	"lina-core/pkg/plugin/capability/manifestcap"
-	"lina-core/pkg/plugin/capability/recordstore"
+	"lina-core/pkg/plugin/pluginbridge/recordstore"
 	"lina-core/pkg/plugin/capability/storagecap"
 	"lina-core/pkg/plugin/pluginbridge"
 )

@@ -18,7 +18,7 @@ import (
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/notifycap"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/capability/usercap"
 	"lina-plugin-linapro-content-notice/backend/internal/dao"
 	"lina-plugin-linapro-content-notice/backend/internal/model/do"
@@ -194,7 +194,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 
 	_, err = dao.Notice.Ctx(ctx).
 		OmitNilData().
-		Where(tenantcap.TenantFilterColumn, tenantID).
+		Where(tenantspi.TenantFilterColumn, tenantID).
 		Where(noticeColumns.Id, in.Id).
 		Data(data).
 		Update()
@@ -313,7 +313,7 @@ func (s *serviceImpl) capabilityContext(ctx context.Context, resource string) ca
 	if s.bizCtxSvc != nil {
 		current = s.bizCtxSvc.Current(ctx)
 	}
-	tenantCtx := tenantcap.TenantFilterContext{TenantID: current.TenantID}
+	tenantCtx := tenantspi.TenantFilterContext{TenantID: current.TenantID}
 	if s.tenantFilter != nil {
 		tenantCtx = s.tenantFilter.Context(ctx)
 	}

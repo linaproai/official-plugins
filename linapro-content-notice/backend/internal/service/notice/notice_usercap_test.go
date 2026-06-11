@@ -12,7 +12,7 @@ import (
 
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/capmodel"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/capability/usercap"
 )
 
@@ -34,7 +34,7 @@ func TestResolveCreatorNameMapUsesSingleUserBatch(t *testing.T) {
 			Username: "operator",
 			TenantID: 2,
 		}},
-		tenantFilter: fakeNoticeTenantFilter{tenantCtx: tenantcap.TenantFilterContext{
+		tenantFilter: fakeNoticeTenantFilter{tenantCtx: tenantspi.TenantFilterContext{
 			UserID:   3,
 			TenantID: 2,
 		}},
@@ -90,7 +90,7 @@ func TestSearchCreatorUserIDsUsesBoundedUserSearch(t *testing.T) {
 			Username: "reviewer",
 			TenantID: 6,
 		}},
-		tenantFilter: fakeNoticeTenantFilter{tenantCtx: tenantcap.TenantFilterContext{
+		tenantFilter: fakeNoticeTenantFilter{tenantCtx: tenantspi.TenantFilterContext{
 			UserID:   4,
 			TenantID: 6,
 		}},
@@ -159,10 +159,10 @@ func (s fakeNoticeBizCtxService) Current(context.Context) bizctxcap.CurrentConte
 }
 
 type fakeNoticeTenantFilter struct {
-	tenantCtx tenantcap.TenantFilterContext
+	tenantCtx tenantspi.TenantFilterContext
 }
 
-func (s fakeNoticeTenantFilter) Context(context.Context) tenantcap.TenantFilterContext {
+func (s fakeNoticeTenantFilter) Context(context.Context) tenantspi.TenantFilterContext {
 	return s.tenantCtx
 }
 

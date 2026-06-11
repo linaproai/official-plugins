@@ -53,7 +53,7 @@ type invocationRetentionCleaner interface {
 func init() {
 	plugin := pluginhost.NewDeclarations(pluginID)
 	plugin.Assets().UseEmbeddedFiles(aicore.EmbeddedFiles)
-	if err := aitext.Provide(pluginID, provideAIText); err != nil {
+	if err := plugin.Providers().ProvideAIText(provideAIText); err != nil {
 		panic(err)
 	}
 	if err := plugin.HTTP().RegisterRoutes(

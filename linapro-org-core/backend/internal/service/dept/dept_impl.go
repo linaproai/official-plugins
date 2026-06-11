@@ -17,7 +17,7 @@ import (
 
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/plugin/capability/capmodel"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/capability/usercap"
 	"lina-plugin-linapro-org-core/backend/internal/dao"
 	"lina-plugin-linapro-org-core/backend/internal/model/do"
@@ -175,7 +175,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 				childAncestors := gstr.Replace(child.Ancestors, oldPrefix, newPrefix, 1)
 				_, err = tx.Model(dao.Dept.Table()).Safe().Ctx(ctx).
 					OmitNilData().
-					Where(tenantcap.TenantFilterColumn, tenantID).
+					Where(tenantspi.TenantFilterColumn, tenantID).
 					Where(colDeptID, child.Id).
 					Data(do.Dept{Ancestors: childAncestors}).
 					Update()
@@ -189,7 +189,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 			}
 			_, err = tx.Model(dao.Dept.Table()).Safe().Ctx(ctx).
 				OmitNilData().
-				Where(tenantcap.TenantFilterColumn, tenantID).
+				Where(tenantspi.TenantFilterColumn, tenantID).
 				Where(colDeptID, in.Id).
 				Data(data).
 				Update()
@@ -205,7 +205,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 	tenantID := s.tenantFilter.Context(ctx).TenantID
 	_, err = dao.Dept.Ctx(ctx).
 		OmitNilData().
-		Where(tenantcap.TenantFilterColumn, tenantID).
+		Where(tenantspi.TenantFilterColumn, tenantID).
 		Where(colDeptID, in.Id).
 		Data(data).
 		Update()
@@ -473,7 +473,7 @@ func (s *serviceImpl) batchGetUsers(ctx context.Context, userIDs []int) ([]*user
 // capabilityContext creates the plugin-visible metadata for organization HTTP
 // reads without exposing host request internals.
 func (s *serviceImpl) capabilityContext(ctx context.Context, resource string) capmodel.CapabilityContext {
-	tenantCtx := tenantcap.TenantFilterContext{}
+	tenantCtx := tenantspi.TenantFilterContext{}
 	if s != nil && s.tenantFilter != nil {
 		tenantCtx = s.tenantFilter.Context(ctx)
 	}

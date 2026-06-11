@@ -9,15 +9,15 @@ import (
 	"github.com/gogf/gf/v2/database/gdb"
 
 	"lina-core/pkg/plugin/capability/capmodel"
-	"lina-core/pkg/plugin/capability/orgcap"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/orgcap/orgspi"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/capability/usercap"
 )
 
 // TestProvideOrgUsesTypedProviderEnv verifies provider construction only needs
-// the narrow orgcap.ProviderEnv published for organization capability.
+// the narrow orgspi.ProviderEnv published for organization capability.
 func TestProvideOrgUsesTypedProviderEnv(t *testing.T) {
-	provider, err := provideOrg(context.Background(), orgcap.ProviderEnv{
+	provider, err := provideOrg(context.Background(), orgspi.ProviderEnv{
 		PluginID:     pluginID,
 		TenantFilter: fakeTenantFilter{},
 		Users:        fakeUsers{},
@@ -33,7 +33,7 @@ func TestProvideOrgUsesTypedProviderEnv(t *testing.T) {
 // TestProvideOrgRejectsMissingTenantFilter verifies provider construction does
 // not silently create an adapter without the host-published tenant filter.
 func TestProvideOrgRejectsMissingTenantFilter(t *testing.T) {
-	provider, err := provideOrg(context.Background(), orgcap.ProviderEnv{
+	provider, err := provideOrg(context.Background(), orgspi.ProviderEnv{
 		PluginID: pluginID,
 	})
 	if err == nil {
@@ -49,8 +49,8 @@ func TestProvideOrgRejectsMissingTenantFilter(t *testing.T) {
 type fakeTenantFilter struct{}
 
 // Context returns a deterministic tenant context for construction-only tests.
-func (fakeTenantFilter) Context(context.Context) tenantcap.TenantFilterContext {
-	return tenantcap.TenantFilterContext{TenantID: 1}
+func (fakeTenantFilter) Context(context.Context) tenantspi.TenantFilterContext {
+	return tenantspi.TenantFilterContext{TenantID: 1}
 }
 
 // Apply returns the input model unchanged because these tests do not execute queries.

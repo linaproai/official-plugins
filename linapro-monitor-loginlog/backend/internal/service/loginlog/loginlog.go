@@ -9,7 +9,7 @@ import (
 
 	"lina-core/pkg/plugin/capability/dictcap"
 	"lina-core/pkg/plugin/capability/i18ncap"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	entitymodel "lina-plugin-linapro-monitor-loginlog/backend/internal/model/entity"
 )
 
@@ -81,11 +81,11 @@ var _ Service = (*serviceImpl)(nil)
 type serviceImpl struct {
 	dictSvc      dictcap.Service                    // dictSvc resolves host dictionary-domain labels.
 	i18nSvc      i18ncap.Service                    // i18nSvc resolves host runtime translations for plugin data.
-	tenantFilter tenantcap.PluginTableFilterService // tenantFilter constrains plugin-owned login-log rows.
+	tenantFilter tenantspi.PluginTableFilterService // tenantFilter constrains plugin-owned login-log rows.
 }
 
 // New creates and returns a new linapro-monitor-loginlog service instance.
-func New(dictSvc dictcap.Service, i18nSvc i18ncap.Service, tenantFilter tenantcap.PluginTableFilterService) Service {
+func New(dictSvc dictcap.Service, i18nSvc i18ncap.Service, tenantFilter tenantspi.PluginTableFilterService) Service {
 	return &serviceImpl{
 		dictSvc:      dictSvc,
 		i18nSvc:      i18nSvc,

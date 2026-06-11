@@ -9,7 +9,7 @@ import (
 
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/notifycap"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/capability/usercap"
 )
 
@@ -61,7 +61,7 @@ var _ Service = (*serviceImpl)(nil)
 type serviceImpl struct {
 	bizCtxSvc    bizctxcap.Service                  // Business context bridge
 	notifySvc    notifycap.AdminService             // Notification management capability
-	tenantFilter tenantcap.PluginTableFilterService // Tenant query filter bridge
+	tenantFilter tenantspi.PluginTableFilterService // Tenant query filter bridge
 	userSvc      usercap.Service                    // User domain projection capability
 }
 
@@ -69,7 +69,7 @@ type serviceImpl struct {
 func New(
 	bizCtxSvc bizctxcap.Service,
 	notifySvc notifycap.AdminService,
-	tenantFilter tenantcap.PluginTableFilterService,
+	tenantFilter tenantspi.PluginTableFilterService,
 	userSvc usercap.Service,
 ) Service {
 	return &serviceImpl{

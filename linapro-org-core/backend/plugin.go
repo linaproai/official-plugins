@@ -6,7 +6,7 @@ import (
 
 	"github.com/gogf/gf/v2/errors/gerror"
 
-	"lina-core/pkg/plugin/capability/orgcap"
+	"lina-core/pkg/plugin/capability/orgcap/orgspi"
 	"lina-core/pkg/plugin/pluginhost"
 	orgcenter "lina-plugin-linapro-org-core"
 	deptcontroller "lina-plugin-linapro-org-core/backend/internal/controller/dept"
@@ -26,7 +26,7 @@ const (
 func init() {
 	plugin := pluginhost.NewDeclarations(pluginID)
 	plugin.Assets().UseEmbeddedFiles(orgcenter.EmbeddedFiles)
-	if err := orgcap.Provide(pluginID, provideOrg); err != nil {
+	if err := plugin.Providers().ProvideOrg(provideOrg); err != nil {
 		panic(err)
 	}
 	if err := plugin.HTTP().RegisterRoutes(
@@ -43,7 +43,7 @@ func init() {
 
 // provideOrg creates the linapro-org-core organization capability adapter from
 // host-published services during framework capability activation.
-func provideOrg(_ context.Context, env orgcap.ProviderEnv) (orgcap.Provider, error) {
+func provideOrg(_ context.Context, env orgspi.ProviderEnv) (orgspi.Provider, error) {
 	if env.TenantFilter == nil {
 		return nil, gerror.New("linapro-org-core provider requires host tenant-filter service")
 	}

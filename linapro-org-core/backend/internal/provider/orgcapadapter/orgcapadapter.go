@@ -13,7 +13,8 @@ import (
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/orgcap"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/orgcap/orgspi"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/capability/usercap"
 	"lina-plugin-linapro-org-core/backend/internal/dao"
 	"lina-plugin-linapro-org-core/backend/internal/model/do"
@@ -32,15 +33,15 @@ const (
 // Provider implements the stable host organization-capability contract.
 type Provider struct {
 	deptSvc      deptsvc.Service                    // deptSvc resolves department tree relationships.
-	tenantFilter tenantcap.PluginTableFilterService // tenantFilter constrains organization provider queries.
+	tenantFilter tenantspi.PluginTableFilterService // tenantFilter constrains organization provider queries.
 	users        usercap.Service                    // users resolves host-owned user projections.
 }
 
 // Ensure Provider implements the published organization-capability provider.
-var _ orgcap.Provider = (*Provider)(nil)
+var _ orgspi.Provider = (*Provider)(nil)
 
 // New creates and returns a new provider instance.
-func New(tenantFilter tenantcap.PluginTableFilterService, users usercap.Service) *Provider {
+func New(tenantFilter tenantspi.PluginTableFilterService, users usercap.Service) *Provider {
 	return &Provider{
 		deptSvc:      deptsvc.New(tenantFilter, users),
 		tenantFilter: tenantFilter,
@@ -275,14 +276,14 @@ func (p *Provider) ReplaceUserAssignments(ctx context.Context, userID int, deptI
 	return dao.UserDept.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 		if _, err := tx.Model(dao.UserDept.Table()).
 			Ctx(ctx).
-			Where(tenantcap.TenantFilterColumn, tenantID).
+			Where(tenantspi.TenantFilterColumn, tenantID).
 			Where(dao.UserDept.Columns().UserId, userID).
 			Delete(); err != nil {
 			return err
 		}
 		if _, err := tx.Model(dao.UserPost.Table()).
 			Ctx(ctx).
-			Where(tenantcap.TenantFilterColumn, tenantID).
+			Where(tenantspi.TenantFilterColumn, tenantID).
 			Where(dao.UserPost.Columns().UserId, userID).
 			Delete(); err != nil {
 			return err
@@ -314,14 +315,14 @@ func (p *Provider) CleanupUserAssignments(ctx context.Context, userID int) error
 	return dao.UserDept.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 		if _, err := tx.Model(dao.UserDept.Table()).
 			Ctx(ctx).
-			Where(tenantcap.TenantFilterColumn, tenantID).
+			Where(tenantspi.TenantFilterColumn, tenantID).
 			Where(dao.UserDept.Columns().UserId, userID).
 			Delete(); err != nil {
 			return err
 		}
 		if _, err := tx.Model(dao.UserPost.Table()).
 			Ctx(ctx).
-			Where(tenantcap.TenantFilterColumn, tenantID).
+			Where(tenantspi.TenantFilterColumn, tenantID).
 			Where(dao.UserPost.Columns().UserId, userID).
 			Delete(); err != nil {
 			return err
@@ -409,7 +410,7 @@ func (p *Provider) UserDeptTree(ctx context.Context) ([]*orgcap.DeptTreeNode, er
 // capabilityContext creates provider-call metadata for usercap calls made by
 // the organization provider.
 func (p *Provider) capabilityContext(ctx context.Context, resource string) capmodel.CapabilityContext {
-	tenantCtx := tenantcap.TenantFilterContext{}
+	tenantCtx := tenantspi.TenantFilterContext{}
 	if p != nil && p.tenantFilter != nil {
 		tenantCtx = p.tenantFilter.Context(ctx)
 	}

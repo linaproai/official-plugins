@@ -17,7 +17,7 @@ import (
 	"lina-core/pkg/apitime"
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/logger"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-plugin-linapro-demo-source/backend/internal/dao"
 	"lina-plugin-linapro-demo-source/backend/internal/model/do"
 	entitymodel "lina-plugin-linapro-demo-source/backend/internal/model/entity"
@@ -254,7 +254,7 @@ func (s *serviceImpl) UpdateRecord(ctx context.Context, in *UpdateRecordInput) (
 
 	tenantID := s.tenantFilter.Context(ctx).TenantID
 	_, err = dao.Record.Ctx(ctx).
-		Where(tenantcap.TenantFilterColumn, tenantID).
+		Where(tenantspi.TenantFilterColumn, tenantID).
 		Where(do.Record{Id: in.Id}).
 		Data(updateData).
 		Update()
@@ -279,7 +279,7 @@ func (s *serviceImpl) DeleteRecord(ctx context.Context, id int64) error {
 
 	tenantID := s.tenantFilter.Context(ctx).TenantID
 	_, err = dao.Record.Ctx(ctx).
-		Where(tenantcap.TenantFilterColumn, tenantID).
+		Where(tenantspi.TenantFilterColumn, tenantID).
 		Where(do.Record{Id: id}).
 		Delete()
 	if err != nil {

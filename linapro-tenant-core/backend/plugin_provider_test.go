@@ -9,14 +9,14 @@ import (
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/plugincap"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/capability/usercap"
 )
 
 // TestProvideTenantUsesTypedProviderEnv verifies provider construction only
-// needs the narrow tenantcap.ProviderEnv published for tenant capability.
+// needs the narrow tenantspi.ProviderEnv published for tenant capability.
 func TestProvideTenantUsesTypedProviderEnv(t *testing.T) {
-	provider, err := provideTenant(context.Background(), tenantcap.ProviderEnv{
+	provider, err := provideTenant(context.Background(), tenantspi.ProviderEnv{
 		PluginID:    pluginID,
 		BizCtx:      fakeBizCtx{},
 		Users:       fakeTenantProviderUsers{},
@@ -34,7 +34,7 @@ func TestProvideTenantUsesTypedProviderEnv(t *testing.T) {
 // TestProvideTenantRejectsMissingBizCtx verifies provider construction does
 // not silently create an adapter without the host-published bizctx service.
 func TestProvideTenantRejectsMissingBizCtx(t *testing.T) {
-	provider, err := provideTenant(context.Background(), tenantcap.ProviderEnv{
+	provider, err := provideTenant(context.Background(), tenantspi.ProviderEnv{
 		PluginID: pluginID,
 	})
 	if err == nil {

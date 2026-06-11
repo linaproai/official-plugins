@@ -21,7 +21,7 @@ import (
 	"lina-core/pkg/plugin/capability/apidoccap"
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/dictcap"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-plugin-linapro-monitor-operlog/backend/internal/dao"
 	"lina-plugin-linapro-monitor-operlog/backend/internal/model/do"
 	"lina-plugin-linapro-monitor-operlog/backend/internal/model/operlogtype"
@@ -457,7 +457,7 @@ func (s *serviceImpl) resolveDictLabels(ctx context.Context, dictType string, va
 
 // dictionaryCapabilityContext builds the audited context required by dictcap.
 func (s *serviceImpl) dictionaryCapabilityContext(ctx context.Context, dictType string) capmodel.CapabilityContext {
-	current := tenantcap.TenantFilterContext{}
+	current := tenantspi.TenantFilterContext{}
 	if s != nil && s.tenantFilter != nil {
 		current = s.tenantFilter.Context(ctx)
 	}
@@ -528,7 +528,7 @@ var defaultOperStatusLabels = map[int]string{
 // resolveAuditTenantContext resolves tenant audit metadata from bizctx and explicit overrides.
 func resolveAuditTenantContext(
 	ctx context.Context,
-	tenantFilter tenantcap.PluginTableFilterService,
+	tenantFilter tenantspi.PluginTableFilterService,
 	tenantID *int,
 	actingUserID *int,
 	onBehalfOfTenantID *int,
