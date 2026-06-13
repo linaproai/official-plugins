@@ -40,7 +40,10 @@ func init() {
 			if !input.PurgeStorageData() {
 				return nil
 			}
-			return demosvc.PurgeStorageData(ctx)
+			if input.Services() == nil || input.Services().Storage() == nil {
+				return gerror.New("linapro-demo-source uninstall requires host storage service")
+			}
+			return demosvc.PurgeStorageData(ctx, input.Services().Storage())
 		},
 	); err != nil {
 		panic(err)
@@ -266,10 +269,10 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		middlewares = routes.Middlewares()
 		services    = registrar.Services()
 	)
-	if services == nil || services.I18n() == nil || services.TenantFilter() == nil {
-		return gerror.New("linapro-demo-source routes require host i18n and tenant-filter services")
+	if services == nil || services.I18n() == nil || services.TenantFilter() == nil || services.Storage() == nil {
+		return gerror.New("linapro-demo-source routes require host i18n, tenant-filter, and storage services")
 	}
-	demoSvc := demosvc.New(services.I18n(), services.TenantFilter())
+	demoSvc := demosvc.New(services.I18n(), services.TenantFilter(), services.Storage())
 	demoController := democtrl.NewV1(demoSvc)
 	routes.Group("/portal/linapro-demo-source", func(group pluginhost.RouteGroup) {
 		group.Middleware(

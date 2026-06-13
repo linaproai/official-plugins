@@ -5,6 +5,7 @@ package demo
 import (
 	"context"
 	"lina-core/pkg/plugin/capability/i18ncap"
+	"lina-core/pkg/plugin/capability/storagecap"
 	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 )
 
@@ -37,12 +38,18 @@ var _ Service = (*serviceImpl)(nil)
 type serviceImpl struct {
 	i18nSvc      i18ncap.Service                    // i18nSvc resolves plugin runtime translations.
 	tenantFilter tenantspi.PluginTableFilterService // tenantFilter constrains plugin-owned demo rows.
+	storageSvc   storagecap.Service                 // storageSvc manages plugin-private attachment objects.
 }
 
 // New creates and returns a new demo service instance.
-func New(i18nSvc i18ncap.Service, tenantFilter tenantspi.PluginTableFilterService) Service {
+func New(
+	i18nSvc i18ncap.Service,
+	tenantFilter tenantspi.PluginTableFilterService,
+	storageSvc storagecap.Service,
+) Service {
 	return &serviceImpl{
 		i18nSvc:      i18nSvc,
 		tenantFilter: tenantFilter,
+		storageSvc:   storageSvc,
 	}
 }

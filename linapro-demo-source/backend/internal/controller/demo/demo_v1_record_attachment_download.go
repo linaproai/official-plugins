@@ -7,7 +7,6 @@ import (
 
 	"io"
 	"lina-plugin-linapro-demo-source/backend/api/demo/v1"
-	"os"
 
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -22,12 +21,8 @@ func (c *ControllerV1) DownloadAttachment(
 		return nil, err
 	}
 
-	fileReader, err := os.Open(out.FullPath)
-	if err != nil {
-		return nil, err
-	}
 	defer func() {
-		closeErr := fileReader.Close()
+		closeErr := out.Body.Close()
 		if err == nil && closeErr != nil {
 			err = closeErr
 		}
@@ -36,7 +31,10 @@ func (c *ControllerV1) DownloadAttachment(
 	r := g.RequestFromCtx(ctx)
 	r.Response.Header().Set("Content-Disposition", "attachment; filename=\""+out.OriginalName+"\"")
 	r.Response.Header().Set("Content-Type", out.ContentType)
-	if _, err = io.Copy(r.Response.RawWriter(), fileReader); err != nil {
+	if out.Size > 0 {
+		r.Response.Header().Set("Content-Length", g.NewVar(out.Size).String())
+	}
+	if _, err = io.Copy(r.Response.RawWriter(), out.Body); err != nil {
 		return nil, err
 	}
 	r.ExitAll()

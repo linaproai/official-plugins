@@ -31,7 +31,7 @@ linapro-demo-source/
 - `manifest/sql/mock-data/`下的`mock`SQL会提供本地样例数据使用的可选演示记录
 - `manifest/sql/uninstall/` 下的卸载 SQL 会在用户确认清理存储数据时删除该插件自有表
 - `frontend/pages/sidebar-entry.vue` 中的示例页面可以对插件自有表执行增删查改，并支持附件上传与下载
-- 插件自有附件文件存放在宿主上传目录下的 `linapro-demo-source/` 命名空间中
+- 插件自有附件对象通过`pluginhost.Services.Storage()`写入，使用`demo-record-files/...`这类插件 logical path
 - 禁用插件时仅隐藏菜单和路由，不清理数据表数据和已存储文件
 - 卸载插件时宿主会弹窗，让用户选择是否同时清理插件自有数据表数据和存储文件
 - 生命周期回调会打印 `BeforeInstall`、`AfterInstall`、`BeforeUpgrade`、`Upgrade`、`AfterUpgrade`、`BeforeDisable`、`AfterDisable`、`BeforeUninstall`、`AfterUninstall`、租户生命周期回调和安装模式回调，便于开发者观察源码插件生命周期流程
@@ -50,7 +50,8 @@ linapro-demo-source/
 - 将插件`API`注册到`registrar.Routes().APIPrefix()`下，该前缀会解析为`/x/linapro-demo-source`；示例插件自行追加`/api/v1`作为自身路由约定
 - 公开页面、门户、静态资源路由或插件自管 fallback handler 应使用非保留路径，不要放在`/x`下
 - 通过宿主构建使用的源码插件注册入口显式接线安装、升级、禁用、卸载、租户和安装模式生命周期回调
-- 将插件自有清理逻辑保留在插件服务中，便于在卸载 `SQL` 删除表之前按需清理附件文件
+- 从`registrar.Services()`显式注入`Storage()`，并用它完成附件保存、下载、替换、删除和可选卸载清理
+- 将插件自有清理逻辑保留在插件服务中，便于在卸载`SQL`删除表之前按需清理`Storage()`对象
 
 ## 前端接入
 
@@ -69,7 +70,16 @@ linapro-demo-source/
 - 安装 SQL 位于 `manifest/sql/`
 - 卸载 SQL 位于 `manifest/sql/uninstall/`
 - 安装 SQL 需要具备幂等性，以便在“卸载但保留数据”后重新安装时继续复用原有数据
-- 当插件存在自有文件存储时，卸载 SQL 应与插件清理钩子协同工作，确保表数据和文件可一起清理
+- 当插件存在自有对象存储时，卸载 SQL 应与插件清理钩子协同工作，确保表数据和`Storage()`对象可一起清理
+
+## 附件存储边界
+
+| 场景 | 样例行为 |
+| --- | --- |
+| 保存或替换附件 | 后端通过`storagecap.Service.Put`写入对象，业务表只保存 logical path、原始文件名和记录元数据。 |
+| 下载附件 | 后端通过`storagecap.Service.Get`读取 logical path 并流式返回 reader，不暴露也不打开宿主文件系统路径。 |
+| 删除记录或移除附件 | 后端通过`storagecap.Service.Delete`删除已存储对象。 |
+| 卸载清理 | 当宿主卸载策略要求清理存储数据时，生命周期回调接收插件作用域 service，按记录中的租户作用域删除附件路径，并对剩余`demo-record-files/`对象执行有界前缀清理。 |
 
 ## 审查要点
 

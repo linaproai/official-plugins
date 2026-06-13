@@ -124,6 +124,18 @@ hostServices:
       # Writes a storage object.
       # 写入存储对象。
       - put
+      # Starts a chunked storage object upload.
+      # 启动分片存储对象上传。
+      - put.init
+      # Appends a chunk to a storage object upload.
+      # 追加一个存储对象上传分片。
+      - put.chunk
+      # Commits a chunked storage object upload.
+      # 提交分片存储对象上传。
+      - put.commit
+      # Aborts a chunked storage object upload.
+      # 中止分片存储对象上传。
+      - put.abort
       # Reads a storage object.
       # 读取存储对象。
       - get

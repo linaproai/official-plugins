@@ -31,7 +31,7 @@ linapro-demo-source/
 - mock SQL under `manifest/sql/mock-data/` provides optional demo records for local sample data
 - uninstall SQL under `manifest/sql/uninstall/` drops the plugin-owned table when the user confirms storage purge
 - the sample page in `frontend/pages/sidebar-entry.vue` performs CRUD against the plugin-owned table and supports attachment upload/download
-- plugin-owned attachment files are stored under the host upload root in the `linapro-demo-source/` namespace
+- plugin-owned attachment objects are stored through `pluginhost.Services.Storage()` under plugin logical paths such as `demo-record-files/...`
 - disabling the plugin hides menus and routes but keeps table data and stored files
 - uninstalling the plugin opens a confirmation dialog that lets the user choose whether to purge plugin-owned table data and stored files
 - lifecycle callbacks log `BeforeInstall`, `AfterInstall`, `BeforeUpgrade`, `Upgrade`, `AfterUpgrade`, `BeforeDisable`, `AfterDisable`, `BeforeUninstall`, `AfterUninstall`, tenant lifecycle callbacks, and install-mode callbacks so developers can observe the source-plugin lifecycle flow
@@ -50,7 +50,8 @@ linapro-demo-source/
 - register plugin APIs under `registrar.Routes().APIPrefix()`, which resolves to `/x/linapro-demo-source`; the sample appends `/api/v1` as its own route convention
 - keep public pages, portals, static routes, or plugin-owned fallback handlers on non-reserved paths instead of putting them under `/x`
 - register install, upgrade, disable, uninstall, tenant, and install-mode lifecycle callbacks through the source-plugin registration entry used by the host build
-- keep plugin-owned cleanup logic in the plugin service so uninstall can optionally purge files before uninstall SQL drops the table
+- inject `Storage()` explicitly from `registrar.Services()` and use it for attachment save, download, replacement, deletion, and optional uninstall purge
+- keep plugin-owned cleanup logic in the plugin service so uninstall can optionally purge `Storage()` objects before uninstall SQL drops the table
 
 ## Front-end Integration
 
@@ -69,7 +70,16 @@ Do not use `/plugin-assets`; that legacy path is not supported.
 - install SQL lives under `manifest/sql/`
 - uninstall SQL lives under `manifest/sql/uninstall/`
 - install SQL should be idempotent so reinstall after a non-purge uninstall can preserve data
-- uninstall SQL should be paired with plugin cleanup hooks when stored files must be removed together with table data
+- uninstall SQL should be paired with plugin cleanup hooks when `Storage()` objects must be removed together with table data
+
+## Attachment Storage Boundary
+
+| Scenario | Sample behavior |
+| --- | --- |
+| Save or replace an attachment | The backend stores the object through `storagecap.Service.Put` and persists only the logical path, original file name, and record metadata. |
+| Download an attachment | The backend reads the logical path through `storagecap.Service.Get` and streams the returned reader; it does not expose or open a host filesystem path. |
+| Delete a record or remove an attachment | The backend deletes the stored object through `storagecap.Service.Delete`. |
+| Purge on uninstall | When the host uninstall policy requests storage purge, the lifecycle callback receives plugin-scoped services, binds the recorded tenant scope, deletes recorded attachment paths, and then performs a bounded prefix cleanup for remaining `demo-record-files/` objects. |
 
 ## Review Checklist
 
