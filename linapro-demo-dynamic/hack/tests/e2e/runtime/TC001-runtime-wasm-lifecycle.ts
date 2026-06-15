@@ -1,9 +1,7 @@
 import { execFileSync } from "node:child_process";
 import {
   copyFileSync,
-  existsSync,
   mkdirSync,
-  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -95,7 +93,12 @@ type UserRouteNode = {
 };
 
 type BundledRuntimeDemoRecordListPayload = {
-  list?: Array<{ title?: string }>;
+  list?: Array<{
+    attachmentName?: string;
+    hasAttachment?: boolean;
+    id?: string;
+    title?: string;
+  }>;
   total?: number;
 };
 
@@ -327,8 +330,8 @@ function bundledRuntimeStorageArtifactPath() {
 function bundledRuntimeStorageRootDir() {
   return path.join(
     runtimeStorageDir(),
-    ".host-services",
-    "storage",
+    ".capability-storage",
+    "plugins",
     bundledRuntimePluginID,
   );
 }
@@ -474,12 +477,14 @@ function seedBundledRuntimePaginationRecords(recordKey: string, count: number) {
 async function bundledRuntimeDemoRecordListSnapshot(
   adminApi: APIRequestContext,
   pageSize = 20,
+  keyword = "",
 ) {
   try {
     const response = await adminApi.get(
       `${publicBaseURL}/x/${bundledRuntimePluginID}/api/v1/demo-records`,
       {
         params: {
+          keyword,
           pageNum: 1,
           pageSize,
         },
@@ -487,6 +492,7 @@ async function bundledRuntimeDemoRecordListSnapshot(
     );
     if (!response.ok()) {
       return {
+        records: [] as NonNullable<BundledRuntimeDemoRecordListPayload["list"]>,
         ok: false,
         status: response.status(),
         titles: [] as string[],
@@ -499,6 +505,7 @@ async function bundledRuntimeDemoRecordListSnapshot(
     ) as BundledRuntimeDemoRecordListPayload;
     const records = Array.isArray(payload?.list) ? payload.list : [];
     return {
+      records,
       ok: true,
       status: response.status(),
       titles: records
@@ -509,6 +516,7 @@ async function bundledRuntimeDemoRecordListSnapshot(
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : String(error),
+      records: [] as NonNullable<BundledRuntimeDemoRecordListPayload["list"]>,
       ok: false,
       status: 0,
       titles: [] as string[],
@@ -561,21 +569,53 @@ async function waitForBundledRuntimeDemoRecordTotal(
     .toBe(total);
 }
 
-function countFilesRecursive(targetPath: string): number {
-  if (!existsSync(targetPath)) {
-    return 0;
+function bundledRuntimeAttachmentPathByTitle(title: string) {
+  if (!bundledRuntimeRecordTableExists()) {
+    return "";
   }
-  const fileInfo = statSync(targetPath);
-  if (!fileInfo.isDirectory()) {
-    return 1;
-  }
-  return readdirSync(targetPath).reduce((total, item) => {
-    return total + countFilesRecursive(path.join(targetPath, item));
-  }, 0);
+  const escapedTitle = pgEscapeLiteral(title);
+  return queryPgScalar(
+    [
+      `SELECT attachment_path FROM ${pgIdentifier(bundledRuntimeRecordTable)}`,
+      `WHERE title = '${escapedTitle}'`,
+      "ORDER BY updated_at DESC, id DESC",
+      "LIMIT 1;",
+    ].join(" "),
+  );
 }
 
-function bundledRuntimeStoredFileCount() {
-  return countFilesRecursive(bundledRuntimeStorageRootDir());
+function hasBundledRuntimeAttachmentReference(title: string) {
+  return bundledRuntimeAttachmentPathByTitle(title).trim().length > 0;
+}
+
+async function bundledRuntimeDemoRecordByTitle(
+  adminApi: APIRequestContext,
+  title: string,
+) {
+  const snapshot = await bundledRuntimeDemoRecordListSnapshot(adminApi, 100, title);
+  if (!snapshot.ok) {
+    return null;
+  }
+  return snapshot.records.find((record) => record.title === title) ?? null;
+}
+
+async function downloadBundledRuntimeAttachment(
+  adminApi: APIRequestContext,
+  title: string,
+) {
+  const record = await bundledRuntimeDemoRecordByTitle(adminApi, title);
+  expect(record, `应能通过动态插件接口查询到记录: ${title}`).toBeTruthy();
+  expect(record?.hasAttachment, `动态插件记录应标记持有附件: ${title}`).toBe(true);
+  expect(
+    record?.attachmentName ?? "",
+    `动态插件记录应保留附件原始文件名: ${title}`,
+  ).toBe(path.basename(bundledRuntimeAttachmentFixturePath()));
+
+  const response = await adminApi.get(
+    `${publicBaseURL}/x/${bundledRuntimePluginID}/api/v1/demo-records/${encodeURIComponent(record!.id ?? "")}/attachment`,
+  );
+  assertOk(response, `下载动态插件记录附件失败: ${title}`);
+  return response.text();
 }
 
 function ensureBundledRuntimeAttachmentFixture() {
@@ -1362,7 +1402,10 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
       attachmentPath: ensureBundledRuntimeAttachmentFixture(),
     });
     expect(bundledRuntimeRecordCountByTitle(recordTitle)).toBe(1);
-    expect(bundledRuntimeStoredFileCount()).toBeGreaterThan(0);
+    expect(hasBundledRuntimeAttachmentReference(recordTitle)).toBeTruthy();
+    expect(
+      await downloadBundledRuntimeAttachment(adminApi!, recordTitle),
+    ).toContain("linapro-demo-dynamic attachment fixture");
 
     await pluginPage.updatePluginDemoDynamicRecord(recordTitle, {
       title: updatedRecordTitle,
@@ -1375,8 +1418,12 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     await setBundledRuntimeEnabled(false);
     await pluginPage.expectSidebarMenuHidden(bundledRuntimeMenuName);
     expect(bundledRuntimeRecordCountByTitle(updatedRecordTitle)).toBe(1);
+    expect(hasBundledRuntimeAttachmentReference(updatedRecordTitle)).toBeTruthy();
 
     await setBundledRuntimeEnabled(true);
+    expect(
+      await downloadBundledRuntimeAttachment(adminApi!, updatedRecordTitle),
+    ).toContain("linapro-demo-dynamic attachment fixture");
     await pluginPage.clickSidebarMenuItem(bundledRuntimeMenuName);
     await expect(
       pluginPage.pluginDemoDynamicRecordRow(updatedRecordTitle),
@@ -1385,7 +1432,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     await pluginPage.gotoManage();
     await pluginPage.uninstallPluginWithOptions(bundledRuntimePluginID, false);
     expect(bundledRuntimeRecordCountByTitle(updatedRecordTitle)).toBe(1);
-    expect(bundledRuntimeStoredFileCount()).toBeGreaterThan(0);
+    expect(hasBundledRuntimeAttachmentReference(updatedRecordTitle)).toBeTruthy();
 
     await confirmBundledRuntimeInstall();
     await expect
@@ -1396,6 +1443,9 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
       .toBe(1);
     await setBundledRuntimeEnabled(true);
     await waitForBundledRuntimeDemoRecord(adminApi!, updatedRecordTitle);
+    expect(
+      await downloadBundledRuntimeAttachment(adminApi!, updatedRecordTitle),
+    ).toContain("linapro-demo-dynamic attachment fixture");
     await pluginPage.clickSidebarMenuItem(bundledRuntimeMenuName);
     await expect(
       pluginPage.pluginDemoDynamicRecordRow(updatedRecordTitle),
@@ -1403,7 +1453,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
 
     await pluginPage.deletePluginDemoDynamicRecord(updatedRecordTitle);
     expect(bundledRuntimeRecordCountByTitle(updatedRecordTitle)).toBe(0);
-    expect(bundledRuntimeStoredFileCount()).toBe(0);
+    expect(hasBundledRuntimeAttachmentReference(updatedRecordTitle)).toBeFalsy();
 
     await pluginPage.createPluginDemoDynamicRecord({
       title: cleanupRecordTitle,
@@ -1411,12 +1461,12 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
       attachmentPath: ensureBundledRuntimeAttachmentFixture(),
     });
     expect(bundledRuntimeRecordCountByTitle(cleanupRecordTitle)).toBe(1);
-    expect(bundledRuntimeStoredFileCount()).toBeGreaterThan(0);
+    expect(hasBundledRuntimeAttachmentReference(cleanupRecordTitle)).toBeTruthy();
 
     await pluginPage.gotoManage();
     await pluginPage.uninstallPluginWithOptions(bundledRuntimePluginID, true);
     expect(bundledRuntimeRecordTableExists()).toBeFalsy();
-    expect(bundledRuntimeStoredFileCount()).toBe(0);
+    expect(hasBundledRuntimeAttachmentReference(cleanupRecordTitle)).toBeFalsy();
 
     await confirmBundledRuntimeInstall();
     await expect
