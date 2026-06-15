@@ -111,7 +111,7 @@ type fakePlugincap struct {
 	provisionTenantID capmodel.DomainID
 }
 
-func (s *fakePlugincap) BatchGetPlugins(context.Context, capmodel.CapabilityContext, []plugincap.PluginID) (*capmodel.BatchResult[*plugincap.Projection, plugincap.PluginID], error) {
+func (s *fakePlugincap) BatchGet(context.Context, capmodel.CapabilityContext, []plugincap.PluginID) (*capmodel.BatchResult[*plugincap.Projection, plugincap.PluginID], error) {
 	return &capmodel.BatchResult[*plugincap.Projection, plugincap.PluginID]{Items: map[plugincap.PluginID]*plugincap.Projection{}}, nil
 }
 
@@ -136,7 +136,7 @@ func (s *fakePlugincap) ListTenantPlugins(_ context.Context, capCtx capmodel.Cap
 	return &capmodel.PageResult[*plugincap.TenantProjection]{Items: s.list, Total: len(s.list)}, nil
 }
 
-func (s *fakePlugincap) SetPluginEnabled(_ context.Context, _ capmodel.CapabilityContext, id plugincap.PluginID, enabled bool) error {
+func (s *fakePlugincap) SetEnabled(_ context.Context, _ capmodel.CapabilityContext, id plugincap.PluginID, enabled bool) error {
 	s.setCalls++
 	s.setPluginID = id
 	s.setEnabled = enabled

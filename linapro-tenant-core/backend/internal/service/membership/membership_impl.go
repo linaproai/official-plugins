@@ -353,7 +353,7 @@ func (s *serviceImpl) ValidateStartupConsistency(ctx context.Context) ([]string,
 			userIDs = append(userIDs, usercap.UserID(strconv.FormatInt(row.UserID, 10)))
 		}
 	}
-	out, err := s.users.BatchGetUsers(ctx, s.capabilityContext(ctx, "membership.startup_consistency"), userIDs)
+	out, err := s.users.BatchGet(ctx, s.capabilityContext(ctx, "membership.startup_consistency"), userIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -395,7 +395,7 @@ func (s *serviceImpl) ensureUserCanJoinTenant(
 		return bizerr.NewCode(capmodel.CodeCapabilityUnavailable, bizerr.P("capability", "user"))
 	}
 	userDomainID := usercap.UserID(strconv.FormatInt(userID, 10))
-	out, err := s.users.BatchGetUsers(ctx, s.capabilityContext(ctx, "membership.user_visibility"), []usercap.UserID{userDomainID})
+	out, err := s.users.BatchGet(ctx, s.capabilityContext(ctx, "membership.user_visibility"), []usercap.UserID{userDomainID})
 	if err != nil {
 		return err
 	}
@@ -512,7 +512,7 @@ func (s *serviceImpl) hydrateUserLabels(ctx context.Context, list []*Entity) err
 		seen[id] = struct{}{}
 		ids = append(ids, id)
 	}
-	out, err := s.users.BatchGetUsers(ctx, s.capabilityContext(ctx, "membership.list"), ids)
+	out, err := s.users.BatchGet(ctx, s.capabilityContext(ctx, "membership.list"), ids)
 	if err != nil {
 		return err
 	}

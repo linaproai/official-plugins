@@ -360,7 +360,7 @@ func (p *Provider) UserDeptTree(ctx context.Context) ([]*orgcap.DeptTreeNode, er
 		seenUsers[item.UserId] = struct{}{}
 		userIDs = append(userIDs, usercap.UserID(strconv.Itoa(item.UserId)))
 	}
-	visibleUsers, err := p.users.BatchGetUsers(ctx, p.capabilityContext(ctx, "org.user_dept_tree"), userIDs)
+	visibleUsers, err := p.users.BatchGet(ctx, p.capabilityContext(ctx, "org.user_dept_tree"), userIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -388,7 +388,7 @@ func (p *Provider) UserDeptTree(ctx context.Context) ([]*orgcap.DeptTreeNode, er
 	nodes := convertDeptTreeNodes(plainTree)
 	applyDeptUserCount(nodes, countMap)
 
-	totalOut, err := p.users.SearchUsers(ctx, p.capabilityContext(ctx, "org.user_dept_tree"), usercap.SearchInput{
+	totalOut, err := p.users.Search(ctx, p.capabilityContext(ctx, "org.user_dept_tree"), usercap.SearchInput{
 		Page: capmodel.PageRequest{PageSize: 1},
 	})
 	if err != nil {

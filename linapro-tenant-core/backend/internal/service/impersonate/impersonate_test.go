@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"lina-core/pkg/bizerr"
-	"lina-core/pkg/plugin/capability/authcap/token"
 	"lina-core/pkg/plugin/capability/authcap/authz"
+	"lina-core/pkg/plugin/capability/authcap/token"
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/usercap"
@@ -201,8 +201,8 @@ type fakeImpersonationUsers struct {
 	users map[usercap.UserID]*usercap.UserProjection
 }
 
-// BatchGetUsers returns configured user projections and opaque missing IDs.
-func (s fakeImpersonationUsers) BatchGetUsers(_ context.Context, _ capmodel.CapabilityContext, ids []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
+// BatchGet returns configured user projections and opaque missing IDs.
+func (s fakeImpersonationUsers) BatchGet(_ context.Context, _ capmodel.CapabilityContext, ids []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
 	out := &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{Items: map[usercap.UserID]*usercap.UserProjection{}}
 	for _, id := range ids {
 		if item := s.users[id]; item != nil {
@@ -214,12 +214,12 @@ func (s fakeImpersonationUsers) BatchGetUsers(_ context.Context, _ capmodel.Capa
 	return out, nil
 }
 
-// SearchUsers is unused by impersonation tests.
-func (s fakeImpersonationUsers) SearchUsers(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
+// Search is unused by impersonation tests.
+func (s fakeImpersonationUsers) Search(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
 	return &capmodel.PageResult[*usercap.UserProjection]{Items: []*usercap.UserProjection{}}, nil
 }
 
-// EnsureUsersVisible is unused by impersonation tests.
-func (s fakeImpersonationUsers) EnsureUsersVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
+// EnsureVisible is unused by impersonation tests.
+func (s fakeImpersonationUsers) EnsureVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
 	return nil
 }

@@ -301,7 +301,7 @@ func (s *serviceImpl) Users(ctx context.Context, deptID int, keyword string, lim
 	}
 	limit = normalizeDeptUserLimit(limit)
 	if deptID == 0 {
-		out, err := s.users.SearchUsers(ctx, s.capabilityContext(ctx, "dept.users"), usercap.SearchInput{
+		out, err := s.users.Search(ctx, s.capabilityContext(ctx, "dept.users"), usercap.SearchInput{
 			Keyword: keyword,
 			Page:    capmodel.PageRequest{PageSize: limit},
 		})
@@ -392,7 +392,7 @@ func (s *serviceImpl) checkCodeUnique(ctx context.Context, code string, excludeI
 // the bounded result with plugin-owned department assignments.
 func (s *serviceImpl) usersByKeywordAndDeptIDs(ctx context.Context, keyword string, limit int, deptIDs []int) ([]*DeptUser, error) {
 	searchLimit := deptUserMaxLimit
-	out, err := s.users.SearchUsers(ctx, s.capabilityContext(ctx, "dept.users"), usercap.SearchInput{
+	out, err := s.users.Search(ctx, s.capabilityContext(ctx, "dept.users"), usercap.SearchInput{
 		Keyword: keyword,
 		Page:    capmodel.PageRequest{PageSize: searchLimit},
 	})
@@ -454,7 +454,7 @@ func (s *serviceImpl) batchGetUsers(ctx context.Context, userIDs []int) ([]*user
 			ids = append(ids, usercap.UserID(strconv.Itoa(userID)))
 		}
 	}
-	out, err := s.users.BatchGetUsers(ctx, s.capabilityContext(ctx, "dept.users"), ids)
+	out, err := s.users.BatchGet(ctx, s.capabilityContext(ctx, "dept.users"), ids)
 	if err != nil {
 		return nil, err
 	}

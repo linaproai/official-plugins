@@ -267,7 +267,7 @@ func (s *serviceImpl) searchCreatorUserIDs(ctx context.Context, keyword string) 
 	if s.userSvc == nil {
 		return nil, gerror.New("linapro-content-notice requires host user capability")
 	}
-	result, err := s.userSvc.SearchUsers(ctx, s.capabilityContext(ctx, noticeCreatorCapabilityResource), usercap.SearchInput{
+	result, err := s.userSvc.Search(ctx, s.capabilityContext(ctx, noticeCreatorCapabilityResource), usercap.SearchInput{
 		Keyword: strings.TrimSpace(keyword),
 		Page: capmodel.PageRequest{
 			PageNum:  1,
@@ -292,7 +292,7 @@ func (s *serviceImpl) resolveCreatorNameMap(ctx context.Context, notices []*Noti
 	if s.userSvc == nil {
 		return nil, gerror.New("linapro-content-notice requires host user capability")
 	}
-	result, err := s.userSvc.BatchGetUsers(ctx, s.capabilityContext(ctx, noticeCreatorCapabilityResource), userIDs)
+	result, err := s.userSvc.BatchGet(ctx, s.capabilityContext(ctx, noticeCreatorCapabilityResource), userIDs)
 	if err != nil || result == nil {
 		return names, err
 	}

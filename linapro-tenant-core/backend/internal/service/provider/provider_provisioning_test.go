@@ -73,18 +73,18 @@ func (providerProvisioningBizCtxService) Current(context.Context) bizctxcap.Curr
 // providerProvisioningUsers is unused by the provisioning path.
 type providerProvisioningUsers struct{}
 
-// BatchGetUsers returns an empty projection map for provisioning-only tests.
-func (providerProvisioningUsers) BatchGetUsers(context.Context, capmodel.CapabilityContext, []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
+// BatchGet returns an empty projection map for provisioning-only tests.
+func (providerProvisioningUsers) BatchGet(context.Context, capmodel.CapabilityContext, []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
 	return &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{Items: map[usercap.UserID]*usercap.UserProjection{}}, nil
 }
 
-// SearchUsers returns an empty page because startup provisioning never searches users.
-func (providerProvisioningUsers) SearchUsers(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
+// Search returns an empty page because startup provisioning never searches users.
+func (providerProvisioningUsers) Search(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
 	return &capmodel.PageResult[*usercap.UserProjection]{Items: []*usercap.UserProjection{}}, nil
 }
 
-// EnsureUsersVisible accepts all inputs because this fixture is construction-only.
-func (providerProvisioningUsers) EnsureUsersVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
+// EnsureVisible accepts all inputs because this fixture is construction-only.
+func (providerProvisioningUsers) EnsureVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
 	return nil
 }
 

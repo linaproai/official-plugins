@@ -62,17 +62,17 @@ func (fakeTenantFilter) Apply(_ context.Context, model *gdb.Model, _ string) *gd
 // construction tests; methods are not executed by these construction checks.
 type fakeUsers struct{}
 
-// BatchGetUsers returns an empty visible projection set.
-func (fakeUsers) BatchGetUsers(context.Context, capmodel.CapabilityContext, []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
+// BatchGet returns an empty visible projection set.
+func (fakeUsers) BatchGet(context.Context, capmodel.CapabilityContext, []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
 	return &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{Items: map[usercap.UserID]*usercap.UserProjection{}}, nil
 }
 
-// SearchUsers returns an empty page.
-func (fakeUsers) SearchUsers(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
+// Search returns an empty page.
+func (fakeUsers) Search(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
 	return &capmodel.PageResult[*usercap.UserProjection]{Items: []*usercap.UserProjection{}}, nil
 }
 
-// EnsureUsersVisible accepts all users for construction-only tests.
-func (fakeUsers) EnsureUsersVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
+// EnsureVisible accepts all users for construction-only tests.
+func (fakeUsers) EnsureVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
 	return nil
 }
