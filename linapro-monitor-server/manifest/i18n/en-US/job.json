@@ -3,7 +3,7 @@
     "handler": {
       "plugin": {
         "linapro-monitor-server": {
-          "cron": {
+          "jobs": {
             "service-monitor-cleanup": {
               "description": "Cleans up expired server runtime metric snapshots for the linapro-monitor-server plugin.",
               "name": "Server Monitor Cleanup"

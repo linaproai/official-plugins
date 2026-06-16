@@ -3,7 +3,7 @@
     "handler": {
       "plugin": {
         "linapro-monitor-server": {
-          "cron": {
+          "jobs": {
             "service-monitor-cleanup": {
               "description": "linapro-monitor-server 插件注册的内置定时任务。",
               "name": "服务监控清理"
