@@ -24,13 +24,13 @@ linapro-demo-dynamic/
 
 ## 构建方式
 
-构建全部动态插件产物：
+在仓库根目录构建全部动态插件产物：
 
 ```bash
 make wasm
 ```
 
-只构建当前样例：
+在仓库根目录只构建当前样例：
 
 ```bash
 make wasm p=linapro-demo-dynamic

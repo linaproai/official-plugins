@@ -24,13 +24,13 @@ linapro-demo-dynamic/
 
 ## Build
 
-Build all dynamic plugin artifacts:
+From the repository root, build all dynamic plugin artifacts:
 
 ```bash
 make wasm
 ```
 
-Build only this sample:
+From the repository root, build only this sample:
 
 ```bash
 make wasm p=linapro-demo-dynamic

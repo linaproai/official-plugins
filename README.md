@@ -29,7 +29,6 @@ The root `go.mod` and `lina-plugins.go` wire the source plugins that are compile
 |------|---------|
 | `go.mod` | Local Go workspace module for source plugin compilation checks |
 | `lina-plugins.go` | Explicit source plugin import registry for host compilation |
-| `Makefile` | Plugin workspace build and code generation entry; `make wasm p=<plugin-id>`, `make ctrl p=<plugin-id>`, and `make dao p=<plugin-id>` delegate to `linactl` |
 | `package.json` | Frontend workspace metadata for source plugin packages |
 | `<plugin-id>/plugin.yaml` | Plugin manifest, metadata, menus, install mode, `i18n`, assets, dependencies, and host service declarations |
 | `<plugin-id>/Makefile` | Plugin-local code generation wrapper that includes the shared root `hack/makefiles/plugin.codegen.mk` target fragment |
@@ -64,7 +63,6 @@ apps/lina-plugins/<plugin-id>/
       dao/                Plugin-local generated DAO objects when database access exists
       model/do/           Plugin-local generated DO objects when database access exists
       model/entity/       Plugin-local generated entity objects when database access exists
-    hack/config.yaml      Plugin-local GoFrame code generation config when DAO generation exists
     plugin.go             Backend registration, route registration, lifecycle entry, or dynamic bridge entry
   frontend/pages/         Plugin-owned pages or public static assets
   manifest/
@@ -72,6 +70,7 @@ apps/lina-plugins/<plugin-id>/
     sql/mock-data/        Optional mock or demo SQL assets
     sql/uninstall/        Optional uninstall SQL assets
     i18n/<locale>/        Plugin i18n resources
+  hack/config.yaml        Plugin-local GoFrame code generation config when DAO generation exists
   hack/tests/             Optional plugin-owned E2E tests, page objects, and helpers
   go.mod                  Plugin-local Go module
   Makefile                Plugin-local code generation wrapper
@@ -85,9 +84,12 @@ Plugin root `Makefile` files are thin wrappers around the repository-level
 `hack/makefiles/plugin.codegen.mk` fragment. The shared fragment derives the
 target backend from the including plugin directory, so plugin `Makefile` files
 must not hard-code `apps/lina-plugins/<plugin-id>/backend`. Run `make ctrl` or
-`make dao` inside a plugin directory to use that plugin's
-`backend/hack/config.yaml`, or run `make ctrl p=<plugin-id>` and
-`make dao p=<plugin-id>` from `apps/lina-plugins/`.
+`make dao` inside a plugin directory to use that plugin's root
+`hack/config.yaml`. From the repository root, run
+`make ctrl dir=apps/lina-plugins/<plugin-id>/backend` or
+`make dao dir=apps/lina-plugins/<plugin-id>/backend` when you need to target a
+plugin backend explicitly. Direct `linactl ctrl` and `linactl dao` calls also
+only accept `dir=<backend-dir>` as the target selector.
 
 `backend/internal/service/` is the only valid location for plugin business services. Do not create `backend/service/`. Dynamic plugins keep the same `backend/api/`, `backend/plugin.go`, `backend/internal/controller/`, and `backend/internal/service/` shape; their bridge files only adapt `WASM` and `pluginbridge` protocols. Guest business capability clients must come from `lina-core/pkg/plugin/pluginbridge`, not from the `pluginbridge` root package.
 
@@ -107,11 +109,12 @@ Source plugin development rules:
 
 Dynamic plugins are delivered as runtime-managed `WASM` artifacts. Use `linapro-demo-dynamic/` as the reference for upload, install, enable, disable, uninstall, `hostServices`, public static assets, and plugin-owned data access through governed host services.
 
-Build all dynamic plugins, or one plugin with `p=<plugin-id>`:
+Build all dynamic plugins, or one plugin with `p=<plugin-id>`, from the
+repository root:
 
 ```bash
-make -C apps/lina-plugins wasm
-make -C apps/lina-plugins wasm p=linapro-demo-dynamic
+make wasm
+make wasm p=linapro-demo-dynamic
 ```
 
 Dynamic plugins must declare `type: dynamic` in `plugin.yaml`, keep `main.go` and `go.mod` as the guest build entry, use `hostServices` to describe runtime capabilities and resource boundaries, and import runtime, storage, data, cache, users, notifications, plugins, and related business host-service clients from `lina-core/pkg/plugin/pluginbridge`. Plugin-local configuration is consumed through `Plugins().Config()` and authorized as `plugins.config.get`; notification sends use `Notifications().Send()` and `notifications.messages.send`; scheduled jobs are managed by the `jobs` domain instead of a separate dynamic `cron` host service.
