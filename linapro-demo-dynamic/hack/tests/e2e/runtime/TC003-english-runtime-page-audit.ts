@@ -72,6 +72,20 @@ function cleanupRuntimePluginData() {
   ]);
 }
 
+function cleanupRuntimePluginRows() {
+  const escapedPluginID = pgEscapeLiteral(pluginID);
+  execPgSQLStatements([
+    `DELETE FROM sys_role_menu WHERE menu_id IN (SELECT id FROM sys_menu WHERE menu_key LIKE 'plugin:${escapedPluginID}:%');`,
+    `DELETE FROM sys_menu WHERE menu_key LIKE 'plugin:${escapedPluginID}:%';`,
+    `DELETE FROM sys_plugin_state WHERE plugin_id = '${escapedPluginID}';`,
+    `DELETE FROM sys_plugin_node_state WHERE plugin_id = '${escapedPluginID}';`,
+    `DELETE FROM sys_plugin_resource_ref WHERE plugin_id = '${escapedPluginID}';`,
+    `DELETE FROM sys_plugin_migration WHERE plugin_id = '${escapedPluginID}';`,
+    `DELETE FROM sys_plugin_release WHERE plugin_id = '${escapedPluginID}';`,
+    `DELETE FROM sys_plugin WHERE plugin_id = '${escapedPluginID}';`,
+  ]);
+}
+
 async function ensureSourcePluginInstalledAndEnabled() {
   let sourcePlugin = await getPlugin(adminApi, sourcePluginID);
   if (sourcePlugin.installed !== 1) {
@@ -155,6 +169,24 @@ async function restorePluginState() {
   let plugin = await getPlugin(adminApi, pluginID);
 
   if (originalInstalled !== 1) {
+    await removePluginForCleanState();
+    return;
+  }
+
+  if (originalEnabled !== 1 && plugin.enabled === 1) {
+    try {
+      await disablePlugin(adminApi, pluginID);
+    } catch (error) {
+      cleanupRuntimePluginRows();
+      await syncPlugins(adminApi);
+      await installPlugin(adminApi, pluginID, { installMode: "global" });
+    }
+  }
+}
+
+async function removePluginForCleanState() {
+  let plugin = await getPlugin(adminApi, pluginID);
+  try {
     if (plugin.enabled === 1) {
       await disablePlugin(adminApi, pluginID);
       plugin = await getPlugin(adminApi, pluginID);
@@ -162,11 +194,9 @@ async function restorePluginState() {
     if (plugin.installed === 1) {
       await uninstallPlugin(adminApi, pluginID);
     }
-    return;
-  }
-
-  if (originalEnabled !== 1 && plugin.enabled === 1) {
-    await disablePlugin(adminApi, pluginID);
+  } catch (error) {
+    cleanupRuntimePluginRows();
+    await syncPlugins(adminApi);
   }
 }
 
@@ -210,14 +240,7 @@ test.describe("TC003 英文运行时页面巡检", () => {
 
   test.beforeEach(async () => {
     cleanupRuntimePluginData();
-    let plugin = await getPlugin(adminApi, pluginID);
-    if (plugin.enabled === 1) {
-      await disablePlugin(adminApi, pluginID);
-      plugin = await getPlugin(adminApi, pluginID);
-    }
-    if (plugin.installed === 1) {
-      await uninstallPlugin(adminApi, pluginID);
-    }
+    await removePluginForCleanState();
   });
 
   test.afterAll(async () => {
@@ -260,14 +283,7 @@ test.describe("TC003 英文运行时页面巡检", () => {
     adminPage,
     mainLayout,
   }) => {
-    let plugin = await getPlugin(adminApi, pluginID);
-    if (plugin.enabled === 1) {
-      await disablePlugin(adminApi, pluginID);
-      plugin = await getPlugin(adminApi, pluginID);
-    }
-    if (plugin.installed === 1) {
-      await uninstallPlugin(adminApi, pluginID);
-    }
+    await removePluginForCleanState();
 
     await mainLayout.switchLanguage("English");
 

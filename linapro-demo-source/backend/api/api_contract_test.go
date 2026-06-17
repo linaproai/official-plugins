@@ -36,6 +36,25 @@ func TestDemoSourceAPIDocI18NDoesNotReferenceRemovedDTOFields(t *testing.T) {
 	assertAPIDocI18NExcludesTokens(t, demoSourcePluginRoot(t), removedAPIDocTokens())
 }
 
+// TestDemoSourceJobI18NResourcesMatchHandlerRefs keeps job handler i18n keys aligned with host handler refs.
+func TestDemoSourceJobI18NResourcesMatchHandlerRefs(t *testing.T) {
+	root := demoSourcePluginRoot(t)
+	assertJobI18NValue(
+		t,
+		root,
+		"en-US",
+		"job.handler.plugin.linapro-demo-source.jobs.source-plugin-echo-inspection.name",
+		"Source Plugin Echo Inspection",
+	)
+	assertJobI18NValue(
+		t,
+		root,
+		"zh-CN",
+		"job.handler.plugin.linapro-demo-source.jobs.source-plugin-echo-inspection.name",
+		"源码插件回显巡检",
+	)
+}
+
 // demoSourcePluginRoot returns the plugin root directory for path-based contract checks.
 func demoSourcePluginRoot(t *testing.T) string {
 	t.Helper()
@@ -117,6 +136,45 @@ func assertAPIDocI18NExcludesTokens(t *testing.T, root string, tokens []string) 
 			}
 		}
 	}
+}
+
+// assertJobI18NValue verifies one runtime job translation key in this plugin's manifest resources.
+func assertJobI18NValue(t *testing.T, root string, locale string, key string, expected string) {
+	t.Helper()
+
+	file := filepath.Join(root, "manifest", "i18n", locale, "job.json")
+	content, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatalf("read %s: %v", slashPath(root, file), err)
+	}
+	var payload map[string]any
+	if err = json.Unmarshal(content, &payload); err != nil {
+		t.Fatalf("parse %s: %v", slashPath(root, file), err)
+	}
+	actual, ok := nestedJSONString(payload, strings.Split(key, "."))
+	if !ok {
+		t.Fatalf("plugin job i18n file %s missing string key %q", slashPath(root, file), key)
+	}
+	if actual != expected {
+		t.Fatalf("plugin job i18n key %q in %s: got %q want %q", key, slashPath(root, file), actual, expected)
+	}
+}
+
+// nestedJSONString resolves a dot-separated JSON object path and returns a string leaf.
+func nestedJSONString(payload map[string]any, parts []string) (string, bool) {
+	var current any = payload
+	for _, part := range parts {
+		object, ok := current.(map[string]any)
+		if !ok {
+			return "", false
+		}
+		current, ok = object[part]
+		if !ok {
+			return "", false
+		}
+	}
+	value, ok := current.(string)
+	return value, ok
 }
 
 // collectAPIFiles lists non-test Go source files under this plugin's backend API directories.

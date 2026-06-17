@@ -6,7 +6,7 @@ import (
 
 	"github.com/gogf/gf/v2/errors/gerror"
 
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/pluginhost"
 	multitenant "lina-plugin-linapro-tenant-core"
 	authcontroller "lina-plugin-linapro-tenant-core/backend/internal/controller/auth"
@@ -31,9 +31,9 @@ const (
 
 // init registers the linapro-tenant-core source plugin and its host callbacks.
 func init() {
-	plugin := pluginhost.NewSourcePlugin(pluginID)
+	plugin := pluginhost.NewDeclarations(pluginID)
 	plugin.Assets().UseEmbeddedFiles(multitenant.EmbeddedFiles)
-	if err := tenantcap.Provide(pluginID, provideTenant); err != nil {
+	if err := plugin.Providers().ProvideTenant(provideTenant); err != nil {
 		panic(err)
 	}
 	if err := plugin.HTTP().RegisterRoutes(
@@ -59,7 +59,7 @@ func init() {
 
 // provideTenant creates the linapro-tenant-core tenant capability adapter from
 // host-published services during framework capability activation.
-func provideTenant(_ context.Context, env tenantcap.ProviderEnv) (tenantcap.Provider, error) {
+func provideTenant(_ context.Context, env tenantspi.ProviderEnv) (tenantspi.Provider, error) {
 	if env.BizCtx == nil {
 		return nil, gerror.New("linapro-tenant-core provider requires host bizctx service")
 	}

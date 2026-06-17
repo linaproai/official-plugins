@@ -27,15 +27,15 @@ const (
 	pluginID = "linapro-monitor-loginlog"
 	// logRetentionDaysKey is the host protected runtime parameter shared by log cleanup jobs.
 	logRetentionDaysKey = "sys.log.retentionDays"
-	// loginLogCleanupCronName identifies the login-log cleanup cron declaration.
-	loginLogCleanupCronName = "login-log-cleanup"
-	// loginLogCleanupCronDisplayName is the English source title for the cleanup cron.
-	loginLogCleanupCronDisplayName = "Login Log Cleanup"
-	// loginLogCleanupCronDescription is the English source description for the cleanup cron.
-	loginLogCleanupCronDescription = "Cleans up expired login audit logs for the linapro-monitor-loginlog plugin."
+	// loginLogCleanupJobName identifies the login-log cleanup job declaration.
+	loginLogCleanupJobName = "login-log-cleanup"
+	// loginLogCleanupJobDisplayName is the English source title for the cleanup job.
+	loginLogCleanupJobDisplayName = "Login Log Cleanup"
+	// loginLogCleanupJobDescription is the English source description for the cleanup job.
+	loginLogCleanupJobDescription = "Cleans up expired login audit logs for the linapro-monitor-loginlog plugin."
 )
 
-// loginLogRetentionCleaner is the plugin service subset needed by the cleanup cron.
+// loginLogRetentionCleaner is the plugin service subset needed by the cleanup job.
 type loginLogRetentionCleaner interface {
 	// CleanupExpired hard-deletes login logs older than the given retention period.
 	CleanupExpired(ctx context.Context, retentionDays int) (int, error)
@@ -43,7 +43,7 @@ type loginLogRetentionCleaner interface {
 
 // init registers the linapro-monitor-loginlog source plugin and its host callbacks.
 func init() {
-	plugin := pluginhost.NewSourcePlugin(pluginID)
+	plugin := pluginhost.NewDeclarations(pluginID)
 	plugin.Assets().UseEmbeddedFiles(monitorloginlogplugin.EmbeddedFiles)
 	if err := plugin.HTTP().RegisterRoutes(
 		pluginhost.ExtensionPointHTTPRouteRegister,
@@ -73,10 +73,10 @@ func init() {
 	); err != nil {
 		panic(err)
 	}
-	if err := plugin.Cron().RegisterCron(
-		pluginhost.ExtensionPointCronRegister,
+	if err := plugin.Jobs().RegisterJobs(
+		pluginhost.ExtensionPointJobsRegister,
 		pluginhost.CallbackExecutionModeBlocking,
-		registerCleanupCron,
+		registerCleanupJob,
 	); err != nil {
 		panic(err)
 	}
@@ -163,19 +163,22 @@ func loginLogServiceForHostServices(services pluginhost.Services) (loginlogsvc.S
 	return sharedLoginLogSvc, nil
 }
 
-// registerCleanupCron contributes the plugin-owned login-log retention cleanup job.
-func registerCleanupCron(ctx context.Context, registrar pluginhost.CronRegistrar) error {
+// registerCleanupJob contributes the plugin-owned login-log retention cleanup job.
+func registerCleanupJob(ctx context.Context, registrar pluginhost.JobsRegistrar) error {
 	services := registrar.Services()
 	if services == nil || services.HostConfig() == nil {
-		return gerror.New("linapro-monitor-loginlog cleanup cron requires host config service")
+		return gerror.New("linapro-monitor-loginlog cleanup job requires host config service")
 	}
-	cleaner := loginlogsvc.New(nil, nil, nil)
+	cleaner, err := loginLogServiceForHostServices(services)
+	if err != nil {
+		return err
+	}
 	return registrar.AddWithMetadata(
 		ctx,
 		"# 27 3 * * *",
-		loginLogCleanupCronName,
-		loginLogCleanupCronDisplayName,
-		loginLogCleanupCronDescription,
+		loginLogCleanupJobName,
+		loginLogCleanupJobDisplayName,
+		loginLogCleanupJobDescription,
 		func(ctx context.Context) error {
 			return cleanupExpiredLoginLogs(ctx, registrar.IsPrimaryNode(), services.HostConfig(), cleaner)
 		},

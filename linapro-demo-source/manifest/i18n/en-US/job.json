@@ -3,7 +3,7 @@
     "handler": {
       "plugin": {
         "linapro-demo-source": {
-          "cron": {
+          "jobs": {
             "source-plugin-echo-inspection": {
               "description": "Runs a lightweight source-plugin inspection task for scheduler integration validation.",
               "name": "Source Plugin Echo Inspection"

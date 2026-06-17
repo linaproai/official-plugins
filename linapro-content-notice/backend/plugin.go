@@ -20,7 +20,7 @@ const (
 
 // init registers the linapro-content-notice source plugin and its host callbacks.
 func init() {
-	plugin := pluginhost.NewSourcePlugin(pluginID)
+	plugin := pluginhost.NewDeclarations(pluginID)
 	plugin.Assets().UseEmbeddedFiles(contentnotice.EmbeddedFiles)
 	if err := plugin.HTTP().RegisterRoutes(
 		pluginhost.ExtensionPointHTTPRouteRegister,

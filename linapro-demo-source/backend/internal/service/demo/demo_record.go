@@ -5,19 +5,20 @@ package demo
 
 import (
 	"context"
+	"io"
 	"mime"
 	"net/http"
-	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/net/ghttp"
-	"github.com/gogf/gf/v2/os/gfile"
 
 	"lina-core/pkg/apitime"
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/logger"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/storagecap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-plugin-linapro-demo-source/backend/internal/dao"
 	"lina-plugin-linapro-demo-source/backend/internal/model/do"
 	entitymodel "lina-plugin-linapro-demo-source/backend/internal/model/entity"
@@ -115,10 +116,12 @@ type RecordMutationOutput struct {
 type AttachmentDownloadOutput struct {
 	// OriginalName is the original attachment filename.
 	OriginalName string
-	// FullPath is the absolute storage path for the attachment.
-	FullPath string
 	// ContentType is the detected content type.
 	ContentType string
+	// Body carries attachment content. Callers must close it.
+	Body io.ReadCloser
+	// Size is the attachment object size in bytes when known.
+	Size int64
 }
 
 // demoRecordEntity reuses the plugin-local generated record entity.
@@ -183,14 +186,14 @@ func (s *serviceImpl) CreateRecord(ctx context.Context, in *CreateRecordInput) (
 		return nil, err
 	}
 
-	attachmentName, attachmentPath, err := saveDemoAttachmentFile(ctx, in.File)
+	attachmentName, attachmentPath, err := s.saveDemoAttachmentFile(ctx, in.File)
 	if err != nil {
 		return nil, err
 	}
 	if attachmentPath != "" {
 		defer func() {
 			if err != nil {
-				cleanupDemoAttachmentAfterMutationFailure(ctx, attachmentPath)
+				s.cleanupDemoAttachmentAfterMutationFailure(ctx, attachmentPath)
 			}
 		}()
 	}
@@ -239,7 +242,7 @@ func (s *serviceImpl) UpdateRecord(ctx context.Context, in *UpdateRecordInput) (
 	newAttachmentName := ""
 	newAttachmentPath := ""
 	if in.File != nil {
-		newAttachmentName, newAttachmentPath, err = saveDemoAttachmentFile(ctx, in.File)
+		newAttachmentName, newAttachmentPath, err = s.saveDemoAttachmentFile(ctx, in.File)
 		if err != nil {
 			return nil, err
 		}
@@ -247,14 +250,14 @@ func (s *serviceImpl) UpdateRecord(ctx context.Context, in *UpdateRecordInput) (
 		updateData.AttachmentPath = stringPointer(newAttachmentPath)
 		defer func() {
 			if err != nil && newAttachmentPath != "" {
-				cleanupDemoAttachmentAfterMutationFailure(ctx, newAttachmentPath)
+				s.cleanupDemoAttachmentAfterMutationFailure(ctx, newAttachmentPath)
 			}
 		}()
 	}
 
 	tenantID := s.tenantFilter.Context(ctx).TenantID
 	_, err = dao.Record.Ctx(ctx).
-		Where(tenantcap.TenantFilterColumn, tenantID).
+		Where(tenantspi.TenantFilterColumn, tenantID).
 		Where(do.Record{Id: in.Id}).
 		Data(updateData).
 		Update()
@@ -263,7 +266,7 @@ func (s *serviceImpl) UpdateRecord(ctx context.Context, in *UpdateRecordInput) (
 	}
 
 	if (in.RemoveAttachment || newAttachmentPath != "") && oldAttachmentPath != "" {
-		if err = deleteDemoAttachmentFile(ctx, oldAttachmentPath); err != nil {
+		if err = s.deleteDemoAttachmentFile(ctx, oldAttachmentPath); err != nil {
 			return nil, err
 		}
 	}
@@ -279,14 +282,14 @@ func (s *serviceImpl) DeleteRecord(ctx context.Context, id int64) error {
 
 	tenantID := s.tenantFilter.Context(ctx).TenantID
 	_, err = dao.Record.Ctx(ctx).
-		Where(tenantcap.TenantFilterColumn, tenantID).
+		Where(tenantspi.TenantFilterColumn, tenantID).
 		Where(do.Record{Id: id}).
 		Delete()
 	if err != nil {
 		return bizerr.WrapCode(err, CodeDemoRecordDeleteFailed)
 	}
 	if record.AttachmentPath != "" {
-		if err = deleteDemoAttachmentFile(ctx, record.AttachmentPath); err != nil {
+		if err = s.deleteDemoAttachmentFile(ctx, record.AttachmentPath); err != nil {
 			return err
 		}
 	}
@@ -306,22 +309,34 @@ func (s *serviceImpl) BuildAttachmentDownload(
 		return nil, bizerr.NewCode(CodeDemoRecordAttachmentRequired)
 	}
 
-	fullPath, err := buildDemoAttachmentFullPath(ctx, record.AttachmentPath)
+	if s.storageSvc == nil {
+		return nil, bizerr.NewCode(CodeDemoAttachmentStorageUnavailable)
+	}
+	objectOutput, err := s.storageSvc.Get(ctx, storagecap.GetInput{Path: record.AttachmentPath})
 	if err != nil {
 		return nil, err
 	}
-	if !gfile.Exists(fullPath) {
+	if objectOutput == nil || !objectOutput.Found || objectOutput.Body == nil {
 		return nil, bizerr.NewCode(CodeDemoRecordAttachmentFileNotFound)
 	}
 
-	contentType := mime.TypeByExtension("." + gfile.ExtName(record.AttachmentName))
+	contentType := ""
+	size := int64(0)
+	if objectOutput.Object != nil {
+		contentType = strings.TrimSpace(objectOutput.Object.ContentType)
+		size = objectOutput.Object.Size
+	}
+	if contentType == "" {
+		contentType = mime.TypeByExtension(filepath.Ext(record.AttachmentName))
+	}
 	if contentType == "" {
 		contentType = http.DetectContentType(nil)
 	}
 	return &AttachmentDownloadOutput{
 		OriginalName: record.AttachmentName,
-		FullPath:     fullPath,
 		ContentType:  contentType,
+		Body:         objectOutput.Body,
+		Size:         size,
 	}, nil
 }
 
@@ -410,32 +425,35 @@ func stringPointer(value string) *string {
 	return &value
 }
 
-// listAllAttachmentPaths returns all persisted attachment paths stored by the
-// sample records table.
-func listAllAttachmentPaths(ctx context.Context) ([]string, error) {
+// listAllAttachmentPaths returns all persisted attachment paths and tenant
+// scopes stored by the sample records table.
+func listAllAttachmentPaths(ctx context.Context) ([]demoAttachmentObject, error) {
 	fields, err := dao.Record.DB().TableFields(ctx, dao.Record.Table())
 	if err != nil {
 		return nil, bizerr.WrapCode(err, CodeDemoRecordTableCheckFailed)
 	}
 	if len(fields) == 0 {
-		return []string{}, nil
+		return []demoAttachmentObject{}, nil
 	}
 
 	rows, err := dao.Record.Ctx(ctx).
-		Fields(dao.Record.Columns().AttachmentPath).
+		Fields(dao.Record.Columns().TenantId, dao.Record.Columns().AttachmentPath).
 		All()
 	if err != nil {
 		return nil, bizerr.WrapCode(err, CodeDemoRecordAttachmentPathQueryFailed)
 	}
 
-	paths := make([]string, 0, len(rows))
+	objects := make([]demoAttachmentObject, 0, len(rows))
 	for _, row := range rows {
 		value := strings.TrimSpace(row[dao.Record.Columns().AttachmentPath].String())
 		if value != "" {
-			paths = append(paths, value)
+			objects = append(objects, demoAttachmentObject{
+				TenantID: row[dao.Record.Columns().TenantId].Int(),
+				Path:     value,
+			})
 		}
 	}
-	return paths, nil
+	return objects, nil
 }
 
 // withRecordTransaction runs one handler inside the shared source-plugin record
@@ -444,17 +462,10 @@ func withRecordTransaction(ctx context.Context, handler func(ctx context.Context
 	return dao.Record.Transaction(ctx, handler)
 }
 
-// fileExists reports whether the path exists and points to a regular
-// non-directory file.
-func fileExists(path string) bool {
-	fileInfo, err := os.Stat(path)
-	return err == nil && !fileInfo.IsDir()
-}
-
 // cleanupDemoAttachmentAfterMutationFailure removes an attachment created by a
 // failed mutation and logs cleanup failures without hiding the primary error.
-func cleanupDemoAttachmentAfterMutationFailure(ctx context.Context, attachmentPath string) {
-	if cleanupErr := deleteDemoAttachmentFile(ctx, attachmentPath); cleanupErr != nil {
+func (s *serviceImpl) cleanupDemoAttachmentAfterMutationFailure(ctx context.Context, attachmentPath string) {
+	if cleanupErr := s.deleteDemoAttachmentFile(ctx, attachmentPath); cleanupErr != nil {
 		logger.Warningf(
 			ctx,
 			"cleanup demo attachment after failed mutation failed path=%s err=%v",

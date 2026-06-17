@@ -21,7 +21,7 @@ const (
 
 // init registers the linapro-monitor-operlog source plugin and its host callbacks.
 func init() {
-	plugin := pluginhost.NewSourcePlugin(pluginID)
+	plugin := pluginhost.NewDeclarations(pluginID)
 	plugin.Assets().UseEmbeddedFiles(monitoroperlogplugin.EmbeddedFiles)
 	if err := plugin.HTTP().RegisterRoutes(
 		pluginhost.ExtensionPointHTTPRouteRegister,

@@ -6,8 +6,12 @@ import (
 	"context"
 
 	"lina-core/pkg/plugin/capability/capmodel"
+	"lina-core/pkg/plugin/capability/hostconfigcap"
+	"lina-core/pkg/plugin/capability/manifestcap"
 	"lina-core/pkg/plugin/capability/orgcap"
+	"lina-core/pkg/plugin/capability/storagecap"
 	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/pluginbridge"
 	"lina-core/pkg/plugin/pluginbridge/protocol"
 )
 
@@ -21,27 +25,25 @@ type Service interface {
 	// GetDemoRecordPayload returns one demo-record detail by ID.
 	GetDemoRecordPayload(recordID string) (*demoRecordPayload, error)
 	// CreateDemoRecordPayload creates one demo record and stores its optional attachment.
-	CreateDemoRecordPayload(input *DemoRecordMutationInput) (*demoRecordPayload, error)
+	CreateDemoRecordPayload(ctx context.Context, input *DemoRecordMutationInput) (*demoRecordPayload, error)
 	// UpdateDemoRecordPayload updates one demo record and replaces or removes its optional attachment.
-	UpdateDemoRecordPayload(recordID string, input *DemoRecordMutationInput) (*demoRecordPayload, error)
+	UpdateDemoRecordPayload(ctx context.Context, recordID string, input *DemoRecordMutationInput) (*demoRecordPayload, error)
 	// DeleteDemoRecordPayload deletes one demo record and its optional attachment.
-	DeleteDemoRecordPayload(recordID string) (*demoRecordDeletePayload, error)
+	DeleteDemoRecordPayload(ctx context.Context, recordID string) (*demoRecordDeletePayload, error)
 	// BuildDemoRecordAttachmentDownload returns one attachment download descriptor.
-	BuildDemoRecordAttachmentDownload(recordID string) (*demoRecordAttachmentDownloadPayload, error)
+	BuildDemoRecordAttachmentDownload(ctx context.Context, recordID string) (*demoRecordAttachmentDownloadPayload, error)
 	// BuildHostCallDemoPayload executes the host service demo and returns the
 	// response payload.
 	BuildHostCallDemoPayload(ctx context.Context, input *HostCallDemoInput) (*hostCallDemoPayload, error)
 	// BuildManifestDemoPayload reads the explicitly authorized packaged
 	// manifest resources and returns the manifest host-service demo payload.
-	BuildManifestDemoPayload() (*hostCallDemoManifestPayload, error)
-	// RegisterCrons publishes all built-in cron declarations for host-side
-	// discovery.
-	RegisterCrons() error
-	// BuildCronHeartbeatPayload executes the declared cron heartbeat task and
-	// returns a lightweight execution summary.
-	BuildCronHeartbeatPayload() (*cronHeartbeatPayload, error)
+	BuildManifestDemoPayload(ctx context.Context) (*hostCallDemoManifestPayload, error)
 	// RunLifecycleDebugHook logs one lifecycle callback invocation.
 	RunLifecycleDebugHook(input *LifecycleDebugInput) error
+	// RegisterJobs publishes built-in Jobs declarations for host-side discovery.
+	RegisterJobs(plugin pluginbridge.Declarations) error
+	// BuildJobHeartbeatPayload executes the declared Jobs heartbeat task.
+	BuildJobHeartbeatPayload() (*jobHeartbeatPayload, error)
 }
 
 // Interface compliance assertion for the default dynamic sample service
@@ -65,21 +67,6 @@ type runtimeHostService interface {
 	Node() (string, error)
 }
 
-// storageHostService abstracts guest storage host-call helpers used by the
-// sample service.
-type storageHostService interface {
-	// Put writes one governed storage object.
-	Put(objectPath string, body []byte, contentType string, overwrite bool) (*protocol.HostServiceStorageObject, error)
-	// Get reads one governed storage object.
-	Get(objectPath string) ([]byte, *protocol.HostServiceStorageObject, bool, error)
-	// Delete removes one governed storage object.
-	Delete(objectPath string) error
-	// List lists governed storage objects under one prefix.
-	List(prefix string, limit uint32) ([]*protocol.HostServiceStorageObject, error)
-	// Stat reads metadata for one governed storage object.
-	Stat(objectPath string) (*protocol.HostServiceStorageObject, bool, error)
-}
-
 // networkHostService abstracts guest outbound HTTP host-call helpers used by
 // the sample service.
 type networkHostService interface {
@@ -87,47 +74,24 @@ type networkHostService interface {
 	Request(targetURL string, request *protocol.HostServiceNetworkRequest) (*protocol.HostServiceNetworkResponse, error)
 }
 
-// cronHostService abstracts guest cron registration host-call helpers used by
-// the sample service.
-type cronHostService interface {
-	// Register submits one built-in cron declaration for host-side discovery.
-	Register(contract *protocol.CronContract) error
-}
-
-// configHostService abstracts guest plugin-config host-call helpers used by
-// the sample service.
-type configHostService interface {
+// pluginConfigService abstracts guest plugin config helpers used by the sample
+// service.
+type pluginConfigService interface {
+	// Exists reports whether one plugin-owned runtime config value exists.
+	Exists(ctx context.Context, key string) (bool, error)
 	// String reads one plugin-owned runtime config value as a string.
-	String(key string) (string, bool, error)
+	String(ctx context.Context, key string, defaultValue string) (string, error)
 	// Bool reads one plugin-owned runtime config value as a bool.
-	Bool(key string) (bool, bool, error)
-}
-
-// manifestHostService abstracts plugin-scoped packaged manifest resource
-// reads used by the sample service.
-type manifestHostService interface {
-	// GetText reads one packaged manifest resource as UTF-8 text.
-	GetText(path string) (string, bool, error)
-	// Scan decodes one YAML manifest resource or nested key into target.
-	Scan(path string, key string, target any) (bool, error)
-}
-
-// hostConfigHostService abstracts whitelisted public host config reads used
-// by the sample service.
-type hostConfigHostService interface {
-	// String reads one whitelisted public host config value as a string.
-	String(key string) (string, bool, error)
-	// Bool reads one whitelisted public host config value as a bool.
-	Bool(key string) (bool, bool, error)
+	Bool(ctx context.Context, key string, defaultValue bool) (bool, error)
 }
 
 // orgHostService abstracts guest organization capability calls used by the
 // sample service.
 type orgHostService interface {
 	// Status returns the current organization capability activation state.
-	Status(ctx context.Context) (capmodel.CapabilityStatus, error)
+	Status(ctx context.Context) capmodel.CapabilityStatus
 	// Available reports whether the organization capability has an active provider.
-	Available(ctx context.Context) (bool, error)
+	Available(ctx context.Context) bool
 	// ListUserDeptAssignments returns user-to-department projections for the provided users.
 	ListUserDeptAssignments(ctx context.Context, userIDs []int) (map[int]*orgcap.UserDeptAssignment, error)
 	// GetUserDeptIDs returns one user's department identifiers.
@@ -140,13 +104,13 @@ type orgHostService interface {
 // service.
 type tenantHostService interface {
 	// Status returns the current tenant capability activation state.
-	Status(ctx context.Context) (capmodel.CapabilityStatus, error)
+	Status(ctx context.Context) capmodel.CapabilityStatus
 	// Available reports whether the tenant capability has an active provider.
-	Available(ctx context.Context) (bool, error)
+	Available(ctx context.Context) bool
 	// Current returns the current request tenant.
-	Current(ctx context.Context) (tenantcap.TenantID, error)
+	Current(ctx context.Context) tenantcap.TenantID
 	// PlatformBypass reports whether the current request may bypass tenant filtering.
-	PlatformBypass(ctx context.Context) (bool, error)
+	PlatformBypass(ctx context.Context) bool
 	// EnsureTenantVisible validates that the current user can access tenantID.
 	EnsureTenantVisible(ctx context.Context, tenantID tenantcap.TenantID) error
 	// ListUserTenants returns active tenants visible to one user.
@@ -155,30 +119,28 @@ type tenantHostService interface {
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	runtimeSvc     runtimeHostService
-	storageSvc     storageHostService
-	networkSvc     networkHostService
-	cronSvc        cronHostService
-	configSvc      configHostService
-	manifestSvc    manifestHostService
-	hostConfigSvc  hostConfigHostService
-	orgSvc         orgHostService
-	tenantSvc      tenantHostService
-	recordStoreSvc recordStoreService
+	runtimeSvc      runtimeHostService
+	storageSvc      storagecap.Service
+	networkSvc      networkHostService
+	pluginConfigSvc pluginConfigService
+	manifestSvc     manifestcap.Service
+	hostConfigSvc   hostconfigcap.Service
+	orgSvc          orgHostService
+	tenantSvc       tenantHostService
+	recordStoreSvc  recordStoreService
 }
 
 // New creates and returns a new dynamic plugin backend service.
 func New() Service {
 	return &serviceImpl{
-		runtimeSvc:     newRuntimeHostService(),
-		storageSvc:     newStorageHostService(),
-		networkSvc:     newNetworkHostService(),
-		cronSvc:        newCronHostService(),
-		configSvc:      newConfigHostService(),
-		manifestSvc:    newManifestHostService(),
-		hostConfigSvc:  newHostConfigHostService(),
-		orgSvc:         newOrgHostService(),
-		tenantSvc:      newTenantHostService(),
-		recordStoreSvc: newRecordStoreService(),
+		runtimeSvc:      newRuntimeHostService(),
+		storageSvc:      newStorageHostService(),
+		networkSvc:      newNetworkHostService(),
+		pluginConfigSvc: newPluginConfigService(),
+		manifestSvc:     newManifestHostService(),
+		hostConfigSvc:   newHostConfigHostService(),
+		orgSvc:          newOrgHostService(),
+		tenantSvc:       newTenantHostService(),
+		recordStoreSvc:  newRecordStoreService(),
 	}
 }

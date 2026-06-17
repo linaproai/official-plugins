@@ -4,24 +4,11 @@
       "demo": {
         "source": {
           "attachment": {
-            "create": {
-              "failed": "创建源码插件示例附件文件失败"
-            },
             "delete": {
               "failed": "删除源码插件示例附件文件失败"
             },
-            "dir": {
-              "create": {
-                "failed": "创建源码插件示例附件目录失败"
-              }
-            },
             "open": {
               "failed": "打开源码插件示例附件失败"
-            },
-            "partial": {
-              "cleanup": {
-                "failed": "清理未完成的源码插件示例附件失败"
-              }
             },
             "size": {
               "too": {
@@ -36,12 +23,8 @@
             "storage": {
               "purge": {
                 "failed": "清理源码插件示例附件存储目录失败"
-              }
-            },
-            "target": {
-              "close": {
-                "failed": "关闭源码插件示例附件文件失败"
-              }
+              },
+              "unavailable": "源码插件示例附件存储服务不可用"
             },
             "write": {
               "failed": "写入源码插件示例附件失败"
@@ -108,4 +91,3 @@
     }
   }
 }
-

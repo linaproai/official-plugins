@@ -10,7 +10,7 @@ import (
 	"lina-core/pkg/plugin/capability/apidoccap"
 	"lina-core/pkg/plugin/capability/dictcap"
 	"lina-core/pkg/plugin/capability/i18ncap"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	entitymodel "lina-plugin-linapro-monitor-operlog/backend/internal/model/entity"
 	"lina-plugin-linapro-monitor-operlog/backend/internal/model/operlogtype"
 )
@@ -88,7 +88,7 @@ type serviceImpl struct {
 	apiDocSvc    apidoccap.Service                  // host apidoc translation service
 	dictSvc      dictcap.Service                    // host dictionary-domain label projection service
 	i18nSvc      i18ncap.Service                    // host runtime translation service
-	tenantFilter tenantcap.PluginTableFilterService // tenantFilter constrains plugin-owned operation-log rows.
+	tenantFilter tenantspi.PluginTableFilterService // tenantFilter constrains plugin-owned operation-log rows.
 }
 
 // New creates and returns a new linapro-monitor-operlog service instance.
@@ -96,7 +96,7 @@ func New(
 	apiDocSvc apidoccap.Service,
 	dictSvc dictcap.Service,
 	i18nSvc i18ncap.Service,
-	tenantFilter tenantcap.PluginTableFilterService,
+	tenantFilter tenantspi.PluginTableFilterService,
 ) Service {
 	return &serviceImpl{
 		apiDocSvc:    apiDocSvc,

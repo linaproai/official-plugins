@@ -1,8 +1,6 @@
 import {
-  existsSync,
   mkdirSync,
   readFileSync,
-  readdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -35,6 +33,10 @@ const pluginRecordTableName = "plugin_linapro_demo_source_record";
 const repoRoot = path.resolve(process.cwd(), "../..");
 const pluginDemoSourceStorageRoots = [
   path.resolve(repoRoot, "temp/upload/linapro-demo-source"),
+  path.resolve(
+    repoRoot,
+    "temp/output/.capability-storage/plugins/linapro-demo-source",
+  ),
   path.resolve(repoRoot, "apps/lina-core/temp/upload/linapro-demo-source"),
 ];
 const pluginDemoSourceFixturePath = path.resolve(
@@ -66,6 +68,13 @@ type UserRouteNode = {
   meta?: {
     title?: string;
   };
+};
+
+type DemoRecordListItem = {
+  id: number;
+  title: string;
+  attachmentName?: string;
+  hasAttachment?: number | boolean;
 };
 
 function unwrapApiData(payload: any) {
@@ -123,6 +132,9 @@ async function installAndEnablePlugin(
 ) {
   await installPlugin(adminApi, id);
   await updatePluginStatus(adminApi, id, true);
+  if (id === pluginID) {
+    await waitForPluginSummaryReady(adminApi);
+  }
 }
 
 async function listPlugins(
@@ -156,6 +168,23 @@ async function fetchPluginSummary(adminApi: APIRequestContext) {
   return await adminApi.get(pluginApiPath(pluginID, `plugins/${pluginID}/summary`));
 }
 
+async function waitForPluginSummaryReady(adminApi: APIRequestContext) {
+  await expect
+    .poll(
+      async () => {
+        const response = await fetchPluginSummary(adminApi);
+        const status = response.status();
+        await response.dispose();
+        return status;
+      },
+      {
+        timeout: 15000,
+        message: "源码插件启用后受保护摘要路由应进入可用状态",
+      },
+    )
+    .toBe(200);
+}
+
 async function fetchPluginPing(apiContext: APIRequestContext) {
   return await apiContext.get(pluginApiPath(pluginID, `plugins/${pluginID}/ping`));
 }
@@ -166,7 +195,7 @@ async function listDemoRecords(adminApi: APIRequestContext) {
   );
   assertOk(response, "查询源码插件示例记录失败");
   const payload = unwrapApiData(await response.json());
-  return payload?.list ?? [];
+  return (payload?.list ?? []) as DemoRecordListItem[];
 }
 
 async function createDemoRecord(
@@ -282,26 +311,46 @@ function listPluginDemoSourceRecordTitles() {
   );
 }
 
-function hasPluginDemoSourceStoredFiles() {
-  return pluginDemoSourceStorageRoots.some((storageRoot) =>
-    directoryContainsFiles(storageRoot),
+function pluginDemoSourceAttachmentPathByTitle(title: string) {
+  if (!pluginDemoSourceTableExists()) {
+    return "";
+  }
+  const escapedTitle = pgEscapeLiteral(title);
+  return queryPgScalar(
+    [
+      `SELECT attachment_path FROM ${pgIdentifier(pluginRecordTableName)}`,
+      `WHERE title = '${escapedTitle}'`,
+      "ORDER BY id DESC",
+      "LIMIT 1;",
+    ].join(" "),
   );
 }
 
-function directoryContainsFiles(dirPath: string): boolean {
-  if (!existsSync(dirPath)) {
-    return false;
-  }
-  for (const entry of readdirSync(dirPath, { withFileTypes: true })) {
-    const fullPath = path.join(dirPath, entry.name);
-    if (entry.isFile()) {
-      return true;
-    }
-    if (entry.isDirectory() && directoryContainsFiles(fullPath)) {
-      return true;
-    }
-  }
-  return false;
+function hasPluginDemoSourceAttachmentReference(title: string) {
+  return pluginDemoSourceAttachmentPathByTitle(title).trim().length > 0;
+}
+
+async function downloadPluginDemoSourceAttachmentByTitle(
+  adminApi: APIRequestContext,
+  title: string,
+) {
+  const records = await listDemoRecords(adminApi);
+  const record = records.find((item) => item.title === title);
+  expect(record, `应能通过接口查询到源码插件记录: ${title}`).toBeTruthy();
+  expect(
+    record?.attachmentName ?? "",
+    `源码插件记录应保留附件原始文件名: ${title}`,
+  ).toBe(path.basename(pluginDemoSourceFixturePath));
+  expect(
+    Boolean(record?.hasAttachment),
+    `源码插件记录应标记持有附件: ${title}`,
+  ).toBe(true);
+
+  const response = await adminApi.get(
+    pluginApiPath(pluginID, `plugins/${pluginID}/records/${record!.id}/attachment`),
+  );
+  assertOk(response, `下载源码插件记录附件失败: ${title}`);
+  return await response.text();
 }
 
 async function loginAsAdmin(page: Page) {
@@ -811,7 +860,7 @@ test.describe("TC-1 源码插件生命周期", () => {
 
     const recordsAfterCreate = await listDemoRecords(adminApi!);
     expect(
-      recordsAfterCreate.map((item: { title: string }) => item.title),
+      recordsAfterCreate.map((item) => item.title),
       "插件示例页面新增后应能从接口查询到对应记录",
     ).toContain(createdTitle);
 
@@ -837,13 +886,13 @@ test.describe("TC-1 源码插件生命周期", () => {
     await pluginPage.deleteSourceDemoRecord(updatedTitle);
 
     const remainingTitles = (await listDemoRecords(adminApi!)).map(
-      (item: { title: string }) => item.title,
+      (item) => item.title,
     );
     expect(remainingTitles).toContain(pluginRecordSeedTitle);
     expect(remainingTitles).not.toContain(updatedTitle);
     expect(
-      hasPluginDemoSourceStoredFiles(),
-      "删除带附件记录后应同步清理插件自有存储文件",
+      hasPluginDemoSourceAttachmentReference(updatedTitle),
+      "删除带附件记录后应同步清理插件自有附件引用",
     ).toBeFalsy();
   });
 
@@ -865,9 +914,13 @@ test.describe("TC-1 源码插件生命周期", () => {
       "安装并写入后插件示例表应存在",
     ).toBeTruthy();
     expect(
-      hasPluginDemoSourceStoredFiles(),
-      "安装并上传附件后应存在插件自有文件",
+      hasPluginDemoSourceAttachmentReference(customTitle),
+      "安装并上传附件后应存在插件自有附件引用",
     ).toBeTruthy();
+    expect(
+      await downloadPluginDemoSourceAttachmentByTitle(adminApi!, customTitle),
+      "禁用前应能通过插件存储能力下载上传附件",
+    ).toContain(pluginDemoSourceFixtureContent);
 
     await loginAsAdmin(page);
     const pluginPage = new DemoSourcePage(page);
@@ -884,9 +937,15 @@ test.describe("TC-1 源码插件生命周期", () => {
       "源码插件禁用后插件示例表数据应被保留",
     ).toEqual(expect.arrayContaining([pluginRecordSeedTitle, customTitle]));
     expect(
-      hasPluginDemoSourceStoredFiles(),
-      "源码插件禁用后插件自有存储文件应被保留",
+      hasPluginDemoSourceAttachmentReference(customTitle),
+      "源码插件禁用后插件自有附件引用应被保留",
     ).toBeTruthy();
+    await updatePluginStatus(adminApi!, pluginID, true);
+    await waitForPluginSummaryReady(adminApi!);
+    expect(
+      await downloadPluginDemoSourceAttachmentByTitle(adminApi!, customTitle),
+      "源码插件重新启用后应能下载禁用前保留的附件",
+    ).toContain(pluginDemoSourceFixtureContent);
   });
 
   test("TC-1p: 卸载时不勾选清理存储数据会保留表数据和文件，并在重装后恢复展示", async ({
@@ -916,12 +975,16 @@ test.describe("TC-1 源码插件生命周期", () => {
       "卸载时不清理存储数据应保留插件示例表中的业务记录",
     ).toEqual(expect.arrayContaining([pluginRecordSeedTitle, customTitle]));
     expect(
-      hasPluginDemoSourceStoredFiles(),
-      "卸载时不清理存储数据应保留插件自有存储文件",
+      hasPluginDemoSourceAttachmentReference(customTitle),
+      "卸载时不清理存储数据应保留插件自有附件引用",
     ).toBeTruthy();
 
     await pluginPage.installPlugin(pluginID);
     await pluginPage.setPluginEnabled(pluginID, true);
+    expect(
+      await downloadPluginDemoSourceAttachmentByTitle(adminApi!, customTitle),
+      "重装后应能通过插件存储能力下载保留的附件",
+    ).toContain(pluginDemoSourceFixtureContent);
     await pluginPage.openSidebarExampleFromMenu();
     await expect(
       pluginPage.pluginSourceRecordRow(pluginRecordSeedTitle),
@@ -952,8 +1015,8 @@ test.describe("TC-1 源码插件生命周期", () => {
       "卸载时勾选清理存储数据后应删除插件示例表",
     ).toBeFalsy();
     expect(
-      hasPluginDemoSourceStoredFiles(),
-      "卸载时勾选清理存储数据后应删除插件自有存储文件",
+      hasPluginDemoSourceAttachmentReference(customTitle),
+      "卸载时勾选清理存储数据后应删除插件自有附件引用",
     ).toBeFalsy();
 
     await pluginPage.installPlugin(pluginID);
@@ -965,8 +1028,8 @@ test.describe("TC-1 源码插件生命周期", () => {
       "重新安装后只应恢复安装 SQL 初始化的种子记录",
     ).toEqual([pluginRecordSeedTitle]);
     expect(
-      hasPluginDemoSourceStoredFiles(),
-      "重新安装后在未重新上传附件前不应残留旧插件文件",
+      hasPluginDemoSourceAttachmentReference(customTitle),
+      "重新安装后在未重新上传附件前不应残留旧插件附件引用",
     ).toBeFalsy();
     await expect(
       pluginPage.pluginSourceRecordRow(pluginRecordSeedTitle),

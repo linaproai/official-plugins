@@ -7,7 +7,7 @@ import (
 
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/plugincap"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/capability/usercap"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/membership"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/provider"
@@ -23,7 +23,7 @@ func New(
 	users usercap.Service,
 	plugins plugincap.Service,
 	pluginAdmin plugincap.AdminService,
-) (tenantcap.Provider, error) {
+) (tenantspi.Provider, error) {
 	if bizCtxSvc == nil {
 		return nil, gerror.New("linapro-tenant-core provider requires host bizctx service")
 	}

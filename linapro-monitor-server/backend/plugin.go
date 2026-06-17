@@ -19,27 +19,27 @@ import (
 const (
 	// pluginID is the immutable identifier published by the embedded source plugin.
 	pluginID = "linapro-monitor-server"
-	// serviceMonitorCollectorName identifies the server metric collection cron.
+	// serviceMonitorCollectorName identifies the server metric collection job.
 	serviceMonitorCollectorName = "service-monitor-collector"
-	// serviceMonitorCollectorDisplayName is the English source title for the collection cron.
+	// serviceMonitorCollectorDisplayName is the English source title for the collection job.
 	serviceMonitorCollectorDisplayName = "Server Monitor Collection"
-	// serviceMonitorCollectorDescription is the English source description for the collection cron.
+	// serviceMonitorCollectorDescription is the English source description for the collection job.
 	serviceMonitorCollectorDescription = "Collects server runtime metrics for the linapro-monitor-server plugin."
-	// serviceMonitorCleanupName identifies the server metric cleanup cron.
+	// serviceMonitorCleanupName identifies the server metric cleanup job.
 	serviceMonitorCleanupName = "service-monitor-cleanup"
-	// serviceMonitorCleanupDisplayName is the English source title for the cleanup cron.
+	// serviceMonitorCleanupDisplayName is the English source title for the cleanup job.
 	serviceMonitorCleanupDisplayName = "Server Monitor Cleanup"
-	// serviceMonitorCleanupDescription is the English source description for the cleanup cron.
+	// serviceMonitorCleanupDescription is the English source description for the cleanup job.
 	serviceMonitorCleanupDescription = "Cleans up expired server runtime metric snapshots for the linapro-monitor-server plugin."
 )
 
 // sharedMonitorSvc is the plugin-owned server monitor service shared by HTTP,
-// Cron, and startup hooks so sampling state is not split across callbacks.
+// Jobs, and startup hooks so sampling state is not split across callbacks.
 var sharedMonitorSvc = monitorsvc.New()
 
 // init registers the linapro-monitor-server source plugin and its host callbacks.
 func init() {
-	plugin := pluginhost.NewSourcePlugin(pluginID)
+	plugin := pluginhost.NewDeclarations(pluginID)
 	plugin.Assets().UseEmbeddedFiles(monitorserverplugin.EmbeddedFiles)
 	if err := plugin.HTTP().RegisterRoutes(
 		pluginhost.ExtensionPointHTTPRouteRegister,
@@ -48,10 +48,10 @@ func init() {
 	); err != nil {
 		panic(err)
 	}
-	if err := plugin.Cron().RegisterCron(
-		pluginhost.ExtensionPointCronRegister,
+	if err := plugin.Jobs().RegisterJobs(
+		pluginhost.ExtensionPointJobsRegister,
 		pluginhost.CallbackExecutionModeBlocking,
-		registerBuiltinCrons,
+		registerBuiltinJobs,
 	); err != nil {
 		panic(err)
 	}
@@ -95,19 +95,19 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 	return nil
 }
 
-// registerBuiltinCrons contributes managed cron definitions for server-monitor collection and cleanup.
-func registerBuiltinCrons(ctx context.Context, registrar pluginhost.CronRegistrar) error {
+// registerBuiltinJobs contributes managed job definitions for server-monitor collection and cleanup.
+func registerBuiltinJobs(ctx context.Context, registrar pluginhost.JobsRegistrar) error {
 	services := registrar.Services()
 	if services == nil {
-		return gerror.New("linapro-monitor-server cron requires plugin config service")
+		return gerror.New("linapro-monitor-server job requires plugin config service")
 	}
 	plugins := services.Plugins()
 	if plugins == nil {
-		return gerror.New("linapro-monitor-server cron requires plugin config service")
+		return gerror.New("linapro-monitor-server job requires plugin config service")
 	}
 	configSvc := plugins.Config()
 	if configSvc == nil {
-		return gerror.New("linapro-monitor-server cron requires plugin config service")
+		return gerror.New("linapro-monitor-server job requires plugin config service")
 	}
 	monitorCfg, err := monitorconfig.Load(ctx, configSvc)
 	if err != nil {

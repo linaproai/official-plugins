@@ -17,8 +17,8 @@ import (
 	"github.com/mssola/useragent"
 
 	"lina-core/pkg/bizerr"
-	"lina-core/pkg/plugin/capability/authcap/token"
 	"lina-core/pkg/plugin/capability/authcap/authz"
+	"lina-core/pkg/plugin/capability/authcap/token"
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/usercap"
@@ -107,7 +107,7 @@ func (s *serviceImpl) currentUser(ctx context.Context, userID int64) (*usercap.U
 		return nil, bizerr.NewCode(capmodel.CodeCapabilityUnavailable, bizerr.P("capability", "user"))
 	}
 	userDomainID := usercap.UserID(strconv.FormatInt(userID, 10))
-	out, err := s.users.BatchGetUsers(ctx, s.capabilityContext(ctx, "impersonate.current_user"), []usercap.UserID{userDomainID})
+	out, err := s.users.BatchGet(ctx, s.capabilityContext(ctx, "impersonate.current_user"), []usercap.UserID{userDomainID})
 	if err != nil || out == nil {
 		return nil, err
 	}

@@ -4,24 +4,11 @@
       "demo": {
         "source": {
           "attachment": {
-            "create": {
-              "failed": "Failed to create demo attachment file"
-            },
             "delete": {
               "failed": "Failed to delete demo attachment file"
             },
-            "dir": {
-              "create": {
-                "failed": "Failed to create demo attachment directory"
-              }
-            },
             "open": {
               "failed": "Failed to open demo attachment"
-            },
-            "partial": {
-              "cleanup": {
-                "failed": "Failed to remove incomplete demo attachment"
-              }
             },
             "size": {
               "too": {
@@ -36,12 +23,8 @@
             "storage": {
               "purge": {
                 "failed": "Failed to remove demo attachment storage"
-              }
-            },
-            "target": {
-              "close": {
-                "failed": "Failed to close demo attachment file"
-              }
+              },
+              "unavailable": "Demo attachment storage service is unavailable"
             },
             "write": {
               "failed": "Failed to write demo attachment"
@@ -108,4 +91,3 @@
     }
   }
 }
-

@@ -82,9 +82,11 @@ dependencies:
 # Host service declaration list for requested host services, methods, and resource boundaries.
 # 插件宿主服务声明列表，用于申请调用宿主 service、method 与资源边界。
 hostServices:
-  # Host service enum. Allowed values: `runtime`, `cron`, `storage`, `network`, and `data`;
+  # Host service enum. Allowed values include `runtime`, `storage`, `network`, `data`,
+  # `plugins`, `manifest`, `hostConfig`, `org`, and `tenant`.
   # `runtime` provides logging, state, and runtime information capabilities.
-  # 宿主服务枚举。可选值：`runtime`、`cron`、`storage`、`network`、`data`；`runtime` 提供日志、状态和运行时信息能力。
+  # 宿主服务枚举。可选值包括：`runtime`、`storage`、`network`、`data`、
+  # `plugins`、`manifest`、`hostConfig`、`org`、`tenant`；`runtime` 提供日志、状态和运行时信息能力。
   - service: runtime
     # Requested method set for this host service.
     # 当前宿主服务申请的方法集合。
@@ -110,19 +112,11 @@ hostServices:
       # Reads the current host node identifier.
       # 读取当前宿主节点标识。
       - info.node
-  # Host service enum. Allowed values: `runtime`, `cron`, `storage`, `network`, and `data`;
-  # `cron` registers built-in scheduled jobs from dynamic plugins.
-  # 宿主服务枚举。可选值：`runtime`、`cron`、`storage`、`network`、`data`；`cron` 用于注册动态插件内置定时任务。
-  - service: cron
-    # Requested method set for this host service.
-    # 当前宿主服务申请的方法集合。
-    methods:
-      # Registers a plugin scheduled job.
-      # 注册插件定时任务。
-      - register
-  # Host service enum. Allowed values: `runtime`, `cron`, `storage`, `network`, and `data`;
+  # Host service enum. Allowed values include `runtime`, `storage`, `network`, `data`,
+  # `plugins`, `manifest`, `hostConfig`, `org`, and `tenant`.
   # `storage` accesses plugin-isolated storage objects.
-  # 宿主服务枚举。可选值：`runtime`、`cron`、`storage`、`network`、`data`；`storage` 用于访问插件隔离存储对象。
+  # 宿主服务枚举。可选值包括：`runtime`、`storage`、`network`、`data`、
+  # `plugins`、`manifest`、`hostConfig`、`org`、`tenant`；`storage` 用于访问插件隔离存储对象。
   - service: storage
     # Requested method set for this host service.
     # 当前宿主服务申请的方法集合。
@@ -130,6 +124,18 @@ hostServices:
       # Writes a storage object.
       # 写入存储对象。
       - put
+      # Starts a chunked storage object upload.
+      # 启动分片存储对象上传。
+      - put.init
+      # Appends a chunk to a storage object upload.
+      # 追加一个存储对象上传分片。
+      - put.chunk
+      # Commits a chunked storage object upload.
+      # 提交分片存储对象上传。
+      - put.commit
+      # Aborts a chunked storage object upload.
+      # 中止分片存储对象上传。
+      - put.abort
       # Reads a storage object.
       # 读取存储对象。
       - get
@@ -154,9 +160,11 @@ hostServices:
         # Example record attachment object prefix.
         # 示例记录附件对象前缀。
         - demo-record-files/
-  # Host service enum. Allowed values: `runtime`, `cron`, `storage`, `network`, and `data`;
+  # Host service enum. Allowed values include `runtime`, `storage`, `network`, `data`,
+  # `plugins`, `manifest`, `hostConfig`, `org`, and `tenant`.
   # `network` performs governed outbound network requests.
-  # 宿主服务枚举。可选值：`runtime`、`cron`、`storage`、`network`、`data`；`network` 用于发起受治理的外部网络请求。
+  # 宿主服务枚举。可选值包括：`runtime`、`storage`、`network`、`data`、
+  # `plugins`、`manifest`、`hostConfig`、`org`、`tenant`；`network` 用于发起受治理的外部网络请求。
   - service: network
     # Requested method set for this host service.
     # 当前宿主服务申请的方法集合。
@@ -170,9 +178,11 @@ hostServices:
       # Allowed URL or URL pattern.
       # 允许访问的 URL 或 URL pattern。
       - url: https://example.com
-  # Host service enum. Allowed values: `runtime`, `cron`, `storage`, `network`, and `data`;
+  # Host service enum. Allowed values include `runtime`, `storage`, `network`, `data`,
+  # `plugins`, `manifest`, `hostConfig`, `org`, and `tenant`.
   # `data` accesses authorized database tables.
-  # 宿主服务枚举。可选值：`runtime`、`cron`、`storage`、`network`、`data`；`data` 用于访问被授权的数据表。
+  # 宿主服务枚举。可选值包括：`runtime`、`storage`、`network`、`data`、
+  # `plugins`、`manifest`、`hostConfig`、`org`、`tenant`；`data` 用于访问被授权的数据表。
   - service: data
     # Requested method set for this host service.
     # 当前宿主服务申请的方法集合。
@@ -204,11 +214,16 @@ hostServices:
         # Dynamic plugin demo record table.
         # 动态插件示例记录表。
         - plugin_linapro_demo_dynamic_record
-  # Host service enum. `config` reads this plugin's own runtime config through config.get only.
-  # 宿主服务枚举。`config` 仅通过 config.get 读取当前插件自己的运行期配置。
-  - service: config
+  # Host service enum. `plugins` reads this plugin's own runtime config through config.get only.
+  # 宿主服务枚举。`plugins` 仅通过 config.get 读取当前插件自己的运行期配置。
+  - service: plugins
     methods:
-      - get
+      - config.get
+  # Host service enum. `jobs` declares plugin-owned built-in scheduled jobs during host discovery.
+  # 宿主服务枚举。`jobs` 用于在宿主发现阶段声明插件内置定时任务。
+  - service: jobs
+    methods:
+      - jobs.register
   # Host service enum. `manifest` reads this plugin's own packaged manifest resources as raw bytes.
   # Paths are relative to the plugin `manifest/` root and do not replace config, SQL, or i18n lifecycle pipelines.
   # 宿主服务枚举。`manifest` 用于读取当前插件自己打包的 manifest 原始资源。

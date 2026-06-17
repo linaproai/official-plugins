@@ -9,9 +9,13 @@ import (
 	v1 "lina-plugin-linapro-demo-dynamic/backend/api/dynamic/v1"
 	dynamicservice "lina-plugin-linapro-demo-dynamic/backend/internal/service/dynamic"
 
-	bridgeguest "lina-core/pkg/plugin/pluginbridge/guest"
+	bridgeplugin "lina-core/pkg/plugin/pluginbridge"
 	"lina-core/pkg/plugin/pluginbridge/protocol"
 )
+
+// BeforeInstallTimeoutMs demonstrates a code-owned lifecycle timeout override
+// for the dynamic plugin builder.
+const BeforeInstallTimeoutMs = 120000
 
 // BeforeInstall logs the dynamic plugin install precondition.
 func (c *Controller) BeforeInstall(ctx context.Context, req *v1.BeforeInstallReq) (*v1.LifecycleDecisionRes, error) {
@@ -109,7 +113,7 @@ func (c *Controller) runLifecycleDebugHook(
 // buildLifecycleDebugInput converts a typed lifecycle request into the service input.
 func buildLifecycleDebugInput(ctx context.Context, req *protocol.LifecycleRequest) *dynamicservice.LifecycleDebugInput {
 	input := &dynamicservice.LifecycleDebugInput{}
-	if envelope := bridgeguest.RequestEnvelopeFromContext(ctx); envelope != nil {
+	if envelope := bridgeplugin.RequestEnvelopeFromContext(ctx); envelope != nil {
 		input.PluginID = strings.TrimSpace(envelope.PluginID)
 	}
 	if req == nil {

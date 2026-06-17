@@ -19,7 +19,7 @@ const (
 
 // init registers the embedded linapro-ops-demo-guard source plugin and its host callbacks.
 func init() {
-	plugin := pluginhost.NewSourcePlugin(pluginID)
+	plugin := pluginhost.NewDeclarations(pluginID)
 	plugin.Assets().UseEmbeddedFiles(democontrolplugin.EmbeddedFiles)
 	if err := plugin.Lifecycle().RegisterBeforeInstallHandler(beforeInstall); err != nil {
 		panic(err)

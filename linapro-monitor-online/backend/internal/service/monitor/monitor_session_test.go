@@ -12,7 +12,7 @@ import (
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/sessioncap"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 )
 
 // TestListDelegatesToSessionDomain verifies online-user listing goes through
@@ -42,7 +42,7 @@ func TestListDelegatesToSessionDomain(t *testing.T) {
 		t.Fatalf("list online sessions: %v", err)
 	}
 	if sessionSvc.searchCalled != 1 {
-		t.Fatalf("expected one SearchSessions call, got %d", sessionSvc.searchCalled)
+		t.Fatalf("expected one Search call, got %d", sessionSvc.searchCalled)
 	}
 	if sessionSvc.searchInput.Page.PageNum != 2 || sessionSvc.searchInput.Page.PageSize != 25 {
 		t.Fatalf("expected page 2 size 25, got page %d size %d", sessionSvc.searchInput.Page.PageNum, sessionSvc.searchInput.Page.PageSize)
@@ -73,7 +73,7 @@ func TestForceLogoutDelegatesToSessionAdmin(t *testing.T) {
 		t.Fatalf("force logout online session: %v", err)
 	}
 	if sessionAdminSvc.revokeCalled != 1 {
-		t.Fatalf("expected one RevokeSession call, got %d", sessionAdminSvc.revokeCalled)
+		t.Fatalf("expected one Revoke call, got %d", sessionAdminSvc.revokeCalled)
 	}
 	if sessionAdminSvc.revokedSessionID != "target-token" {
 		t.Fatalf("expected token target-token, got %q", sessionAdminSvc.revokedSessionID)
@@ -91,8 +91,8 @@ type monitorSessionService struct {
 	searchResult *capmodel.PageResult[*sessioncap.Projection]
 }
 
-// SearchSessions records search arguments and returns the configured result.
-func (s *monitorSessionService) SearchSessions(_ context.Context, capCtx capmodel.CapabilityContext, input sessioncap.SearchInput) (*capmodel.PageResult[*sessioncap.Projection], error) {
+// Search records search arguments and returns the configured result.
+func (s *monitorSessionService) Search(_ context.Context, capCtx capmodel.CapabilityContext, input sessioncap.SearchInput) (*capmodel.PageResult[*sessioncap.Projection], error) {
 	s.searchCalled++
 	s.searchCapCtx = capCtx
 	s.searchInput = input
@@ -102,8 +102,8 @@ func (s *monitorSessionService) SearchSessions(_ context.Context, capCtx capmode
 	return &capmodel.PageResult[*sessioncap.Projection]{Items: []*sessioncap.Projection{}}, nil
 }
 
-// BatchGetSessions is unused by these service tests.
-func (s *monitorSessionService) BatchGetSessions(context.Context, capmodel.CapabilityContext, []sessioncap.SessionID) (*capmodel.BatchResult[*sessioncap.Projection, sessioncap.SessionID], error) {
+// BatchGet is unused by these service tests.
+func (s *monitorSessionService) BatchGet(context.Context, capmodel.CapabilityContext, []sessioncap.SessionID) (*capmodel.BatchResult[*sessioncap.Projection, sessioncap.SessionID], error) {
 	return &capmodel.BatchResult[*sessioncap.Projection, sessioncap.SessionID]{
 		Items:      map[sessioncap.SessionID]*sessioncap.Projection{},
 		MissingIDs: []sessioncap.SessionID{},
@@ -117,8 +117,8 @@ type monitorSessionAdminService struct {
 	revokedSessionID sessioncap.SessionID
 }
 
-// RevokeSession records the session ID passed to the published session admin service.
-func (s *monitorSessionAdminService) RevokeSession(_ context.Context, capCtx capmodel.CapabilityContext, id sessioncap.SessionID) error {
+// Revoke records the session ID passed to the published session admin service.
+func (s *monitorSessionAdminService) Revoke(_ context.Context, capCtx capmodel.CapabilityContext, id sessioncap.SessionID) error {
 	s.revokeCalled++
 	s.revokeCapCtx = capCtx
 	s.revokedSessionID = id
@@ -137,8 +137,8 @@ func (monitorBizCtxService) Current(context.Context) bizctxcap.CurrentContext {
 type monitorTenantFilterService struct{}
 
 // Context returns a request-scoped tenant and actor projection.
-func (monitorTenantFilterService) Context(context.Context) tenantcap.TenantFilterContext {
-	return tenantcap.TenantFilterContext{UserID: 7, TenantID: 3}
+func (monitorTenantFilterService) Context(context.Context) tenantspi.TenantFilterContext {
+	return tenantspi.TenantFilterContext{UserID: 7, TenantID: 3}
 }
 
 // Apply is unused by these service tests.

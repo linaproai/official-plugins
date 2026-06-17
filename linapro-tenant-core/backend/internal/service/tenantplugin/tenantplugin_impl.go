@@ -59,7 +59,7 @@ func (s *serviceImpl) SetEnabled(ctx context.Context, pluginID string, enabled b
 			return err
 		}
 	}
-	if err = s.pluginAdmin.SetPluginEnabled(
+	if err = s.pluginAdmin.SetEnabled(
 		ctx,
 		s.capabilityContext(ctx, tenantID, "tenant_plugin.set_enabled"),
 		plugincap.PluginID(normalizedPluginID),

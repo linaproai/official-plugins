@@ -9,4 +9,4 @@ This directory stores install-time and optional mock resources for `linapro-demo
 - `sql/mock-data/001-linapro-demo-dynamic-mock-data.sql`: provides optional local demo records.
 - `i18n/`: stores plugin-owned runtime translation resources.
 
-The dynamic plugin declares a `manifest` host service in `plugin.yaml` for `config/profile.yaml` and `config/config.yaml` only. `manifest.get` reads these packaged files as raw resources and does not replace the dedicated config, SQL, or i18n lifecycle pipelines.
+The dynamic plugin declares a `manifest` host service in `plugin.yaml` for `config/profile.yaml` and `config/config.yaml` only. `manifest.get` reads these packaged files as raw resources and does not replace `Plugins().Config()`, SQL, or i18n lifecycle pipelines.

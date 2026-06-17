@@ -7,15 +7,18 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/gogf/gf/v2/container/gvar"
 
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/orgcap"
 	"lina-core/pkg/plugin/capability/tenantcap"
 )
 
-// fakeConfigHostService returns deterministic plugin config values for unit
+// fakePluginConfigService returns deterministic plugin config values for unit
 // tests.
-type fakeConfigHostService struct {
+type fakePluginConfigService struct {
 	strings map[string]configStringResult
 	bools   map[string]configBoolResult
 }
@@ -32,16 +35,33 @@ type configBoolResult struct {
 	found bool
 }
 
+// Exists reports whether one fake plugin config key exists.
+func (s *fakePluginConfigService) Exists(_ context.Context, key string) (bool, error) {
+	if result := s.strings[key]; result.found {
+		return true, nil
+	}
+	if result := s.bools[key]; result.found {
+		return true, nil
+	}
+	return false, nil
+}
+
 // String returns one configured fake string value.
-func (s *fakeConfigHostService) String(key string) (string, bool, error) {
+func (s *fakePluginConfigService) String(_ context.Context, key string, defaultValue string) (string, error) {
 	result := s.strings[key]
-	return result.value, result.found, nil
+	if !result.found {
+		return defaultValue, nil
+	}
+	return result.value, nil
 }
 
 // Bool returns one configured fake bool value.
-func (s *fakeConfigHostService) Bool(key string) (bool, bool, error) {
+func (s *fakePluginConfigService) Bool(_ context.Context, key string, defaultValue bool) (bool, error) {
 	result := s.bools[key]
-	return result.value, result.found, nil
+	if !result.found {
+		return defaultValue, nil
+	}
+	return result.value, nil
 }
 
 // fakeHostConfigHostService returns deterministic public host config values for unit
@@ -51,16 +71,54 @@ type fakeHostConfigHostService struct {
 	bools   map[string]configBoolResult
 }
 
+// Get returns one configured fake public host config raw value.
+func (s *fakeHostConfigHostService) Get(_ context.Context, key string) (*gvar.Var, error) {
+	if result := s.strings[key]; result.found {
+		return gvar.New(result.value), nil
+	}
+	if result := s.bools[key]; result.found {
+		return gvar.New(result.value), nil
+	}
+	return nil, nil
+}
+
+// Exists reports whether one configured fake public host config key exists.
+func (s *fakeHostConfigHostService) Exists(_ context.Context, key string) (bool, error) {
+	if result := s.strings[key]; result.found {
+		return true, nil
+	}
+	if result := s.bools[key]; result.found {
+		return true, nil
+	}
+	return false, nil
+}
+
 // String returns one configured fake public host config string value.
-func (s *fakeHostConfigHostService) String(key string) (string, bool, error) {
+func (s *fakeHostConfigHostService) String(_ context.Context, key string, defaultValue string) (string, error) {
 	result := s.strings[key]
-	return result.value, result.found, nil
+	if !result.found {
+		return defaultValue, nil
+	}
+	return result.value, nil
 }
 
 // Bool returns one configured fake public host config bool value.
-func (s *fakeHostConfigHostService) Bool(key string) (bool, bool, error) {
+func (s *fakeHostConfigHostService) Bool(_ context.Context, key string, defaultValue bool) (bool, error) {
 	result := s.bools[key]
-	return result.value, result.found, nil
+	if !result.found {
+		return defaultValue, nil
+	}
+	return result.value, nil
+}
+
+// Int returns the provided default value because tests do not configure ints.
+func (s *fakeHostConfigHostService) Int(_ context.Context, _ string, defaultValue int) (int, error) {
+	return defaultValue, nil
+}
+
+// Duration returns the provided default value because tests do not configure durations.
+func (s *fakeHostConfigHostService) Duration(_ context.Context, _ string, defaultValue time.Duration) (time.Duration, error) {
+	return defaultValue, nil
 }
 
 // fakeManifestHostService returns deterministic manifest resources for unit
@@ -76,24 +134,35 @@ type manifestTextResult struct {
 	found bool
 }
 
-// GetText returns one configured fake manifest text resource.
-func (s *fakeManifestHostService) GetText(path string) (string, bool, error) {
+// Get returns one configured fake manifest resource.
+func (s *fakeManifestHostService) Get(_ context.Context, path string) ([]byte, error) {
 	result := s.texts[path]
-	return result.value, result.found, nil
+	if !result.found {
+		return nil, nil
+	}
+	return []byte(result.value), nil
+}
+
+// Exists reports whether one configured fake manifest resource exists.
+func (s *fakeManifestHostService) Exists(_ context.Context, path string) (bool, error) {
+	if path == hostCallDemoManifestProfilePath {
+		return true, nil
+	}
+	return s.texts[path].found, nil
 }
 
 // Scan copies the configured profile into the target for the expected profile
 // path and key.
-func (s *fakeManifestHostService) Scan(path string, key string, target any) (bool, error) {
+func (s *fakeManifestHostService) Scan(_ context.Context, path string, key string, target any) error {
 	if path != hostCallDemoManifestProfilePath || strings.TrimSpace(key) != "profile" {
-		return false, nil
+		return nil
 	}
 	profile, ok := target.(*hostCallDemoManifestProfile)
 	if !ok {
-		return false, nil
+		return nil
 	}
 	*profile = s.profile
-	return true, nil
+	return nil
 }
 
 // fakeOrgHostService returns deterministic organization capability values for
@@ -101,17 +170,17 @@ func (s *fakeManifestHostService) Scan(path string, key string, target any) (boo
 type fakeOrgHostService struct{}
 
 // Status returns a deterministic organization capability status.
-func (s *fakeOrgHostService) Status(_ context.Context) (capmodel.CapabilityStatus, error) {
+func (s *fakeOrgHostService) Status(_ context.Context) capmodel.CapabilityStatus {
 	return capmodel.CapabilityStatus{
 		CapabilityID:   orgcap.CapabilityOrgV1,
 		Available:      true,
 		ActiveProvider: orgcap.ProviderPluginID,
-	}, nil
+	}
 }
 
 // Available reports that the fake organization capability is active.
-func (s *fakeOrgHostService) Available(_ context.Context) (bool, error) {
-	return true, nil
+func (s *fakeOrgHostService) Available(_ context.Context) bool {
+	return true
 }
 
 // ListUserDeptAssignments returns one deterministic current-user assignment.
@@ -141,27 +210,27 @@ func (s *fakeOrgHostService) GetUserPostIDs(_ context.Context, _ int) ([]int, er
 type fakeTenantHostService struct{}
 
 // Status returns a deterministic tenant capability status.
-func (s *fakeTenantHostService) Status(_ context.Context) (capmodel.CapabilityStatus, error) {
+func (s *fakeTenantHostService) Status(_ context.Context) capmodel.CapabilityStatus {
 	return capmodel.CapabilityStatus{
 		CapabilityID:   tenantcap.CapabilityTenantV1,
 		Available:      true,
 		ActiveProvider: tenantcap.ProviderPluginID,
-	}, nil
+	}
 }
 
 // Available reports that the fake tenant capability is active.
-func (s *fakeTenantHostService) Available(_ context.Context) (bool, error) {
-	return true, nil
+func (s *fakeTenantHostService) Available(_ context.Context) bool {
+	return true
 }
 
 // Current returns one deterministic current tenant.
-func (s *fakeTenantHostService) Current(_ context.Context) (tenantcap.TenantID, error) {
-	return tenantcap.TenantID(7), nil
+func (s *fakeTenantHostService) Current(_ context.Context) tenantcap.TenantID {
+	return tenantcap.TenantID(7)
 }
 
 // PlatformBypass reports that the fake request uses tenant filtering.
-func (s *fakeTenantHostService) PlatformBypass(_ context.Context) (bool, error) {
-	return false, nil
+func (s *fakeTenantHostService) PlatformBypass(_ context.Context) bool {
+	return false
 }
 
 // EnsureTenantVisible accepts the deterministic current tenant.
@@ -180,11 +249,11 @@ func (s *fakeTenantHostService) ListUserTenants(_ context.Context, _ int) ([]ten
 }
 
 // TestRunHostCallDemoConfigReadsPluginAndHostConfigValues verifies the dynamic
-// demo reads plugin config and public host config values through separate host
-// service clients.
+// demo reads plugin config and public host config values through separate
+// governed clients.
 func TestRunHostCallDemoConfigReadsPluginAndHostConfigValues(t *testing.T) {
 	service := &serviceImpl{
-		configSvc: &fakeConfigHostService{
+		pluginConfigSvc: &fakePluginConfigService{
 			strings: map[string]configStringResult{
 				hostCallDemoPluginGreetingKey: {
 					value: "Hello from test config",
@@ -218,7 +287,7 @@ func TestRunHostCallDemoConfigReadsPluginAndHostConfigValues(t *testing.T) {
 		},
 	}
 
-	payload, err := service.runHostCallDemoConfig()
+	payload, err := service.runHostCallDemoConfig(t.Context())
 	if err != nil {
 		t.Fatalf("expected config demo to succeed, got error: %v", err)
 	}
@@ -259,7 +328,7 @@ func TestRunHostCallDemoManifestReadsAuthorizedResources(t *testing.T) {
 		},
 	}
 
-	payload, err := service.runHostCallDemoManifest()
+	payload, err := service.runHostCallDemoManifest(t.Context())
 	if err != nil {
 		t.Fatalf("expected manifest demo to succeed, got error: %v", err)
 	}

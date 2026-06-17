@@ -1,9 +1,7 @@
 import { execFileSync } from "node:child_process";
 import {
   copyFileSync,
-  existsSync,
   mkdirSync,
-  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -11,22 +9,29 @@ import {
 } from "node:fs";
 import path from "node:path";
 
-import type { APIRequestContext, APIResponse, Page } from "@host-tests/support/playwright";
+import type {
+  APIRequestContext,
+  APIResponse,
+  Page,
+} from "@host-tests/support/playwright";
 
-import { request as playwrightRequest, expect } from "@host-tests/support/playwright";
+import {
+  request as playwrightRequest,
+  expect,
+} from "@host-tests/support/playwright";
 
-import { test } from '@host-tests/fixtures/auth';
-import { config } from '@host-tests/fixtures/config';
-import { refreshPluginProjection } from '@host-tests/fixtures/plugin';
-import { LoginPage } from '@host-tests/pages/LoginPage';
-import { DemoDynamicPage } from '../../pages/DemoDynamicPage';
+import { test } from "@host-tests/fixtures/auth";
+import { config } from "@host-tests/fixtures/config";
+import { refreshPluginProjection } from "@host-tests/fixtures/plugin";
+import { LoginPage } from "@host-tests/pages/LoginPage";
+import { DemoDynamicPage } from "../../pages/DemoDynamicPage";
 import {
   execPgSQLStatements,
   pgEscapeLiteral,
   pgIdentifier,
   queryPgScalar,
-} from '@host-tests/support/postgres';
-import { waitForUploadReady } from '@host-tests/support/ui';
+} from "@host-tests/support/postgres";
+import { waitForUploadReady } from "@host-tests/support/ui";
 
 const apiBaseURL = config.apiBaseURL;
 const publicBaseURL = config.publicBaseURL;
@@ -45,8 +50,6 @@ const bundledRuntimePluginID = "linapro-demo-dynamic";
 const bundledRuntimeDependencyPluginID = "linapro-demo-source";
 const bundledRuntimeRecordTable = "plugin_linapro_demo_dynamic_record";
 const bundledRuntimeAttachmentPath = "demo-record-files/";
-const bundledRuntimeCronHandlerRef = `plugin:${bundledRuntimePluginID}/cron:heartbeat`;
-const bundledRuntimeCronStateKey = "cron_heartbeat_count";
 const bundledRuntimeLegacyArtifactPath = path.join(
   repoRoot(),
   "apps",
@@ -76,14 +79,6 @@ type PluginDynamicStateItem = {
   runtimeState?: string;
 };
 
-type JobListItem = {
-  id: number;
-  handlerRef?: string;
-  isBuiltin?: number;
-  name?: string;
-  status?: string;
-};
-
 type UserRouteNode = {
   component?: string;
   path?: string;
@@ -98,7 +93,12 @@ type UserRouteNode = {
 };
 
 type BundledRuntimeDemoRecordListPayload = {
-  list?: Array<{ title?: string }>;
+  list?: Array<{
+    attachmentName?: string;
+    hasAttachment?: boolean;
+    id?: string;
+    title?: string;
+  }>;
   total?: number;
 };
 
@@ -330,8 +330,8 @@ function bundledRuntimeStorageArtifactPath() {
 function bundledRuntimeStorageRootDir() {
   return path.join(
     runtimeStorageDir(),
-    ".host-services",
-    "storage",
+    ".capability-storage",
+    "plugins",
     bundledRuntimePluginID,
   );
 }
@@ -348,7 +348,10 @@ function bundledRuntimeAttachmentFixturePath() {
 }
 
 function cleanupBundledRuntimeAttachmentFixture() {
-  rmSync(bundledRuntimeAttachmentFixtureDir(), { force: true, recursive: true });
+  rmSync(bundledRuntimeAttachmentFixtureDir(), {
+    force: true,
+    recursive: true,
+  });
 }
 
 function bundledRuntimeUploadProbePath() {
@@ -386,7 +389,6 @@ function cleanupBundledRuntimeDemoData() {
   execPgSQLStatements([
     `DROP TABLE IF EXISTS ${pgIdentifier(bundledRuntimeRecordTable)};`,
     `DELETE FROM sys_plugin_migration WHERE plugin_id = '${pgEscapeLiteral(bundledRuntimePluginID)}';`,
-    `DELETE FROM sys_plugin_state WHERE plugin_id = '${pgEscapeLiteral(bundledRuntimePluginID)}' AND state_key = '${pgEscapeLiteral(bundledRuntimeCronStateKey)}';`,
   ]);
   rmSync(bundledRuntimeStorageRootDir(), { force: true, recursive: true });
   cleanupBundledRuntimeAttachmentFixture();
@@ -435,20 +437,6 @@ function bundledRuntimeRecordCountByTitle(title: string) {
   );
 }
 
-function bundledRuntimeCronStateCount() {
-  return Number(
-    queryPgScalar(
-      [
-        "SELECT COALESCE(MAX(state_value), '0')",
-        "FROM sys_plugin_state",
-        `WHERE plugin_id = '${pgEscapeLiteral(bundledRuntimePluginID)}'`,
-        `AND state_key = '${pgEscapeLiteral(bundledRuntimeCronStateKey)}'`,
-        ";",
-      ].join(" "),
-    ) || "0",
-  );
-}
-
 function seedBundledRuntimePaginationRecords(recordKey: string, count: number) {
   if (!bundledRuntimeRecordTableExists()) {
     throw new Error(`${bundledRuntimeRecordTable} is missing before seeding`);
@@ -489,12 +477,14 @@ function seedBundledRuntimePaginationRecords(recordKey: string, count: number) {
 async function bundledRuntimeDemoRecordListSnapshot(
   adminApi: APIRequestContext,
   pageSize = 20,
+  keyword = "",
 ) {
   try {
     const response = await adminApi.get(
       `${publicBaseURL}/x/${bundledRuntimePluginID}/api/v1/demo-records`,
       {
         params: {
+          keyword,
           pageNum: 1,
           pageSize,
         },
@@ -502,6 +492,7 @@ async function bundledRuntimeDemoRecordListSnapshot(
     );
     if (!response.ok()) {
       return {
+        records: [] as NonNullable<BundledRuntimeDemoRecordListPayload["list"]>,
         ok: false,
         status: response.status(),
         titles: [] as string[],
@@ -514,6 +505,7 @@ async function bundledRuntimeDemoRecordListSnapshot(
     ) as BundledRuntimeDemoRecordListPayload;
     const records = Array.isArray(payload?.list) ? payload.list : [];
     return {
+      records,
       ok: true,
       status: response.status(),
       titles: records
@@ -524,6 +516,7 @@ async function bundledRuntimeDemoRecordListSnapshot(
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : String(error),
+      records: [] as NonNullable<BundledRuntimeDemoRecordListPayload["list"]>,
       ok: false,
       status: 0,
       titles: [] as string[],
@@ -576,21 +569,53 @@ async function waitForBundledRuntimeDemoRecordTotal(
     .toBe(total);
 }
 
-function countFilesRecursive(targetPath: string): number {
-  if (!existsSync(targetPath)) {
-    return 0;
+function bundledRuntimeAttachmentPathByTitle(title: string) {
+  if (!bundledRuntimeRecordTableExists()) {
+    return "";
   }
-  const fileInfo = statSync(targetPath);
-  if (!fileInfo.isDirectory()) {
-    return 1;
-  }
-  return readdirSync(targetPath).reduce((total, item) => {
-    return total + countFilesRecursive(path.join(targetPath, item));
-  }, 0);
+  const escapedTitle = pgEscapeLiteral(title);
+  return queryPgScalar(
+    [
+      `SELECT attachment_path FROM ${pgIdentifier(bundledRuntimeRecordTable)}`,
+      `WHERE title = '${escapedTitle}'`,
+      "ORDER BY updated_at DESC, id DESC",
+      "LIMIT 1;",
+    ].join(" "),
+  );
 }
 
-function bundledRuntimeStoredFileCount() {
-  return countFilesRecursive(bundledRuntimeStorageRootDir());
+function hasBundledRuntimeAttachmentReference(title: string) {
+  return bundledRuntimeAttachmentPathByTitle(title).trim().length > 0;
+}
+
+async function bundledRuntimeDemoRecordByTitle(
+  adminApi: APIRequestContext,
+  title: string,
+) {
+  const snapshot = await bundledRuntimeDemoRecordListSnapshot(adminApi, 100, title);
+  if (!snapshot.ok) {
+    return null;
+  }
+  return snapshot.records.find((record) => record.title === title) ?? null;
+}
+
+async function downloadBundledRuntimeAttachment(
+  adminApi: APIRequestContext,
+  title: string,
+) {
+  const record = await bundledRuntimeDemoRecordByTitle(adminApi, title);
+  expect(record, `应能通过动态插件接口查询到记录: ${title}`).toBeTruthy();
+  expect(record?.hasAttachment, `动态插件记录应标记持有附件: ${title}`).toBe(true);
+  expect(
+    record?.attachmentName ?? "",
+    `动态插件记录应保留附件原始文件名: ${title}`,
+  ).toBe(path.basename(bundledRuntimeAttachmentFixturePath()));
+
+  const response = await adminApi.get(
+    `${publicBaseURL}/x/${bundledRuntimePluginID}/api/v1/demo-records/${encodeURIComponent(record!.id ?? "")}/attachment`,
+  );
+  assertOk(response, `下载动态插件记录附件失败: ${title}`);
+  return response.text();
 }
 
 function ensureBundledRuntimeAttachmentFixture() {
@@ -801,7 +826,10 @@ async function setPluginEnabled(
 async function ensureBundledRuntimeDependencyInstalled(
   adminApi: APIRequestContext,
 ) {
-  const dependency = await findPlugin(adminApi, bundledRuntimeDependencyPluginID);
+  const dependency = await findPlugin(
+    adminApi,
+    bundledRuntimeDependencyPluginID,
+  );
   if (dependency?.installed === 1) {
     return;
   }
@@ -833,60 +861,6 @@ async function uninstallPlugin(adminApi: APIRequestContext, id = pluginID) {
   assertOk(response, "卸载动态插件失败");
 }
 
-async function listJobs(adminApi: APIRequestContext): Promise<JobListItem[]> {
-  const pageSize = 200;
-  let pageNum = 1;
-  const items: JobListItem[] = [];
-
-  while (true) {
-    const response = await adminApi.get("job", {
-      params: {
-        pageNum,
-        pageSize,
-      },
-    });
-    assertOk(response, "查询定时任务列表失败");
-    const payload = unwrapApiData(await response.json());
-    const currentItems = (payload?.list ?? []) as JobListItem[];
-    items.push(...currentItems);
-
-    const total = Number(payload?.total ?? 0);
-    if (items.length >= total || currentItems.length === 0) {
-      return items;
-    }
-    pageNum += 1;
-  }
-}
-
-async function findJobByHandlerRef(
-  adminApi: APIRequestContext,
-  handlerRef: string,
-  keyword?: string,
-): Promise<JobListItem | null> {
-  if (keyword) {
-    const response = await adminApi.get("job", {
-      params: {
-        keyword,
-        pageNum: 1,
-        pageSize: 20,
-      },
-    });
-    assertOk(response, `按关键字查询定时任务失败: ${keyword}`);
-    const payload = unwrapApiData(await response.json());
-    const jobs = (payload?.list ?? []) as JobListItem[];
-    return jobs.find((item) => item.handlerRef === handlerRef) ?? null;
-  }
-
-  const jobs = await listJobs(adminApi);
-  return jobs.find((item) => item.handlerRef === handlerRef) ?? null;
-}
-
-async function triggerJob(adminApi: APIRequestContext, jobID: number) {
-  const response = await adminApi.post(`job/${jobID}/trigger`);
-  assertOk(response, `立即执行定时任务失败: ${jobID}`);
-  return unwrapApiData(await response.json());
-}
-
 async function uploadDynamicPluginViaAPI(
   adminApi: APIRequestContext,
   artifactPath: string,
@@ -905,7 +879,9 @@ async function uploadDynamicPluginViaAPI(
     multipart.transportPadding = "x".repeat(paddingBytes);
   }
 
-  const response = await adminApi.post("plugins/dynamic/package", { multipart });
+  const response = await adminApi.post("plugins/dynamic/package", {
+    multipart,
+  });
   assertOk(response, `上传动态插件失败: ${artifactPath}`);
   return unwrapApiData(await response.json());
 }
@@ -1036,11 +1012,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     await pluginPage.gotoManage();
 
     await test.step("TC-1b: 上传后宿主立即识别插件并进入可安装状态", async () => {
-      await pluginPage.uploadDynamicPlugin(
-        wasmPath,
-        false,
-        "插件包上传成功",
-      );
+      await pluginPage.uploadDynamicPlugin(wasmPath, false, "插件包上传成功");
 
       const pluginAfterUpload = await waitForPluginDiscovered(
         adminApi!,
@@ -1087,7 +1059,9 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
 
       await pluginPage.clickSidebarMenuItem(iframeMenuName);
       await expect(
-        pluginPage.pluginIframeFrame().getByRole("heading", { name: pluginName }),
+        pluginPage
+          .pluginIframeFrame()
+          .getByRole("heading", { name: pluginName }),
       ).toBeVisible();
       await expect(
         pluginPage
@@ -1129,13 +1103,19 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     await test.step("TC-1g: 宿主内嵌菜单通过 runtime-page 壳挂载 ESM 入口", async () => {
       const embeddedRoute = findRouteByTitle(routes, embeddedMenuName);
       expect(embeddedRoute, "启用后应生成宿主内嵌动态路由").toBeTruthy();
-      expect(embeddedRoute?.component).toBe("#/views/system/plugin/dynamic-page");
-      expect(embeddedRoute?.meta?.query?.pluginAccessMode).toBe("embedded-mount");
+      expect(embeddedRoute?.component).toBe(
+        "#/views/system/plugin/dynamic-page",
+      );
+      expect(embeddedRoute?.meta?.query?.pluginAccessMode).toBe(
+        "embedded-mount",
+      );
       expect(embeddedRoute?.meta?.query?.embeddedSrc).toBe(embeddedAssetPath);
 
       await pluginPage.clickSidebarMenuItem(embeddedMenuName);
       await expect(pluginPage.pluginDynamicEmbeddedHost()).toBeVisible();
-      await expect(page.getByRole("heading", { name: pluginName })).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: pluginName }),
+      ).toBeVisible();
       await expect(
         page.getByText("runtime embedded mount", { exact: true }),
       ).toBeVisible();
@@ -1177,15 +1157,16 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     await ensureBundledRuntimeDependencyInstalled(adminApi!);
     await pluginPage.openInstallAuthorization(bundledRuntimePluginID);
     const hostServiceAuthModal = pluginPage.hostServiceAuthModal();
-    await expect(hostServiceAuthModal).toContainText("Cron");
+    await expect(hostServiceAuthModal).not.toContainText("Cron");
+    await expect(
+      hostServiceAuthModal.getByText("jobs", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      hostServiceAuthModal.getByText("jobs.register", { exact: true }),
+    ).toBeVisible();
     await expect(hostServiceAuthModal).not.toContainText("申请存储路径");
     await expect(hostServiceAuthModal).not.toContainText("申请数据表名");
     await expect(hostServiceAuthModal).not.toContainText("申请访问地址");
-    await expect(hostServiceAuthModal).toContainText("动态插件心跳");
-    await expect(hostServiceAuthModal).toContainText("heartbeat");
-    await expect(hostServiceAuthModal).toContainText("# */10 * * * *");
-    await expect(hostServiceAuthModal).toContainText("所有节点执行");
-    await expect(hostServiceAuthModal).toContainText("单例执行");
     await expect(
       hostServiceAuthModal.getByTestId(
         "plugin-host-service-summary-label-cron-cron-review",
@@ -1195,25 +1176,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
       hostServiceAuthModal.getByTestId(
         `plugin-host-service-auth-list-${bundledRuntimePluginID}-cron`,
       ),
-    ).toBeVisible();
-    const cronItem = hostServiceAuthModal.getByTestId(
-      `plugin-host-service-auth-item-${bundledRuntimePluginID}-cron-heartbeat`,
-    );
-    await expect(cronItem).toContainText("动态插件心跳");
-    await expect(cronItem).toContainText("表达式：");
-    await expect(cronItem).toContainText("调度范围：");
-    await expect(cronItem).toContainText("并发策略：");
-    const cronLabelFontWeight = await cronItem
-      .locator("span", { hasText: "表达式：" })
-      .first()
-      .evaluate((node) =>
-        Number.parseInt(getComputedStyle(node).fontWeight, 10),
-      );
-    expect(cronLabelFontWeight).toBeGreaterThanOrEqual(600);
-    const hostServiceAuthText = await hostServiceAuthModal.innerText();
-    expect(hostServiceAuthText.indexOf("Cron")).toBeLessThan(
-      hostServiceAuthText.indexOf("运行时"),
-    );
+    ).toHaveCount(0);
     await pluginPage.confirmHostServiceAuthorization();
     await expect
       .poll(
@@ -1368,80 +1331,6 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     expect(payload.isSuperAdmin).toBeTruthy();
   });
 
-  test("TC-1o: linapro-demo-dynamic 安装后其内置定时任务立即出现在任务管理中，启用后可手动执行", async ({
-    page,
-  }) => {
-    await ensureBundledRuntimePluginSynchronized(adminApi!);
-    await loginAsAdmin(page);
-
-    const pluginPage = new DemoDynamicPage(page);
-    await pluginPage.gotoManage();
-    await pluginPage.searchByPluginId(bundledRuntimePluginID);
-
-    await ensureBundledRuntimeDependencyInstalled(adminApi!);
-    await pluginPage.openInstallAuthorization(bundledRuntimePluginID);
-    await pluginPage.confirmHostServiceAuthorization();
-    await expect
-      .poll(
-        async () =>
-          (await findPlugin(adminApi!, bundledRuntimePluginID))?.installed ?? 0,
-      )
-      .toBe(1);
-
-    await expect
-      .poll(async () => {
-        const job = await findJobByHandlerRef(
-          adminApi!,
-          bundledRuntimeCronHandlerRef,
-          "动态插件心跳",
-        );
-        return job?.status ?? "";
-      })
-      .toBe("paused_by_plugin");
-
-    const installedJob = await findJobByHandlerRef(
-      adminApi!,
-      bundledRuntimeCronHandlerRef,
-      "动态插件心跳",
-    );
-    expect(installedJob, "安装后应投影出动态插件内置定时任务").toBeTruthy();
-    expect(installedJob?.isBuiltin).toBe(1);
-
-    await page.reload();
-    await pluginPage.setPluginEnabled(bundledRuntimePluginID, true);
-
-    await expect
-      .poll(async () => {
-        const job = await findJobByHandlerRef(
-          adminApi!,
-          bundledRuntimeCronHandlerRef,
-          "动态插件心跳",
-        );
-        return job?.status ?? "";
-      })
-      .toBe("enabled");
-
-    const enabledJob = await findJobByHandlerRef(
-      adminApi!,
-      bundledRuntimeCronHandlerRef,
-      "动态插件心跳",
-    );
-    expect(enabledJob, "启用后应保留动态插件内置定时任务").toBeTruthy();
-    expect(enabledJob?.status).toBe("enabled");
-
-    const cronStateBeforeTrigger = bundledRuntimeCronStateCount();
-    await triggerJob(adminApi!, enabledJob!.id);
-    await expect
-      .poll(
-        () => bundledRuntimeCronStateCount(),
-        {
-          message: "手动执行后动态插件心跳计数应增长",
-          timeout: 20_000,
-        },
-      )
-      .toBeGreaterThan(cronStateBeforeTrigger);
-  });
-
   test("TC-1k: linapro-demo-dynamic 示例记录支持 CRUD，并在禁用与卸载时按选项保留或清理数据附件", async ({
     page,
   }) => {
@@ -1513,7 +1402,10 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
       attachmentPath: ensureBundledRuntimeAttachmentFixture(),
     });
     expect(bundledRuntimeRecordCountByTitle(recordTitle)).toBe(1);
-    expect(bundledRuntimeStoredFileCount()).toBeGreaterThan(0);
+    expect(hasBundledRuntimeAttachmentReference(recordTitle)).toBeTruthy();
+    expect(
+      await downloadBundledRuntimeAttachment(adminApi!, recordTitle),
+    ).toContain("linapro-demo-dynamic attachment fixture");
 
     await pluginPage.updatePluginDemoDynamicRecord(recordTitle, {
       title: updatedRecordTitle,
@@ -1526,8 +1418,12 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     await setBundledRuntimeEnabled(false);
     await pluginPage.expectSidebarMenuHidden(bundledRuntimeMenuName);
     expect(bundledRuntimeRecordCountByTitle(updatedRecordTitle)).toBe(1);
+    expect(hasBundledRuntimeAttachmentReference(updatedRecordTitle)).toBeTruthy();
 
     await setBundledRuntimeEnabled(true);
+    expect(
+      await downloadBundledRuntimeAttachment(adminApi!, updatedRecordTitle),
+    ).toContain("linapro-demo-dynamic attachment fixture");
     await pluginPage.clickSidebarMenuItem(bundledRuntimeMenuName);
     await expect(
       pluginPage.pluginDemoDynamicRecordRow(updatedRecordTitle),
@@ -1536,7 +1432,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     await pluginPage.gotoManage();
     await pluginPage.uninstallPluginWithOptions(bundledRuntimePluginID, false);
     expect(bundledRuntimeRecordCountByTitle(updatedRecordTitle)).toBe(1);
-    expect(bundledRuntimeStoredFileCount()).toBeGreaterThan(0);
+    expect(hasBundledRuntimeAttachmentReference(updatedRecordTitle)).toBeTruthy();
 
     await confirmBundledRuntimeInstall();
     await expect
@@ -1547,6 +1443,9 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
       .toBe(1);
     await setBundledRuntimeEnabled(true);
     await waitForBundledRuntimeDemoRecord(adminApi!, updatedRecordTitle);
+    expect(
+      await downloadBundledRuntimeAttachment(adminApi!, updatedRecordTitle),
+    ).toContain("linapro-demo-dynamic attachment fixture");
     await pluginPage.clickSidebarMenuItem(bundledRuntimeMenuName);
     await expect(
       pluginPage.pluginDemoDynamicRecordRow(updatedRecordTitle),
@@ -1554,7 +1453,7 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
 
     await pluginPage.deletePluginDemoDynamicRecord(updatedRecordTitle);
     expect(bundledRuntimeRecordCountByTitle(updatedRecordTitle)).toBe(0);
-    expect(bundledRuntimeStoredFileCount()).toBe(0);
+    expect(hasBundledRuntimeAttachmentReference(updatedRecordTitle)).toBeFalsy();
 
     await pluginPage.createPluginDemoDynamicRecord({
       title: cleanupRecordTitle,
@@ -1562,12 +1461,12 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
       attachmentPath: ensureBundledRuntimeAttachmentFixture(),
     });
     expect(bundledRuntimeRecordCountByTitle(cleanupRecordTitle)).toBe(1);
-    expect(bundledRuntimeStoredFileCount()).toBeGreaterThan(0);
+    expect(hasBundledRuntimeAttachmentReference(cleanupRecordTitle)).toBeTruthy();
 
     await pluginPage.gotoManage();
     await pluginPage.uninstallPluginWithOptions(bundledRuntimePluginID, true);
     expect(bundledRuntimeRecordTableExists()).toBeFalsy();
-    expect(bundledRuntimeStoredFileCount()).toBe(0);
+    expect(hasBundledRuntimeAttachmentReference(cleanupRecordTitle)).toBeFalsy();
 
     await confirmBundledRuntimeInstall();
     await expect
@@ -1633,26 +1532,32 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     );
     await expect(pluginPage.pluginDemoDynamicPaginationPage(1)).toBeDisabled();
     await expect(pluginPage.pluginDemoDynamicPaginationPage(2)).toBeEnabled();
-    await expect(pluginPage.pluginDemoDynamicRecordRow(newestTitle)).toBeVisible();
-    await expect(pluginPage.pluginDemoDynamicRecordRow(oldestTitle)).toHaveCount(
-      0,
-    );
+    await expect(
+      pluginPage.pluginDemoDynamicRecordRow(newestTitle),
+    ).toBeVisible();
+    await expect(
+      pluginPage.pluginDemoDynamicRecordRow(oldestTitle),
+    ).toHaveCount(0);
 
     await pluginPage.pluginDemoDynamicPaginationPage(2).click();
     await expect(pluginPage.pluginDemoDynamicPaginationSummary()).toHaveText(
       "第 2 / 2 页，显示第 11-12 条，共 12 条",
     );
     await expect(pluginPage.pluginDemoDynamicPaginationPage(2)).toBeDisabled();
-    await expect(pluginPage.pluginDemoDynamicRecordRow(oldestTitle)).toBeVisible();
-    await expect(pluginPage.pluginDemoDynamicRecordRow(newestTitle)).toHaveCount(
-      0,
-    );
+    await expect(
+      pluginPage.pluginDemoDynamicRecordRow(oldestTitle),
+    ).toBeVisible();
+    await expect(
+      pluginPage.pluginDemoDynamicRecordRow(newestTitle),
+    ).toHaveCount(0);
 
     await pluginPage.pluginDemoDynamicPaginationPrevButton().click();
     await expect(pluginPage.pluginDemoDynamicPaginationSummary()).toHaveText(
       "第 1 / 2 页，显示第 1-10 条，共 12 条",
     );
-    await expect(pluginPage.pluginDemoDynamicRecordRow(newestTitle)).toBeVisible();
+    await expect(
+      pluginPage.pluginDemoDynamicRecordRow(newestTitle),
+    ).toBeVisible();
   });
 
   test("TC-1m: linapro-demo-dynamic 在 multipart 请求体超过默认 8MB 时仍按上传参数上限完成上传", async () => {
@@ -1695,8 +1600,14 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
       expect(uploadPayload?.installed ?? 0).toBe(0);
       expect(uploadPayload?.enabled ?? 0).toBe(0);
 
-      const pluginAfterUpload = await findPlugin(adminApi!, bundledRuntimePluginID);
-      expect(pluginAfterUpload, "上传后应保留 linapro-demo-dynamic 记录").toBeTruthy();
+      const pluginAfterUpload = await findPlugin(
+        adminApi!,
+        bundledRuntimePluginID,
+      );
+      expect(
+        pluginAfterUpload,
+        "上传后应保留 linapro-demo-dynamic 记录",
+      ).toBeTruthy();
       expect(pluginAfterUpload?.installed ?? 0).toBe(0);
       expect(pluginAfterUpload?.enabled ?? 0).toBe(0);
     } finally {
@@ -1722,7 +1633,8 @@ test.describe("TC-1 运行时 wasm 插件生命周期", () => {
     await loginAsAdmin(page);
 
     const uploadMaxSizeMB = runtimeUploadMaxSizeMB();
-    const oversizedProbeBytes = uploadMaxSizeMB * bytesPerMegabyte + 2 * bytesPerMegabyte;
+    const oversizedProbeBytes =
+      uploadMaxSizeMB * bytesPerMegabyte + 2 * bytesPerMegabyte;
     const expectedMessage = `文件大小不能超过${uploadMaxSizeMB}MB`;
     const oversizedBuffer = Buffer.alloc(oversizedProbeBytes, 0x61);
     const oversizedFilePath = path.join(

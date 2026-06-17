@@ -12,7 +12,7 @@ import (
 
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/capmodel"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/capability/usercap"
 )
 
@@ -34,7 +34,7 @@ func TestResolveCreatorNameMapUsesSingleUserBatch(t *testing.T) {
 			Username: "operator",
 			TenantID: 2,
 		}},
-		tenantFilter: fakeNoticeTenantFilter{tenantCtx: tenantcap.TenantFilterContext{
+		tenantFilter: fakeNoticeTenantFilter{tenantCtx: tenantspi.TenantFilterContext{
 			UserID:   3,
 			TenantID: 2,
 		}},
@@ -71,7 +71,7 @@ func TestResolveCreatorNameMapUsesSingleUserBatch(t *testing.T) {
 }
 
 // TestSearchCreatorUserIDsUsesBoundedUserSearch verifies creator keyword
-// filtering is delegated to usercap.SearchUsers with a bounded request.
+// filtering is delegated to usercap.Search with a bounded request.
 func TestSearchCreatorUserIDsUsesBoundedUserSearch(t *testing.T) {
 	ctx := context.Background()
 	userSvc := &fakeNoticeUserService{
@@ -90,7 +90,7 @@ func TestSearchCreatorUserIDsUsesBoundedUserSearch(t *testing.T) {
 			Username: "reviewer",
 			TenantID: 6,
 		}},
-		tenantFilter: fakeNoticeTenantFilter{tenantCtx: tenantcap.TenantFilterContext{
+		tenantFilter: fakeNoticeTenantFilter{tenantCtx: tenantspi.TenantFilterContext{
 			UserID:   4,
 			TenantID: 6,
 		}},
@@ -126,7 +126,7 @@ type fakeNoticeUserService struct {
 	searchResult *capmodel.PageResult[*usercap.UserProjection]
 }
 
-func (s *fakeNoticeUserService) BatchGetUsers(
+func (s *fakeNoticeUserService) BatchGet(
 	_ context.Context,
 	capCtx capmodel.CapabilityContext,
 	ids []usercap.UserID,
@@ -136,7 +136,7 @@ func (s *fakeNoticeUserService) BatchGetUsers(
 	return s.batchResult, nil
 }
 
-func (s *fakeNoticeUserService) SearchUsers(
+func (s *fakeNoticeUserService) Search(
 	_ context.Context,
 	capCtx capmodel.CapabilityContext,
 	input usercap.SearchInput,
@@ -146,7 +146,7 @@ func (s *fakeNoticeUserService) SearchUsers(
 	return s.searchResult, nil
 }
 
-func (s *fakeNoticeUserService) EnsureUsersVisible(_ context.Context, _ capmodel.CapabilityContext, _ []usercap.UserID) error {
+func (s *fakeNoticeUserService) EnsureVisible(_ context.Context, _ capmodel.CapabilityContext, _ []usercap.UserID) error {
 	return nil
 }
 
@@ -159,10 +159,10 @@ func (s fakeNoticeBizCtxService) Current(context.Context) bizctxcap.CurrentConte
 }
 
 type fakeNoticeTenantFilter struct {
-	tenantCtx tenantcap.TenantFilterContext
+	tenantCtx tenantspi.TenantFilterContext
 }
 
-func (s fakeNoticeTenantFilter) Context(context.Context) tenantcap.TenantFilterContext {
+func (s fakeNoticeTenantFilter) Context(context.Context) tenantspi.TenantFilterContext {
 	return s.tenantCtx
 }
 

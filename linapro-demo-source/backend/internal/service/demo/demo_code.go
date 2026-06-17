@@ -99,6 +99,12 @@ var (
 		"Failed to remove demo attachment storage",
 		gcode.CodeInternalError,
 	)
+	// CodeDemoAttachmentStorageUnavailable reports that the plugin storage service is missing.
+	CodeDemoAttachmentStorageUnavailable = bizerr.MustDefine(
+		"PLUGIN_DEMO_SOURCE_ATTACHMENT_STORAGE_UNAVAILABLE",
+		"Demo attachment storage service is unavailable",
+		gcode.CodeInvalidOperation,
+	)
 	// CodeDemoAttachmentOpenFailed reports that opening an uploaded attachment failed.
 	CodeDemoAttachmentOpenFailed = bizerr.MustDefine(
 		"PLUGIN_DEMO_SOURCE_ATTACHMENT_OPEN_FAILED",
@@ -109,24 +115,6 @@ var (
 	CodeDemoAttachmentSourceCloseFailed = bizerr.MustDefine(
 		"PLUGIN_DEMO_SOURCE_ATTACHMENT_SOURCE_CLOSE_FAILED",
 		"Failed to close demo attachment source",
-		gcode.CodeInternalError,
-	)
-	// CodeDemoAttachmentDirCreateFailed reports that creating the attachment directory failed.
-	CodeDemoAttachmentDirCreateFailed = bizerr.MustDefine(
-		"PLUGIN_DEMO_SOURCE_ATTACHMENT_DIR_CREATE_FAILED",
-		"Failed to create demo attachment directory",
-		gcode.CodeInternalError,
-	)
-	// CodeDemoAttachmentCreateFailed reports that creating the attachment file failed.
-	CodeDemoAttachmentCreateFailed = bizerr.MustDefine(
-		"PLUGIN_DEMO_SOURCE_ATTACHMENT_CREATE_FAILED",
-		"Failed to create demo attachment file",
-		gcode.CodeInternalError,
-	)
-	// CodeDemoAttachmentTargetCloseFailed reports that closing the stored attachment failed.
-	CodeDemoAttachmentTargetCloseFailed = bizerr.MustDefine(
-		"PLUGIN_DEMO_SOURCE_ATTACHMENT_TARGET_CLOSE_FAILED",
-		"Failed to close demo attachment file",
 		gcode.CodeInternalError,
 	)
 	// CodeDemoAttachmentWriteFailed reports that writing an attachment failed.
@@ -146,11 +134,5 @@ var (
 		"PLUGIN_DEMO_SOURCE_ATTACHMENT_SIZE_TOO_LARGE",
 		"Attachment size must not exceed {maxSizeMB}MB",
 		gcode.CodeInvalidParameter,
-	)
-	// CodeDemoAttachmentPartialCleanupFailed reports that cleanup after a failed write failed.
-	CodeDemoAttachmentPartialCleanupFailed = bizerr.MustDefine(
-		"PLUGIN_DEMO_SOURCE_ATTACHMENT_PARTIAL_CLEANUP_FAILED",
-		"Failed to remove incomplete demo attachment",
-		gcode.CodeInternalError,
 	)
 )

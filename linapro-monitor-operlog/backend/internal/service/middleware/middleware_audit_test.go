@@ -3,12 +3,66 @@
 package middleware
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"reflect"
 	"testing"
 
+	"lina-core/pkg/plugin/capability/apidoccap"
 	"lina-plugin-linapro-monitor-operlog/backend/internal/model/operlogtype"
 )
+
+type testAuditReq struct{}
+
+type testSourceAuditReq struct{}
+
+func testAuditHandler(context.Context, *testAuditReq) (any, error) {
+	return nil, nil
+}
+
+// TestBuildOperationKeyFromHandlerTypeKeepsStaticDTOKeys verifies static route
+// anchors continue using DTO-derived apidoc keys instead of path fallback keys.
+func TestBuildOperationKeyFromHandlerTypeKeepsStaticDTOKeys(t *testing.T) {
+	const expected = "plugins.linapro_monitor_operlog.backend.internal.service.middleware.testAuditReq"
+	actual := buildOperationKeyFromHandlerType(reflect.TypeOf(testAuditHandler))
+	if actual != expected {
+		t.Fatalf("expected %q, got %q", expected, actual)
+	}
+
+	pathFallback := apidoccap.BuildOperationKeyFromPath("/api/v1/operlog", http.MethodGet)
+	if pathFallback == actual {
+		t.Fatalf("expected handler DTO key to stay distinct from path fallback %q", pathFallback)
+	}
+}
+
+// TestNormalizeOpenAPIComponentKeyMatchesHostAndPluginKeyRules verifies the
+// private helper keeps the same static-route key normalization used by apidoc.
+func TestNormalizeOpenAPIComponentKeyMatchesHostAndPluginKeyRules(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "host component",
+			input:    "lina-core.api.user.v1.ListReq",
+			expected: "core.api.user.v1.ListReq",
+		},
+		{
+			name:     "source plugin api component",
+			input:    "lina-plugin-linapro-org-core.backend.api.dept.v1.ListReq",
+			expected: "plugins.linapro_org_core.api.dept.v1.ListReq",
+		},
+	}
+
+	for _, testCase := range testCases {
+		actual := normalizeOpenAPIComponentKey(testCase.input)
+		if actual != testCase.expected {
+			t.Fatalf("%s: expected %q, got %q", testCase.name, testCase.expected, actual)
+		}
+	}
+}
 
 // TestSanitizeOperLogParamMasksNestedSensitiveFields verifies password fields
 // and shell-environment payloads are recursively sanitized before logging.

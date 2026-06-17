@@ -22,7 +22,7 @@ type HostCallDemoRes struct {
 	Manifest   *HostCallDemoManifestRes `json:"manifest" dc:"Packaged manifest resource read summary for explicitly authorized manifest.get paths" eg:"{\"profilePath\":\"config/profile.yaml\",\"profileFound\":true,\"profileName\":\"demo-dynamic-profile\",\"profileTier\":\"sample\",\"profileOwner\":\"linapro\",\"configPath\":\"config/config.yaml\",\"configFound\":true,\"configBodyPreview\":\"demo:\\n  greeting: Hello from dynamic plugin\"}"`
 	Org        *HostCallDemoOrgRes      `json:"org" dc:"Organization capability host service read summary" eg:"{\"available\":true,\"capabilityId\":\"framework.org.v1\",\"activeProvider\":\"linapro-org-core\",\"assignmentCount\":1,\"currentUserDeptCount\":1,\"currentUserPostCount\":2}"`
 	Tenant     *HostCallDemoTenantRes   `json:"tenant" dc:"Tenant capability host service read summary" eg:"{\"available\":true,\"capabilityId\":\"framework.tenant.v1\",\"activeProvider\":\"linapro-tenant-core\",\"currentTenantId\":1,\"platformBypass\":false,\"userTenantCount\":1,\"visible\":true}"`
-	Message    string                   `json:"message" dc:"Host call demonstration information" eg:"Host service demo executed through runtime, storage, network, data, config, manifest, hostConfig, org, and tenant services."`
+	Message    string                   `json:"message" dc:"Host call demonstration information" eg:"Host service demo executed through runtime, storage, network, data, plugins.config.get, manifest, hostConfig, org, and tenant services."`
 }
 
 // HostCallDemoRuntimeRes describes runtime service results.
@@ -63,7 +63,7 @@ type HostCallDemoDataRes struct {
 
 // HostCallDemoConfigRes describes plugin config and public host config reads.
 type HostCallDemoConfigRes struct {
-	Plugin     *HostCallDemoPluginConfigRes `json:"plugin" dc:"Plugin-owned runtime config values read through the config host service" eg:"{\"greeting\":\"Hello from dynamic plugin\",\"greetingFound\":true,\"featureEnabled\":true,\"featureEnabledFound\":true}"`
+	Plugin     *HostCallDemoPluginConfigRes `json:"plugin" dc:"Plugin-owned runtime config values read through Plugins().Config()" eg:"{\"greeting\":\"Hello from dynamic plugin\",\"greetingFound\":true,\"featureEnabled\":true,\"featureEnabledFound\":true}"`
 	HostConfig *HostCallDemoHostConfigRes   `json:"hostConfig" dc:"Whitelisted public host config values read through the hostConfig host service" eg:"{\"workspaceBasePath\":\"/opt/linapro\",\"workspaceBasePathFound\":true,\"i18nDefault\":\"zh-CN\",\"i18nDefaultFound\":true,\"i18nEnabled\":true,\"i18nEnabledFound\":true}"`
 }
 

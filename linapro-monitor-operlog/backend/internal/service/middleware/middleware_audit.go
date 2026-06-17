@@ -6,6 +6,8 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"reflect"
+	"regexp"
 	"strings"
 	"time"
 
@@ -37,6 +39,9 @@ const (
 	operLogRedactedValue  = "[REDACTED]"
 	operLogBinaryContent  = "[BINARY CONTENT]"
 )
+
+// openAPIKeyInvalidCharsPattern matches characters that cannot be used in apidoc keys.
+var openAPIKeyInvalidCharsPattern = regexp.MustCompile(`[^A-Za-z0-9_]+`)
 
 // auditRouteMetadata stores the route-level audit metadata collected from the
 // static handler declaration and the dynamic-route runtime projection.
@@ -121,7 +126,7 @@ func (s *serviceImpl) resolveAuditRouteMetadata(request *ghttp.Request) auditRou
 	if s == nil || s.routeMetaSvc == nil {
 		return metadata
 	}
-	dynamicMetadata := s.routeMetaSvc.DynamicRouteMetadata(request)
+	dynamicMetadata := s.routeMetaSvc.DynamicRouteMetadata(request.GetCtx())
 	if dynamicMetadata == nil {
 		return metadata
 	}
@@ -237,13 +242,108 @@ func buildStaticRouteAnchor(request *ghttp.Request, handler *ghttp.HandlerItemPa
 
 	routeMethod = strings.ToUpper(strings.TrimSpace(routeMethod))
 	routePath = normalizeRoutePath(routePath)
-	routeDocKey := apidoccap.BuildOperationKeyFromHandler(handler)
+	routeDocKey := buildOperationKeyFromHandler(handler)
 	if routeDocKey == "" {
 		// Some dynamic or projected routes do not have a handler-derived apidoc
 		// key, so fall back to the same path/method key shape used by apidoc.
 		routeDocKey = apidoccap.BuildOperationKeyFromPath(routePath, routeMethod)
 	}
 	return routeOwner, routeMethod, routePath, routeDocKey
+}
+
+// buildOperationKeyFromHandler returns the static-route apidoc key base for one
+// GoFrame strict route handler.
+func buildOperationKeyFromHandler(handler *ghttp.HandlerItemParsed) string {
+	if handler == nil || handler.Handler == nil {
+		return ""
+	}
+	return buildOperationKeyFromHandlerType(handler.Handler.Info.Type)
+}
+
+// buildOperationKeyFromHandlerType returns the static-route apidoc key base for
+// a handler function type.
+func buildOperationKeyFromHandlerType(handlerType reflect.Type) string {
+	if handlerType == nil || handlerType.Kind() != reflect.Func || handlerType.NumIn() != 2 {
+		return ""
+	}
+	return buildOperationKeyFromRequestType(handlerType.In(1))
+}
+
+// buildOperationKeyFromRequestType returns the static-route apidoc key base for
+// a request DTO type.
+func buildOperationKeyFromRequestType(reqType reflect.Type) string {
+	if reqType == nil {
+		return ""
+	}
+	if reqType.Kind() == reflect.Pointer {
+		reqType = reqType.Elem()
+	}
+	if reqType.Kind() != reflect.Struct || strings.TrimSpace(reqType.Name()) == "" {
+		return ""
+	}
+	componentName := strings.ReplaceAll(reqType.PkgPath(), "/", ".") + "." + reqType.Name()
+	return normalizeOpenAPIComponentKey(componentName)
+}
+
+// normalizeOpenAPIComponentKey converts GoFrame schema component names into stable apidoc keys.
+func normalizeOpenAPIComponentKey(name string) string {
+	trimmedName := strings.TrimSpace(name)
+	if trimmedName == "" {
+		return ""
+	}
+	if strings.HasPrefix(trimmedName, "lina-plugin-") {
+		return normalizeSourcePluginOpenAPIComponentKey(trimmedName)
+	}
+	replacements := []struct {
+		old string
+		new string
+	}{
+		{old: "lina-core.", new: "core."},
+		{old: "lina-plugins.", new: "plugins."},
+	}
+	for _, replacement := range replacements {
+		if strings.HasPrefix(trimmedName, replacement.old) {
+			trimmedName = replacement.new + strings.TrimPrefix(trimmedName, replacement.old)
+			break
+		}
+	}
+	return sanitizeOpenAPIKey(trimmedName)
+}
+
+// normalizeSourcePluginOpenAPIComponentKey converts source-plugin schema component names into plugin keys.
+func normalizeSourcePluginOpenAPIComponentKey(name string) string {
+	trimmedName := strings.TrimSpace(name)
+	withoutPrefix := strings.TrimPrefix(trimmedName, "lina-plugin-")
+	pluginPart, rest, ok := strings.Cut(withoutPrefix, ".")
+	if !ok || strings.TrimSpace(pluginPart) == "" {
+		return sanitizeOpenAPIKey(trimmedName)
+	}
+	if strings.HasPrefix(rest, "backend.api.") {
+		rest = strings.TrimPrefix(rest, "backend.")
+	}
+	return "plugins." + sanitizeOpenAPIKeyPart(pluginPart) + "." + sanitizeOpenAPIKey(rest)
+}
+
+// sanitizeOpenAPIKey normalizes a full key while preserving dots as hierarchy separators.
+func sanitizeOpenAPIKey(key string) string {
+	parts := strings.Split(strings.TrimSpace(key), ".")
+	for index, part := range parts {
+		parts[index] = sanitizeOpenAPIKeyPart(part)
+	}
+	return strings.Join(parts, ".")
+}
+
+// sanitizeOpenAPIKeyPart normalizes one key segment for safe JSON-object keys.
+func sanitizeOpenAPIKeyPart(part string) string {
+	trimmedPart := strings.TrimSpace(part)
+	trimmedPart = strings.Trim(trimmedPart, "{}")
+	trimmedPart = strings.ReplaceAll(trimmedPart, "-", "_")
+	trimmedPart = openAPIKeyInvalidCharsPattern.ReplaceAllString(trimmedPart, "_")
+	trimmedPart = strings.Trim(trimmedPart, "_")
+	if trimmedPart == "" {
+		return "empty"
+	}
+	return trimmedPart
 }
 
 // normalizeRoutePath canonicalizes a route path for persistent route anchors.

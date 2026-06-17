@@ -9,14 +9,14 @@ import (
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/plugincap"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/capability/usercap"
 )
 
 // TestProvideTenantUsesTypedProviderEnv verifies provider construction only
-// needs the narrow tenantcap.ProviderEnv published for tenant capability.
+// needs the narrow tenantspi.ProviderEnv published for tenant capability.
 func TestProvideTenantUsesTypedProviderEnv(t *testing.T) {
-	provider, err := provideTenant(context.Background(), tenantcap.ProviderEnv{
+	provider, err := provideTenant(context.Background(), tenantspi.ProviderEnv{
 		PluginID:    pluginID,
 		BizCtx:      fakeBizCtx{},
 		Users:       fakeTenantProviderUsers{},
@@ -34,7 +34,7 @@ func TestProvideTenantUsesTypedProviderEnv(t *testing.T) {
 // TestProvideTenantRejectsMissingBizCtx verifies provider construction does
 // not silently create an adapter without the host-published bizctx service.
 func TestProvideTenantRejectsMissingBizCtx(t *testing.T) {
-	provider, err := provideTenant(context.Background(), tenantcap.ProviderEnv{
+	provider, err := provideTenant(context.Background(), tenantspi.ProviderEnv{
 		PluginID: pluginID,
 	})
 	if err == nil {
@@ -57,26 +57,26 @@ func (fakeBizCtx) Current(context.Context) bizctxcap.CurrentContext {
 // fakeTenantProviderUsers is the minimal user capability required to build the provider.
 type fakeTenantProviderUsers struct{}
 
-// BatchGetUsers is unused by provider construction tests.
-func (fakeTenantProviderUsers) BatchGetUsers(context.Context, capmodel.CapabilityContext, []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
+// BatchGet is unused by provider construction tests.
+func (fakeTenantProviderUsers) BatchGet(context.Context, capmodel.CapabilityContext, []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
 	return &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{Items: map[usercap.UserID]*usercap.UserProjection{}}, nil
 }
 
-// SearchUsers is unused by provider construction tests.
-func (fakeTenantProviderUsers) SearchUsers(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
+// Search is unused by provider construction tests.
+func (fakeTenantProviderUsers) Search(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
 	return &capmodel.PageResult[*usercap.UserProjection]{}, nil
 }
 
-// EnsureUsersVisible is unused by provider construction tests.
-func (fakeTenantProviderUsers) EnsureUsersVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
+// EnsureVisible is unused by provider construction tests.
+func (fakeTenantProviderUsers) EnsureVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
 	return nil
 }
 
 // fakeTenantProviderPlugins is the minimal plugin capability required to build the provider.
 type fakeTenantProviderPlugins struct{}
 
-// BatchGetPlugins is unused by provider construction tests.
-func (fakeTenantProviderPlugins) BatchGetPlugins(context.Context, capmodel.CapabilityContext, []plugincap.PluginID) (*capmodel.BatchResult[*plugincap.Projection, plugincap.PluginID], error) {
+// BatchGet is unused by provider construction tests.
+func (fakeTenantProviderPlugins) BatchGet(context.Context, capmodel.CapabilityContext, []plugincap.PluginID) (*capmodel.BatchResult[*plugincap.Projection, plugincap.PluginID], error) {
 	return &capmodel.BatchResult[*plugincap.Projection, plugincap.PluginID]{Items: map[plugincap.PluginID]*plugincap.Projection{}}, nil
 }
 
@@ -108,8 +108,8 @@ func (fakeTenantProviderPlugins) ListTenantPlugins(context.Context, capmodel.Cap
 // fakeTenantProviderPluginAdmin is the minimal plugin admin capability required to build the provider.
 type fakeTenantProviderPluginAdmin struct{}
 
-// SetPluginEnabled is unused by provider construction tests.
-func (fakeTenantProviderPluginAdmin) SetPluginEnabled(context.Context, capmodel.CapabilityContext, plugincap.PluginID, bool) error {
+// SetEnabled is unused by provider construction tests.
+func (fakeTenantProviderPluginAdmin) SetEnabled(context.Context, capmodel.CapabilityContext, plugincap.PluginID, bool) error {
 	return nil
 }
 

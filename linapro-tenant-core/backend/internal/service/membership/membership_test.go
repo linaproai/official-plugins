@@ -46,8 +46,8 @@ func (s membershipTestBizCtxService) Current(context.Context) bizctxcap.CurrentC
 // membershipTestUsers resolves users from the test-only sys_user fixture table.
 type membershipTestUsers struct{}
 
-// BatchGetUsers returns user projections from the test fixture table.
-func (membershipTestUsers) BatchGetUsers(ctx context.Context, _ capmodel.CapabilityContext, ids []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
+// BatchGet returns user projections from the test fixture table.
+func (membershipTestUsers) BatchGet(ctx context.Context, _ capmodel.CapabilityContext, ids []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
 	out := &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{
 		Items:      make(map[usercap.UserID]*usercap.UserProjection, len(ids)),
 		MissingIDs: []usercap.UserID{},
@@ -95,13 +95,13 @@ func (membershipTestUsers) BatchGetUsers(ctx context.Context, _ capmodel.Capabil
 	return out, nil
 }
 
-// SearchUsers is unused by membership tests.
-func (membershipTestUsers) SearchUsers(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
+// Search is unused by membership tests.
+func (membershipTestUsers) Search(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
 	return &capmodel.PageResult[*usercap.UserProjection]{Items: []*usercap.UserProjection{}}, nil
 }
 
-// EnsureUsersVisible is unused by membership tests.
-func (membershipTestUsers) EnsureUsersVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
+// EnsureVisible is unused by membership tests.
+func (membershipTestUsers) EnsureVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
 	return nil
 }
 

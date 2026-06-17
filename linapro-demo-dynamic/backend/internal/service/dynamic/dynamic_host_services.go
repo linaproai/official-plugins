@@ -5,11 +5,14 @@
 package dynamicservice
 
 import (
-	"lina-core/pkg/plugin/capability/recordstore"
-	"lina-core/pkg/plugin/pluginbridge/guest"
+	"lina-core/pkg/plugin/capability/hostconfigcap"
+	"lina-core/pkg/plugin/capability/manifestcap"
+	"lina-core/pkg/plugin/pluginbridge/recordstore"
+	"lina-core/pkg/plugin/capability/storagecap"
+	"lina-core/pkg/plugin/pluginbridge"
 )
 
-var guestServices = guest.Default()
+var guestServices = pluginbridge.Default()
 
 // recordStoreService abstracts the governed record store facade used by the sample service.
 type recordStoreService interface {
@@ -24,8 +27,8 @@ func newRuntimeHostService() runtimeHostService {
 	return guestServices.Runtime()
 }
 
-// newStorageHostService returns the guest-side storage host client.
-func newStorageHostService() storageHostService {
+// newStorageHostService returns the guest-side storage domain client.
+func newStorageHostService() storagecap.Service {
 	return guestServices.Storage()
 }
 
@@ -39,24 +42,20 @@ func newRecordStoreService() recordStoreService {
 	return guestServices.RecordStore()
 }
 
-// newCronHostService returns the guest-side cron registration host client.
-func newCronHostService() cronHostService {
-	return guestServices.Cron()
-}
-
-// newConfigHostService returns the guest-side plugin config host client.
-func newConfigHostService() configHostService {
+// newPluginConfigService returns the guest-side plugin config client.
+func newPluginConfigService() pluginConfigService {
 	return guestServices.Plugins().Config()
 }
 
 // newManifestHostService returns the guest-side plugin manifest resource
-// client.
-func newManifestHostService() manifestHostService {
+// capability client.
+func newManifestHostService() manifestcap.Service {
 	return guestServices.Manifest()
 }
 
-// newHostConfigHostService returns the guest-side public host config client.
-func newHostConfigHostService() hostConfigHostService {
+// newHostConfigHostService returns the guest-side public host config
+// capability client.
+func newHostConfigHostService() hostconfigcap.Service {
 	return guestServices.HostConfig()
 }
 

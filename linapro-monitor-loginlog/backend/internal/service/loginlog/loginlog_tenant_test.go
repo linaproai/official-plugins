@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"lina-core/pkg/plugin/capability/bizctxcap"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 )
 
 // testBizCtxService returns one configured plugin-visible context snapshot.
@@ -77,8 +77,8 @@ func TestResolveAuditTenantContextHonorsExplicitOverrides(t *testing.T) {
 }
 
 // newTenantFilterForTest creates an explicitly injected tenant filter service.
-func newTenantFilterForTest(current bizctxcap.CurrentContext) tenantcap.PluginTableFilterService {
-	service, err := tenantcap.NewPluginTableFilter(testBizCtxService{current: current}, nil)
+func newTenantFilterForTest(current bizctxcap.CurrentContext) tenantspi.PluginTableFilterService {
+	service, err := tenantspi.NewPluginTableFilter(testBizCtxService{current: current}, nil)
 	if err != nil {
 		panic(err)
 	}

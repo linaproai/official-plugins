@@ -17,8 +17,6 @@ type IDynamicV1 interface {
 	DownloadDemoRecordAttachment(ctx context.Context, req *v1.DownloadDemoRecordAttachmentReq) (res *v1.DownloadDemoRecordAttachmentRes, err error)
 	HostCallDemo(ctx context.Context, req *v1.HostCallDemoReq) (res *v1.HostCallDemoRes, err error)
 	ManifestDemo(ctx context.Context, req *v1.ManifestDemoReq) (res *v1.ManifestDemoRes, err error)
-	RegisterCrons(ctx context.Context, req *v1.RegisterCronsReq) (res *v1.RegisterCronsRes, err error)
-	CronHeartbeat(ctx context.Context, req *v1.CronHeartbeatReq) (res *v1.CronHeartbeatRes, err error)
 	BeforeInstall(ctx context.Context, req *v1.BeforeInstallReq) (res *v1.LifecycleDecisionRes, err error)
 	AfterInstall(ctx context.Context, req *v1.AfterInstallReq) (res *v1.LifecycleDecisionRes, err error)
 	BeforeUpgrade(ctx context.Context, req *v1.BeforeUpgradeReq) (res *v1.LifecycleDecisionRes, err error)
@@ -35,4 +33,6 @@ type IDynamicV1 interface {
 	AfterTenantDelete(ctx context.Context, req *v1.AfterTenantDeleteReq) (res *v1.LifecycleDecisionRes, err error)
 	BeforeInstallModeChange(ctx context.Context, req *v1.BeforeInstallModeChangeReq) (res *v1.LifecycleDecisionRes, err error)
 	AfterInstallModeChange(ctx context.Context, req *v1.AfterInstallModeChangeReq) (res *v1.LifecycleDecisionRes, err error)
+	RegisterJobs(ctx context.Context, req *v1.RegisterJobsReq) (res *v1.RegisterJobsRes, err error)
+	JobHeartbeat(ctx context.Context, req *v1.JobHeartbeatReq) (res *v1.JobHeartbeatRes, err error)
 }

@@ -11,7 +11,7 @@ import (
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/sessioncap"
-	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 )
 
 const (
@@ -36,7 +36,7 @@ var _ Service = (*serviceImpl)(nil)
 // serviceImpl implements Service.
 type serviceImpl struct {
 	bizCtxSvc       bizctxcap.Service                  // Business context bridge
-	tenantFilter    tenantcap.PluginTableFilterService // Tenant query filter bridge
+	tenantFilter    tenantspi.PluginTableFilterService // Tenant query filter bridge
 	sessionSvc      sessioncap.Service                 // Online-session read capability
 	sessionAdminSvc sessioncap.AdminService            // Online-session management capability
 }
@@ -44,7 +44,7 @@ type serviceImpl struct {
 // New creates and returns a new linapro-monitor-online service instance.
 func New(
 	bizCtxSvc bizctxcap.Service,
-	tenantFilter tenantcap.PluginTableFilterService,
+	tenantFilter tenantspi.PluginTableFilterService,
 	sessionSvc sessioncap.Service,
 	sessionAdminSvc sessioncap.AdminService,
 ) Service {
@@ -77,7 +77,7 @@ func (s *serviceImpl) capabilityContext(ctx context.Context, resource string) ca
 	if s.bizCtxSvc != nil {
 		current = s.bizCtxSvc.Current(ctx)
 	}
-	tenantCtx := tenantcap.TenantFilterContext{TenantID: current.TenantID}
+	tenantCtx := tenantspi.TenantFilterContext{TenantID: current.TenantID}
 	if s.tenantFilter != nil {
 		tenantCtx = s.tenantFilter.Context(ctx)
 	}

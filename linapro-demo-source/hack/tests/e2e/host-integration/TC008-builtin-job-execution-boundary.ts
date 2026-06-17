@@ -6,6 +6,7 @@ import {
   createAdminApiContext,
   disablePlugin,
   enablePlugin,
+  ensurePluginBuiltinJobEnabled,
   expectBusinessError,
   getJob,
   getPlugin,
@@ -19,7 +20,7 @@ import {
 test.describe('TC-4 Built-in job execution boundary', () => {
   const pluginID = 'linapro-demo-source';
   const pluginJobName = '源码插件回显巡检';
-  const pluginHandlerRef = `plugin:${pluginID}/cron:source-plugin-echo-inspection`;
+  const pluginHandlerRef = `plugin:${pluginID}/jobs:source-plugin-echo-inspection`;
 
   let api: APIRequestContext;
   let hostJobId = 0;
@@ -51,22 +52,11 @@ test.describe('TC-4 Built-in job execution boundary', () => {
     hostJobId = hostJob!.id;
     hostJobName = hostJob!.name;
 
-    await expect
-      .poll(
-        async () => {
-          const result = await listJobs(api, pluginJobName);
-          const pluginJob = result.list.find(
-            (item) => item.handlerRef === pluginHandlerRef && item.isBuiltin === 1,
-          );
-          pluginJobId = pluginJob?.id ?? 0;
-          return pluginJob?.status ?? '';
-        },
-        {
-          timeout: 10000,
-          message: 'plugin built-in job should be enabled before boundary checks',
-        },
-      )
-      .toBe('enabled');
+    pluginJobId = await ensurePluginBuiltinJobEnabled(api, {
+      pluginId: pluginID,
+      jobName: pluginJobName,
+      handlerRef: pluginHandlerRef,
+    });
   });
 
   test.afterAll(async () => {

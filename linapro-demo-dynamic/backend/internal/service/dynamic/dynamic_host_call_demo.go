@@ -4,14 +4,17 @@
 package dynamicservice
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 
+	"lina-core/pkg/plugin/capability/storagecap"
 	"lina-core/pkg/plugin/pluginbridge/protocol"
 )
 
@@ -20,14 +23,14 @@ import (
 const (
 	hostCallDemoStateKey            = "host_call_demo_visit_count"
 	hostCallDemoStoragePath         = "host-call-demo/"
-	hostCallDemoStoragePrefix       = "host-call-demo"
+	hostCallDemoStoragePrefix       = "host-call-demo/"
 	hostCallDemoStorageContentType  = "application/json"
 	hostCallDemoNetworkURL          = "https://example.com"
 	hostCallDemoNetworkMethodGet    = "GET"
 	hostCallDemoDataTable           = demoRecordTable
 	hostCallDemoRecordTitlePrefix   = "Host call demo"
 	hostCallDemoAnonymousUser       = "anonymous"
-	hostCallDemoSummaryMessage      = "Host service demo executed through runtime, storage, network, data, config, manifest, hostConfig, org, and tenant services."
+	hostCallDemoSummaryMessage      = "Host service demo executed through runtime, storage, network, data, plugins.config.get, manifest, hostConfig, org, and tenant services."
 	hostCallDemoNetworkPreview      = 120
 	hostCallDemoPluginGreetingKey   = "demo.greeting"
 	hostCallDemoPluginFeatureKey    = "demo.featureEnabled"
@@ -70,7 +73,7 @@ func (s *serviceImpl) BuildHostCallDemoPayload(ctx context.Context, input *HostC
 		return nil, err
 	}
 
-	storageSummary, err := s.runHostCallDemoStorage(hostCallDemoPluginID(input), uuidValue)
+	storageSummary, err := s.runHostCallDemoStorage(ctx, hostCallDemoPluginID(input), uuidValue)
 	if err != nil {
 		return nil, err
 	}
@@ -78,11 +81,11 @@ func (s *serviceImpl) BuildHostCallDemoPayload(ctx context.Context, input *HostC
 	if err != nil {
 		return nil, err
 	}
-	configSummary, err := s.runHostCallDemoConfig()
+	configSummary, err := s.runHostCallDemoConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
-	manifestSummary, err := s.runHostCallDemoManifest()
+	manifestSummary, err := s.runHostCallDemoManifest(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -117,8 +120,8 @@ func (s *serviceImpl) BuildHostCallDemoPayload(ctx context.Context, input *HostC
 
 // BuildManifestDemoPayload reads the explicitly authorized packaged manifest
 // resources and returns the manifest host-service demo payload.
-func (s *serviceImpl) BuildManifestDemoPayload() (*hostCallDemoManifestPayload, error) {
-	return s.runHostCallDemoManifest()
+func (s *serviceImpl) BuildManifestDemoPayload(ctx context.Context) (*hostCallDemoManifestPayload, error) {
+	return s.runHostCallDemoManifest(ctx)
 }
 
 // parseHostCallDemoRuntimeNow converts the runtime.info.now host-service value
@@ -139,10 +142,11 @@ func parseHostCallDemoRuntimeNow(value string) *int64 {
 // runHostCallDemoStorage exercises governed storage APIs and summarizes the
 // round-trip result.
 func (s *serviceImpl) runHostCallDemoStorage(
+	ctx context.Context,
 	pluginID string,
 	demoKey string,
 ) (payload *hostCallDemoStoragePayload, err error) {
-	objectPath := fmt.Sprintf("%s/%s.json", hostCallDemoStoragePrefix, demoKey)
+	objectPath := fmt.Sprintf("%s%s.json", hostCallDemoStoragePrefix, demoKey)
 	body, err := json.Marshal(&hostCallDemoStorageRecord{
 		PluginID: pluginID,
 		DemoKey:  demoKey,
@@ -150,45 +154,67 @@ func (s *serviceImpl) runHostCallDemoStorage(
 	if err != nil {
 		return nil, gerror.Wrap(err, "marshal storage demo request body failed")
 	}
-	if _, err = s.storageSvc.Put(objectPath, body, hostCallDemoStorageContentType, true); err != nil {
+	if _, err = s.storageSvc.Put(ctx, storagecap.PutInput{
+		Path:        objectPath,
+		Body:        bytes.NewReader(body),
+		Size:        int64(len(body)),
+		ContentType: hostCallDemoStorageContentType,
+		Overwrite:   true,
+	}); err != nil {
 		return nil, err
 	}
 	deleted := false
 	defer func() {
 		if !deleted {
-			if cleanupErr := s.storageSvc.Delete(objectPath); cleanupErr != nil && err == nil {
+			if cleanupErr := s.storageSvc.Delete(ctx, storagecap.DeleteInput{Path: objectPath}); cleanupErr != nil && err == nil {
 				err = cleanupErr
 			}
 		}
 	}()
 
-	readBody, _, found, err := s.storageSvc.Get(objectPath)
+	readOutput, err := s.storageSvc.Get(ctx, storagecap.GetInput{Path: objectPath})
 	if err != nil {
 		return nil, err
 	}
-	if !found || string(readBody) != string(body) {
+	if readOutput == nil || !readOutput.Found {
+		return nil, gerror.New("storage demo object verification failed")
+	}
+	readBody, err := io.ReadAll(readOutput.Body)
+	if err != nil {
+		return nil, err
+	}
+	if readOutput.Body != nil {
+		if closeErr := readOutput.Body.Close(); closeErr != nil {
+			return nil, closeErr
+		}
+	}
+	if string(readBody) != string(body) {
 		return nil, gerror.New("storage demo object verification failed")
 	}
 
-	objects, err := s.storageSvc.List(hostCallDemoStoragePrefix, 10)
+	listOutput, err := s.storageSvc.List(ctx, storagecap.ListInput{Prefix: hostCallDemoStoragePrefix, Limit: 10})
 	if err != nil {
 		return nil, err
 	}
-	if err = s.storageSvc.Delete(objectPath); err != nil {
+	if err = s.storageSvc.Delete(ctx, storagecap.DeleteInput{Path: objectPath}); err != nil {
 		return nil, err
 	}
 	deleted = true
 
-	_, statFound, err := s.storageSvc.Stat(objectPath)
+	statOutput, err := s.storageSvc.Stat(ctx, storagecap.StatInput{Path: objectPath})
 	if err != nil {
 		return nil, err
+	}
+	listedCount := 0
+	if listOutput != nil {
+		listedCount = len(listOutput.Objects)
 	}
 	return &hostCallDemoStoragePayload{
 		PathPrefix:  hostCallDemoStoragePath,
 		ObjectPath:  objectPath,
 		Stored:      true,
-		ListedCount: len(objects),
-		Deleted:     !statFound,
+		ListedCount: listedCount,
+		Deleted:     statOutput == nil || !statOutput.Found,
 	}, nil
 }
 
@@ -309,31 +335,51 @@ func (s *serviceImpl) runHostCallDemoNetwork(input *HostCallDemoInput, demoKey s
 
 // runHostCallDemoConfig demonstrates reading plugin-owned config and
 // whitelisted public host config through dynamic-plugin host services.
-func (s *serviceImpl) runHostCallDemoConfig() (*hostCallDemoConfigPayload, error) {
-	if s.configSvc == nil {
-		return nil, gerror.New("config host service is unavailable")
+func (s *serviceImpl) runHostCallDemoConfig(ctx context.Context) (*hostCallDemoConfigPayload, error) {
+	if s.pluginConfigSvc == nil {
+		return nil, gerror.New("plugin config service is unavailable")
 	}
 	if s.hostConfigSvc == nil {
-		return nil, gerror.New("host config host service is unavailable")
+		return nil, gerror.New("hostConfig service is unavailable")
 	}
 
-	greeting, greetingFound, err := s.configSvc.String(hostCallDemoPluginGreetingKey)
+	greetingFound, err := s.pluginConfigSvc.Exists(ctx, hostCallDemoPluginGreetingKey)
 	if err != nil {
 		return nil, err
 	}
-	featureEnabled, featureEnabledFound, err := s.configSvc.Bool(hostCallDemoPluginFeatureKey)
+	greeting, err := s.pluginConfigSvc.String(ctx, hostCallDemoPluginGreetingKey, "")
 	if err != nil {
 		return nil, err
 	}
-	workspaceBasePath, workspaceBasePathFound, err := s.hostConfigSvc.String(hostCallDemoWorkspaceKey)
+	featureEnabledFound, err := s.pluginConfigSvc.Exists(ctx, hostCallDemoPluginFeatureKey)
 	if err != nil {
 		return nil, err
 	}
-	i18nDefault, i18nDefaultFound, err := s.hostConfigSvc.String(hostCallDemoI18nDefaultKey)
+	featureEnabled, err := s.pluginConfigSvc.Bool(ctx, hostCallDemoPluginFeatureKey, false)
 	if err != nil {
 		return nil, err
 	}
-	i18nEnabled, i18nEnabledFound, err := s.hostConfigSvc.Bool(hostCallDemoI18nEnabledKey)
+	workspaceBasePathFound, err := s.hostConfigSvc.Exists(ctx, hostCallDemoWorkspaceKey)
+	if err != nil {
+		return nil, err
+	}
+	workspaceBasePath, err := s.hostConfigSvc.String(ctx, hostCallDemoWorkspaceKey, "")
+	if err != nil {
+		return nil, err
+	}
+	i18nDefaultFound, err := s.hostConfigSvc.Exists(ctx, hostCallDemoI18nDefaultKey)
+	if err != nil {
+		return nil, err
+	}
+	i18nDefault, err := s.hostConfigSvc.String(ctx, hostCallDemoI18nDefaultKey, "")
+	if err != nil {
+		return nil, err
+	}
+	i18nEnabledFound, err := s.hostConfigSvc.Exists(ctx, hostCallDemoI18nEnabledKey)
+	if err != nil {
+		return nil, err
+	}
+	i18nEnabled, err := s.hostConfigSvc.Bool(ctx, hostCallDemoI18nEnabledKey, false)
 	if err != nil {
 		return nil, err
 	}
@@ -358,20 +404,25 @@ func (s *serviceImpl) runHostCallDemoConfig() (*hostCallDemoConfigPayload, error
 
 // runHostCallDemoManifest demonstrates reading the plugin's own packaged
 // manifest resources through explicitly authorized manifest.get paths.
-func (s *serviceImpl) runHostCallDemoManifest() (*hostCallDemoManifestPayload, error) {
+func (s *serviceImpl) runHostCallDemoManifest(ctx context.Context) (*hostCallDemoManifestPayload, error) {
 	if s.manifestSvc == nil {
 		return nil, gerror.New("manifest host service is unavailable")
 	}
 
 	profile := &hostCallDemoManifestProfile{}
-	profileFound, err := s.manifestSvc.Scan(hostCallDemoManifestProfilePath, "profile", profile)
+	profileFound, err := s.manifestSvc.Exists(ctx, hostCallDemoManifestProfilePath)
 	if err != nil {
 		return nil, err
 	}
-	configText, configFound, err := s.manifestSvc.GetText(hostCallDemoManifestConfigPath)
+	err = s.manifestSvc.Scan(ctx, hostCallDemoManifestProfilePath, "profile", profile)
 	if err != nil {
 		return nil, err
 	}
+	configContent, err := s.manifestSvc.Get(ctx, hostCallDemoManifestConfigPath)
+	if err != nil {
+		return nil, err
+	}
+	configFound := len(configContent) > 0
 
 	return &hostCallDemoManifestPayload{
 		ProfilePath:       hostCallDemoManifestProfilePath,
@@ -381,7 +432,7 @@ func (s *serviceImpl) runHostCallDemoManifest() (*hostCallDemoManifestPayload, e
 		ProfileOwner:      profile.Owner,
 		ConfigPath:        hostCallDemoManifestConfigPath,
 		ConfigFound:       configFound,
-		ConfigBodyPreview: buildHostCallDemoBodyPreview([]byte(configText)),
+		ConfigBodyPreview: buildHostCallDemoBodyPreview(configContent),
 	}, nil
 }
 
@@ -392,14 +443,8 @@ func (s *serviceImpl) runHostCallDemoOrg(ctx context.Context, input *HostCallDem
 		return nil, gerror.New("org host service is unavailable")
 	}
 
-	status, err := s.orgSvc.Status(ctx)
-	if err != nil {
-		return nil, err
-	}
-	available, err := s.orgSvc.Available(ctx)
-	if err != nil {
-		return nil, err
-	}
+	status := s.orgSvc.Status(ctx)
+	available := s.orgSvc.Available(ctx)
 
 	payload := &hostCallDemoOrgPayload{
 		Available:      available,
@@ -439,22 +484,11 @@ func (s *serviceImpl) runHostCallDemoTenant(ctx context.Context, input *HostCall
 		return nil, gerror.New("tenant host service is unavailable")
 	}
 
-	status, err := s.tenantSvc.Status(ctx)
-	if err != nil {
-		return nil, err
-	}
-	available, err := s.tenantSvc.Available(ctx)
-	if err != nil {
-		return nil, err
-	}
-	currentTenantID, err := s.tenantSvc.Current(ctx)
-	if err != nil {
-		return nil, err
-	}
-	platformBypass, err := s.tenantSvc.PlatformBypass(ctx)
-	if err != nil {
-		return nil, err
-	}
+	status := s.tenantSvc.Status(ctx)
+	available := s.tenantSvc.Available(ctx)
+	currentTenantID := s.tenantSvc.Current(ctx)
+	platformBypass := s.tenantSvc.PlatformBypass(ctx)
+	var err error
 	if err = s.tenantSvc.EnsureTenantVisible(ctx, currentTenantID); err != nil {
 		return nil, err
 	}
