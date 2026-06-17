@@ -21,15 +21,13 @@ The workspace currently contains source plugins compiled into the host, plus one
 | `linapro-demo-source` | `source` | `tenant_aware` | `tenant_scoped` | Source plugin example for menu pages, public routes, and protected routes |
 | `linapro-demo-dynamic` | `dynamic` | `tenant_aware` | `tenant_scoped` | Dynamic `WASM` plugin example for embedded menu pages, plugin-owned `SQL` table `CRUD`, and standalone static pages |
 
-The root `go.mod` and `lina-plugins.go` wire the source plugins that are compiled with the host. `linapro-demo-dynamic` is intentionally not wired as a source plugin; it is the runtime plugin reference used by the `WASM` build and lifecycle flow.
+`linactl` wires source plugins automatically during plugin-full builds by generating the ignored `temp/official-plugins` aggregate module and `temp/go.work.plugins` workspace from the plugin manifests and plugin-local Go modules. `linapro-demo-dynamic` is intentionally excluded from the source-plugin aggregate; it is the runtime plugin reference used by the `WASM` build and lifecycle flow.
 
 ## Workspace Files
 
 | Path | Purpose |
 |------|---------|
-| `go.mod` | Local Go workspace module for source plugin compilation checks |
-| `lina-plugins.go` | Explicit source plugin import registry for host compilation |
-| `package.json` | Frontend workspace metadata for source plugin packages |
+| `<plugin-id>/hack/config.yaml` | Plugin-local tool configuration, including code generation, custom build commands, and other plugin-owned tooling |
 | `<plugin-id>/plugin.yaml` | Plugin manifest, metadata, menus, install mode, `i18n`, assets, dependencies, and host service declarations |
 | `<plugin-id>/Makefile` | Plugin-local code generation wrapper that includes the shared root `hack/makefiles/plugin.codegen.mk` target fragment |
 | `<plugin-id>/README.md` | English plugin-level guide |
@@ -70,8 +68,9 @@ apps/lina-plugins/<plugin-id>/
     sql/mock-data/        Optional mock or demo SQL assets
     sql/uninstall/        Optional uninstall SQL assets
     i18n/<locale>/        Plugin i18n resources
-  hack/config.yaml        Plugin-local GoFrame code generation config when DAO generation exists
-  hack/tests/             Optional plugin-owned E2E tests, page objects, and helpers
+  hack/
+    config.yaml           Plugin-local tool configuration, including code generation and custom build commands
+    tests/                Optional plugin-owned E2E tests, page objects, and helpers
   go.mod                  Plugin-local Go module
   Makefile                Plugin-local code generation wrapper
   plugin.yaml             Plugin manifest
@@ -91,6 +90,22 @@ must not hard-code `apps/lina-plugins/<plugin-id>/backend`. Run `make ctrl` or
 plugin backend explicitly. Direct `linactl ctrl` and `linactl dao` calls also
 only accept `dir=<backend-dir>` as the target selector.
 
+Plugins that need their own build step must declare it in the plugin root
+`hack/config.yaml` under `build.commands`. The root `make build` command scans
+direct plugin directories under `apps/lina-plugins` that contain `plugin.yaml`
+and runs configured commands before the host backend is compiled. Passing
+`dir=apps/lina-plugins/<plugin-id>` builds only that plugin. Missing
+`build.commands` is valid and means the plugin has no custom build step.
+
+```yaml
+build:
+  commands:
+    - pnpm --dir "$(PLUGIN_ROOT)/frontend" run build
+```
+
+`$(PLUGIN_ROOT)` expands to the plugin directory and `$(REPO_ROOT)` expands to
+the repository root. Build commands run from the plugin root.
+
 `backend/internal/service/` is the only valid location for plugin business services. Do not create `backend/service/`. Dynamic plugins keep the same `backend/api/`, `backend/plugin.go`, `backend/internal/controller/`, and `backend/internal/service/` shape; their bridge files only adapt `WASM` and `pluginbridge` protocols. Guest business capability clients must come from `lina-core/pkg/plugin/pluginbridge`, not from the `pluginbridge` root package.
 
 ## Source Plugins
@@ -103,7 +118,7 @@ Source plugin development rules:
 2. Keep plugin metadata, menus, page mounts, lifecycle resources, `SQL` assets, and `i18n` assets in `plugin.yaml` and `manifest/`.
 3. Keep backend implementation under `backend/`, with business logic in `backend/internal/service/`.
 4. Keep frontend pages under `frontend/pages/` or declare public asset directories through `plugin.yaml` `public_assets`.
-5. Register source plugins explicitly in `apps/lina-plugins/lina-plugins.go` when they must be compiled into the host.
+5. Keep the plugin's own `go.mod` and `backend/plugin.go` complete; `linactl` discovers and aggregates source-plugin backend packages automatically during plugin-full builds.
 
 ## Dynamic Plugins
 
