@@ -12,6 +12,7 @@ import (
 	"github.com/gogf/gf/v2/container/gvar"
 
 	"lina-core/pkg/plugin/capability/capmodel"
+	"lina-core/pkg/plugin/capability/manifestcap"
 	"lina-core/pkg/plugin/capability/orgcap"
 	"lina-core/pkg/plugin/capability/tenantcap"
 )
@@ -141,6 +142,41 @@ func (s *fakeManifestHostService) Get(_ context.Context, path string) ([]byte, e
 		return nil, nil
 	}
 	return []byte(result.value), nil
+}
+
+// GetMany returns configured fake manifest resources for explicit paths.
+func (s *fakeManifestHostService) GetMany(_ context.Context, input manifestcap.GetManyInput) (*manifestcap.GetManyOutput, error) {
+	output := &manifestcap.GetManyOutput{Resources: []*manifestcap.ResourceContent{}}
+	for _, path := range input.Paths {
+		result := s.texts[path]
+		if !result.found {
+			output.MissingPaths = append(output.MissingPaths, path)
+			continue
+		}
+		output.Resources = append(output.Resources, &manifestcap.ResourceContent{
+			Path: path,
+			Body: []byte(result.value),
+		})
+	}
+	return output, nil
+}
+
+// List returns metadata for configured fake manifest resources.
+func (s *fakeManifestHostService) List(_ context.Context, input manifestcap.ListInput) (*manifestcap.ListOutput, error) {
+	output := &manifestcap.ListOutput{
+		Resources: []*manifestcap.Resource{},
+		Limit:     input.Limit,
+	}
+	for path, result := range s.texts {
+		if !result.found || !strings.HasPrefix(path, input.Prefix) {
+			continue
+		}
+		output.Resources = append(output.Resources, &manifestcap.Resource{
+			Path: path,
+			Size: int64(len(result.value)),
+		})
+	}
+	return output, nil
 }
 
 // Exists reports whether one configured fake manifest resource exists.

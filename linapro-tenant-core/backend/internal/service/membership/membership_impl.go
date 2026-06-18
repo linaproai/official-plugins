@@ -353,7 +353,7 @@ func (s *serviceImpl) ValidateStartupConsistency(ctx context.Context) ([]string,
 			userIDs = append(userIDs, usercap.UserID(strconv.FormatInt(row.UserID, 10)))
 		}
 	}
-	out, err := s.users.BatchGet(ctx, s.capabilityContext(ctx, "membership.startup_consistency"), userIDs)
+	out, err := s.users.BatchGet(ctx, s.startupConsistencyCapabilityContext(), userIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -371,6 +371,25 @@ func (s *serviceImpl) ValidateStartupConsistency(ctx context.Context) ([]string,
 		}
 	}
 	return details, nil
+}
+
+// startupConsistencyCapabilityContext creates a host-owned system call context
+// for startup-only membership integrity checks.
+func (s *serviceImpl) startupConsistencyCapabilityContext() capmodel.CapabilityContext {
+	now := time.Now()
+	return capmodel.CapabilityContext{
+		PluginID: membershipCapabilityPluginID,
+		Actor: capmodel.CapabilityActor{
+			Type:         capmodel.ActorTypeSystem,
+			Name:         membershipCapabilityPluginID,
+			SystemReason: "tenant membership startup consistency",
+		},
+		TenantID:    capmodel.DomainID(strconv.FormatInt(shared.PlatformTenantID, 10)),
+		Source:      capmodel.CapabilitySourceHost,
+		SystemCall:  true,
+		Resource:    "membership.startup_consistency",
+		RequestedAt: now,
+	}
 }
 
 // getVisible retrieves one membership by primary key within the visible tenant.
