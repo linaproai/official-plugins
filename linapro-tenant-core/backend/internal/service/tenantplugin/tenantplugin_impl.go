@@ -24,7 +24,7 @@ func (s *serviceImpl) List(ctx context.Context) (*ListOutput, error) {
 	if err = s.requirePlugincap(); err != nil {
 		return nil, err
 	}
-	out, err := s.plugins.ListTenantPlugins(ctx, s.capabilityContext(ctx, tenantID, "tenant_plugin.list"))
+	out, err := s.plugins.ListTenantPlugins(ctx, s.capabilityContext(ctx, tenantID, "tenant_plugin.list"), plugincap.TenantListInput{})
 	if err != nil {
 		return nil, err
 	}

@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gogf/gf/v2/database/gdb"
@@ -270,6 +271,210 @@ func (p *Provider) GetUserPostIDs(ctx context.Context, userID int) ([]int, error
 	return ids, nil
 }
 
+// BatchGetUserOrgProfiles returns stable organization profiles for provided users.
+func (p *Provider) BatchGetUserOrgProfiles(
+	ctx context.Context,
+	userIDs []int,
+) (*capmodel.BatchResult[*orgcap.UserOrgProfile, int], error) {
+	result := &capmodel.BatchResult[*orgcap.UserOrgProfile, int]{
+		Items:      make(map[int]*orgcap.UserOrgProfile, len(userIDs)),
+		MissingIDs: make([]int, 0),
+	}
+	if len(userIDs) == 0 {
+		return result, nil
+	}
+	normalized := uniquePositiveInts(userIDs)
+	for _, userID := range normalized {
+		result.Items[userID] = &orgcap.UserOrgProfile{UserID: userID}
+	}
+	assignments, err := p.ListUserDeptAssignments(ctx, normalized)
+	if err != nil {
+		return nil, err
+	}
+	for userID, assignment := range assignments {
+		if assignment == nil {
+			continue
+		}
+		profile := result.Items[userID]
+		if profile == nil {
+			profile = &orgcap.UserOrgProfile{UserID: userID}
+			result.Items[userID] = profile
+		}
+		profile.DeptID = assignment.DeptID
+		profile.DeptName = assignment.DeptName
+	}
+
+	userPosts := make([]*entitymodel.UserPost, 0)
+	if err = p.tenantFilter.Apply(ctx, dao.UserPost.Ctx(ctx), "").
+		Fields(dao.UserPost.Columns().UserId, dao.UserPost.Columns().PostId).
+		WhereIn(dao.UserPost.Columns().UserId, normalized).
+		Scan(&userPosts); err != nil {
+		return nil, err
+	}
+	postIDs := make([]int, 0, len(userPosts))
+	userPostIDs := make(map[int][]int, len(normalized))
+	for _, item := range userPosts {
+		if item == nil {
+			continue
+		}
+		userPostIDs[item.UserId] = append(userPostIDs[item.UserId], item.PostId)
+		postIDs = append(postIDs, item.PostId)
+	}
+	postNames, err := p.postNames(ctx, postIDs)
+	if err != nil {
+		return nil, err
+	}
+	for userID, ids := range userPostIDs {
+		profile := result.Items[userID]
+		if profile == nil {
+			profile = &orgcap.UserOrgProfile{UserID: userID}
+			result.Items[userID] = profile
+		}
+		profile.PostIDs = uniquePositiveInts(ids)
+		profile.PostNames = make([]string, 0, len(profile.PostIDs))
+		for _, postID := range profile.PostIDs {
+			if name := postNames[postID]; name != "" {
+				profile.PostNames = append(profile.PostNames, name)
+			}
+		}
+	}
+	return result, nil
+}
+
+// ListDeptTree returns a bounded ordinary department tree projection.
+func (p *Provider) ListDeptTree(ctx context.Context, input orgcap.DeptTreeInput) (*orgcap.DeptTreeResult, error) {
+	nodes, err := p.UserDeptTree(ctx)
+	if err != nil {
+		return nil, err
+	}
+	total := countDeptTreeNodes(nodes)
+	maxNodes := input.MaxNodes
+	if maxNodes <= 0 || maxNodes > orgcap.MaxDeptTreeNodes {
+		maxNodes = orgcap.MaxDeptTreeNodes
+	}
+	items, truncated := truncateDeptTreeNodes(nodes, maxNodes)
+	return &orgcap.DeptTreeResult{Items: items, Total: total, Truncated: truncated}, nil
+}
+
+// SearchDepartments returns bounded department candidates.
+func (p *Provider) SearchDepartments(
+	ctx context.Context,
+	input orgcap.DeptSearchInput,
+) (*capmodel.PageResult[*orgcap.DeptProjection], error) {
+	pageNum, pageSize := normalizeProviderPage(input.Page, orgcap.MaxDeptSearchPageSize)
+	model := p.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "")
+	if keyword := strings.TrimSpace(input.Keyword); keyword != "" {
+		keywordFilter := model.Builder().
+			WhereLike(dao.Dept.Columns().Name, "%"+keyword+"%").
+			WhereOrLike(dao.Dept.Columns().Code, "%"+keyword+"%")
+		model = model.Where(keywordFilter)
+	}
+	if input.Status != nil {
+		model = model.Where(dao.Dept.Columns().Status, *input.Status)
+	}
+	total, err := model.Count()
+	if err != nil {
+		return nil, err
+	}
+	depts := make([]*entitymodel.Dept, 0)
+	if err = model.Page(pageNum, pageSize).OrderAsc(dao.Dept.Columns().OrderNum).Scan(&depts); err != nil {
+		return nil, err
+	}
+	items := make([]*orgcap.DeptProjection, 0, len(depts))
+	for _, deptItem := range depts {
+		if deptItem == nil {
+			continue
+		}
+		items = append(items, &orgcap.DeptProjection{
+			DeptID:   deptItem.Id,
+			ParentID: deptItem.ParentId,
+			DeptName: deptItem.Name,
+			DeptCode: deptItem.Code,
+			Status:   deptItem.Status,
+		})
+	}
+	return &capmodel.PageResult[*orgcap.DeptProjection]{Items: items, Total: total}, nil
+}
+
+// ListPostOptionsPage returns bounded post candidates.
+func (p *Provider) ListPostOptionsPage(
+	ctx context.Context,
+	input orgcap.PostOptionsInput,
+) (*capmodel.PageResult[*orgcap.PostOption], error) {
+	pageNum, pageSize := normalizeProviderPage(input.Page, orgcap.MaxPostOptionsPageSize)
+	model := p.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx), "")
+	if input.Status != nil {
+		model = model.Where(dao.Post.Columns().Status, *input.Status)
+	} else {
+		model = model.Where(dao.Post.Columns().Status, postStatusEnabled)
+	}
+	if input.DeptID != nil {
+		deptIDs, err := p.deptSvc.DescendantDeptIDs(ctx, *input.DeptID)
+		if err != nil {
+			return nil, err
+		}
+		model = model.WhereIn(dao.Post.Columns().DeptId, deptIDs)
+	}
+	if keyword := strings.TrimSpace(input.Keyword); keyword != "" {
+		keywordFilter := model.Builder().
+			WhereLike(dao.Post.Columns().Name, "%"+keyword+"%").
+			WhereOrLike(dao.Post.Columns().Code, "%"+keyword+"%")
+		model = model.Where(keywordFilter)
+	}
+	total, err := model.Count()
+	if err != nil {
+		return nil, err
+	}
+	posts := make([]*entitymodel.Post, 0)
+	if err = model.Page(pageNum, pageSize).OrderAsc(dao.Post.Columns().Sort).Scan(&posts); err != nil {
+		return nil, err
+	}
+	options := make([]*orgcap.PostOption, 0, len(posts))
+	for _, postItem := range posts {
+		if postItem == nil {
+			continue
+		}
+		options = append(options, &orgcap.PostOption{PostID: postItem.Id, PostName: postItem.Name})
+	}
+	return &capmodel.PageResult[*orgcap.PostOption]{Items: options, Total: total}, nil
+}
+
+// EnsureDepartmentsVisible verifies all department identifiers are visible.
+func (p *Provider) EnsureDepartmentsVisible(ctx context.Context, deptIDs []int) error {
+	normalized := uniquePositiveInts(deptIDs)
+	if len(normalized) == 0 {
+		return nil
+	}
+	count, err := p.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
+		WhereIn(dao.Dept.Columns().Id, normalized).
+		Count()
+	if err != nil {
+		return err
+	}
+	if count != len(normalized) {
+		return bizerr.NewCode(capmodel.CodeCapabilityDenied)
+	}
+	return nil
+}
+
+// EnsurePostsVisible verifies all post identifiers are visible.
+func (p *Provider) EnsurePostsVisible(ctx context.Context, postIDs []int) error {
+	normalized := uniquePositiveInts(postIDs)
+	if len(normalized) == 0 {
+		return nil
+	}
+	count, err := p.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx), "").
+		WhereIn(dao.Post.Columns().Id, normalized).
+		Count()
+	if err != nil {
+		return err
+	}
+	if count != len(normalized) {
+		return bizerr.NewCode(capmodel.CodeCapabilityDenied)
+	}
+	return nil
+}
+
 // ReplaceUserAssignments rewrites one user's department and post associations.
 func (p *Provider) ReplaceUserAssignments(ctx context.Context, userID int, deptID *int, postIDs []int) error {
 	tenantID := p.tenantFilter.Context(ctx).TenantID
@@ -514,4 +719,103 @@ func newUnassignedDeptNode(totalUsers int, assignedUsers int) *orgcap.DeptTreeNo
 		UserCount: unassignedUsers,
 		Children:  make([]*orgcap.DeptTreeNode, 0),
 	}
+}
+
+// postNames returns post display names keyed by post identifier.
+func (p *Provider) postNames(ctx context.Context, postIDs []int) (map[int]string, error) {
+	normalized := uniquePositiveInts(postIDs)
+	result := make(map[int]string, len(normalized))
+	if len(normalized) == 0 {
+		return result, nil
+	}
+	posts := make([]*entitymodel.Post, 0, len(normalized))
+	if err := p.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx), "").
+		Fields(dao.Post.Columns().Id, dao.Post.Columns().Name).
+		WhereIn(dao.Post.Columns().Id, normalized).
+		Scan(&posts); err != nil {
+		return nil, err
+	}
+	for _, postItem := range posts {
+		if postItem != nil {
+			result[postItem.Id] = postItem.Name
+		}
+	}
+	return result, nil
+}
+
+// normalizeProviderPage applies bounded provider-side page defaults.
+func normalizeProviderPage(page capmodel.PageRequest, maxPageSize int) (int, int) {
+	pageNum := page.PageNum
+	if pageNum <= 0 {
+		pageNum = 1
+	}
+	pageSize := page.PageSize
+	if pageSize <= 0 {
+		pageSize = page.Limit
+	}
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	if maxPageSize > 0 && pageSize > maxPageSize {
+		pageSize = maxPageSize
+	}
+	return pageNum, pageSize
+}
+
+// uniquePositiveInts returns positive identifiers once in input order.
+func uniquePositiveInts(ids []int) []int {
+	if len(ids) == 0 {
+		return nil
+	}
+	result := make([]int, 0, len(ids))
+	seen := make(map[int]struct{}, len(ids))
+	for _, id := range ids {
+		if id <= 0 {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		result = append(result, id)
+	}
+	return result
+}
+
+// countDeptTreeNodes counts all nodes in a department tree projection.
+func countDeptTreeNodes(nodes []*orgcap.DeptTreeNode) int {
+	total := 0
+	for _, node := range nodes {
+		if node == nil {
+			continue
+		}
+		total++
+		total += countDeptTreeNodes(node.Children)
+	}
+	return total
+}
+
+// truncateDeptTreeNodes returns a detached tree prefix capped by maxNodes.
+func truncateDeptTreeNodes(nodes []*orgcap.DeptTreeNode, maxNodes int) ([]*orgcap.DeptTreeNode, bool) {
+	remaining := maxNodes
+	truncated := false
+	var clone func([]*orgcap.DeptTreeNode) []*orgcap.DeptTreeNode
+	clone = func(source []*orgcap.DeptTreeNode) []*orgcap.DeptTreeNode {
+		out := make([]*orgcap.DeptTreeNode, 0, len(source))
+		for _, node := range source {
+			if node == nil {
+				continue
+			}
+			if remaining <= 0 {
+				truncated = true
+				break
+			}
+			remaining--
+			copyNode := *node
+			copyNode.Children = clone(node.Children)
+			out = append(out, &copyNode)
+		}
+		return out
+	}
+	return clone(nodes), truncated
 }

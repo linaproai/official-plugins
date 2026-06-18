@@ -73,9 +73,19 @@ func (providerProvisioningBizCtxService) Current(context.Context) bizctxcap.Curr
 // providerProvisioningUsers is unused by the provisioning path.
 type providerProvisioningUsers struct{}
 
+// Current returns nil because startup provisioning never reads the current user.
+func (providerProvisioningUsers) Current(context.Context, capmodel.CapabilityContext) (*usercap.UserProjection, error) {
+	return nil, nil
+}
+
 // BatchGet returns an empty projection map for provisioning-only tests.
 func (providerProvisioningUsers) BatchGet(context.Context, capmodel.CapabilityContext, []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
 	return &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{Items: map[usercap.UserID]*usercap.UserProjection{}}, nil
+}
+
+// BatchResolve returns an empty projection map for provisioning-only tests.
+func (providerProvisioningUsers) BatchResolve(context.Context, capmodel.CapabilityContext, usercap.BatchResolveInput) (*capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey], error) {
+	return &capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey]{Items: map[usercap.ResolveKey]*usercap.UserProjection{}}, nil
 }
 
 // Search returns an empty page because startup provisioning never searches users.
