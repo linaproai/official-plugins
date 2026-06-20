@@ -1305,6 +1305,28 @@ func (s *memoryCacheService) Get(
 	return &copied, true, nil
 }
 
+func (s *memoryCacheService) GetMany(
+	_ context.Context,
+	in cachecap.GetManyInput,
+) (*cachecap.GetManyOutput, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	output := &cachecap.GetManyOutput{
+		Items:       make(map[string]*cachecap.CacheItem, len(in.Keys)),
+		MissingKeys: []string{},
+	}
+	for _, key := range in.Keys {
+		item, ok := s.items[memoryCacheKey(in.Namespace, key)]
+		if !ok {
+			output.MissingKeys = append(output.MissingKeys, key)
+			continue
+		}
+		copied := *item
+		output.Items[key] = &copied
+	}
+	return output, nil
+}
+
 func (s *memoryCacheService) Set(
 	_ context.Context,
 	namespace string,
@@ -1325,10 +1347,42 @@ func (s *memoryCacheService) Set(
 	return &copied, nil
 }
 
+func (s *memoryCacheService) SetMany(
+	_ context.Context,
+	in cachecap.SetManyInput,
+) (*cachecap.SetManyOutput, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	output := &cachecap.SetManyOutput{
+		Items: make(map[string]*cachecap.CacheItem, len(in.Items)),
+	}
+	for _, input := range in.Items {
+		item := &cachecap.CacheItem{
+			Key:       input.Key,
+			ValueKind: cachecap.CacheValueKindString,
+			Value:     input.Value,
+			ExpireAt:  memoryCacheExpireAt(input.TTL),
+		}
+		s.items[memoryCacheKey(in.Namespace, input.Key)] = item
+		copied := *item
+		output.Items[input.Key] = &copied
+	}
+	return output, nil
+}
+
 func (s *memoryCacheService) Delete(_ context.Context, namespace string, key string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.items, memoryCacheKey(namespace, key))
+	return nil
+}
+
+func (s *memoryCacheService) DeleteMany(_ context.Context, in cachecap.DeleteManyInput) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, key := range in.Keys {
+		delete(s.items, memoryCacheKey(in.Namespace, key))
+	}
 	return nil
 }
 

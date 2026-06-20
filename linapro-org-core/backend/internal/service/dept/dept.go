@@ -125,7 +125,7 @@ type TreeNode struct {
 
 // DeptUser represents one selectable user row.
 type DeptUser struct {
-	Id       int    `json:"id"`
+	Id       string `json:"id"`
 	Username string `json:"username"`
 	Nickname string `json:"nickname"`
 }

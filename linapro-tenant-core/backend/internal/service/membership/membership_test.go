@@ -46,6 +46,11 @@ func (s membershipTestBizCtxService) Current(context.Context) bizctxcap.CurrentC
 // membershipTestUsers resolves users from the test-only sys_user fixture table.
 type membershipTestUsers struct{}
 
+// Current is unused by membership tests.
+func (membershipTestUsers) Current(context.Context, capmodel.CapabilityContext) (*usercap.UserProjection, error) {
+	return nil, nil
+}
+
 // BatchGet returns user projections from the test fixture table.
 func (membershipTestUsers) BatchGet(ctx context.Context, _ capmodel.CapabilityContext, ids []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
 	out := &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{
@@ -95,6 +100,14 @@ func (membershipTestUsers) BatchGet(ctx context.Context, _ capmodel.CapabilityCo
 	return out, nil
 }
 
+// BatchResolve is unused by membership tests.
+func (membershipTestUsers) BatchResolve(context.Context, capmodel.CapabilityContext, usercap.BatchResolveInput) (*capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey], error) {
+	return &capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey]{
+		Items:      map[usercap.ResolveKey]*usercap.UserProjection{},
+		MissingIDs: []usercap.ResolveKey{},
+	}, nil
+}
+
 // Search is unused by membership tests.
 func (membershipTestUsers) Search(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
 	return &capmodel.PageResult[*usercap.UserProjection]{Items: []*usercap.UserProjection{}}, nil
@@ -103,6 +116,21 @@ func (membershipTestUsers) Search(context.Context, capmodel.CapabilityContext, u
 // EnsureVisible is unused by membership tests.
 func (membershipTestUsers) EnsureVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
 	return nil
+}
+
+// recordingMembershipUsers records capability context while reusing fixture
+// projection behavior for startup consistency tests.
+type recordingMembershipUsers struct {
+	membershipTestUsers
+	calls  int
+	capCtx capmodel.CapabilityContext
+}
+
+// BatchGet records the domain call context before resolving fixture users.
+func (s *recordingMembershipUsers) BatchGet(ctx context.Context, capCtx capmodel.CapabilityContext, ids []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
+	s.calls++
+	s.capCtx = capCtx
+	return s.membershipTestUsers.BatchGet(ctx, capCtx, ids)
 }
 
 // membershipTestService creates a membership service with an explicit request
@@ -477,6 +505,53 @@ func TestCurrentUsesContextIdentity(t *testing.T) {
 	}
 	if item.Id != membershipAID || item.UserID != userAID || item.TenantID != tenantAID {
 		t.Fatalf("expected context membership id=%d user=%d tenant=%d, got %#v", membershipAID, userAID, tenantAID, item)
+	}
+}
+
+// TestValidateStartupConsistencyUsesHostSystemCapabilityContext verifies
+// startup checks do not require an HTTP authenticated user data-scope snapshot.
+func TestValidateStartupConsistencyUsesHostSystemCapabilityContext(t *testing.T) {
+	ctx := context.Background()
+	configureMembershipTestDB(t, ctx)
+
+	const (
+		tenantCode = "membership-startup-context-test"
+		username   = "membership_startup_context_test"
+		password   = "$2a$10$6u4IIEd63chleDWJIY6.NewSU7YrpBQ0Tbp.KfLiG71NQrRlL9qTe"
+	)
+
+	tenantID := insertMembershipTestTenant(t, ctx, tenantCode, shared.TenantStatusActive)
+	userID := insertMembershipTestUser(t, ctx, username, password, tenantID)
+	insertMembershipTestRow(t, ctx, userID, tenantID)
+	t.Cleanup(func() {
+		if _, err := shared.Model(ctx, shared.TableMembership).Unscoped().Where("user_id", userID).Delete(); err != nil {
+			t.Errorf("cleanup startup context membership failed: %v", err)
+		}
+		if _, err := shared.Model(ctx, membershipTestTableSysUser).Unscoped().Where("id", userID).Delete(); err != nil {
+			t.Errorf("cleanup startup context user failed: %v", err)
+		}
+		if _, err := shared.Model(ctx, shared.TableTenant).Unscoped().Where("id", tenantID).Delete(); err != nil {
+			t.Errorf("cleanup startup context tenant failed: %v", err)
+		}
+	})
+
+	users := &recordingMembershipUsers{}
+	details, err := New(membershipTestBizCtxService{}, users).ValidateStartupConsistency(ctx)
+	if err != nil {
+		t.Fatalf("validate startup consistency failed: %v", err)
+	}
+	if len(details) != 0 {
+		t.Fatalf("expected no startup consistency details, got %#v", details)
+	}
+	if users.calls != 1 {
+		t.Fatalf("expected one user batch lookup, got %d", users.calls)
+	}
+	if users.capCtx.Actor.Type != capmodel.ActorTypeSystem ||
+		!users.capCtx.SystemCall ||
+		users.capCtx.Source != capmodel.CapabilitySourceHost ||
+		users.capCtx.TenantID != "0" ||
+		users.capCtx.Resource != "membership.startup_consistency" {
+		t.Fatalf("expected host system startup capability context, got %#v", users.capCtx)
 	}
 }
 

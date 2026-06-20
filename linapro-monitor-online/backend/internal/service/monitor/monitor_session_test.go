@@ -91,6 +91,11 @@ type monitorSessionService struct {
 	searchResult *capmodel.PageResult[*sessioncap.Projection]
 }
 
+// Current returns no current session because list tests never read it.
+func (s *monitorSessionService) Current(context.Context, capmodel.CapabilityContext) (*sessioncap.Projection, error) {
+	return nil, nil
+}
+
 // Search records search arguments and returns the configured result.
 func (s *monitorSessionService) Search(_ context.Context, capCtx capmodel.CapabilityContext, input sessioncap.SearchInput) (*capmodel.PageResult[*sessioncap.Projection], error) {
 	s.searchCalled++
@@ -108,6 +113,19 @@ func (s *monitorSessionService) BatchGet(context.Context, capmodel.CapabilityCon
 		Items:      map[sessioncap.SessionID]*sessioncap.Projection{},
 		MissingIDs: []sessioncap.SessionID{},
 	}, nil
+}
+
+// BatchGetUserOnlineStatus is unused by these service tests.
+func (s *monitorSessionService) BatchGetUserOnlineStatus(_ context.Context, _ capmodel.CapabilityContext, userIDs []string) (*capmodel.BatchResult[*sessioncap.UserOnlineStatusProjection, string], error) {
+	return &capmodel.BatchResult[*sessioncap.UserOnlineStatusProjection, string]{
+		Items:      map[string]*sessioncap.UserOnlineStatusProjection{},
+		MissingIDs: append([]string(nil), userIDs...),
+	}, nil
+}
+
+// EnsureVisible accepts all session IDs because visibility is outside these tests.
+func (s *monitorSessionService) EnsureVisible(context.Context, capmodel.CapabilityContext, []sessioncap.SessionID) error {
+	return nil
 }
 
 // monitorSessionAdminService records calls to the published host session admin service.

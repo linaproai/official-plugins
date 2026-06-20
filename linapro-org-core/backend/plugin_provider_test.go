@@ -62,9 +62,19 @@ func (fakeTenantFilter) Apply(_ context.Context, model *gdb.Model, _ string) *gd
 // construction tests; methods are not executed by these construction checks.
 type fakeUsers struct{}
 
+// Current returns no current user projection for construction-only tests.
+func (fakeUsers) Current(context.Context, capmodel.CapabilityContext) (*usercap.UserProjection, error) {
+	return nil, nil
+}
+
 // BatchGet returns an empty visible projection set.
 func (fakeUsers) BatchGet(context.Context, capmodel.CapabilityContext, []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
 	return &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{Items: map[usercap.UserID]*usercap.UserProjection{}}, nil
+}
+
+// BatchResolve returns an empty visible projection set.
+func (fakeUsers) BatchResolve(context.Context, capmodel.CapabilityContext, usercap.BatchResolveInput) (*capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey], error) {
+	return &capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey]{Items: map[usercap.ResolveKey]*usercap.UserProjection{}}, nil
 }
 
 // Search returns an empty page.

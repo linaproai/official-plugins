@@ -386,8 +386,8 @@ func userDomainIDStorageID(id usercap.UserID) (int64, bool) {
 	return storageID, err == nil && storageID > 0
 }
 
-// userProjectionDisplayName keeps the legacy username field stable while still
-// tolerating richer user-domain projections.
+// userProjectionDisplayName chooses the stable notice creator display field
+// from the current user-domain projection.
 func userProjectionDisplayName(user *usercap.UserProjection) string {
 	if user == nil {
 		return ""

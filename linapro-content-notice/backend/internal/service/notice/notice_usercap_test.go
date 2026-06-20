@@ -126,6 +126,13 @@ type fakeNoticeUserService struct {
 	searchResult *capmodel.PageResult[*usercap.UserProjection]
 }
 
+func (s *fakeNoticeUserService) Current(
+	context.Context,
+	capmodel.CapabilityContext,
+) (*usercap.UserProjection, error) {
+	return nil, nil
+}
+
 func (s *fakeNoticeUserService) BatchGet(
 	_ context.Context,
 	capCtx capmodel.CapabilityContext,
@@ -134,6 +141,35 @@ func (s *fakeNoticeUserService) BatchGet(
 	s.batchCapCtx = capCtx
 	s.batchIDs = append([]usercap.UserID(nil), ids...)
 	return s.batchResult, nil
+}
+
+func (s *fakeNoticeUserService) BatchResolve(
+	_ context.Context,
+	capCtx capmodel.CapabilityContext,
+	input usercap.BatchResolveInput,
+) (*capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey], error) {
+	s.batchCapCtx = capCtx
+	s.batchIDs = append([]usercap.UserID(nil), input.IDs...)
+	result := &capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey]{
+		Items:      map[usercap.ResolveKey]*usercap.UserProjection{},
+		MissingIDs: []usercap.ResolveKey{},
+	}
+	if s.batchResult == nil {
+		for _, id := range input.IDs {
+			result.MissingIDs = append(result.MissingIDs, usercap.ResolveKey(id))
+		}
+		return result, nil
+	}
+	for _, id := range input.IDs {
+		key := usercap.ResolveKey(id)
+		item, ok := s.batchResult.Items[id]
+		if !ok {
+			result.MissingIDs = append(result.MissingIDs, key)
+			continue
+		}
+		result.Items[key] = item
+	}
+	return result, nil
 }
 
 func (s *fakeNoticeUserService) Search(

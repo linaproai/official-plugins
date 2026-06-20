@@ -57,9 +57,19 @@ func (fakeBizCtx) Current(context.Context) bizctxcap.CurrentContext {
 // fakeTenantProviderUsers is the minimal user capability required to build the provider.
 type fakeTenantProviderUsers struct{}
 
+// Current is unused by provider construction tests.
+func (fakeTenantProviderUsers) Current(context.Context, capmodel.CapabilityContext) (*usercap.UserProjection, error) {
+	return nil, nil
+}
+
 // BatchGet is unused by provider construction tests.
 func (fakeTenantProviderUsers) BatchGet(context.Context, capmodel.CapabilityContext, []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
 	return &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{Items: map[usercap.UserID]*usercap.UserProjection{}}, nil
+}
+
+// BatchResolve is unused by provider construction tests.
+func (fakeTenantProviderUsers) BatchResolve(context.Context, capmodel.CapabilityContext, usercap.BatchResolveInput) (*capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey], error) {
+	return &capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey]{Items: map[usercap.ResolveKey]*usercap.UserProjection{}}, nil
 }
 
 // Search is unused by provider construction tests.
@@ -75,9 +85,19 @@ func (fakeTenantProviderUsers) EnsureVisible(context.Context, capmodel.Capabilit
 // fakeTenantProviderPlugins is the minimal plugin capability required to build the provider.
 type fakeTenantProviderPlugins struct{}
 
+// Current is unused by provider construction tests.
+func (fakeTenantProviderPlugins) Current(context.Context, capmodel.CapabilityContext) (*plugincap.Projection, error) {
+	return nil, nil
+}
+
 // BatchGet is unused by provider construction tests.
 func (fakeTenantProviderPlugins) BatchGet(context.Context, capmodel.CapabilityContext, []plugincap.PluginID) (*capmodel.BatchResult[*plugincap.Projection, plugincap.PluginID], error) {
 	return &capmodel.BatchResult[*plugincap.Projection, plugincap.PluginID]{Items: map[plugincap.PluginID]*plugincap.Projection{}}, nil
+}
+
+// Search is unused by provider construction tests.
+func (fakeTenantProviderPlugins) Search(context.Context, capmodel.CapabilityContext, plugincap.SearchInput) (*capmodel.PageResult[*plugincap.Projection], error) {
+	return &capmodel.PageResult[*plugincap.Projection]{Items: []*plugincap.Projection{}}, nil
 }
 
 // Config is unused by provider construction tests.
@@ -101,8 +121,19 @@ func (s fakeTenantProviderPlugins) Registry() plugincap.RegistryService {
 }
 
 // ListTenantPlugins is unused by provider construction tests.
-func (fakeTenantProviderPlugins) ListTenantPlugins(context.Context, capmodel.CapabilityContext) (*capmodel.PageResult[*plugincap.TenantProjection], error) {
-	return &capmodel.PageResult[*plugincap.TenantProjection]{}, nil
+func (fakeTenantProviderPlugins) ListTenantPlugins(context.Context, capmodel.CapabilityContext, plugincap.TenantListInput) (*capmodel.PageResult[*plugincap.TenantProjection], error) {
+	return &capmodel.PageResult[*plugincap.TenantProjection]{Items: []*plugincap.TenantProjection{}}, nil
+}
+
+// BatchGetCapabilityStatus is unused by provider construction tests.
+func (fakeTenantProviderPlugins) BatchGetCapabilityStatus(_ context.Context, _ capmodel.CapabilityContext, keys []plugincap.CapabilityKey) (*capmodel.BatchResult[*capmodel.CapabilityStatus, plugincap.CapabilityKey], error) {
+	result := &capmodel.BatchResult[*capmodel.CapabilityStatus, plugincap.CapabilityKey]{
+		Items: map[plugincap.CapabilityKey]*capmodel.CapabilityStatus{},
+	}
+	for _, key := range keys {
+		result.Items[key] = &capmodel.CapabilityStatus{Available: false, Reason: "test_no_provider"}
+	}
+	return result, nil
 }
 
 // fakeTenantProviderPluginAdmin is the minimal plugin admin capability required to build the provider.

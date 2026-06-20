@@ -186,6 +186,15 @@ func (s fakeImpersonationAuthz) BatchGetPermissions(context.Context, capmodel.Ca
 	return &capmodel.BatchResult[*authz.PermissionProjection, authz.PermissionKey]{Items: map[authz.PermissionKey]*authz.PermissionProjection{}}, nil
 }
 
+// BatchHasPermissions is unused by impersonation tests.
+func (s fakeImpersonationAuthz) BatchHasPermissions(_ context.Context, _ capmodel.CapabilityContext, keys []authz.PermissionKey) (map[authz.PermissionKey]bool, error) {
+	result := make(map[authz.PermissionKey]bool, len(keys))
+	for _, key := range keys {
+		result[key] = false
+	}
+	return result, nil
+}
+
 // HasPermission is unused by impersonation tests.
 func (s fakeImpersonationAuthz) HasPermission(context.Context, capmodel.CapabilityContext, authz.PermissionKey) (bool, error) {
 	return false, nil
@@ -201,6 +210,11 @@ type fakeImpersonationUsers struct {
 	users map[usercap.UserID]*usercap.UserProjection
 }
 
+// Current returns no current user projection because these tests resolve explicit users.
+func (s fakeImpersonationUsers) Current(context.Context, capmodel.CapabilityContext) (*usercap.UserProjection, error) {
+	return nil, nil
+}
+
 // BatchGet returns configured user projections and opaque missing IDs.
 func (s fakeImpersonationUsers) BatchGet(_ context.Context, _ capmodel.CapabilityContext, ids []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
 	out := &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{Items: map[usercap.UserID]*usercap.UserProjection{}}
@@ -210,6 +224,20 @@ func (s fakeImpersonationUsers) BatchGet(_ context.Context, _ capmodel.Capabilit
 			continue
 		}
 		out.MissingIDs = append(out.MissingIDs, id)
+	}
+	return out, nil
+}
+
+// BatchResolve resolves configured users by ID for impersonation tests.
+func (s fakeImpersonationUsers) BatchResolve(_ context.Context, _ capmodel.CapabilityContext, input usercap.BatchResolveInput) (*capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey], error) {
+	out := &capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey]{Items: map[usercap.ResolveKey]*usercap.UserProjection{}}
+	for _, id := range input.IDs {
+		key := usercap.ResolveKey(id)
+		if item := s.users[id]; item != nil {
+			out.Items[key] = item
+			continue
+		}
+		out.MissingIDs = append(out.MissingIDs, key)
 	}
 	return out, nil
 }

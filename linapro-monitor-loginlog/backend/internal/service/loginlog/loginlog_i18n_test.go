@@ -65,6 +65,30 @@ func (s *fakeDictService) ResolveLabels(_ context.Context, capCtx capmodel.Capab
 	return result, nil
 }
 
+// ListValues returns configured labels as one deterministic page.
+func (s *fakeDictService) ListValues(_ context.Context, capCtx capmodel.CapabilityContext, input dictcap.ListValuesInput) (*capmodel.PageResult[*dictcap.LabelProjection], error) {
+	s.lastPluginID = capCtx.PluginID
+	s.lastType = input.Type
+	result := &capmodel.PageResult[*dictcap.LabelProjection]{Items: []*dictcap.LabelProjection{}}
+	for value, label := range s.labels {
+		result.Items = append(result.Items, &dictcap.LabelProjection{
+			Type:     input.Type,
+			Value:    value,
+			LabelKey: "dict." + string(input.Type) + "." + string(value) + ".label",
+			Label:    label,
+		})
+	}
+	result.Total = len(result.Items)
+	return result, nil
+}
+
+// EnsureValuesVisible accepts dictionary values used by localization tests.
+func (s *fakeDictService) EnsureValuesVisible(_ context.Context, capCtx capmodel.CapabilityContext, input dictcap.ResolveInput) error {
+	s.lastPluginID = capCtx.PluginID
+	s.lastType = input.Type
+	return nil
+}
+
 // TestTranslateLoginLogMessageResolvesStableReason verifies that login-log
 // display messages are translated from stable auth lifecycle reason codes.
 func TestTranslateLoginLogMessageResolvesStableReason(t *testing.T) {

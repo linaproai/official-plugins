@@ -115,6 +115,14 @@ func (s *fakePlugincap) BatchGet(context.Context, capmodel.CapabilityContext, []
 	return &capmodel.BatchResult[*plugincap.Projection, plugincap.PluginID]{Items: map[plugincap.PluginID]*plugincap.Projection{}}, nil
 }
 
+func (s *fakePlugincap) Current(context.Context, capmodel.CapabilityContext) (*plugincap.Projection, error) {
+	return nil, nil
+}
+
+func (s *fakePlugincap) Search(context.Context, capmodel.CapabilityContext, plugincap.SearchInput) (*capmodel.PageResult[*plugincap.Projection], error) {
+	return &capmodel.PageResult[*plugincap.Projection]{Items: []*plugincap.Projection{}}, nil
+}
+
 func (s *fakePlugincap) Config() plugincap.ConfigService {
 	return nil
 }
@@ -131,9 +139,19 @@ func (s *fakePlugincap) Registry() plugincap.RegistryService {
 	return s
 }
 
-func (s *fakePlugincap) ListTenantPlugins(_ context.Context, capCtx capmodel.CapabilityContext) (*capmodel.PageResult[*plugincap.TenantProjection], error) {
+func (s *fakePlugincap) ListTenantPlugins(_ context.Context, capCtx capmodel.CapabilityContext, _ plugincap.TenantListInput) (*capmodel.PageResult[*plugincap.TenantProjection], error) {
 	s.lastListTenantID = capCtx.TenantID
 	return &capmodel.PageResult[*plugincap.TenantProjection]{Items: s.list, Total: len(s.list)}, nil
+}
+
+func (s *fakePlugincap) BatchGetCapabilityStatus(_ context.Context, _ capmodel.CapabilityContext, keys []plugincap.CapabilityKey) (*capmodel.BatchResult[*capmodel.CapabilityStatus, plugincap.CapabilityKey], error) {
+	result := &capmodel.BatchResult[*capmodel.CapabilityStatus, plugincap.CapabilityKey]{
+		Items: map[plugincap.CapabilityKey]*capmodel.CapabilityStatus{},
+	}
+	for _, key := range keys {
+		result.Items[key] = &capmodel.CapabilityStatus{Available: false, Reason: "test_no_provider"}
+	}
+	return result, nil
 }
 
 func (s *fakePlugincap) SetEnabled(_ context.Context, _ capmodel.CapabilityContext, id plugincap.PluginID, enabled bool) error {
