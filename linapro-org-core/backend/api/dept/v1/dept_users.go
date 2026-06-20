@@ -12,7 +12,7 @@ type UsersReq struct {
 
 // DeptUser represents a user in a department.
 type DeptUser struct {
-	Id       int    `json:"id" dc:"User ID" eg:"1"`
+	Id       string `json:"id" dc:"User ID" eg:"1"`
 	Username string `json:"username" dc:"User login account" eg:"zhangsan"`
 	Nickname string `json:"nickname" dc:"User nickname, used for front-end display" eg:"Zhang San"`
 }

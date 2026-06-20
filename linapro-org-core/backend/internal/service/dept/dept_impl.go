@@ -405,7 +405,7 @@ func (s *serviceImpl) usersByKeywordAndDeptIDs(ctx context.Context, keyword stri
 	candidateIDs := make([]int, 0, len(out.Items))
 	projectionsByID := make(map[int]*usercap.UserProjection, len(out.Items))
 	for _, projection := range out.Items {
-		userID, ok := parseUserProjectionID(projection)
+		userID, ok := userProjectionNumericID(projection)
 		if !ok {
 			continue
 		}
@@ -521,8 +521,8 @@ func toDeptUsers(rows []*usercap.UserProjection, limit int) []*DeptUser {
 		if row == nil {
 			continue
 		}
-		id, ok := parseUserProjectionID(row)
-		if !ok {
+		id := string(row.ID)
+		if id == "" {
 			continue
 		}
 		result = append(result, &DeptUser{Id: id, Username: row.Username, Nickname: row.Nickname})
@@ -533,9 +533,9 @@ func toDeptUsers(rows []*usercap.UserProjection, limit int) []*DeptUser {
 	return result
 }
 
-// parseUserProjectionID decodes the domain string ID back to the API's legacy
-// numeric response shape at the controller boundary.
-func parseUserProjectionID(row *usercap.UserProjection) (int, bool) {
+// userProjectionNumericID decodes the domain user ID for plugin-owned
+// department assignment table joins.
+func userProjectionNumericID(row *usercap.UserProjection) (int, bool) {
 	if row == nil {
 		return 0, false
 	}
