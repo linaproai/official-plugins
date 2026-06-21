@@ -170,7 +170,7 @@ func cleanupExpiredInvocations(
 
 // requiredLogRetentionDays reads the required host log-retention parameter.
 func requiredLogRetentionDays(ctx context.Context, hostConfigSvc hostconfigcap.Service) (int, error) {
-	value, err := hostConfigSvc.Get(ctx, logRetentionDaysKey)
+	value, err := hostConfigSvc.Get(ctx, logRetentionDaysKey, nil)
 	if err != nil {
 		return 0, err
 	}

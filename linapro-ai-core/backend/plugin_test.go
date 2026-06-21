@@ -18,7 +18,7 @@ type invocationCleanupHostConfigStub struct {
 }
 
 // Get returns the configured retention value.
-func (s invocationCleanupHostConfigStub) Get(context.Context, string) (*gvar.Var, error) {
+func (s invocationCleanupHostConfigStub) Get(context.Context, string, any) (*gvar.Var, error) {
 	return s.value, s.err
 }
 

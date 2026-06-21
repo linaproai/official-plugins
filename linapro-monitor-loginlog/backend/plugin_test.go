@@ -18,7 +18,7 @@ type loginLogCleanupHostConfigStub struct {
 }
 
 // Get returns the configured retention value.
-func (s loginLogCleanupHostConfigStub) Get(context.Context, string) (*gvar.Var, error) {
+func (s loginLogCleanupHostConfigStub) Get(context.Context, string, any) (*gvar.Var, error) {
 	return s.value, s.err
 }
 

@@ -73,12 +73,15 @@ type fakeHostConfigHostService struct {
 }
 
 // Get returns one configured fake public host config raw value.
-func (s *fakeHostConfigHostService) Get(_ context.Context, key string) (*gvar.Var, error) {
+func (s *fakeHostConfigHostService) Get(_ context.Context, key string, defaultValue any) (*gvar.Var, error) {
 	if result := s.strings[key]; result.found {
 		return gvar.New(result.value), nil
 	}
 	if result := s.bools[key]; result.found {
 		return gvar.New(result.value), nil
+	}
+	if defaultValue != nil {
+		return gvar.New(defaultValue), nil
 	}
 	return nil, nil
 }
