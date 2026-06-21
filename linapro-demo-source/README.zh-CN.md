@@ -40,6 +40,8 @@ linapro-demo-source/
 
 `plugin.yaml` 负责保存插件元数据、菜单声明和按钮权限。页面与 `SQL` 资源仍然通过目录约定发现，而不是在元数据中重复维护。
 
+本示例声明`distribution: marketplace`，因此仍是通过插件管理显式安装、启用、升级、禁用和卸载的普通插件。只有已注册且属于项目组成部分的源码插件才应使用`distribution: builtin`，由宿主启动流程自动安装、启用和安全升级。
+
 `plugin.yaml`不声明源码插件`HTTP`路由。工作台导航仍来自`menus`，后端路由由插件代码注册。
 
 ## 后端接入

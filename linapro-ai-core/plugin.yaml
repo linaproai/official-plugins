@@ -1,14 +1,53 @@
+# Plugin identifier, unique across the host and source plugin directories.
+# 插件唯一标识，必须在宿主和源码插件目录中保持唯一。
 id: linapro-ai-core
+
+# Plugin display name used in plugin management, menu governance, and docs.
+# 插件显示名称，用于插件管理、菜单治理和文档展示。
 name: AI Hub
+
+# Plugin semantic version used for plugin sync, upgrades, and delivery asset identity.
+# 插件语义化版本号，用于插件同步、升级和交付资产识别。
 version: v0.1.0
+
+# Plugin type enum. Allowed values: `source` is compiled with the host; `dynamic` is loaded as a runtime plugin artifact.
+# 插件类型枚举。可选值：`source` 表示随宿主源码编译交付；`dynamic` 表示作为运行时动态插件产物加载。
 type: source
+
+# Plugin distribution governance enum. `marketplace` keeps this plugin explicitly
+# governed through plugin management or `plugin.autoEnable`. Use `builtin` only
+# for registered source plugins that host startup must install, enable, and safely upgrade.
+# 插件分发治理枚举。`marketplace`表示插件仍通过插件管理或`plugin.autoEnable`
+# 显式治理。只有需要宿主启动自动安装、启用和安全升级的已注册源码插件才使用`builtin`。
+distribution: marketplace
+
+# Multi-tenant scope enum. Allowed values: `platform_only` is platform-context only; `tenant_aware` is governed by tenant context.
+# 多租户作用域枚举。可选值：`platform_only` 表示仅平台上下文可见和治理；`tenant_aware` 表示按租户上下文治理。
 scope_nature: platform_only
+
+# Multi-tenant support flag. `true` means the plugin supports tenant-level installation and provisioning governance.
+# 多租户支持标记。`true` 表示插件支持租户级安装与开通治理。
 supports_multi_tenant: false
+
+# Default install mode enum. Allowed values: `global` enables one shared installation; `tenant_scoped` enables or disables per tenant.
+# 默认安装模式枚举。可选值：`global` 表示全局统一安装启用；`tenant_scoped` 表示按租户独立启用或禁用。
 default_install_mode: global
+
+# Plugin capability summary for management pages, delivery notes, and developer context.
+# 插件能力说明，用于插件管理页、交付说明和开发者理解边界。
 description: Official source plugin for AI providers, models, capability tiers, and request logs
+
+# Plugin author or owning team.
+# 插件作者或归属团队。
 author: linapro
+
+# Plugin license identifier.
+# 插件许可证标识。
 license: Apache-2.0
 
+# Plugin internationalization config. This follows the host i18n config shape;
+# enabled plugins must ship manifest/i18n resources for the listed locales.
+# 插件国际化配置。该配置与宿主 i18n 配置结构保持一致；启用后需提供对应语言资源。
 i18n:
   enabled: true
   default: zh-CN
@@ -18,130 +57,384 @@ i18n:
     - locale: zh-CN
       nativeName: 简体中文
 
+# Plugin menu declaration list; the host syncs menus, permissions, and route entries from it.
+# 插件菜单声明列表，宿主按该列表同步菜单、权限和路由入口。
 menus:
+  # Unique directory key for the AI Hub top-level plugin directory.
+  # AI Hub 顶级插件目录唯一键。
   - key: plugin:linapro-ai-core:smart-center
+    # Directory display name.
+    # 目录显示名称。
     name: AI Hub
+    # Directory route segment used as the AI Hub route namespace.
+    # 目录路由片段，作为 AI Hub 路由命名空间。
     path: ai
+    # Permission code required to access the AI Hub directory.
+    # 访问 AI Hub 目录所需的权限标识。
     perms: ai:center:view
+    # Menu icon using an Iconify icon name.
+    # 菜单图标，使用 Iconify 图标名称。
     icon: lucide:brain-circuit
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: D
+    # Menu sort order; lower values appear earlier.
+    # 菜单排序值，数值越小越靠前。
     sort: 8
+    # Menu remark stored in host menu governance data.
+    # 菜单备注，写入宿主菜单治理数据。
     remark: AI Hub top-level directory
+  # Unique menu key for provider management.
+  # 供应商管理菜单唯一键。
   - key: plugin:linapro-ai-core:providers
+    # Parent menu key pointing to the AI Hub directory.
+    # 父级菜单键，指向 AI Hub 目录。
     parent_key: plugin:linapro-ai-core:smart-center
+    # Menu display name.
+    # 菜单显示名称。
     name: Providers
+    # Menu route path.
+    # 菜单路由路径。
     path: /ai/providers
+    # Menu render component; the dynamic page shell hosts plugin pages.
+    # 菜单渲染组件，动态页壳用于承载插件页面。
     component: system/plugin/dynamic-page
+    # Permission code required to access this menu.
+    # 菜单访问权限标识。
     perms: ai:provider:list
+    # Menu icon using an Iconify icon name.
+    # 菜单图标，使用 Iconify 图标名称。
     icon: lucide:server-cog
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: M
+    # Menu sort order; lower values appear earlier.
+    # 菜单排序值，数值越小越靠前。
     sort: 1
+    # Menu remark stored in host menu governance data.
+    # 菜单备注，写入宿主菜单治理数据。
     remark: Manage AI providers
+  # Unique button key mounted under provider management.
+  # 挂载在供应商管理菜单下的按钮唯一键。
   - key: plugin:linapro-ai-core:providers:query
+    # Parent menu key pointing to provider management.
+    # 父级菜单键，指向供应商管理菜单。
     parent_key: plugin:linapro-ai-core:providers
+    # Button display name.
+    # 按钮显示名称。
     name: Query Providers
+    # Button permission code.
+    # 按钮权限标识。
     perms: ai:provider:list
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: B
+    # Button sort order; lower values appear earlier.
+    # 按钮排序值，数值越小越靠前。
     sort: 1
+  # Unique button key mounted under provider management.
+  # 挂载在供应商管理菜单下的按钮唯一键。
   - key: plugin:linapro-ai-core:providers:create
+    # Parent menu key pointing to provider management.
+    # 父级菜单键，指向供应商管理菜单。
     parent_key: plugin:linapro-ai-core:providers
+    # Button display name.
+    # 按钮显示名称。
     name: Create Provider
+    # Button permission code.
+    # 按钮权限标识。
     perms: ai:provider:create
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: B
+    # Button sort order; lower values appear earlier.
+    # 按钮排序值，数值越小越靠前。
     sort: 2
+  # Unique button key mounted under provider management.
+  # 挂载在供应商管理菜单下的按钮唯一键。
   - key: plugin:linapro-ai-core:providers:update
+    # Parent menu key pointing to provider management.
+    # 父级菜单键，指向供应商管理菜单。
     parent_key: plugin:linapro-ai-core:providers
+    # Button display name.
+    # 按钮显示名称。
     name: Update Provider
+    # Button permission code.
+    # 按钮权限标识。
     perms: ai:provider:update
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: B
+    # Button sort order; lower values appear earlier.
+    # 按钮排序值，数值越小越靠前。
     sort: 3
+  # Unique button key mounted under provider management.
+  # 挂载在供应商管理菜单下的按钮唯一键。
   - key: plugin:linapro-ai-core:providers:delete
+    # Parent menu key pointing to provider management.
+    # 父级菜单键，指向供应商管理菜单。
     parent_key: plugin:linapro-ai-core:providers
+    # Button display name.
+    # 按钮显示名称。
     name: Delete Provider
+    # Button permission code.
+    # 按钮权限标识。
     perms: ai:provider:delete
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: B
+    # Button sort order; lower values appear earlier.
+    # 按钮排序值，数值越小越靠前。
     sort: 4
+  # Unique menu key for AI model management.
+  # AI 模型管理菜单唯一键。
   - key: plugin:linapro-ai-core:models
+    # Parent menu key pointing to the AI Hub directory.
+    # 父级菜单键，指向 AI Hub 目录。
     parent_key: plugin:linapro-ai-core:smart-center
+    # Menu display name.
+    # 菜单显示名称。
     name: Models
+    # Menu route path.
+    # 菜单路由路径。
     path: /ai/models
+    # Menu render component; the dynamic page shell hosts plugin pages.
+    # 菜单渲染组件，动态页壳用于承载插件页面。
     component: system/plugin/dynamic-page
+    # Permission code required to access this menu.
+    # 菜单访问权限标识。
     perms: ai:provider:list
+    # Menu icon using an Iconify icon name.
+    # 菜单图标，使用 Iconify 图标名称。
     icon: lucide:box
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: M
+    # Menu sort order; lower values appear earlier.
+    # 菜单排序值，数值越小越靠前。
     sort: 2
+    # Menu remark stored in host menu governance data.
+    # 菜单备注，写入宿主菜单治理数据。
     remark: Manage AI provider models
+  # Unique button key mounted under AI model management.
+  # 挂载在 AI 模型管理菜单下的按钮唯一键。
   - key: plugin:linapro-ai-core:models:query
+    # Parent menu key pointing to AI model management.
+    # 父级菜单键，指向 AI 模型管理菜单。
     parent_key: plugin:linapro-ai-core:models
+    # Button display name.
+    # 按钮显示名称。
     name: Query Models
+    # Button permission code.
+    # 按钮权限标识。
     perms: ai:provider:list
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: B
+    # Button sort order; lower values appear earlier.
+    # 按钮排序值，数值越小越靠前。
     sort: 1
+  # Unique button key mounted under AI model management.
+  # 挂载在 AI 模型管理菜单下的按钮唯一键。
   - key: plugin:linapro-ai-core:models:create
+    # Parent menu key pointing to AI model management.
+    # 父级菜单键，指向 AI 模型管理菜单。
     parent_key: plugin:linapro-ai-core:models
+    # Button display name.
+    # 按钮显示名称。
     name: Create Model
+    # Button permission code.
+    # 按钮权限标识。
     perms: ai:provider:create
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: B
+    # Button sort order; lower values appear earlier.
+    # 按钮排序值，数值越小越靠前。
     sort: 2
+  # Unique button key mounted under AI model management.
+  # 挂载在 AI 模型管理菜单下的按钮唯一键。
   - key: plugin:linapro-ai-core:models:update
+    # Parent menu key pointing to AI model management.
+    # 父级菜单键，指向 AI 模型管理菜单。
     parent_key: plugin:linapro-ai-core:models
+    # Button display name.
+    # 按钮显示名称。
     name: Update Model
+    # Button permission code.
+    # 按钮权限标识。
     perms: ai:provider:update
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: B
+    # Button sort order; lower values appear earlier.
+    # 按钮排序值，数值越小越靠前。
     sort: 3
+  # Unique button key mounted under AI model management.
+  # 挂载在 AI 模型管理菜单下的按钮唯一键。
   - key: plugin:linapro-ai-core:models:delete
+    # Parent menu key pointing to AI model management.
+    # 父级菜单键，指向 AI 模型管理菜单。
     parent_key: plugin:linapro-ai-core:models
+    # Button display name.
+    # 按钮显示名称。
     name: Delete Model
+    # Button permission code.
+    # 按钮权限标识。
     perms: ai:provider:delete
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: B
+    # Button sort order; lower values appear earlier.
+    # 按钮排序值，数值越小越靠前。
     sort: 4
+  # Unique menu key for AI capability tier management.
+  # AI 能力层级管理菜单唯一键。
   - key: plugin:linapro-ai-core:tiers
+    # Parent menu key pointing to the AI Hub directory.
+    # 父级菜单键，指向 AI Hub 目录。
     parent_key: plugin:linapro-ai-core:smart-center
+    # Menu display name.
+    # 菜单显示名称。
     name: AI Tiers
+    # Menu route path.
+    # 菜单路由路径。
     path: /ai/tiers
+    # Menu render component; the dynamic page shell hosts plugin pages.
+    # 菜单渲染组件，动态页壳用于承载插件页面。
     component: system/plugin/dynamic-page
+    # Permission code required to access this menu.
+    # 菜单访问权限标识。
     perms: ai:tier:list
+    # Menu icon using an Iconify icon name.
+    # 菜单图标，使用 Iconify 图标名称。
     icon: lucide:sliders-horizontal
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: M
+    # Menu sort order; lower values appear earlier.
+    # 菜单排序值，数值越小越靠前。
     sort: 3
+    # Menu remark stored in host menu governance data.
+    # 菜单备注，写入宿主菜单治理数据。
     remark: Manage basic, standard, and advanced AI capability tiers
+  # Unique button key mounted under AI capability tier management.
+  # 挂载在 AI 能力层级管理菜单下的按钮唯一键。
   - key: plugin:linapro-ai-core:tiers:query
+    # Parent menu key pointing to AI capability tier management.
+    # 父级菜单键，指向 AI 能力层级管理菜单。
     parent_key: plugin:linapro-ai-core:tiers
+    # Button display name.
+    # 按钮显示名称。
     name: Query Tiers
+    # Button permission code.
+    # 按钮权限标识。
     perms: ai:tier:list
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: B
+    # Button sort order; lower values appear earlier.
+    # 按钮排序值，数值越小越靠前。
     sort: 1
+  # Unique button key mounted under AI capability tier management.
+  # 挂载在 AI 能力层级管理菜单下的按钮唯一键。
   - key: plugin:linapro-ai-core:tiers:update
+    # Parent menu key pointing to AI capability tier management.
+    # 父级菜单键，指向 AI 能力层级管理菜单。
     parent_key: plugin:linapro-ai-core:tiers
+    # Button display name.
+    # 按钮显示名称。
     name: Update Tier
+    # Button permission code.
+    # 按钮权限标识。
     perms: ai:tier:update
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: B
+    # Button sort order; lower values appear earlier.
+    # 按钮排序值，数值越小越靠前。
     sort: 2
+  # Unique button key mounted under AI capability tier management.
+  # 挂载在 AI 能力层级管理菜单下的按钮唯一键。
   - key: plugin:linapro-ai-core:tiers:test
+    # Parent menu key pointing to AI capability tier management.
+    # 父级菜单键，指向 AI 能力层级管理菜单。
     parent_key: plugin:linapro-ai-core:tiers
+    # Button display name.
+    # 按钮显示名称。
     name: Test Tier
+    # Button permission code.
+    # 按钮权限标识。
     perms: ai:tier:test
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: B
+    # Button sort order; lower values appear earlier.
+    # 按钮排序值，数值越小越靠前。
     sort: 3
+  # Unique menu key for AI request log management.
+  # AI 请求日志管理菜单唯一键。
   - key: plugin:linapro-ai-core:invocations
+    # Parent menu key pointing to the AI Hub directory.
+    # 父级菜单键，指向 AI Hub 目录。
     parent_key: plugin:linapro-ai-core:smart-center
+    # Menu display name.
+    # 菜单显示名称。
     name: Request Logs
+    # Menu route path.
+    # 菜单路由路径。
     path: /ai/invocations
+    # Menu render component; the dynamic page shell hosts plugin pages.
+    # 菜单渲染组件，动态页壳用于承载插件页面。
     component: system/plugin/dynamic-page
+    # Permission code required to access this menu.
+    # 菜单访问权限标识。
     perms: ai:invocation:list
+    # Menu icon using an Iconify icon name.
+    # 菜单图标，使用 Iconify 图标名称。
     icon: lucide:activity
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: M
+    # Menu sort order; lower values appear earlier.
+    # 菜单排序值，数值越小越靠前。
     sort: 4
+    # Menu remark stored in host menu governance data.
+    # 菜单备注，写入宿主菜单治理数据。
     remark: View AI request records and masked summaries
+  # Unique button key mounted under AI request log management.
+  # 挂载在 AI 请求日志管理菜单下的按钮唯一键。
   - key: plugin:linapro-ai-core:invocations:query
+    # Parent menu key pointing to AI request log management.
+    # 父级菜单键，指向 AI 请求日志管理菜单。
     parent_key: plugin:linapro-ai-core:invocations
+    # Button display name.
+    # 按钮显示名称。
     name: Query Request Logs
+    # Button permission code.
+    # 按钮权限标识。
     perms: ai:invocation:list
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: B
+    # Button sort order; lower values appear earlier.
+    # 按钮排序值，数值越小越靠前。
     sort: 1
+  # Unique button key mounted under AI request log management.
+  # 挂载在 AI 请求日志管理菜单下的按钮唯一键。
   - key: plugin:linapro-ai-core:invocations:clear
+    # Parent menu key pointing to AI request log management.
+    # 父级菜单键，指向 AI 请求日志管理菜单。
     parent_key: plugin:linapro-ai-core:invocations
+    # Button display name.
+    # 按钮显示名称。
     name: Clear Request Logs
+    # Button permission code.
+    # 按钮权限标识。
     perms: ai:invocation:clear
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
     type: B
+    # Button sort order; lower values appear earlier.
+    # 按钮排序值，数值越小越靠前。
     sort: 2

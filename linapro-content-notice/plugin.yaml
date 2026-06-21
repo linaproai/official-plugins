@@ -14,6 +14,10 @@ version: v0.1.0
 # 插件类型枚举。可选值：`source` 表示随宿主源码编译交付；`dynamic` 表示作为运行时动态插件产物加载。
 type: source
 
+# Plugin distribution governance enum. `marketplace` keeps this plugin explicitly governed through plugin management or `plugin.autoEnable`. Use `builtin` only for registered source plugins that host startup must install, enable, and safely upgrade.
+# 插件分发治理枚举。`marketplace`表示插件仍通过插件管理或`plugin.autoEnable`显式治理。只有需要宿主启动自动安装、启用和安全升级的已注册源码插件才使用`builtin`。
+distribution: marketplace
+
 # Multi-tenant scope enum. Allowed values: `platform_only` is platform-context only; `tenant_aware` is governed by tenant context.
 # 多租户作用域枚举。可选值：`platform_only` 表示仅平台上下文可见和治理；`tenant_aware` 表示按租户上下文治理。
 scope_nature: tenant_aware
