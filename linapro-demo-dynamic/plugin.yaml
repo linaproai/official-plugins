@@ -276,8 +276,7 @@ hostServices:
       - list
     resources:
       paths:
-        - config/config.yaml
-        - config/profile.yaml
+        - config/
   # Host service enum. `hostConfig` reads whitelisted public host config keys through get.
   # 宿主服务枚举。`hostConfig` 仅通过 get 读取白名单内的宿主公开配置。
   - service: hostConfig

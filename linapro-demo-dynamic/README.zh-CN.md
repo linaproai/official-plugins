@@ -78,7 +78,7 @@ public_assets:
 
 资源类宿主服务授权仍在`plugin.yaml`中声明，但业务代码使用领域能力接口。例如，样例先获取`pluginbridge.Default()`，再将`guestServices.Storage()`作为`storagecap.Service`使用，并通过`storagecap.PutInput`、`GetInput`、`ListInput`、`DeleteInput`和`StatInput`完成存储操作；storage 协议 DTO 保留在桥接传输内部。
 
-`manifest`宿主服务示例仅授权`config/profile.yaml`和`config/config.yaml`。`/api/v1/manifest-demo`路由会通过`manifest.get`读取这两个打包文件，并在内嵌页面展示返回的 profile 与配置预览，从而完整演示从声明到使用的流程。`/api/v1/host-call-demo`路由还会额外演示`manifest.get_many`、`manifest.list`以及`bizctx`、`cache`、`lock`宿主服务的低风险 smoke 投影。运行期实际生效插件配置通过`Plugins().Config()`读取，并授权为`plugins.config.get`；SQL 和 i18n 生命周期资源不放入本次`manifest`宿主服务授权示例。
+`manifest`宿主服务示例授权`config/`打包清单前缀。`/api/v1/manifest-demo`路由会通过`manifest.get`读取`config/profile.yaml`和`config/config.yaml`，并在内嵌页面展示返回的 profile 与配置预览，从而完整演示从声明到使用的流程。`/api/v1/host-call-demo`路由还会在同一前缀内额外演示`manifest.get_many`、`manifest.list`以及`bizctx`、`cache`、`lock`宿主服务的低风险 smoke 投影。运行期实际生效插件配置通过`Plugins().Config()`读取，并授权为`plugins.config.get`；SQL 和 i18n 生命周期资源不放入本次`manifest`宿主服务授权示例。
 
 该样例还通过`service: jobs`和`method: jobs.register`声明一个内置定时任务。同一个`RegisterPlugin`函数会通过`plugin.Jobs().Register(...)`声明内置任务；宿主 Jobs 发现期使用`pluginbridge.NewDeclarations()`执行该声明，将结果投影到`Jobs`管理中，并通过声明的`JobHeartbeat`路由执行心跳任务。
 
