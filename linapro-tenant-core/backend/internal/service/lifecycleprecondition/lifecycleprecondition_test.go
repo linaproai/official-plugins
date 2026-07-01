@@ -43,8 +43,8 @@ func TestPreconditionRejectsSuspendedTenantBeforePluginRemoval(t *testing.T) {
 	}
 }
 
-// TestNewRequiresTenantCounter verifies dependency construction fails fast.
-func TestNewRequiresTenantCounter(t *testing.T) {
+// TestNewRequiresTenantCountingDependency verifies dependency construction fails fast.
+func TestNewRequiresTenantCountingDependency(t *testing.T) {
 	if _, err := New(nil); err == nil {
 		t.Fatal("expected missing tenant counter to fail")
 	}

@@ -12,6 +12,7 @@ import (
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/usercap"
+	"lina-core/pkg/statusflag"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/shared"
 	tenantsvc "lina-plugin-linapro-tenant-core/backend/internal/service/tenant"
 )
@@ -61,8 +62,8 @@ func TestStartDelegatesTokenIssuanceToHostAuth(t *testing.T) {
 		authzSvc:  fakeImpersonationAuthz{platformAdmin: true},
 		bizCtxSvc: impersonateGuardBizCtx{current: bizctxcap.CurrentContext{UserID: int(userID), PlatformBypass: true}},
 		tenantSvc: fakeImpersonationTenantService{tenant: &tenantsvc.Entity{Id: 42, Status: string(shared.TenantStatusActive)}},
-		users: fakeImpersonationUsers{users: map[usercap.UserID]*usercap.UserProjection{
-			usercap.UserID("42"): &usercap.UserProjection{ID: usercap.UserID("42"), Username: "platform-admin"},
+		users: fakeImpersonationUsers{users: map[usercap.UserID]*usercap.UserInfo{
+			usercap.UserID("42"): &usercap.UserInfo{ID: usercap.UserID("42"), Username: "platform-admin"},
 		}},
 	}
 
@@ -182,12 +183,12 @@ type fakeImpersonationAuthz struct {
 }
 
 // BatchGetPermissions is unused by impersonation tests.
-func (s fakeImpersonationAuthz) BatchGetPermissions(context.Context, capmodel.CapabilityContext, []authz.PermissionKey) (*capmodel.BatchResult[*authz.PermissionProjection, authz.PermissionKey], error) {
-	return &capmodel.BatchResult[*authz.PermissionProjection, authz.PermissionKey]{Items: map[authz.PermissionKey]*authz.PermissionProjection{}}, nil
+func (s fakeImpersonationAuthz) BatchGetPermissions(context.Context, []authz.PermissionKey) (*capmodel.BatchResult[*authz.PermissionInfo, authz.PermissionKey], error) {
+	return &capmodel.BatchResult[*authz.PermissionInfo, authz.PermissionKey]{Items: map[authz.PermissionKey]*authz.PermissionInfo{}}, nil
 }
 
 // BatchHasPermissions is unused by impersonation tests.
-func (s fakeImpersonationAuthz) BatchHasPermissions(_ context.Context, _ capmodel.CapabilityContext, keys []authz.PermissionKey) (map[authz.PermissionKey]bool, error) {
+func (s fakeImpersonationAuthz) BatchHasPermissions(_ context.Context, keys []authz.PermissionKey) (map[authz.PermissionKey]bool, error) {
 	result := make(map[authz.PermissionKey]bool, len(keys))
 	for _, key := range keys {
 		result[key] = false
@@ -196,28 +197,38 @@ func (s fakeImpersonationAuthz) BatchHasPermissions(_ context.Context, _ capmode
 }
 
 // HasPermission is unused by impersonation tests.
-func (s fakeImpersonationAuthz) HasPermission(context.Context, capmodel.CapabilityContext, authz.PermissionKey) (bool, error) {
+func (s fakeImpersonationAuthz) HasPermission(context.Context, authz.PermissionKey) (bool, error) {
 	return false, nil
 }
 
 // IsPlatformAdmin returns the configured decision.
-func (s fakeImpersonationAuthz) IsPlatformAdmin(context.Context, capmodel.CapabilityContext, authz.UserID) (bool, error) {
+func (s fakeImpersonationAuthz) IsPlatformAdmin(context.Context, authz.UserID) (bool, error) {
 	return s.platformAdmin, nil
+}
+
+// ReplaceRolePermissions is unused by impersonation tests.
+func (s fakeImpersonationAuthz) ReplaceRolePermissions(context.Context, authz.RoleID, []authz.PermissionKey) error {
+	return nil
 }
 
 // fakeImpersonationUsers returns configured user projections.
 type fakeImpersonationUsers struct {
-	users map[usercap.UserID]*usercap.UserProjection
+	users map[usercap.UserID]*usercap.UserInfo
 }
 
 // Current returns no current user projection because these tests resolve explicit users.
-func (s fakeImpersonationUsers) Current(context.Context, capmodel.CapabilityContext) (*usercap.UserProjection, error) {
+func (s fakeImpersonationUsers) Current(context.Context) (*usercap.UserInfo, error) {
+	return nil, nil
+}
+
+// Get is unused by impersonation tests.
+func (s fakeImpersonationUsers) Get(context.Context, usercap.UserID) (*usercap.UserInfo, error) {
 	return nil, nil
 }
 
 // BatchGet returns configured user projections and opaque missing IDs.
-func (s fakeImpersonationUsers) BatchGet(_ context.Context, _ capmodel.CapabilityContext, ids []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
-	out := &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{Items: map[usercap.UserID]*usercap.UserProjection{}}
+func (s fakeImpersonationUsers) BatchGet(_ context.Context, ids []usercap.UserID) (*capmodel.BatchResult[*usercap.UserInfo, usercap.UserID], error) {
+	out := &capmodel.BatchResult[*usercap.UserInfo, usercap.UserID]{Items: map[usercap.UserID]*usercap.UserInfo{}}
 	for _, id := range ids {
 		if item := s.users[id]; item != nil {
 			out.Items[id] = item
@@ -229,8 +240,8 @@ func (s fakeImpersonationUsers) BatchGet(_ context.Context, _ capmodel.Capabilit
 }
 
 // BatchResolve resolves configured users by ID for impersonation tests.
-func (s fakeImpersonationUsers) BatchResolve(_ context.Context, _ capmodel.CapabilityContext, input usercap.BatchResolveInput) (*capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey], error) {
-	out := &capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey]{Items: map[usercap.ResolveKey]*usercap.UserProjection{}}
+func (s fakeImpersonationUsers) BatchResolve(_ context.Context, input usercap.BatchResolveInput) (*capmodel.BatchResult[*usercap.UserInfo, usercap.ResolveKey], error) {
+	out := &capmodel.BatchResult[*usercap.UserInfo, usercap.ResolveKey]{Items: map[usercap.ResolveKey]*usercap.UserInfo{}}
 	for _, id := range input.IDs {
 		key := usercap.ResolveKey(id)
 		if item := s.users[id]; item != nil {
@@ -242,12 +253,50 @@ func (s fakeImpersonationUsers) BatchResolve(_ context.Context, _ capmodel.Capab
 	return out, nil
 }
 
-// Search is unused by impersonation tests.
-func (s fakeImpersonationUsers) Search(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
-	return &capmodel.PageResult[*usercap.UserProjection]{Items: []*usercap.UserProjection{}}, nil
+// List is unused by impersonation tests.
+func (s fakeImpersonationUsers) List(context.Context, usercap.ListInput) (*capmodel.PageResult[*usercap.UserInfo], error) {
+	return &capmodel.PageResult[*usercap.UserInfo]{Items: []*usercap.UserInfo{}}, nil
 }
 
 // EnsureVisible is unused by impersonation tests.
-func (s fakeImpersonationUsers) EnsureVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
+func (s fakeImpersonationUsers) EnsureVisible(context.Context, []usercap.UserID) error {
+	return nil
+}
+
+// Create is unused by impersonation tests.
+func (s fakeImpersonationUsers) Create(context.Context, usercap.CreateInput) (usercap.UserID, error) {
+	return "", nil
+}
+
+// Update is unused by impersonation tests.
+func (s fakeImpersonationUsers) Update(context.Context, usercap.UpdateInput) error {
+	return nil
+}
+
+// Delete is unused by impersonation tests.
+func (s fakeImpersonationUsers) Delete(context.Context, usercap.UserID) error {
+	return nil
+}
+
+// SetStatus is unused by impersonation tests.
+func (s fakeImpersonationUsers) SetStatus(context.Context, usercap.UserID, statusflag.Enabled) error {
+	return nil
+}
+
+// ResetPassword is unused by impersonation tests.
+func (s fakeImpersonationUsers) ResetPassword(context.Context, usercap.UserID, string) error {
+	return nil
+}
+
+// Assignment returns user-role assignment operations unused by impersonation tests.
+func (s fakeImpersonationUsers) Assignment() usercap.AssignmentService {
+	return fakeImpersonationUserAssignments{}
+}
+
+// fakeImpersonationUserAssignments accepts unused role replacements.
+type fakeImpersonationUserAssignments struct{}
+
+// ReplaceRoles is unused by impersonation tests.
+func (fakeImpersonationUserAssignments) ReplaceRoles(context.Context, usercap.UserID, []int) error {
 	return nil
 }

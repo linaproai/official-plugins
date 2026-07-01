@@ -9,7 +9,6 @@ import (
 	"context"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/frame/g"
@@ -19,13 +18,10 @@ import (
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/plugin/capability/authcap/authz"
 	"lina-core/pkg/plugin/capability/authcap/token"
-	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/usercap"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/shared"
 )
-
-const impersonateCapabilityPluginID = "linapro-tenant-core"
 
 // Start validates an impersonation request and returns token metadata.
 func (s *serviceImpl) Start(ctx context.Context, in StartInput) (*StartOutput, error) {
@@ -102,12 +98,12 @@ func (s *serviceImpl) Stop(ctx context.Context, in StopInput) error {
 }
 
 // currentUser returns the current platform user projection.
-func (s *serviceImpl) currentUser(ctx context.Context, userID int64) (*usercap.UserProjection, error) {
+func (s *serviceImpl) currentUser(ctx context.Context, userID int64) (*usercap.UserInfo, error) {
 	if s == nil || s.users == nil {
 		return nil, bizerr.NewCode(capmodel.CodeCapabilityUnavailable, bizerr.P("capability", "user"))
 	}
 	userDomainID := usercap.UserID(strconv.FormatInt(userID, 10))
-	out, err := s.users.BatchGet(ctx, s.capabilityContext(ctx, "impersonate.current_user"), []usercap.UserID{userDomainID})
+	out, err := s.users.BatchGet(ctx, []usercap.UserID{userDomainID})
 	if err != nil || out == nil {
 		return nil, err
 	}
@@ -119,41 +115,7 @@ func (s *serviceImpl) isPlatformAdmin(ctx context.Context, userID int64) (bool, 
 	if s == nil || s.authzSvc == nil {
 		return false, bizerr.NewCode(capmodel.CodeCapabilityUnavailable, bizerr.P("capability", "authz"))
 	}
-	return s.authzSvc.IsPlatformAdmin(ctx, s.capabilityContext(ctx, "impersonate.platform_admin"), authz.UserID(strconv.FormatInt(userID, 10)))
-}
-
-// capabilityContext creates plugin-visible metadata for impersonation domain
-// calls into host-owned capabilities.
-func (s *serviceImpl) capabilityContext(ctx context.Context, resource string) capmodel.CapabilityContext {
-	current := bizctxcap.CurrentContext{}
-	if s != nil && s.bizCtxSvc != nil {
-		current = s.bizCtxSvc.Current(ctx)
-	}
-	actorID := current.ActingUserID
-	if actorID == 0 {
-		actorID = current.UserID
-	}
-	actor := capmodel.CapabilityActor{
-		Type:   capmodel.ActorTypeUser,
-		UserID: int64(actorID),
-		Name:   current.Username,
-	}
-	if actorID == 0 {
-		actor = capmodel.CapabilityActor{
-			Type:         capmodel.ActorTypeSystem,
-			Name:         impersonateCapabilityPluginID,
-			SystemReason: "tenant impersonation domain call",
-		}
-	}
-	return capmodel.CapabilityContext{
-		PluginID:    impersonateCapabilityPluginID,
-		Actor:       actor,
-		TenantID:    capmodel.DomainID(strconv.Itoa(current.TenantID)),
-		Source:      capmodel.CapabilitySourceHTTP,
-		SystemCall:  actor.Type == capmodel.ActorTypeSystem,
-		Resource:    resource,
-		RequestedAt: time.Now(),
-	}
+	return s.authzSvc.IsPlatformAdmin(ctx, authz.UserID(strconv.FormatInt(userID, 10)))
 }
 
 // writeAuditLogs writes optional login and operation log rows when monitor tables exist.

@@ -4,8 +4,8 @@ package impersonate
 import (
 	"context"
 
-	"lina-core/pkg/plugin/capability/authcap/token"
 	"lina-core/pkg/plugin/capability/authcap/authz"
+	"lina-core/pkg/plugin/capability/authcap/token"
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/usercap"
 	tenantsvc "lina-plugin-linapro-tenant-core/backend/internal/service/tenant"

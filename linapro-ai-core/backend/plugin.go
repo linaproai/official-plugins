@@ -43,12 +43,6 @@ var (
 	smartCenterHTTPClient = &http.Client{Timeout: 60 * time.Second}
 )
 
-// invocationRetentionCleaner is the Smart Center service subset needed by the cleanup job.
-type invocationRetentionCleaner interface {
-	// CleanupExpiredInvocations hard-deletes invocation logs older than the retention period.
-	CleanupExpiredInvocations(ctx context.Context, retentionDays int) (int, error)
-}
-
 // init registers the linapro-ai-core source plugin, route bindings, and text AI provider.
 func init() {
 	plugin := pluginhost.NewDeclarations(pluginID)
@@ -149,7 +143,7 @@ func cleanupExpiredInvocations(
 	ctx context.Context,
 	primaryNode bool,
 	hostConfigSvc hostconfigcap.Service,
-	cleaner invocationRetentionCleaner,
+	cleaner aisvc.Service,
 ) error {
 	if !primaryNode {
 		return nil

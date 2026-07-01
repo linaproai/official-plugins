@@ -67,7 +67,7 @@ func (s *serviceImpl) CreateProviderEndpoint(ctx context.Context, in ProviderEnd
 	if err != nil {
 		return 0, err
 	}
-	return id, s.InvalidateTierCache(ctx, "", "", "")
+	return id, s.invalidateTierCache(ctx, "", "", "")
 }
 
 // UpdateProviderEndpoint updates one provider protocol endpoint.
@@ -100,7 +100,7 @@ func (s *serviceImpl) UpdateProviderEndpoint(ctx context.Context, in ProviderEnd
 	if err != nil {
 		return err
 	}
-	return s.InvalidateTierCache(ctx, "", "", "")
+	return s.invalidateTierCache(ctx, "", "", "")
 }
 
 // DeleteProviderEndpoint soft-deletes one endpoint after reference checks.
@@ -121,7 +121,7 @@ func (s *serviceImpl) DeleteProviderEndpoint(ctx context.Context, providerID int
 	if _, err = dao.ProviderEndpoint.Ctx(ctx).Where(do.ProviderEndpoint{Id: id, ProviderId: providerID}).Delete(); err != nil {
 		return err
 	}
-	return s.InvalidateTierCache(ctx, "", "", "")
+	return s.invalidateTierCache(ctx, "", "", "")
 }
 
 // syncProviderFormEndpoints applies the provider drawer's fixed OpenAI and
@@ -223,10 +223,10 @@ func (s *serviceImpl) deleteProviderEndpointInTransaction(ctx context.Context, p
 
 func normalizeProviderFormProtocol(value string) string {
 	switch normalizeProtocol(value) {
-	case ProtocolOpenAI:
-		return ProtocolOpenAI
-	case ProtocolAnthropic:
-		return ProtocolAnthropic
+	case protocolOpenAI:
+		return protocolOpenAI
+	case protocolAnthropic:
+		return protocolAnthropic
 	default:
 		return ""
 	}
@@ -309,7 +309,7 @@ func (s *serviceImpl) UpsertModelCapabilities(ctx context.Context, modelID int64
 	if err != nil {
 		return err
 	}
-	return s.InvalidateTierCache(ctx, "", "", "")
+	return s.invalidateTierCache(ctx, "", "", "")
 }
 
 // modelCapabilityInputKeys returns normalized capability identities from the save payload.
@@ -562,15 +562,16 @@ func (s *serviceImpl) enabledSyncEndpoints(ctx context.Context, providerID int64
 	if providerID <= 0 {
 		return nil, bizerr.NewCode(CodeProviderProtocolRequired)
 	}
+	cols := dao.ProviderEndpoint.Columns()
 	model := dao.ProviderEndpoint.Ctx(ctx).Where(do.ProviderEndpoint{
 		ProviderId: providerID,
 		Enabled:    enabledYes,
 	})
 	if protocol != "" {
-		model = model.Where(dao.ProviderEndpoint.Columns().Protocol, protocol)
+		model = model.Where(cols.Protocol, protocol)
 	}
 	rows := make([]*entity.ProviderEndpoint, 0)
-	if err := model.OrderAsc(dao.ProviderEndpoint.Columns().Id).Scan(&rows); err != nil {
+	if err := model.OrderAsc(cols.Id).Scan(&rows); err != nil {
 		return nil, err
 	}
 	if len(rows) == 0 {

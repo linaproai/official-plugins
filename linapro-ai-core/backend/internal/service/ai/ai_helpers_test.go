@@ -28,12 +28,12 @@ func TestMaskSecretRefPreservesRecognizablePrefixAndSuffix(t *testing.T) {
 }
 
 func TestCapabilityMethodCacheKey(t *testing.T) {
-	if got := normalizeCapabilityMethod(""); got != CapabilityMethodGenerate {
-		t.Fatalf("expected default method %q, got %q", CapabilityMethodGenerate, got)
+	if got := normalizeCapabilityMethod(""); got != capabilityMethodGenerate {
+		t.Fatalf("expected default method %q, got %q", capabilityMethodGenerate, got)
 	}
 
-	generateKey := tierCacheKey(CapabilityTypeText, CapabilityMethodGenerate, TierCodeBasic)
-	otherKey := tierCacheKey(CapabilityTypeText, "summarize", TierCodeBasic)
+	generateKey := tierCacheKey(capabilityTypeText, capabilityMethodGenerate, tierCodeBasic)
+	otherKey := tierCacheKey(capabilityTypeText, "summarize", tierCodeBasic)
 	if generateKey == otherKey {
 		t.Fatalf("expected method-specific cache keys, got %q", generateKey)
 	}

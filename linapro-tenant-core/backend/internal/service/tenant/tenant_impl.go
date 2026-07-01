@@ -173,8 +173,10 @@ func (s *serviceImpl) Delete(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
-	if s.pluginLifecycleSvc != nil {
-		s.pluginLifecycleSvc.NotifyTenantDeleted(ctx, int(id))
+	if s.plugins != nil {
+		if lifecycleSvc := s.plugins.Lifecycle(); lifecycleSvc != nil {
+			lifecycleSvc.NotifyTenantDeleted(ctx, int(id))
+		}
 	}
 	return nil
 }
@@ -191,10 +193,14 @@ func (s *serviceImpl) ensurePlatformTenantGovernance(ctx context.Context) error 
 // ensureTenantDeletePreconditionAllowed asks the host lifecycle service whether
 // a tenant can be deleted.
 func (s *serviceImpl) ensureTenantDeletePreconditionAllowed(ctx context.Context, tenantID int64) error {
-	if s.pluginLifecycleSvc == nil {
+	if s == nil || s.plugins == nil {
 		return nil
 	}
-	if err := s.pluginLifecycleSvc.EnsureTenantDeleteAllowed(ctx, int(tenantID)); err != nil {
+	lifecycleSvc := s.plugins.Lifecycle()
+	if lifecycleSvc == nil {
+		return nil
+	}
+	if err := lifecycleSvc.EnsureTenantDeleteAllowed(ctx, int(tenantID)); err != nil {
 		return bizerr.WrapCode(err, CodeTenantDeletePreconditionVetoed, bizerr.P("tenantId", tenantID))
 	}
 	return nil

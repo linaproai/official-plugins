@@ -5,14 +5,17 @@ package dynamicservice
 import (
 	"context"
 
-	"lina-core/pkg/plugin/capability/capmodel"
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/cachecap"
 	"lina-core/pkg/plugin/capability/hostconfigcap"
+	"lina-core/pkg/plugin/capability/lockcap"
 	"lina-core/pkg/plugin/capability/manifestcap"
 	"lina-core/pkg/plugin/capability/orgcap"
+	"lina-core/pkg/plugin/capability/plugincap"
 	"lina-core/pkg/plugin/capability/storagecap"
 	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/pluginbridge"
-	"lina-core/pkg/plugin/pluginbridge/protocol"
+	"lina-core/pkg/plugin/pluginbridge/recordstore"
 )
 
 // Service defines the dynamic service contract.
@@ -50,97 +53,36 @@ type Service interface {
 // implementation.
 var _ Service = (*serviceImpl)(nil)
 
-// runtimeHostService abstracts guest runtime host-call helpers used by the
-// sample service.
-type runtimeHostService interface {
-	// Log writes one structured runtime log entry through the host.
-	Log(level int, message string, fields map[string]string) error
-	// StateGetInt reads one integer runtime state value.
-	StateGetInt(key string) (int, bool, error)
-	// StateSetInt writes one integer runtime state value.
-	StateSetInt(key string, value int) error
-	// Now returns the current host time string.
-	Now() (string, error)
-	// UUID returns one host-generated unique identifier string.
-	UUID() (string, error)
-	// Node returns the current host node identity string.
-	Node() (string, error)
-}
-
-// networkHostService abstracts guest outbound HTTP host-call helpers used by
-// the sample service.
-type networkHostService interface {
-	// Request executes one governed outbound network request through the host.
-	Request(targetURL string, request *protocol.HostServiceNetworkRequest) (*protocol.HostServiceNetworkResponse, error)
-}
-
-// pluginConfigService abstracts guest plugin config helpers used by the sample
-// service.
-type pluginConfigService interface {
-	// Exists reports whether one plugin-owned runtime config value exists.
-	Exists(ctx context.Context, key string) (bool, error)
-	// String reads one plugin-owned runtime config value as a string.
-	String(ctx context.Context, key string, defaultValue string) (string, error)
-	// Bool reads one plugin-owned runtime config value as a bool.
-	Bool(ctx context.Context, key string, defaultValue bool) (bool, error)
-}
-
-// orgHostService abstracts guest organization capability calls used by the
-// sample service.
-type orgHostService interface {
-	// Status returns the current organization capability activation state.
-	Status(ctx context.Context) capmodel.CapabilityStatus
-	// Available reports whether the organization capability has an active provider.
-	Available(ctx context.Context) bool
-	// ListUserDeptAssignments returns user-to-department projections for the provided users.
-	ListUserDeptAssignments(ctx context.Context, userIDs []int) (map[int]*orgcap.UserDeptAssignment, error)
-	// GetUserDeptIDs returns one user's department identifiers.
-	GetUserDeptIDs(ctx context.Context, userID int) ([]int, error)
-	// GetUserPostIDs returns one user's post identifiers.
-	GetUserPostIDs(ctx context.Context, userID int) ([]int, error)
-}
-
-// tenantHostService abstracts guest tenant capability calls used by the sample
-// service.
-type tenantHostService interface {
-	// Status returns the current tenant capability activation state.
-	Status(ctx context.Context) capmodel.CapabilityStatus
-	// Available reports whether the tenant capability has an active provider.
-	Available(ctx context.Context) bool
-	// Current returns the current request tenant.
-	Current(ctx context.Context) tenantcap.TenantID
-	// PlatformBypass reports whether the current request may bypass tenant filtering.
-	PlatformBypass(ctx context.Context) bool
-	// EnsureTenantVisible validates that the current user can access tenantID.
-	EnsureTenantVisible(ctx context.Context, tenantID tenantcap.TenantID) error
-	// ListUserTenants returns active tenants visible to one user.
-	ListUserTenants(ctx context.Context, userID int) ([]tenantcap.TenantInfo, error)
-}
-
 // serviceImpl implements Service.
 type serviceImpl struct {
-	runtimeSvc      runtimeHostService
-	storageSvc      storagecap.Service
-	networkSvc      networkHostService
-	pluginConfigSvc pluginConfigService
-	manifestSvc     manifestcap.Service
-	hostConfigSvc   hostconfigcap.Service
-	orgSvc          orgHostService
-	tenantSvc       tenantHostService
-	recordStoreSvc  recordStoreService
+	runtimeSvc     pluginbridge.RuntimeHostService
+	storageSvc     storagecap.Service
+	networkSvc     pluginbridge.NetworkHostService
+	pluginsSvc     plugincap.Service
+	manifestSvc    manifestcap.Service
+	hostConfigSvc  hostconfigcap.Service
+	bizCtxSvc      bizctxcap.Service
+	cacheSvc       cachecap.Service
+	lockSvc        lockcap.Service
+	orgSvc         orgcap.Service
+	tenantSvc      tenantcap.Service
+	recordStoreSvc *recordstore.DB
 }
 
 // New creates and returns a new dynamic plugin backend service.
 func New() Service {
 	return &serviceImpl{
-		runtimeSvc:      newRuntimeHostService(),
-		storageSvc:      newStorageHostService(),
-		networkSvc:      newNetworkHostService(),
-		pluginConfigSvc: newPluginConfigService(),
-		manifestSvc:     newManifestHostService(),
-		hostConfigSvc:   newHostConfigHostService(),
-		orgSvc:          newOrgHostService(),
-		tenantSvc:       newTenantHostService(),
-		recordStoreSvc:  newRecordStoreService(),
+		runtimeSvc:     newRuntimeHostService(),
+		storageSvc:     newStorageHostService(),
+		networkSvc:     newNetworkHostService(),
+		pluginsSvc:     newPluginsHostService(),
+		manifestSvc:    newManifestHostService(),
+		hostConfigSvc:  newHostConfigHostService(),
+		bizCtxSvc:      newBizCtxHostService(),
+		cacheSvc:       newCacheHostService(),
+		lockSvc:        newLockHostService(),
+		orgSvc:         newOrgHostService(),
+		tenantSvc:      newTenantHostService(),
+		recordStoreSvc: newRecordStoreService(),
 	}
 }

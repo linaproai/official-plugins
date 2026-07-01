@@ -9,26 +9,26 @@ import (
 
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/notifycap"
-	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/capability/usercap"
 )
 
 // Dict types used in notice
 const (
-	DictTypeNoticeType   = "sys_notice_type"   // Notice type dictionary
-	DictTypeNoticeStatus = "sys_notice_status" // Notice status dictionary
+	dictTypeNoticeType   = "sys_notice_type"   // Notice type dictionary
+	dictTypeNoticeStatus = "sys_notice_status" // Notice status dictionary
 )
 
 // Notice type values (matching sys_notice_type dictionary)
 const (
-	NoticeTypeNotice       = 1 // Notice
-	NoticeTypeAnnouncement = 2 // Announcement
+	noticeTypeNotice       = 1 // Notice
+	noticeTypeAnnouncement = 2 // Announcement
 )
 
 // Notice status values (matching sys_notice_status dictionary)
 const (
-	NoticeStatusDraft     = 0 // Draft
-	NoticeStatusPublished = 1 // Published
+	noticeStatusDraft     = 0 // Draft
+	noticeStatusPublished = 1 // Published
 )
 
 // Service defines tenant-scoped notice CRUD and publication fan-out for the plugin.
@@ -59,24 +59,24 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	bizCtxSvc    bizctxcap.Service                  // Business context bridge
-	notifySvc    notifycap.AdminService             // Notification management capability
-	tenantFilter tenantspi.PluginTableFilterService // Tenant query filter bridge
-	userSvc      usercap.Service                    // User domain projection capability
+	bizCtxSvc bizctxcap.Service // Business context bridge
+	notifySvc notifycap.Service // Notification capability
+	tenantSvc tenantcap.Service // Tenant capability bridge
+	userSvc   usercap.Service   // User domain projection capability
 }
 
 // New creates and returns a new Service instance.
 func New(
 	bizCtxSvc bizctxcap.Service,
-	notifySvc notifycap.AdminService,
-	tenantFilter tenantspi.PluginTableFilterService,
+	notifySvc notifycap.Service,
+	tenantSvc tenantcap.Service,
 	userSvc usercap.Service,
 ) Service {
 	return &serviceImpl{
-		bizCtxSvc:    bizCtxSvc,
-		notifySvc:    notifySvc,
-		tenantFilter: tenantFilter,
-		userSvc:      userSvc,
+		bizCtxSvc: bizCtxSvc,
+		notifySvc: notifySvc,
+		tenantSvc: tenantSvc,
+		userSvc:   userSvc,
 	}
 }
 
@@ -85,7 +85,7 @@ type ListInput struct {
 	PageNum   int    // Page number, starting from 1
 	PageSize  int    // Page size
 	Title     string // Title, supports fuzzy search
-	Type      int    // Type: 1=Notice 2=Announcement (see NoticeType* constants)
+	Type      int    // Type: 1=Notice 2=Announcement
 	CreatedBy string // Creator username, supports fuzzy search
 }
 
@@ -104,10 +104,10 @@ type ListOutput struct {
 // CreateInput defines input for Create function.
 type CreateInput struct {
 	Title   string // Title
-	Type    int    // Type: 1=Notice 2=Announcement (see NoticeType* constants)
+	Type    int    // Type: 1=Notice 2=Announcement
 	Content string // Content
 	FileIds string // Attachment file IDs, comma-separated
-	Status  int    // Status: 0=Draft 1=Published (see NoticeStatus* constants)
+	Status  int    // Status: 0=Draft 1=Published
 	Remark  string // Remark
 }
 
@@ -115,9 +115,9 @@ type CreateInput struct {
 type UpdateInput struct {
 	Id      int64   // Notice ID
 	Title   *string // Title
-	Type    *int    // Type: 1=Notice 2=Announcement (see NoticeType* constants)
+	Type    *int    // Type: 1=Notice 2=Announcement
 	Content *string // Content
 	FileIds *string // Attachment file IDs, comma-separated
-	Status  *int    // Status: 0=Draft 1=Published (see NoticeStatus* constants)
+	Status  *int    // Status: 0=Draft 1=Published
 	Remark  *string // Remark
 }

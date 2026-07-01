@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 )
 
@@ -57,11 +58,13 @@ func TestResolveAuditTenantContextReadsImpersonation(t *testing.T) {
 
 // TestResolveAuditTenantContextHonorsExplicitOverrides verifies callers can override context defaults.
 func TestResolveAuditTenantContextHonorsExplicitOverrides(t *testing.T) {
-	tenantFilter := newTenantFilterForTest(bizctxcap.CurrentContext{})
-	tenantID := 21
-	actingUserID := 4
-	onBehalfOfTenantID := 22
-	isImpersonation := true
+	var (
+		tenantFilter       = newTenantFilterForTest(bizctxcap.CurrentContext{})
+		tenantID           = 21
+		actingUserID       = 4
+		onBehalfOfTenantID = 22
+		isImpersonation    = true
+	)
 
 	actual := resolveAuditTenantContext(
 		context.Background(),
@@ -77,8 +80,8 @@ func TestResolveAuditTenantContextHonorsExplicitOverrides(t *testing.T) {
 }
 
 // newTenantFilterForTest creates an explicitly injected tenant filter service.
-func newTenantFilterForTest(current bizctxcap.CurrentContext) tenantspi.PluginTableFilterService {
-	service, err := tenantspi.NewPluginTableFilter(testBizCtxService{current: current}, nil)
+func newTenantFilterForTest(current bizctxcap.CurrentContext) tenantcap.FilterService {
+	service, err := tenantspi.NewPluginTableFilter(testBizCtxService{current: current})
 	if err != nil {
 		panic(err)
 	}

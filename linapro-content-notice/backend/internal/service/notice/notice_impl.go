@@ -1,6 +1,6 @@
 // notice_impl.go implements notice CRUD, publish state transitions, and
 // tenant-scoped query/export behavior for the linapro-content-notice plugin. It keeps
-// host i18n and tenant-filter dependencies injected so plugin-owned notice rows
+// host capability and tenant dependencies injected so plugin-owned notice rows
 // remain isolated from host-internal services.
 
 package notice
@@ -9,15 +9,14 @@ import (
 	"context"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 
+	usermsgv1 "lina-core/api/usermsg/v1"
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/logger"
-	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/capmodel"
-	"lina-core/pkg/plugin/capability/notifycap"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/capability/usercap"
 	"lina-plugin-linapro-content-notice/backend/internal/dao"
@@ -34,7 +33,7 @@ const (
 func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, error) {
 	noticeColumns := dao.Notice.Columns()
 
-	m := s.tenantFilter.Apply(ctx, dao.Notice.Ctx(ctx), "")
+	m := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Notice.Ctx(ctx), "")
 
 	// Apply filters
 	if in.Title != "" {
@@ -94,7 +93,7 @@ func (s *serviceImpl) GetById(ctx context.Context, id int64) (*ListItem, error) 
 	noticeColumns := dao.Notice.Columns()
 
 	var notice *NoticeEntity
-	err := s.tenantFilter.Apply(ctx, dao.Notice.Ctx(ctx), "").
+	err := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Notice.Ctx(ctx), "").
 		Where(noticeColumns.Id, id).
 		Scan(&notice)
 	if err != nil {
@@ -122,9 +121,11 @@ func (s *serviceImpl) GetById(ctx context.Context, id int64) (*ListItem, error) 
 
 // Create creates a new notice.
 func (s *serviceImpl) Create(ctx context.Context, in CreateInput) (int64, error) {
-	bizCtx := s.bizCtxSvc.Current(ctx)
-	createdBy := int64(bizCtx.UserID)
-	tenantID := s.tenantFilter.Context(ctx).TenantID
+	var (
+		bizCtx    = s.bizCtxSvc.Current(ctx)
+		createdBy = int64(bizCtx.UserID)
+		tenantID  = s.tenantFilterContext(ctx).TenantID
+	)
 
 	// Insert notice (GoFrame auto-fills created_at and updated_at).
 	id, err := dao.Notice.Ctx(ctx).Data(do.Notice{
@@ -143,7 +144,7 @@ func (s *serviceImpl) Create(ctx context.Context, in CreateInput) (int64, error)
 	}
 
 	// If published, dispatch inbox notifications through the unified notify domain.
-	if in.Status == NoticeStatusPublished {
+	if in.Status == noticeStatusPublished {
 		if dispatchErr := s.dispatchPublishedNotice(ctx, id, in.Title, in.Content, in.Type, createdBy); dispatchErr != nil {
 			logger.Errorf(ctx, "dispatch published notice failed for notice %d: %v", id, dispatchErr)
 		}
@@ -158,7 +159,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 
 	// Check notice exists and get old status.
 	var oldNotice *NoticeEntity
-	err := s.tenantFilter.Apply(ctx, dao.Notice.Ctx(ctx), "").
+	err := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Notice.Ctx(ctx), "").
 		Where(noticeColumns.Id, in.Id).
 		Scan(&oldNotice)
 	if err != nil {
@@ -168,9 +169,11 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 		return bizerr.NewCode(CodeNoticeNotFound)
 	}
 
-	bizCtx := s.bizCtxSvc.Current(ctx)
-	updatedBy := int64(bizCtx.UserID)
-	tenantID := s.tenantFilter.Context(ctx).TenantID
+	var (
+		bizCtx    = s.bizCtxSvc.Current(ctx)
+		updatedBy = int64(bizCtx.UserID)
+		tenantID  = s.tenantFilterContext(ctx).TenantID
+	)
 
 	data := do.Notice{UpdatedBy: updatedBy}
 	if in.Title != nil {
@@ -203,7 +206,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 	}
 
 	// If status changed from draft(0) to published(1), dispatch inbox notifications.
-	if in.Status != nil && *in.Status == NoticeStatusPublished && oldNotice.Status == NoticeStatusDraft {
+	if in.Status != nil && *in.Status == noticeStatusPublished && oldNotice.Status == noticeStatusDraft {
 		title := oldNotice.Title
 		if in.Title != nil {
 			title = *in.Title
@@ -233,14 +236,14 @@ func (s *serviceImpl) Delete(ctx context.Context, ids string) error {
 
 	// Soft delete using GoFrame's auto soft-delete feature.
 	noticeColumns := dao.Notice.Columns()
-	_, err := s.tenantFilter.Apply(ctx, dao.Notice.Ctx(ctx), "").
+	_, err := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Notice.Ctx(ctx), "").
 		WhereIn(noticeColumns.Id, idList).
 		Delete()
 	if err != nil {
 		return err
 	}
 
-	if cascadeErr := s.notifySvc.DeleteBySource(ctx, s.capabilityContext(ctx, "notice.delete"), notifycap.SourceTypeNotice, idList); cascadeErr != nil {
+	if cascadeErr := s.notifySvc.DeleteBySource(ctx, usermsgv1.SourceTypeNotice, idList); cascadeErr != nil {
 		logger.Errorf(ctx, "cascade delete notify deliveries failed for notice ids %s: %v", ids, cascadeErr)
 	}
 	return nil
@@ -261,13 +264,29 @@ func normalizeNoticeDeleteIDs(ids string) []string {
 	return result
 }
 
+// pluginTableFilter returns the tenant table-filter slice from the injected tenant service.
+func (s *serviceImpl) pluginTableFilter() tenantcap.FilterService {
+	if s == nil || s.tenantSvc == nil {
+		return nil
+	}
+	return s.tenantSvc.Filter()
+}
+
+// tenantFilterContext returns current tenant metadata for write ownership fields.
+func (s *serviceImpl) tenantFilterContext(ctx context.Context) tenantcap.TenantFilterContext {
+	if filter := s.pluginTableFilter(); filter != nil {
+		return filter.Context(ctx)
+	}
+	return tenantcap.TenantFilterContext{}
+}
+
 // searchCreatorUserIDs resolves a creator keyword through the host user domain
 // capability before filtering plugin-owned notice rows by creator ID.
 func (s *serviceImpl) searchCreatorUserIDs(ctx context.Context, keyword string) ([]int64, error) {
 	if s.userSvc == nil {
 		return nil, gerror.New("linapro-content-notice requires host user capability")
 	}
-	result, err := s.userSvc.Search(ctx, s.capabilityContext(ctx, noticeCreatorCapabilityResource), usercap.SearchInput{
+	result, err := s.userSvc.List(ctx, usercap.ListInput{
 		Keyword: strings.TrimSpace(keyword),
 		Page: capmodel.PageRequest{
 			PageNum:  1,
@@ -278,7 +297,7 @@ func (s *serviceImpl) searchCreatorUserIDs(ctx context.Context, keyword string) 
 	if err != nil || result == nil {
 		return nil, err
 	}
-	return userProjectionStorageIDs(result.Items), nil
+	return userInfoStorageIDs(result.Items), nil
 }
 
 // resolveCreatorNameMap resolves current-page creator display names through one
@@ -292,7 +311,7 @@ func (s *serviceImpl) resolveCreatorNameMap(ctx context.Context, notices []*Noti
 	if s.userSvc == nil {
 		return nil, gerror.New("linapro-content-notice requires host user capability")
 	}
-	result, err := s.userSvc.BatchGet(ctx, s.capabilityContext(ctx, noticeCreatorCapabilityResource), userIDs)
+	result, err := s.userSvc.BatchGet(ctx, userIDs)
 	if err != nil || result == nil {
 		return names, err
 	}
@@ -301,48 +320,9 @@ func (s *serviceImpl) resolveCreatorNameMap(ctx context.Context, notices []*Noti
 		if !ok {
 			continue
 		}
-		names[storageID] = userProjectionDisplayName(projection)
+		names[storageID] = userInfoDisplayName(projection)
 	}
 	return names, nil
-}
-
-// capabilityContext builds the audited domain-call context used by host user
-// capabilities without exposing host-private request or storage objects.
-func (s *serviceImpl) capabilityContext(ctx context.Context, resource string) capmodel.CapabilityContext {
-	var current bizctxcap.CurrentContext
-	if s.bizCtxSvc != nil {
-		current = s.bizCtxSvc.Current(ctx)
-	}
-	tenantCtx := tenantspi.TenantFilterContext{TenantID: current.TenantID}
-	if s.tenantFilter != nil {
-		tenantCtx = s.tenantFilter.Context(ctx)
-	}
-	actorUserID := tenantCtx.ActingUserID
-	if actorUserID == 0 {
-		actorUserID = current.ActingUserID
-	}
-	if actorUserID == 0 {
-		actorUserID = tenantCtx.UserID
-	}
-	if actorUserID == 0 {
-		actorUserID = current.UserID
-	}
-	tenantID := tenantCtx.TenantID
-	if tenantID == 0 {
-		tenantID = current.TenantID
-	}
-	return capmodel.CapabilityContext{
-		PluginID: pluginID,
-		Actor: capmodel.CapabilityActor{
-			Type:   capmodel.ActorTypeUser,
-			UserID: int64(actorUserID),
-			Name:   current.Username,
-		},
-		TenantID:    capmodel.DomainID(strconv.Itoa(tenantID)),
-		Source:      capmodel.CapabilitySourceHTTP,
-		Resource:    resource,
-		RequestedAt: time.Now(),
-	}
 }
 
 // creatorDomainIDs converts plugin-owned notice creator storage values to
@@ -363,9 +343,9 @@ func creatorDomainIDs(notices []*NoticeEntity) []usercap.UserID {
 	return ids
 }
 
-// userProjectionStorageIDs converts visible user projections back to plugin
+// userInfoStorageIDs converts visible user projections back to plugin
 // notice creator IDs for database-side notice filtering.
-func userProjectionStorageIDs(users []*usercap.UserProjection) []int64 {
+func userInfoStorageIDs(users []*usercap.UserInfo) []int64 {
 	ids := make([]int64, 0, len(users))
 	for _, user := range users {
 		if user == nil {
@@ -386,9 +366,9 @@ func userDomainIDStorageID(id usercap.UserID) (int64, bool) {
 	return storageID, err == nil && storageID > 0
 }
 
-// userProjectionDisplayName chooses the stable notice creator display field
+// userInfoDisplayName chooses the stable notice creator display field
 // from the current user-domain projection.
-func userProjectionDisplayName(user *usercap.UserProjection) string {
+func userInfoDisplayName(user *usercap.UserInfo) string {
 	if user == nil {
 		return ""
 	}

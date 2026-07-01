@@ -7,7 +7,7 @@
 - one menu entry rendered inside the default management workspace
 - one standalone static page that does not depend on the host UI framework
 - demo backend routes executed through the dynamic plugin bridge
-- governed access to `runtime`, `storage`, `network`, `data`, `plugins`, `jobs`, `manifest`, `hostConfig`, `org`, and `tenant` host services through `pkg/plugin/pluginbridge`
+- governed access to `runtime`, `storage`, `network`, `data`, `plugins`, `bizctx`, `cache`, `lock`, `jobs`, `manifest`, `hostConfig`, `org`, and `tenant` host services through `pkg/plugin/pluginbridge`
 - source-compatible `Before*` precondition handlers and `After*` notification handlers are auto-discovered from backend controller methods, then write runtime debug logs for lifecycle flow inspection
 
 ## Directory Layout
@@ -76,9 +76,9 @@ These declarations are reviewed and authorized by the host during plugin lifecyc
 
 Guest business host-service clients are imported from `lina-core/pkg/plugin/pluginbridge`. The same package is also used by the sample's bridge files for protocol envelopes, route dispatch, lifecycle contracts, Jobs declaration contracts, and response helpers.
 
-Resource host-service authorization remains declared in `plugin.yaml`, but business code uses domain capability interfaces. For example, the sample calls `pluginbridge.Storage()` as `storagecap.Service` and works with `storagecap.PutInput`, `GetInput`, `ListInput`, `DeleteInput`, and `StatInput`; storage protocol DTOs stay inside the bridge transport.
+Resource host-service authorization remains declared in `plugin.yaml`, but business code uses domain capability interfaces. For example, the sample obtains `pluginbridge.Default()` and calls `guestServices.Storage()` as `storagecap.Service`, then works with `storagecap.PutInput`, `GetInput`, `ListInput`, `DeleteInput`, and `StatInput`; storage protocol DTOs stay inside the bridge transport.
 
-The `manifest` host service example authorizes only `config/profile.yaml` and `config/config.yaml`. The `/api/v1/manifest-demo` route reads those two packaged files through `manifest.get` and the embedded page displays the returned profile and config preview, so the sample shows the full declaration-to-use flow. Runtime-effective plugin configuration is read through `Plugins().Config()` and authorized as `plugins.config.get`; SQL and i18n lifecycle resources are not included in this manifest host-service authorization example.
+The `manifest` host service example authorizes only `config/profile.yaml` and `config/config.yaml`. The `/api/v1/manifest-demo` route reads those two packaged files through `manifest.get` and the embedded page displays the returned profile and config preview, so the sample shows the full declaration-to-use flow. The `/api/v1/host-call-demo` route additionally exercises `manifest.get_many` and `manifest.list`, plus the `bizctx`, `cache`, and `lock` host services through low-risk smoke projections. Runtime-effective plugin configuration is read through `Plugins().Config()` and authorized as `plugins.config.get`; SQL and i18n lifecycle resources are not included in this manifest host-service authorization example.
 
 The sample also declares one built-in scheduled job through `service: jobs` and `method: jobs.register`. The same `RegisterPlugin` function declares the built-in job through `plugin.Jobs().Register(...)`; host-driven Jobs discovery executes it with `pluginbridge.NewDeclarations()`, projects the declaration into Jobs management, and executes the heartbeat through the declared `JobHeartbeat` route.
 

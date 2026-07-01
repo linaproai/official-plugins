@@ -1,3 +1,4 @@
+//lint:file-ignore U1000 Dynamic WASM entry points are exported by symbol name and called by the host runtime.
 package main
 
 import (

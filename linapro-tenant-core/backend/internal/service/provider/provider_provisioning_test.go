@@ -14,6 +14,7 @@ import (
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/usercap"
+	"lina-core/pkg/statusflag"
 	"lina-plugin-linapro-tenant-core/backend/internal/dao"
 	"lina-plugin-linapro-tenant-core/backend/internal/model/do"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/membership"
@@ -40,11 +41,13 @@ func TestProvisionAutoEnabledTenantPluginsAppliesExistingActiveTenants(t *testin
 		cleanupProviderProvisioningRows(t, ctx, activeTenantID, suspendedTenantID)
 	})
 
-	bizCtxSvc := providerProvisioningBizCtxService{}
-	membershipSvc := membership.New(bizCtxSvc, providerProvisioningUsers{})
-	resolverConfigSvc := resolverconfig.New()
-	tenantPluginSvc := &providerProvisioningTenantPlugins{}
-	resolverSvc := resolver.New(bizCtxSvc, membershipSvc)
+	var (
+		bizCtxSvc         = providerProvisioningBizCtxService{}
+		membershipSvc     = membership.New(bizCtxSvc, providerProvisioningUsers{})
+		resolverConfigSvc = resolverconfig.New()
+		tenantPluginSvc   = &providerProvisioningTenantPlugins{}
+		resolverSvc       = resolver.New(bizCtxSvc, membershipSvc)
+	)
 	providerSvc, err := New(membershipSvc, resolverSvc, resolverConfigSvc, tenantPluginSvc)
 	if err != nil {
 		t.Fatalf("create provider service failed: %v", err)
@@ -74,27 +77,70 @@ func (providerProvisioningBizCtxService) Current(context.Context) bizctxcap.Curr
 type providerProvisioningUsers struct{}
 
 // Current returns nil because startup provisioning never reads the current user.
-func (providerProvisioningUsers) Current(context.Context, capmodel.CapabilityContext) (*usercap.UserProjection, error) {
+func (providerProvisioningUsers) Current(context.Context) (*usercap.UserInfo, error) {
+	return nil, nil
+}
+
+// Get returns nil because startup provisioning never reads users.
+func (providerProvisioningUsers) Get(context.Context, usercap.UserID) (*usercap.UserInfo, error) {
 	return nil, nil
 }
 
 // BatchGet returns an empty projection map for provisioning-only tests.
-func (providerProvisioningUsers) BatchGet(context.Context, capmodel.CapabilityContext, []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
-	return &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{Items: map[usercap.UserID]*usercap.UserProjection{}}, nil
+func (providerProvisioningUsers) BatchGet(context.Context, []usercap.UserID) (*capmodel.BatchResult[*usercap.UserInfo, usercap.UserID], error) {
+	return &capmodel.BatchResult[*usercap.UserInfo, usercap.UserID]{Items: map[usercap.UserID]*usercap.UserInfo{}}, nil
 }
 
 // BatchResolve returns an empty projection map for provisioning-only tests.
-func (providerProvisioningUsers) BatchResolve(context.Context, capmodel.CapabilityContext, usercap.BatchResolveInput) (*capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey], error) {
-	return &capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey]{Items: map[usercap.ResolveKey]*usercap.UserProjection{}}, nil
+func (providerProvisioningUsers) BatchResolve(context.Context, usercap.BatchResolveInput) (*capmodel.BatchResult[*usercap.UserInfo, usercap.ResolveKey], error) {
+	return &capmodel.BatchResult[*usercap.UserInfo, usercap.ResolveKey]{Items: map[usercap.ResolveKey]*usercap.UserInfo{}}, nil
 }
 
-// Search returns an empty page because startup provisioning never searches users.
-func (providerProvisioningUsers) Search(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
-	return &capmodel.PageResult[*usercap.UserProjection]{Items: []*usercap.UserProjection{}}, nil
+// List returns an empty page because startup provisioning never lists users.
+func (providerProvisioningUsers) List(context.Context, usercap.ListInput) (*capmodel.PageResult[*usercap.UserInfo], error) {
+	return &capmodel.PageResult[*usercap.UserInfo]{Items: []*usercap.UserInfo{}}, nil
 }
 
 // EnsureVisible accepts all inputs because this fixture is construction-only.
-func (providerProvisioningUsers) EnsureVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
+func (providerProvisioningUsers) EnsureVisible(context.Context, []usercap.UserID) error {
+	return nil
+}
+
+// Create is unused by startup provisioning tests.
+func (providerProvisioningUsers) Create(context.Context, usercap.CreateInput) (usercap.UserID, error) {
+	return "", nil
+}
+
+// Update is unused by startup provisioning tests.
+func (providerProvisioningUsers) Update(context.Context, usercap.UpdateInput) error {
+	return nil
+}
+
+// Delete is unused by startup provisioning tests.
+func (providerProvisioningUsers) Delete(context.Context, usercap.UserID) error {
+	return nil
+}
+
+// SetStatus is unused by startup provisioning tests.
+func (providerProvisioningUsers) SetStatus(context.Context, usercap.UserID, statusflag.Enabled) error {
+	return nil
+}
+
+// ResetPassword is unused by startup provisioning tests.
+func (providerProvisioningUsers) ResetPassword(context.Context, usercap.UserID, string) error {
+	return nil
+}
+
+// Assignment returns user-role assignment operations unused by startup provisioning tests.
+func (providerProvisioningUsers) Assignment() usercap.AssignmentService {
+	return providerProvisioningUserAssignments{}
+}
+
+// providerProvisioningUserAssignments accepts unused role replacements.
+type providerProvisioningUserAssignments struct{}
+
+// ReplaceRoles is unused by startup provisioning tests.
+func (providerProvisioningUserAssignments) ReplaceRoles(context.Context, usercap.UserID, []int) error {
 	return nil
 }
 

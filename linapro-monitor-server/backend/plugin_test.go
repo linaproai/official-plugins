@@ -4,11 +4,15 @@ package backend
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/gogf/gf/v2/container/gvar"
+	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/os/gcfg"
+
 	"lina-core/pkg/plugin/capability/plugincap"
-	pluginconfig "lina-core/pkg/plugin/capability/plugincap"
 	monitorsvc "lina-plugin-linapro-monitor-server/backend/internal/service/monitor"
 )
 
@@ -97,11 +101,118 @@ monitor:
 	}
 }
 
-// newPluginTestConfigService builds a scoped plugin config service from artifact content.
-func newPluginTestConfigService(t *testing.T, content string) plugincap.ConfigService {
+// newPluginTestConfigService builds a plugin-domain service from artifact content.
+func newPluginTestConfigService(t *testing.T, content string) plugincap.Service {
 	t.Helper()
 
-	return pluginconfig.NewConfigFactory(t.TempDir(), t.TempDir()).
-		WithArtifactConfig("linapro-monitor-server", []byte(content)).
-		ForPlugin("linapro-monitor-server")
+	adapter, err := gcfg.NewAdapterContent(content)
+	if err != nil {
+		t.Fatalf("create test config adapter: %v", err)
+	}
+	return pluginTestPlugins{config: pluginTestConfigService{cfg: gcfg.NewWithAdapter(adapter)}}
+}
+
+// pluginTestPlugins exposes plugin-domain capabilities used by backend tests.
+type pluginTestPlugins struct {
+	config plugincap.ConfigService
+}
+
+// Config returns the configured test plugin config service.
+func (s pluginTestPlugins) Config() plugincap.ConfigService {
+	return s.config
+}
+
+// Registry is unused by backend tests.
+func (s pluginTestPlugins) Registry() plugincap.RegistryService {
+	return nil
+}
+
+// State is unused by backend tests.
+func (s pluginTestPlugins) State() plugincap.StateService {
+	return nil
+}
+
+// Lifecycle is unused by backend tests.
+func (s pluginTestPlugins) Lifecycle() plugincap.LifecycleService {
+	return nil
+}
+
+// pluginTestConfigService is a test-local plugincap.ConfigService backed by YAML content.
+type pluginTestConfigService struct {
+	cfg *gcfg.Config
+}
+
+// Get returns one raw test config value.
+func (s pluginTestConfigService) Get(ctx context.Context, key string, defaultValue any) (*gvar.Var, error) {
+	if s.cfg == nil {
+		if defaultValue != nil {
+			return gvar.New(defaultValue), nil
+		}
+		return nil, nil
+	}
+	if defaultValue != nil {
+		return s.cfg.Get(ctx, key, defaultValue)
+	}
+	return s.cfg.Get(ctx, key)
+}
+
+// Exists reports whether one test config key exists.
+func (s pluginTestConfigService) Exists(ctx context.Context, key string) (bool, error) {
+	value, err := s.Get(ctx, key, nil)
+	return value != nil && !value.IsNil(), err
+}
+
+// Scan scans one test config section into target.
+func (s pluginTestConfigService) Scan(ctx context.Context, key string, target any) error {
+	if target == nil {
+		return gerror.New("plugin config scan target cannot be nil")
+	}
+	value, err := s.Get(ctx, key, nil)
+	if err != nil || value == nil || value.IsNil() {
+		return err
+	}
+	return value.Scan(target)
+}
+
+// String reads a string test config value.
+func (s pluginTestConfigService) String(ctx context.Context, key string, defaultValue string) (string, error) {
+	value, err := s.Get(ctx, key, defaultValue)
+	if err != nil || value == nil || value.IsNil() {
+		return defaultValue, err
+	}
+	if raw := value.String(); strings.TrimSpace(raw) != "" {
+		return raw, nil
+	}
+	return defaultValue, nil
+}
+
+// Bool reads a bool test config value.
+func (s pluginTestConfigService) Bool(ctx context.Context, key string, defaultValue bool) (bool, error) {
+	value, err := s.Get(ctx, key, defaultValue)
+	if err != nil || value == nil || value.IsNil() {
+		return defaultValue, err
+	}
+	return value.Bool(), nil
+}
+
+// Int reads an int test config value.
+func (s pluginTestConfigService) Int(ctx context.Context, key string, defaultValue int) (int, error) {
+	value, err := s.Get(ctx, key, defaultValue)
+	if err != nil || value == nil || value.IsNil() {
+		return defaultValue, err
+	}
+	return value.Int(), nil
+}
+
+// Duration reads a duration test config value.
+func (s pluginTestConfigService) Duration(ctx context.Context, key string, defaultValue time.Duration) (time.Duration, error) {
+	value, err := s.Get(ctx, key, defaultValue)
+	if err != nil || value == nil || value.IsNil() {
+		return defaultValue, err
+	}
+	raw := strings.TrimSpace(value.String())
+	if raw == "" {
+		return defaultValue, nil
+	}
+	return time.ParseDuration(raw)
 }

@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/net/ghttp"
 
 	"lina-core/pkg/apitime"
@@ -134,10 +133,13 @@ func (s *serviceImpl) ListRecords(ctx context.Context, in *ListRecordsInput) (ou
 	}
 
 	pageNum, pageSize := normalizeListPagination(in)
-	model := s.tenantFilter.Apply(ctx, dao.Record.Ctx(ctx), "")
-	keyword := strings.TrimSpace(in.Keyword)
+	var (
+		cols    = dao.Record.Columns()
+		model   = tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Record.Ctx(ctx), "")
+		keyword = strings.TrimSpace(in.Keyword)
+	)
 	if keyword != "" {
-		model = model.WhereLike(dao.Record.Columns().Title, "%"+keyword+"%")
+		model = model.WhereLike(cols.Title, "%"+keyword+"%")
 	}
 
 	total, err := model.Count()
@@ -147,8 +149,8 @@ func (s *serviceImpl) ListRecords(ctx context.Context, in *ListRecordsInput) (ou
 
 	items := make([]*demoRecordEntity, 0)
 	err = model.
-		OrderDesc(dao.Record.Columns().UpdatedAt).
-		OrderDesc(dao.Record.Columns().Id).
+		OrderDesc(cols.UpdatedAt).
+		OrderDesc(cols.Id).
 		Page(pageNum, pageSize).
 		Scan(&items)
 	if err != nil {
@@ -198,7 +200,7 @@ func (s *serviceImpl) CreateRecord(ctx context.Context, in *CreateRecordInput) (
 		}()
 	}
 
-	tenantID := s.tenantFilter.Context(ctx).TenantID
+	tenantID := s.tenantFilterContext(ctx).TenantID
 	recordID, err := dao.Record.Ctx(ctx).Data(do.Record{
 		TenantId:       tenantID,
 		Title:          strings.TrimSpace(in.Title),
@@ -255,7 +257,7 @@ func (s *serviceImpl) UpdateRecord(ctx context.Context, in *UpdateRecordInput) (
 		}()
 	}
 
-	tenantID := s.tenantFilter.Context(ctx).TenantID
+	tenantID := s.tenantFilterContext(ctx).TenantID
 	_, err = dao.Record.Ctx(ctx).
 		Where(tenantspi.TenantFilterColumn, tenantID).
 		Where(do.Record{Id: in.Id}).
@@ -280,7 +282,7 @@ func (s *serviceImpl) DeleteRecord(ctx context.Context, id int64) error {
 		return err
 	}
 
-	tenantID := s.tenantFilter.Context(ctx).TenantID
+	tenantID := s.tenantFilterContext(ctx).TenantID
 	_, err = dao.Record.Ctx(ctx).
 		Where(tenantspi.TenantFilterColumn, tenantID).
 		Where(do.Record{Id: id}).
@@ -350,7 +352,7 @@ func (s *serviceImpl) getRecordEntity(ctx context.Context, id int64) (*demoRecor
 	}
 
 	var record *demoRecordEntity
-	err := s.tenantFilter.Apply(ctx, dao.Record.Ctx(ctx), "").
+	err := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Record.Ctx(ctx), "").
 		Where(do.Record{Id: id}).
 		Scan(&record)
 	if err != nil {
@@ -436,8 +438,9 @@ func listAllAttachmentPaths(ctx context.Context) ([]demoAttachmentObject, error)
 		return []demoAttachmentObject{}, nil
 	}
 
+	cols := dao.Record.Columns()
 	rows, err := dao.Record.Ctx(ctx).
-		Fields(dao.Record.Columns().TenantId, dao.Record.Columns().AttachmentPath).
+		Fields(cols.TenantId, cols.AttachmentPath).
 		All()
 	if err != nil {
 		return nil, bizerr.WrapCode(err, CodeDemoRecordAttachmentPathQueryFailed)
@@ -445,21 +448,15 @@ func listAllAttachmentPaths(ctx context.Context) ([]demoAttachmentObject, error)
 
 	objects := make([]demoAttachmentObject, 0, len(rows))
 	for _, row := range rows {
-		value := strings.TrimSpace(row[dao.Record.Columns().AttachmentPath].String())
+		value := strings.TrimSpace(row[cols.AttachmentPath].String())
 		if value != "" {
 			objects = append(objects, demoAttachmentObject{
-				TenantID: row[dao.Record.Columns().TenantId].Int(),
+				TenantID: row[cols.TenantId].Int(),
 				Path:     value,
 			})
 		}
 	}
 	return objects, nil
-}
-
-// withRecordTransaction runs one handler inside the shared source-plugin record
-// transaction boundary.
-func withRecordTransaction(ctx context.Context, handler func(ctx context.Context, tx gdb.TX) error) error {
-	return dao.Record.Transaction(ctx, handler)
 }
 
 // cleanupDemoAttachmentAfterMutationFailure removes an attachment created by a

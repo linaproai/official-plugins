@@ -11,6 +11,7 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 
 	"lina-core/pkg/bizerr"
+	"lina-core/pkg/plugin/capability/plugincap"
 )
 
 const (
@@ -54,10 +55,18 @@ func (s *serviceImpl) Guard(request *ghttp.Request) {
 
 // isDemoControlEnabled reports whether the current plugin state activates demo protection.
 func (s *serviceImpl) isDemoControlEnabled(ctx context.Context) bool {
-	if s == nil || s.enablementReader == nil {
+	if s == nil || s.pluginsSvc == nil {
 		return false
 	}
-	return s.enablementReader.IsEnabledAuthoritative(ctx, demoControlPluginID)
+	stateSvc := s.pluginsSvc.State()
+	if stateSvc == nil {
+		return false
+	}
+	enabled, err := stateSvc.IsEnabledAuthoritative(ctx, plugincap.PluginID(demoControlPluginID))
+	if err != nil {
+		return false
+	}
+	return enabled
 }
 
 // isDemoControlAllowedRequest reports whether the incoming request should bypass

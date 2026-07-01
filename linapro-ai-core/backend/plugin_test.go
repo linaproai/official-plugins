@@ -5,6 +5,7 @@ package backend
 import (
 	"context"
 	"lina-core/pkg/plugin/capability/hostconfigcap"
+	aisvc "lina-plugin-linapro-ai-core/backend/internal/service/ai"
 	"testing"
 
 	"github.com/gogf/gf/v2/container/gvar"
@@ -24,6 +25,7 @@ func (s invocationCleanupHostConfigStub) Get(context.Context, string, any) (*gva
 
 // invocationCleanupCleanerStub records cleanup calls.
 type invocationCleanupCleanerStub struct {
+	aisvc.Service
 	called bool
 	days   int
 	err    error

@@ -91,9 +91,11 @@ func (s *serviceImpl) UpdateTier(ctx context.Context, in TierUpdateInput) error 
 	if err := s.ensurePlatform(ctx); err != nil {
 		return err
 	}
-	capabilityType := normalizeCapabilityType(in.CapabilityType)
-	capabilityMethod := normalizeCapabilityMethod(in.CapabilityMethod)
-	code := normalizeTierCode(in.Code)
+	var (
+		capabilityType   = normalizeCapabilityType(in.CapabilityType)
+		capabilityMethod = normalizeCapabilityMethod(in.CapabilityMethod)
+		code             = normalizeTierCode(in.Code)
+	)
 	if code == "" {
 		return bizerr.NewCode(CodeTierNotFound)
 	}
@@ -148,7 +150,7 @@ func (s *serviceImpl) UpdateTier(ctx context.Context, in TierUpdateInput) error 
 	if err != nil {
 		return err
 	}
-	return s.InvalidateTierCache(ctx, capabilityType, capabilityMethod, code)
+	return s.invalidateTierCache(ctx, capabilityType, capabilityMethod, code)
 }
 
 // TestTier executes a saved or draft tier binding test.
@@ -156,9 +158,11 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 	if err := s.ensurePlatform(ctx); err != nil {
 		return nil, err
 	}
-	capabilityType := normalizeCapabilityType(in.CapabilityType)
-	capabilityMethod := normalizeCapabilityMethod(in.CapabilityMethod)
-	code := normalizeTierCode(in.Code)
+	var (
+		capabilityType   = normalizeCapabilityType(in.CapabilityType)
+		capabilityMethod = normalizeCapabilityMethod(in.CapabilityMethod)
+		code             = normalizeTierCode(in.Code)
+	)
 	if code == "" {
 		return nil, bizerr.NewCode(CodeTierNotFound)
 	}
@@ -210,7 +214,7 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 	result, callErr := s.callProvider(callCtx, binding, messages, in.MaxOutputTokens, nil, effort)
 	usage := aitext.Usage{}
 	output := &TierTestOutput{
-		Status:         InvocationStatusSuccess,
+		Status:         invocationStatusSuccess,
 		ProviderName:   binding.ProviderName,
 		ModelName:      binding.ModelName,
 		Protocol:       binding.Protocol,
@@ -223,7 +227,7 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 		output.ThinkingEffort = result.ThinkingEffort
 	}
 	if callErr != nil {
-		output.Status = InvocationStatusFailed
+		output.Status = invocationStatusFailed
 		output.ErrorSummary = sanitizeErrorSummary(callErr)
 	}
 	invocationEffort := output.ThinkingEffort
@@ -234,7 +238,7 @@ func (s *serviceImpl) TestTier(ctx context.Context, in TierTestInput) (*TierTest
 		requestID:        requestIDFromMetadata(nil),
 		capabilityType:   capabilityType,
 		capabilityMethod: capabilityMethod,
-		purpose:          InvocationPurposeTierTest,
+		purpose:          invocationPurposeTierTest,
 		tierCode:         code,
 		sourcePluginID:   aitext.ProviderPluginID,
 		thinkingEffort:   invocationEffort,
@@ -272,8 +276,8 @@ func normalizeTierTestTimeout(timeout time.Duration) time.Duration {
 	return tierTestTimeout
 }
 
-// InvalidateTierCache publishes a shared revision and clears local cached tier binding entries.
-func (s *serviceImpl) InvalidateTierCache(ctx context.Context, capabilityType string, capabilityMethod string, tierCode string) error {
+// invalidateTierCache publishes a shared revision and clears local cached tier binding entries.
+func (s *serviceImpl) invalidateTierCache(ctx context.Context, capabilityType string, capabilityMethod string, tierCode string) error {
 	if s == nil {
 		return nil
 	}
@@ -469,7 +473,7 @@ func (s *serviceImpl) validateModelCapabilityBinding(
 ) error {
 	capabilityType = normalizeCapabilityType(capabilityType)
 	capabilityMethod = normalizeCapabilityMethod(capabilityMethod)
-	if capabilityType == CapabilityTypeText && capabilityMethod == CapabilityMethodGenerate {
+	if capabilityType == capabilityTypeText && capabilityMethod == capabilityMethodGenerate {
 		return nil
 	}
 	count, err := dao.ModelCapability.Ctx(ctx).Where(do.ModelCapability{
@@ -558,9 +562,11 @@ func (s *serviceImpl) primaryBindingsByTier(ctx context.Context, tierIDs []int64
 		return nil, err
 	}
 	for _, row := range bindingRows {
-		tier := tiers[row.TierId]
-		provider := providers[row.ProviderId]
-		model := models[row.ModelId]
+		var (
+			tier     = tiers[row.TierId]
+			provider = providers[row.ProviderId]
+			model    = models[row.ModelId]
+		)
 		if tier == nil || provider == nil || model == nil || provider.Enabled != enabledYes || model.Enabled != enabledYes {
 			continue
 		}

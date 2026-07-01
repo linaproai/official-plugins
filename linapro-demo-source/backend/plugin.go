@@ -269,10 +269,14 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		middlewares = routes.Middlewares()
 		services    = registrar.Services()
 	)
-	if services == nil || services.I18n() == nil || services.TenantFilter() == nil || services.Storage() == nil {
+	if services == nil {
 		return gerror.New("linapro-demo-source routes require host i18n, tenant-filter, and storage services")
 	}
-	demoSvc := demosvc.New(services.I18n(), services.TenantFilter(), services.Storage())
+	tenantSvc := services.Tenant()
+	if services.I18n() == nil || tenantSvc == nil || tenantSvc.Filter() == nil || services.Storage() == nil {
+		return gerror.New("linapro-demo-source routes require host i18n, tenant-filter, and storage services")
+	}
+	demoSvc := demosvc.New(services.I18n(), tenantSvc, services.Storage())
 	demoController := democtrl.NewV1(demoSvc)
 	routes.Group("/portal/linapro-demo-source", func(group pluginhost.RouteGroup) {
 		group.Middleware(

@@ -146,12 +146,21 @@ hostServices:
       # Deletes a storage object.
       # 删除存储对象。
       - delete
+      # Deletes storage objects by explicit paths.
+      # 按显式路径批量删除存储对象。
+      - delete.batch
       # Lists storage objects.
       # 列出存储对象。
       - list
+      # Lists storage objects with cursor pagination.
+      # 使用游标分页列出存储对象。
+      - list.cursor
       # Reads storage object metadata.
       # 读取存储对象元数据。
       - stat
+      # Reads storage object metadata by explicit paths.
+      # 按显式路径批量读取存储对象元数据。
+      - stat.batch
     # Resource boundary declaration limiting which objects this host service can access.
     # 资源边界声明，限定该宿主服务可访问的对象范围。
     resources:
@@ -223,6 +232,34 @@ hostServices:
   - service: plugins
     methods:
       - config.get
+  # Host service enum. `bizctx` reads the current request business-context projection.
+  # 宿主服务枚举。`bizctx`用于读取当前请求业务上下文投影。
+  - service: bizctx
+    methods:
+      - current.get
+  # Host service enum. `cache` reads and writes plugin-scoped cache entries for smoke verification.
+  # 宿主服务枚举。`cache`用于读写插件作用域缓存项，支撑 smoke 验证。
+  - service: cache
+    methods:
+      - get
+      - get_many
+      - set
+      - set_many
+      - delete
+      - delete_many
+      - incr
+      - expire
+    resources:
+      - ref: host-call-demo-cache
+  # Host service enum. `lock` acquires, renews, and releases plugin-scoped locks for smoke verification.
+  # 宿主服务枚举。`lock`用于获取、续期和释放插件作用域锁，支撑 smoke 验证。
+  - service: lock
+    methods:
+      - acquire
+      - renew
+      - release
+    resources:
+      - ref: host-call-demo-lock
   # Host service enum. `jobs` declares plugin-owned built-in scheduled jobs during host discovery.
   # 宿主服务枚举。`jobs` 用于在宿主发现阶段声明插件内置定时任务。
   - service: jobs
@@ -235,6 +272,8 @@ hostServices:
   - service: manifest
     methods:
       - get
+      - get_many
+      - list
     resources:
       paths:
         - config/config.yaml
@@ -255,19 +294,19 @@ hostServices:
     methods:
       - capability.status
       - capability.available
-      - users.dept_assignments.list
-      - users.dept_ids.get
-      - users.post_ids.get
+      - org.assignment.user_profiles.batch_get
+      - org.department.batch_get
+      - org.post.batch_get
   # Host service enum. `tenant` reads and validates tenant capability context for the current user.
   # 宿主服务枚举。`tenant` 用于读取并校验当前用户相关的租户能力上下文。
   - service: tenant
     methods:
       - capability.status
       - capability.available
-      - tenants.current
-      - tenants.platform_bypass
-      - tenants.visible.ensure
-      - users.tenants.list
+      - tenant.context.current
+      - tenant.context.platform_bypass
+      - tenant.directory.visible.ensure_many
+      - tenant.membership.list_by_user
 # Plugin menu declaration list; the host syncs menus, button permissions, and route entries from it.
 # 插件菜单声明列表，宿主按该列表同步菜单、按钮权限和路由入口。
 menus:

@@ -22,6 +22,7 @@ import (
 
 // fakeUserTenantLister records default resolver membership lookups for unit tests.
 type fakeUserTenantLister struct {
+	membership.Service
 	calls   int
 	tenants []*membership.TenantInfo
 	err     error

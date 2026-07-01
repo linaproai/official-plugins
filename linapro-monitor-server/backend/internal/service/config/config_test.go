@@ -8,8 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogf/gf/v2/container/gvar"
+	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/os/gcfg"
+
 	"lina-core/pkg/plugin/capability/plugincap"
-	configsvc "lina-core/pkg/plugin/capability/plugincap"
 )
 
 // TestLoadUsesDefaultsWhenUnset verifies monitor config defaults when config is absent.
@@ -89,11 +92,122 @@ monitor:
 	}
 }
 
-// newTestConfigService builds a scoped plugin config reader from artifact content.
-func newTestConfigService(t *testing.T, content string) plugincap.ConfigService {
+// newTestConfigService builds a plugin-domain service from artifact content.
+func newTestConfigService(t *testing.T, content string) plugincap.Service {
 	t.Helper()
 
-	return configsvc.NewConfigFactory(t.TempDir(), t.TempDir()).
-		WithArtifactConfig("linapro-monitor-server", []byte(content)).
-		ForPlugin("linapro-monitor-server")
+	adapter, err := gcfg.NewAdapterContent(content)
+	if err != nil {
+		t.Fatalf("create test config adapter: %v", err)
+	}
+	return testPlugins{config: testConfigService{cfg: gcfg.NewWithAdapter(adapter)}}
+}
+
+// testPlugins exposes plugin-domain capabilities used by config tests.
+type testPlugins struct {
+	config plugincap.ConfigService
+}
+
+// Config returns the configured test plugin config service.
+func (s testPlugins) Config() plugincap.ConfigService {
+	return s.config
+}
+
+// Registry is unused by config tests.
+func (s testPlugins) Registry() plugincap.RegistryService {
+	return nil
+}
+
+// State is unused by config tests.
+func (s testPlugins) State() plugincap.StateService {
+	return nil
+}
+
+// Lifecycle is unused by config tests.
+func (s testPlugins) Lifecycle() plugincap.LifecycleService {
+	return nil
+}
+
+// testConfigService is a test-local plugincap.ConfigService backed by YAML content.
+type testConfigService struct {
+	cfg *gcfg.Config
+}
+
+// Get returns one raw test config value.
+func (s testConfigService) Get(ctx context.Context, key string, defaultValue any) (*gvar.Var, error) {
+	if s.cfg == nil {
+		if defaultValue != nil {
+			return gvar.New(defaultValue), nil
+		}
+		return nil, nil
+	}
+	if defaultValue != nil {
+		return s.cfg.Get(ctx, key, defaultValue)
+	}
+	return s.cfg.Get(ctx, key)
+}
+
+// Exists reports whether one test config key exists.
+func (s testConfigService) Exists(ctx context.Context, key string) (bool, error) {
+	value, err := s.Get(ctx, key, nil)
+	return value != nil && !value.IsNil(), err
+}
+
+// Scan scans one test config section into target.
+func (s testConfigService) Scan(ctx context.Context, key string, target any) error {
+	if target == nil {
+		return gerror.New("plugin config scan target cannot be nil")
+	}
+	value, err := s.Get(ctx, key, nil)
+	if err != nil || value == nil || value.IsNil() {
+		return err
+	}
+	return value.Scan(target)
+}
+
+// String reads a string test config value.
+func (s testConfigService) String(ctx context.Context, key string, defaultValue string) (string, error) {
+	value, err := s.Get(ctx, key, defaultValue)
+	if err != nil || value == nil || value.IsNil() {
+		return defaultValue, err
+	}
+	if raw := value.String(); strings.TrimSpace(raw) != "" {
+		return raw, nil
+	}
+	return defaultValue, nil
+}
+
+// Bool reads a bool test config value.
+func (s testConfigService) Bool(ctx context.Context, key string, defaultValue bool) (bool, error) {
+	value, err := s.Get(ctx, key, defaultValue)
+	if err != nil || value == nil || value.IsNil() {
+		return defaultValue, err
+	}
+	return value.Bool(), nil
+}
+
+// Int reads an int test config value.
+func (s testConfigService) Int(ctx context.Context, key string, defaultValue int) (int, error) {
+	value, err := s.Get(ctx, key, defaultValue)
+	if err != nil || value == nil || value.IsNil() {
+		return defaultValue, err
+	}
+	return value.Int(), nil
+}
+
+// Duration reads a duration test config value.
+func (s testConfigService) Duration(ctx context.Context, key string, defaultValue time.Duration) (time.Duration, error) {
+	value, err := s.Get(ctx, key, defaultValue)
+	if err != nil || value == nil || value.IsNil() {
+		return defaultValue, err
+	}
+	raw := strings.TrimSpace(value.String())
+	if raw == "" {
+		return defaultValue, nil
+	}
+	duration, err := time.ParseDuration(raw)
+	if err != nil {
+		return 0, gerror.Wrapf(err, "read monitor server interval config failed key=%s", key)
+	}
+	return duration, nil
 }

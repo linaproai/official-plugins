@@ -47,10 +47,10 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	bizCtxSvc          bizctxcap.Service
-	resolverConfigSvc  resolverconfig.Service
-	tenantPluginSvc    tenantplugin.Service
-	pluginLifecycleSvc plugincap.LifecycleService
+	bizCtxSvc         bizctxcap.Service
+	resolverConfigSvc resolverconfig.Service
+	tenantPluginSvc   tenantplugin.Service
+	plugins           plugincap.Service
 }
 
 // New creates and returns a new tenant Service instance.
@@ -58,13 +58,13 @@ func New(
 	bizCtxSvc bizctxcap.Service,
 	resolverConfigSvc resolverconfig.Service,
 	tenantPluginSvc tenantplugin.Service,
-	pluginLifecycleSvc plugincap.LifecycleService,
+	plugins plugincap.Service,
 ) Service {
 	return &serviceImpl{
-		bizCtxSvc:          bizCtxSvc,
-		resolverConfigSvc:  resolverConfigSvc,
-		tenantPluginSvc:    tenantPluginSvc,
-		pluginLifecycleSvc: pluginLifecycleSvc,
+		bizCtxSvc:         bizCtxSvc,
+		resolverConfigSvc: resolverConfigSvc,
+		tenantPluginSvc:   tenantPluginSvc,
+		plugins:           plugins,
 	}
 }
 

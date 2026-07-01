@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/text/gstr"
@@ -32,7 +31,7 @@ const (
 
 // List queries the department list with optional filters.
 func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, error) {
-	model := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "")
+	model := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Dept.Ctx(ctx), "")
 	if in.Name != "" {
 		model = model.WhereLike(colDeptName, "%"+in.Name+"%")
 	}
@@ -64,7 +63,7 @@ func (s *serviceImpl) Create(ctx context.Context, in CreateInput) (int, error) {
 		ancestors = fmt.Sprintf("%s,%d", parent.Ancestors, in.ParentId)
 	}
 
-	tenantID := s.tenantFilter.Context(ctx).TenantID
+	tenantID := s.tenantFilterContext(ctx).TenantID
 	id, err := dao.Dept.Ctx(ctx).Data(do.Dept{
 		TenantId:  tenantID,
 		ParentId:  in.ParentId,
@@ -87,7 +86,7 @@ func (s *serviceImpl) Create(ctx context.Context, in CreateInput) (int, error) {
 // GetByID retrieves one department detail by primary key.
 func (s *serviceImpl) GetByID(ctx context.Context, id int) (*DeptEntity, error) {
 	var dept *DeptEntity
-	err := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
+	err := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Dept.Ctx(ctx), "").
 		Where(colDeptID, id).
 		Scan(&dept)
 	if err != nil {
@@ -155,10 +154,12 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 			newAncestors = fmt.Sprintf("%s,%d", parent.Ancestors, newParentID)
 		}
 
-		oldPrefix := fmt.Sprintf("%s,%d", dept.Ancestors, in.Id)
-		newPrefix := fmt.Sprintf("%s,%d", newAncestors, in.Id)
-		children := make([]*DeptEntity, 0)
-		err = s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
+		var (
+			oldPrefix = fmt.Sprintf("%s,%d", dept.Ancestors, in.Id)
+			newPrefix = fmt.Sprintf("%s,%d", newAncestors, in.Id)
+			children  = make([]*DeptEntity, 0)
+		)
+		err = tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Dept.Ctx(ctx), "").
 			WhereLike(colDeptAncestors, oldPrefix+",%").
 			WhereOr(colDeptParentID, in.Id).
 			Scan(&children)
@@ -166,14 +167,14 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 			return err
 		}
 
-		tenantID := s.tenantFilter.Context(ctx).TenantID
-		err = dao.Dept.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
+		tenantID := s.tenantFilterContext(ctx).TenantID
+		err = dao.Dept.Transaction(ctx, func(ctx context.Context, _ gdb.TX) error {
 			for _, child := range children {
 				if child == nil {
 					continue
 				}
 				childAncestors := gstr.Replace(child.Ancestors, oldPrefix, newPrefix, 1)
-				_, err = tx.Model(dao.Dept.Table()).Safe().Ctx(ctx).
+				_, err = dao.Dept.Ctx(ctx).
 					OmitNilData().
 					Where(tenantspi.TenantFilterColumn, tenantID).
 					Where(colDeptID, child.Id).
@@ -187,7 +188,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 			if buildErr != nil {
 				return buildErr
 			}
-			_, err = tx.Model(dao.Dept.Table()).Safe().Ctx(ctx).
+			_, err = dao.Dept.Ctx(ctx).
 				OmitNilData().
 				Where(tenantspi.TenantFilterColumn, tenantID).
 				Where(colDeptID, in.Id).
@@ -202,7 +203,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 	if err != nil {
 		return err
 	}
-	tenantID := s.tenantFilter.Context(ctx).TenantID
+	tenantID := s.tenantFilterContext(ctx).TenantID
 	_, err = dao.Dept.Ctx(ctx).
 		OmitNilData().
 		Where(tenantspi.TenantFilterColumn, tenantID).
@@ -214,7 +215,7 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 
 // Delete deletes one department when no child or user binding blocks it.
 func (s *serviceImpl) Delete(ctx context.Context, id int) error {
-	childCount, err := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
+	childCount, err := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Dept.Ctx(ctx), "").
 		Where(colDeptParentID, id).
 		Count()
 	if err != nil {
@@ -224,7 +225,7 @@ func (s *serviceImpl) Delete(ctx context.Context, id int) error {
 		return bizerr.NewCode(CodeDeptHasChildrenDeleteDenied)
 	}
 
-	userCount, err := s.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx), "").
+	userCount, err := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.UserDept.Ctx(ctx), "").
 		Where(colUserDeptID, id).
 		Count()
 	if err != nil {
@@ -234,7 +235,7 @@ func (s *serviceImpl) Delete(ctx context.Context, id int) error {
 		return bizerr.NewCode(CodeDeptHasUsersDeleteDenied)
 	}
 
-	_, err = s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
+	_, err = tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Dept.Ctx(ctx), "").
 		Where(colDeptID, id).
 		Delete()
 	return err
@@ -243,7 +244,7 @@ func (s *serviceImpl) Delete(ctx context.Context, id int) error {
 // Tree returns the plain department tree.
 func (s *serviceImpl) Tree(ctx context.Context) ([]*TreeNode, error) {
 	deptList := make([]*DeptEntity, 0)
-	err := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
+	err := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Dept.Ctx(ctx), "").
 		OrderAsc(colDeptOrderNum).
 		Scan(&deptList)
 	if err != nil {
@@ -282,7 +283,7 @@ func (s *serviceImpl) Exclude(ctx context.Context, in ExcludeInput) ([]*DeptEnti
 
 	prefix := fmt.Sprintf("%s,%d", dept.Ancestors, in.Id)
 	list := make([]*DeptEntity, 0)
-	err = s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
+	err = tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Dept.Ctx(ctx), "").
 		WhereNot(colDeptID, in.Id).
 		WhereNotLike(colDeptAncestors, prefix+",%").
 		WhereNotLike(colDeptAncestors, prefix).
@@ -301,7 +302,7 @@ func (s *serviceImpl) Users(ctx context.Context, deptID int, keyword string, lim
 	}
 	limit = normalizeDeptUserLimit(limit)
 	if deptID == 0 {
-		out, err := s.users.Search(ctx, s.capabilityContext(ctx, "dept.users"), usercap.SearchInput{
+		out, err := s.users.List(ctx, usercap.ListInput{
 			Keyword: keyword,
 			Page:    capmodel.PageRequest{PageSize: limit},
 		})
@@ -320,7 +321,7 @@ func (s *serviceImpl) Users(ctx context.Context, deptID int, keyword string, lim
 	}
 
 	userDeptRows := make([]*entitymodel.UserDept, 0)
-	err = s.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx), "").
+	err = tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.UserDept.Ctx(ctx), "").
 		Fields(colUserUserID).
 		WhereIn(colUserDeptID, deptIDs).
 		Group(colUserUserID).
@@ -358,7 +359,7 @@ func (s *serviceImpl) DescendantDeptIDs(ctx context.Context, deptID int) ([]int,
 	deptIDs := []int{deptID}
 	parentIDs := []int{deptID}
 	for len(parentIDs) > 0 {
-		childValues, err := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
+		childValues, err := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Dept.Ctx(ctx), "").
 			WhereIn(colDeptParentID, parentIDs).
 			Fields(colDeptID).
 			Array()
@@ -374,7 +375,7 @@ func (s *serviceImpl) DescendantDeptIDs(ctx context.Context, deptID int) ([]int,
 
 // checkCodeUnique checks whether one department code already exists.
 func (s *serviceImpl) checkCodeUnique(ctx context.Context, code string, excludeID int) error {
-	model := s.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").Where(colDeptCode, code)
+	model := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Dept.Ctx(ctx), "").Where(colDeptCode, code)
 	if excludeID > 0 {
 		model = model.WhereNot(colDeptID, excludeID)
 	}
@@ -392,7 +393,7 @@ func (s *serviceImpl) checkCodeUnique(ctx context.Context, code string, excludeI
 // the bounded result with plugin-owned department assignments.
 func (s *serviceImpl) usersByKeywordAndDeptIDs(ctx context.Context, keyword string, limit int, deptIDs []int) ([]*DeptUser, error) {
 	searchLimit := deptUserMaxLimit
-	out, err := s.users.Search(ctx, s.capabilityContext(ctx, "dept.users"), usercap.SearchInput{
+	out, err := s.users.List(ctx, usercap.ListInput{
 		Keyword: keyword,
 		Page:    capmodel.PageRequest{PageSize: searchLimit},
 	})
@@ -403,9 +404,9 @@ func (s *serviceImpl) usersByKeywordAndDeptIDs(ctx context.Context, keyword stri
 		return []*DeptUser{}, nil
 	}
 	candidateIDs := make([]int, 0, len(out.Items))
-	projectionsByID := make(map[int]*usercap.UserProjection, len(out.Items))
+	projectionsByID := make(map[int]*usercap.UserInfo, len(out.Items))
 	for _, projection := range out.Items {
-		userID, ok := userProjectionNumericID(projection)
+		userID, ok := userInfoNumericID(projection)
 		if !ok {
 			continue
 		}
@@ -417,7 +418,7 @@ func (s *serviceImpl) usersByKeywordAndDeptIDs(ctx context.Context, keyword stri
 	}
 
 	userDeptRows := make([]*entitymodel.UserDept, 0)
-	err = s.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx), "").
+	err = tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.UserDept.Ctx(ctx), "").
 		Fields(colUserUserID).
 		WhereIn(colUserDeptID, deptIDs).
 		WhereIn(colUserUserID, candidateIDs).
@@ -432,7 +433,7 @@ func (s *serviceImpl) usersByKeywordAndDeptIDs(ctx context.Context, keyword stri
 			assigned[row.UserId] = struct{}{}
 		}
 	}
-	filtered := make([]*usercap.UserProjection, 0, limit)
+	filtered := make([]*usercap.UserInfo, 0, limit)
 	for _, userID := range candidateIDs {
 		if _, ok := assigned[userID]; !ok {
 			continue
@@ -447,18 +448,18 @@ func (s *serviceImpl) usersByKeywordAndDeptIDs(ctx context.Context, keyword stri
 
 // batchGetUsers resolves user projections through usercap while preserving
 // assignment order and hiding missing or invisible users.
-func (s *serviceImpl) batchGetUsers(ctx context.Context, userIDs []int) ([]*usercap.UserProjection, error) {
+func (s *serviceImpl) batchGetUsers(ctx context.Context, userIDs []int) ([]*usercap.UserInfo, error) {
 	ids := make([]usercap.UserID, 0, len(userIDs))
 	for _, userID := range userIDs {
 		if userID > 0 {
 			ids = append(ids, usercap.UserID(strconv.Itoa(userID)))
 		}
 	}
-	out, err := s.users.BatchGet(ctx, s.capabilityContext(ctx, "dept.users"), ids)
+	out, err := s.users.BatchGet(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
-	result := make([]*usercap.UserProjection, 0, len(ids))
+	result := make([]*usercap.UserInfo, 0, len(ids))
 	if out == nil {
 		return result, nil
 	}
@@ -468,39 +469,6 @@ func (s *serviceImpl) batchGetUsers(ctx context.Context, userIDs []int) ([]*user
 		}
 	}
 	return result, nil
-}
-
-// capabilityContext creates the plugin-visible metadata for organization HTTP
-// reads without exposing host request internals.
-func (s *serviceImpl) capabilityContext(ctx context.Context, resource string) capmodel.CapabilityContext {
-	tenantCtx := tenantspi.TenantFilterContext{}
-	if s != nil && s.tenantFilter != nil {
-		tenantCtx = s.tenantFilter.Context(ctx)
-	}
-	actorID := tenantCtx.ActingUserID
-	if actorID == 0 {
-		actorID = tenantCtx.UserID
-	}
-	actor := capmodel.CapabilityActor{
-		Type:   capmodel.ActorTypeUser,
-		UserID: int64(actorID),
-	}
-	if actorID == 0 {
-		actor = capmodel.CapabilityActor{
-			Type:         capmodel.ActorTypeSystem,
-			Name:         deptCapabilityPluginID,
-			SystemReason: "department user projection",
-		}
-	}
-	return capmodel.CapabilityContext{
-		PluginID:    deptCapabilityPluginID,
-		Actor:       actor,
-		TenantID:    capmodel.DomainID(strconv.Itoa(tenantCtx.TenantID)),
-		Source:      capmodel.CapabilitySourceHTTP,
-		SystemCall:  actor.Type == capmodel.ActorTypeSystem,
-		Resource:    resource,
-		RequestedAt: time.Now(),
-	}
 }
 
 // normalizeDeptUserLimit applies the bounded selector contract.
@@ -515,7 +483,7 @@ func normalizeDeptUserLimit(limit int) int {
 }
 
 // toDeptUsers converts usercap projections into selectable user rows.
-func toDeptUsers(rows []*usercap.UserProjection, limit int) []*DeptUser {
+func toDeptUsers(rows []*usercap.UserInfo, limit int) []*DeptUser {
 	result := make([]*DeptUser, 0, len(rows))
 	for _, row := range rows {
 		if row == nil {
@@ -533,9 +501,9 @@ func toDeptUsers(rows []*usercap.UserProjection, limit int) []*DeptUser {
 	return result
 }
 
-// userProjectionNumericID decodes the domain user ID for plugin-owned
+// userInfoNumericID decodes the domain user ID for plugin-owned
 // department assignment table joins.
-func userProjectionNumericID(row *usercap.UserProjection) (int, bool) {
+func userInfoNumericID(row *usercap.UserInfo) (int, bool) {
 	if row == nil {
 		return 0, false
 	}

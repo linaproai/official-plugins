@@ -41,9 +41,9 @@ type Service interface {
 	// ApplyUserTenantFilter constrains platform user-list rows to a requested tenant.
 	// It returns the possibly modified model, whether a filter was applied, and errors.
 	ApplyUserTenantFilter(ctx context.Context, model *gdb.Model, userIDColumn string, tenantID tenantcap.TenantID) (*gdb.Model, bool, error)
-	// ListUserTenantProjections returns tenant ownership labels for visible users
+	// ListUserTenantMemberships returns tenant ownership labels for visible users
 	// without changing host user data or i18n resources.
-	ListUserTenantProjections(ctx context.Context, userIDs []int) (map[int]*tenantcap.UserTenantProjection, error)
+	ListUserTenantMemberships(ctx context.Context, userIDs []int) (map[int]*tenantcap.TenantMembershipInfo, error)
 	// ResolveUserTenantAssignment validates requested memberships and returns a
 	// host write plan. It does not persist changes itself.
 	ResolveUserTenantAssignment(ctx context.Context, requested []tenantcap.TenantID, mode tenantcap.UserTenantAssignmentMode) (*tenantcap.UserTenantAssignmentPlan, error)
@@ -91,9 +91,9 @@ type TenantInfo struct {
 	Status string `json:"status" orm:"status"`
 }
 
-// userTenantProjectionRow is the joined membership and tenant display
+// userTenantMembershipRow is the joined membership and tenant display
 // projection consumed by host user-list screens.
-type userTenantProjectionRow struct {
+type userTenantMembershipRow struct {
 	UserID     int    `json:"userId" orm:"user_id"`
 	TenantID   int    `json:"tenantId" orm:"tenant_id"`
 	TenantName string `json:"tenantName" orm:"tenant_name"`

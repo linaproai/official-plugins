@@ -48,9 +48,9 @@ func (s *serviceImpl) listRemoteModels(ctx context.Context, endpoint *entity.Pro
 		return nil, bizerr.NewCode(CodeProviderProtocolRequired)
 	}
 	switch endpoint.Protocol {
-	case ProtocolOpenAI, ProtocolOpenAICompatible:
+	case protocolOpenAI, protocolOpenAICompatible:
 		return s.listOpenAIModels(ctx, endpoint)
-	case ProtocolAnthropic, ProtocolAnthropicCompatible:
+	case protocolAnthropic, protocolAnthropicCompatible:
 		return s.listAnthropicModels(ctx, endpoint)
 	default:
 		return nil, bizerr.NewCode(CodeRequestInvalid)
@@ -67,9 +67,9 @@ func (s *serviceImpl) callProvider(
 	effort string,
 ) (*adapterResult, error) {
 	switch binding.Protocol {
-	case ProtocolOpenAI, ProtocolOpenAICompatible:
+	case protocolOpenAI, protocolOpenAICompatible:
 		return s.callOpenAI(ctx, binding, messages, maxOutputTokens, temperature, effort)
-	case ProtocolAnthropic, ProtocolAnthropicCompatible:
+	case protocolAnthropic, protocolAnthropicCompatible:
 		return s.callAnthropic(ctx, binding, messages, maxOutputTokens, temperature, effort)
 	default:
 		return nil, bizerr.NewCode(CodeRequestInvalid)
@@ -403,7 +403,7 @@ func providerURLCacheKey(protocol string, baseURL string) string {
 // provider protocol families that use OpenAI-compatible or Anthropic endpoints.
 func supportsProviderVersionFallback(protocol string) bool {
 	switch protocol {
-	case ProtocolOpenAI, ProtocolOpenAICompatible, ProtocolAnthropic, ProtocolAnthropicCompatible:
+	case protocolOpenAI, protocolOpenAICompatible, protocolAnthropic, protocolAnthropicCompatible:
 		return true
 	default:
 		return false
@@ -428,9 +428,11 @@ func versionedProviderBaseURL(base string, resourcePath string) (string, bool, e
 		return "", false, bizerr.NewCode(CodeProviderProtocolRequired)
 	}
 	resourcePath = "/" + strings.TrimLeft(resourcePath, "/")
-	endpointPath := strings.TrimRight(parsed.Path, "/")
-	resourceSuffix := strings.TrimRight(resourcePath, "/")
-	basePath := strings.TrimRight(strings.TrimSuffix(endpointPath, resourceSuffix), "/")
+	var (
+		endpointPath   = strings.TrimRight(parsed.Path, "/")
+		resourceSuffix = strings.TrimRight(resourcePath, "/")
+		basePath       = strings.TrimRight(strings.TrimSuffix(endpointPath, resourceSuffix), "/")
+	)
 	if basePath == "/v1" || strings.HasSuffix(basePath, "/v1") {
 		parsed.Path = basePath
 		return parsed.String(), false, nil

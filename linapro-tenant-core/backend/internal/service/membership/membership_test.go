@@ -16,11 +16,15 @@ import (
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/capability/usercap"
+	"lina-core/pkg/statusflag"
 	"lina-plugin-linapro-tenant-core/backend/internal/model/do"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/shared"
 )
 
-const membershipTestTableSysUser = "sys_user"
+const (
+	membershipTestTableSysUser   = "sys_user"
+	membershipTestStatusDisabled = 0
+)
 
 type membershipTestSysUser struct {
 	g.Meta   `orm:"table:sys_user, do:true"`
@@ -47,14 +51,19 @@ func (s membershipTestBizCtxService) Current(context.Context) bizctxcap.CurrentC
 type membershipTestUsers struct{}
 
 // Current is unused by membership tests.
-func (membershipTestUsers) Current(context.Context, capmodel.CapabilityContext) (*usercap.UserProjection, error) {
+func (membershipTestUsers) Current(context.Context) (*usercap.UserInfo, error) {
+	return nil, nil
+}
+
+// Get is unused by membership tests.
+func (membershipTestUsers) Get(context.Context, usercap.UserID) (*usercap.UserInfo, error) {
 	return nil, nil
 }
 
 // BatchGet returns user projections from the test fixture table.
-func (membershipTestUsers) BatchGet(ctx context.Context, _ capmodel.CapabilityContext, ids []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
-	out := &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{
-		Items:      make(map[usercap.UserID]*usercap.UserProjection, len(ids)),
+func (membershipTestUsers) BatchGet(ctx context.Context, ids []usercap.UserID) (*capmodel.BatchResult[*usercap.UserInfo, usercap.UserID], error) {
+	out := &capmodel.BatchResult[*usercap.UserInfo, usercap.UserID]{
+		Items:      make(map[usercap.UserID]*usercap.UserInfo, len(ids)),
 		MissingIDs: []usercap.UserID{},
 	}
 	intIDs := make([]int64, 0, len(ids))
@@ -85,7 +94,7 @@ func (membershipTestUsers) BatchGet(ctx context.Context, _ capmodel.CapabilityCo
 	}
 	for _, row := range rows {
 		requestID := requested[row.Id]
-		out.Items[requestID] = &usercap.UserProjection{
+		out.Items[requestID] = &usercap.UserInfo{
 			ID:       requestID,
 			TenantID: capmodel.DomainID(strconv.FormatInt(row.TenantID, 10)),
 			Username: row.Username,
@@ -101,36 +110,74 @@ func (membershipTestUsers) BatchGet(ctx context.Context, _ capmodel.CapabilityCo
 }
 
 // BatchResolve is unused by membership tests.
-func (membershipTestUsers) BatchResolve(context.Context, capmodel.CapabilityContext, usercap.BatchResolveInput) (*capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey], error) {
-	return &capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey]{
-		Items:      map[usercap.ResolveKey]*usercap.UserProjection{},
+func (membershipTestUsers) BatchResolve(context.Context, usercap.BatchResolveInput) (*capmodel.BatchResult[*usercap.UserInfo, usercap.ResolveKey], error) {
+	return &capmodel.BatchResult[*usercap.UserInfo, usercap.ResolveKey]{
+		Items:      map[usercap.ResolveKey]*usercap.UserInfo{},
 		MissingIDs: []usercap.ResolveKey{},
 	}, nil
 }
 
-// Search is unused by membership tests.
-func (membershipTestUsers) Search(context.Context, capmodel.CapabilityContext, usercap.SearchInput) (*capmodel.PageResult[*usercap.UserProjection], error) {
-	return &capmodel.PageResult[*usercap.UserProjection]{Items: []*usercap.UserProjection{}}, nil
+// List is unused by membership tests.
+func (membershipTestUsers) List(context.Context, usercap.ListInput) (*capmodel.PageResult[*usercap.UserInfo], error) {
+	return &capmodel.PageResult[*usercap.UserInfo]{Items: []*usercap.UserInfo{}}, nil
 }
 
 // EnsureVisible is unused by membership tests.
-func (membershipTestUsers) EnsureVisible(context.Context, capmodel.CapabilityContext, []usercap.UserID) error {
+func (membershipTestUsers) EnsureVisible(context.Context, []usercap.UserID) error {
 	return nil
 }
 
-// recordingMembershipUsers records capability context while reusing fixture
+// Create is unused by membership tests.
+func (membershipTestUsers) Create(context.Context, usercap.CreateInput) (usercap.UserID, error) {
+	return "", nil
+}
+
+// Update is unused by membership tests.
+func (membershipTestUsers) Update(context.Context, usercap.UpdateInput) error {
+	return nil
+}
+
+// Delete is unused by membership tests.
+func (membershipTestUsers) Delete(context.Context, usercap.UserID) error {
+	return nil
+}
+
+// SetStatus is unused by membership tests.
+func (membershipTestUsers) SetStatus(context.Context, usercap.UserID, statusflag.Enabled) error {
+	return nil
+}
+
+// ResetPassword is unused by membership tests.
+func (membershipTestUsers) ResetPassword(context.Context, usercap.UserID, string) error {
+	return nil
+}
+
+// Assignment returns user-role assignment operations unused by membership tests.
+func (membershipTestUsers) Assignment() usercap.AssignmentService {
+	return membershipTestUserAssignments{}
+}
+
+// membershipTestUserAssignments accepts unused role replacements.
+type membershipTestUserAssignments struct{}
+
+// ReplaceRoles is unused by membership tests.
+func (membershipTestUserAssignments) ReplaceRoles(context.Context, usercap.UserID, []int) error {
+	return nil
+}
+
+// recordingMembershipUsers records business context while reusing fixture
 // projection behavior for startup consistency tests.
 type recordingMembershipUsers struct {
 	membershipTestUsers
-	calls  int
-	capCtx capmodel.CapabilityContext
+	calls   int
+	current bizctxcap.CurrentContext
 }
 
-// BatchGet records the domain call context before resolving fixture users.
-func (s *recordingMembershipUsers) BatchGet(ctx context.Context, capCtx capmodel.CapabilityContext, ids []usercap.UserID) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
+// BatchGet records the domain call business context before resolving fixture users.
+func (s *recordingMembershipUsers) BatchGet(ctx context.Context, ids []usercap.UserID) (*capmodel.BatchResult[*usercap.UserInfo, usercap.UserID], error) {
 	s.calls++
-	s.capCtx = capCtx
-	return s.membershipTestUsers.BatchGet(ctx, capCtx, ids)
+	s.current = bizctxcap.CurrentFromContext(ctx)
+	return s.membershipTestUsers.BatchGet(ctx, ids)
 }
 
 // membershipTestService creates a membership service with an explicit request
@@ -327,9 +374,11 @@ func TestUpdateRejectsOtherTenantMembership(t *testing.T) {
 		}
 	})
 
-	membershipBID := insertMembershipTestRow(t, ctx, userBID, tenantBID)
-	statusDisabled := shared.MembershipStatusDisabled
-	err := membershipTestService(int(tenantAID), 99001).Update(ctx, UpdateInput{Id: membershipBID, Status: &statusDisabled})
+	var (
+		membershipBID  = insertMembershipTestRow(t, ctx, userBID, tenantBID)
+		statusDisabled = membershipTestStatusDisabled
+		err            = membershipTestService(int(tenantAID), 99001).Update(ctx, UpdateInput{Id: membershipBID, Status: &statusDisabled})
+	)
 	if !bizerr.Is(err, CodeMembershipNotFound) {
 		t.Fatalf("expected cross-tenant update to be hidden as not found, got %v", err)
 	}
@@ -397,9 +446,11 @@ func TestTenantAuthorizationOnlyAllowsActiveTenants(t *testing.T) {
 		password      = "$2a$10$6u4IIEd63chleDWJIY6.NewSU7YrpBQ0Tbp.KfLiG71NQrRlL9qTe"
 	)
 
-	activeTenantID := insertMembershipTestTenant(t, ctx, activeCode, shared.TenantStatusActive)
-	suspendedTenantID := insertMembershipTestTenant(t, ctx, suspendedCode, shared.TenantStatusSuspended)
-	userID := insertMembershipTestUser(t, ctx, username, password, activeTenantID)
+	var (
+		activeTenantID    = insertMembershipTestTenant(t, ctx, activeCode, shared.TenantStatusActive)
+		suspendedTenantID = insertMembershipTestTenant(t, ctx, suspendedCode, shared.TenantStatusSuspended)
+		userID            = insertMembershipTestUser(t, ctx, username, password, activeTenantID)
+	)
 	t.Cleanup(func() {
 		if _, err := shared.Model(ctx, shared.TableMembership).Unscoped().Where("user_id", userID).Delete(); err != nil {
 			t.Errorf("cleanup lifecycle memberships failed: %v", err)
@@ -442,9 +493,11 @@ func TestGetByUserAndTenantHonorsRequestedTenant(t *testing.T) {
 		password = "$2a$10$6u4IIEd63chleDWJIY6.NewSU7YrpBQ0Tbp.KfLiG71NQrRlL9qTe"
 	)
 
-	tenantAID := insertMembershipTestTenant(t, ctx, "membership-requested-tenant-a", shared.TenantStatusActive)
-	tenantBID := insertMembershipTestTenant(t, ctx, "membership-requested-tenant-b", shared.TenantStatusActive)
-	userID := insertMembershipTestUser(t, ctx, username, password, tenantAID)
+	var (
+		tenantAID = insertMembershipTestTenant(t, ctx, "membership-requested-tenant-a", shared.TenantStatusActive)
+		tenantBID = insertMembershipTestTenant(t, ctx, "membership-requested-tenant-b", shared.TenantStatusActive)
+		userID    = insertMembershipTestUser(t, ctx, username, password, tenantAID)
+	)
 	t.Cleanup(func() {
 		if _, err := shared.Model(ctx, shared.TableMembership).Unscoped().Where("user_id", userID).Delete(); err != nil {
 			t.Errorf("cleanup requested-tenant memberships failed: %v", err)
@@ -481,9 +534,11 @@ func TestCurrentUsesContextIdentity(t *testing.T) {
 		password   = "$2a$10$6u4IIEd63chleDWJIY6.NewSU7YrpBQ0Tbp.KfLiG71NQrRlL9qTe"
 	)
 
-	tenantAID := insertMembershipTestTenant(t, ctx, tenantCode, shared.TenantStatusActive)
-	userAID := insertMembershipTestUser(t, ctx, usernameA, password, tenantAID)
-	userBID := insertMembershipTestUser(t, ctx, usernameB, password, tenantBID)
+	var (
+		tenantAID = insertMembershipTestTenant(t, ctx, tenantCode, shared.TenantStatusActive)
+		userAID   = insertMembershipTestUser(t, ctx, usernameA, password, tenantAID)
+		userBID   = insertMembershipTestUser(t, ctx, usernameB, password, tenantBID)
+	)
 	t.Cleanup(func() {
 		if _, err := shared.Model(ctx, shared.TableMembership).Unscoped().WhereIn("user_id", []int64{userAID, userBID}).Delete(); err != nil {
 			t.Errorf("cleanup current scoped memberships failed: %v", err)
@@ -508,9 +563,9 @@ func TestCurrentUsesContextIdentity(t *testing.T) {
 	}
 }
 
-// TestValidateStartupConsistencyUsesHostSystemCapabilityContext verifies
+// TestValidateStartupConsistencyUsesPlatformBypassContext verifies
 // startup checks do not require an HTTP authenticated user data-scope snapshot.
-func TestValidateStartupConsistencyUsesHostSystemCapabilityContext(t *testing.T) {
+func TestValidateStartupConsistencyUsesPlatformBypassContext(t *testing.T) {
 	ctx := context.Background()
 	configureMembershipTestDB(t, ctx)
 
@@ -546,12 +601,8 @@ func TestValidateStartupConsistencyUsesHostSystemCapabilityContext(t *testing.T)
 	if users.calls != 1 {
 		t.Fatalf("expected one user batch lookup, got %d", users.calls)
 	}
-	if users.capCtx.Actor.Type != capmodel.ActorTypeSystem ||
-		!users.capCtx.SystemCall ||
-		users.capCtx.Source != capmodel.CapabilitySourceHost ||
-		users.capCtx.TenantID != "0" ||
-		users.capCtx.Resource != "membership.startup_consistency" {
-		t.Fatalf("expected host system startup capability context, got %#v", users.capCtx)
+	if !users.current.PlatformBypass || users.current.TenantID != int(shared.PlatformTenantID) {
+		t.Fatalf("expected startup platform bypass context, got %#v", users.current)
 	}
 }
 
@@ -613,9 +664,11 @@ func TestReplaceUserTenantAssignmentsDefaultMultiModeAllowsMultipleTenants(t *te
 		password    = "$2a$10$6u4IIEd63chleDWJIY6.NewSU7YrpBQ0Tbp.KfLiG71NQrRlL9qTe"
 	)
 
-	tenantAID := insertMembershipTestTenant(t, ctx, tenantACode, shared.TenantStatusActive)
-	tenantBID := insertMembershipTestTenant(t, ctx, tenantBCode, shared.TenantStatusActive)
-	userID := insertMembershipTestUser(t, ctx, username, password, tenantAID)
+	var (
+		tenantAID = insertMembershipTestTenant(t, ctx, tenantACode, shared.TenantStatusActive)
+		tenantBID = insertMembershipTestTenant(t, ctx, tenantBCode, shared.TenantStatusActive)
+		userID    = insertMembershipTestUser(t, ctx, username, password, tenantAID)
+	)
 	insertMembershipTestRow(t, ctx, userID, tenantAID)
 	t.Cleanup(func() {
 		if _, err := shared.Model(ctx, shared.TableMembership).Unscoped().Where("user_id", userID).Delete(); err != nil {

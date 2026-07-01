@@ -29,24 +29,42 @@ func (s fakeI18nService) Translate(_ context.Context, key string, fallback strin
 	return fallback
 }
 
-// FindMessageKeys is unused by these tests and returns no matches.
-func (s fakeI18nService) FindMessageKeys(_ context.Context, _ string, _ string) []string {
-	return []string{}
-}
-
 // fakeDictService returns deterministic dictionary-domain labels.
 type fakeDictService struct {
-	labels       map[dictcap.Value]string
-	lastPluginID string
-	lastType     dictcap.Type
+	labels   map[dictcap.Value]string
+	lastType dictcap.Type
+}
+
+// Type is unused by these tests.
+func (s *fakeDictService) Type() dictcap.TypeService {
+	return nil
+}
+
+// Value returns the fake value service.
+func (s *fakeDictService) Value() dictcap.ValueService {
+	return s
+}
+
+// Refresh is unused by these tests.
+func (s *fakeDictService) Refresh(context.Context, dictcap.Type) error {
+	return nil
+}
+
+// Get is unused by these tests.
+func (s *fakeDictService) Get(context.Context, int) (*dictcap.ValueInfo, error) {
+	return nil, nil
+}
+
+// BatchGet is unused by these tests.
+func (s *fakeDictService) BatchGet(context.Context, dictcap.BatchGetValuesInput) (*capmodel.BatchResult[*dictcap.ValueInfo, dictcap.Value], error) {
+	return &capmodel.BatchResult[*dictcap.ValueInfo, dictcap.Value]{Items: map[dictcap.Value]*dictcap.ValueInfo{}}, nil
 }
 
 // ResolveLabels returns configured labels using dictcap batch semantics.
-func (s *fakeDictService) ResolveLabels(_ context.Context, capCtx capmodel.CapabilityContext, input dictcap.ResolveInput) (*capmodel.BatchResult[*dictcap.LabelProjection, dictcap.Value], error) {
-	s.lastPluginID = capCtx.PluginID
+func (s *fakeDictService) ResolveLabels(ctx context.Context, input dictcap.ResolveInput) (*capmodel.BatchResult[*dictcap.LabelInfo, dictcap.Value], error) {
 	s.lastType = input.Type
-	result := &capmodel.BatchResult[*dictcap.LabelProjection, dictcap.Value]{
-		Items:      map[dictcap.Value]*dictcap.LabelProjection{},
+	result := &capmodel.BatchResult[*dictcap.LabelInfo, dictcap.Value]{
+		Items:      map[dictcap.Value]*dictcap.LabelInfo{},
 		MissingIDs: []dictcap.Value{},
 	}
 	for _, value := range input.Values {
@@ -55,7 +73,7 @@ func (s *fakeDictService) ResolveLabels(_ context.Context, capCtx capmodel.Capab
 			result.MissingIDs = append(result.MissingIDs, value)
 			continue
 		}
-		result.Items[value] = &dictcap.LabelProjection{
+		result.Items[value] = &dictcap.LabelInfo{
 			Type:     input.Type,
 			Value:    value,
 			LabelKey: "dict." + string(input.Type) + "." + string(value) + ".label",
@@ -65,13 +83,12 @@ func (s *fakeDictService) ResolveLabels(_ context.Context, capCtx capmodel.Capab
 	return result, nil
 }
 
-// ListValues returns configured labels as one deterministic page.
-func (s *fakeDictService) ListValues(_ context.Context, capCtx capmodel.CapabilityContext, input dictcap.ListValuesInput) (*capmodel.PageResult[*dictcap.LabelProjection], error) {
-	s.lastPluginID = capCtx.PluginID
+// List returns configured labels as one deterministic page.
+func (s *fakeDictService) List(ctx context.Context, input dictcap.ListValuesInput) (*capmodel.PageResult[*dictcap.ValueInfo], error) {
 	s.lastType = input.Type
-	result := &capmodel.PageResult[*dictcap.LabelProjection]{Items: []*dictcap.LabelProjection{}}
+	result := &capmodel.PageResult[*dictcap.ValueInfo]{Items: []*dictcap.ValueInfo{}}
 	for value, label := range s.labels {
-		result.Items = append(result.Items, &dictcap.LabelProjection{
+		result.Items = append(result.Items, &dictcap.ValueInfo{
 			Type:     input.Type,
 			Value:    value,
 			LabelKey: "dict." + string(input.Type) + "." + string(value) + ".label",
@@ -83,9 +100,33 @@ func (s *fakeDictService) ListValues(_ context.Context, capCtx capmodel.Capabili
 }
 
 // EnsureValuesVisible accepts dictionary values used by localization tests.
-func (s *fakeDictService) EnsureValuesVisible(_ context.Context, capCtx capmodel.CapabilityContext, input dictcap.ResolveInput) error {
-	s.lastPluginID = capCtx.PluginID
+func (s *fakeDictService) EnsureValuesVisible(ctx context.Context, input dictcap.ResolveInput) error {
 	s.lastType = input.Type
+	return nil
+}
+
+// EnsureVisible is unused by these tests.
+func (s *fakeDictService) EnsureVisible(context.Context, []int) error {
+	return nil
+}
+
+// Create is unused by these tests.
+func (s *fakeDictService) Create(context.Context, dictcap.CreateValueInput) (int, error) {
+	return 0, nil
+}
+
+// Update is unused by these tests.
+func (s *fakeDictService) Update(context.Context, dictcap.UpdateValueInput) error {
+	return nil
+}
+
+// Delete is unused by these tests.
+func (s *fakeDictService) Delete(context.Context, int) error {
+	return nil
+}
+
+// DeleteByType is unused by these tests.
+func (s *fakeDictService) DeleteByType(context.Context, dictcap.Type) error {
 	return nil
 }
 
@@ -149,8 +190,8 @@ func TestExportTypeAndStatusTextUseDictCapability(t *testing.T) {
 	}}
 	service := &serviceImpl{dictSvc: dict}
 
-	operTypeMap := service.buildStringDictLabelMap(context.Background(), DictTypeOperType)
-	statusMap := service.buildIntDictLabelMap(context.Background(), DictTypeOperStatus)
+	operTypeMap := service.buildStringDictLabelMap(context.Background(), dictTypeOperType)
+	statusMap := service.buildIntDictLabelMap(context.Background(), dictTypeOperStatus)
 
 	if actual := service.exportOperTypeText(context.Background(), operlogtype.OperTypeExport.String(), operTypeMap); actual != "Domain Export" {
 		t.Fatalf("expected dictcap operation type label, got %q", actual)
@@ -158,7 +199,7 @@ func TestExportTypeAndStatusTextUseDictCapability(t *testing.T) {
 	if actual := service.exportStatusText(context.Background(), OperStatusSuccess, statusMap); actual != "Domain Success" {
 		t.Fatalf("expected dictcap status label, got %q", actual)
 	}
-	if dict.lastPluginID != pluginID || dict.lastType != dictcap.Type(DictTypeOperStatus) {
-		t.Fatalf("expected dictcap context plugin=%s type=%s, got plugin=%s type=%s", pluginID, DictTypeOperStatus, dict.lastPluginID, dict.lastType)
+	if dict.lastType != dictcap.Type(dictTypeOperStatus) {
+		t.Fatalf("expected dictcap type=%s, got type=%s", dictTypeOperStatus, dict.lastType)
 	}
 }

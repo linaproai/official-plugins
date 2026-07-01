@@ -51,6 +51,6 @@ func registerGlobalMiddleware(_ context.Context, registrar pluginhost.HTTPRegist
 	if services == nil || services.I18n() == nil || services.Plugins() == nil || services.Plugins().State() == nil {
 		return gerror.New("linapro-ops-demo-guard middleware requires host i18n and plugin-state services")
 	}
-	guardSvc := middlewaresvc.New(services.I18n(), services.Plugins().State())
+	guardSvc := middlewaresvc.New(services.I18n(), services.Plugins())
 	return registrar.GlobalMiddlewares().Bind("/*", guardSvc.Guard)
 }

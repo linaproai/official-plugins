@@ -5,6 +5,7 @@ package backend
 import (
 	"context"
 	"lina-core/pkg/plugin/capability/hostconfigcap"
+	loginlogsvc "lina-plugin-linapro-monitor-loginlog/backend/internal/service/loginlog"
 	"testing"
 
 	"github.com/gogf/gf/v2/container/gvar"
@@ -24,6 +25,7 @@ func (s loginLogCleanupHostConfigStub) Get(context.Context, string, any) (*gvar.
 
 // loginLogCleanupCleanerStub records cleanup calls.
 type loginLogCleanupCleanerStub struct {
+	loginlogsvc.Service
 	called bool
 	days   int
 	err    error

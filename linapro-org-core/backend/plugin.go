@@ -44,13 +44,13 @@ func init() {
 // provideOrg creates the linapro-org-core organization capability adapter from
 // host-published services during framework capability activation.
 func provideOrg(_ context.Context, env orgspi.ProviderEnv) (orgspi.Provider, error) {
-	if env.TenantFilter == nil {
+	if env.Tenant == nil || env.Tenant.Filter() == nil {
 		return nil, gerror.New("linapro-org-core provider requires host tenant-filter service")
 	}
 	if env.Users == nil {
 		return nil, gerror.New("linapro-org-core provider requires host user capability service")
 	}
-	return orgcapadapter.New(env.TenantFilter, env.Users), nil
+	return orgcapadapter.New(env.Tenant, env.Users), nil
 }
 
 // registerRoutes binds department and post management routes through the published host middleware set.
@@ -60,11 +60,15 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		middlewares = routes.Middlewares()
 		services    = registrar.Services()
 	)
-	if services == nil || services.I18n() == nil || services.TenantFilter() == nil || services.Users() == nil {
+	if services == nil {
 		return gerror.New("linapro-org-core routes require host i18n, tenant-filter, and user capability services")
 	}
-	deptSvc := deptsvc.New(services.TenantFilter(), services.Users())
-	postSvc := postsvc.New(services.I18n(), services.TenantFilter())
+	tenantSvc := services.Tenant()
+	if services.I18n() == nil || tenantSvc == nil || tenantSvc.Filter() == nil || services.Users() == nil {
+		return gerror.New("linapro-org-core routes require host i18n, tenant-filter, and user capability services")
+	}
+	deptSvc := deptsvc.New(tenantSvc, services.Users())
+	postSvc := postsvc.New(services.I18n(), tenantSvc)
 	routes.Group(routes.APIPrefix(), func(group pluginhost.RouteGroup) {
 		group.Group("/api/v1", func(group pluginhost.RouteGroup) {
 			group.Middleware(

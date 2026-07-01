@@ -63,7 +63,7 @@ func provideTenant(_ context.Context, env tenantspi.ProviderEnv) (tenantspi.Prov
 	if env.BizCtx == nil {
 		return nil, gerror.New("linapro-tenant-core provider requires host bizctx service")
 	}
-	return tenantadapter.New(env.BizCtx, env.PluginLifecycle, env.Users, env.Plugins, env.PluginAdmin)
+	return tenantadapter.New(env.BizCtx, env.Tenant, env.Users, env.Plugins)
 }
 
 // beforeDisable enforces linapro-tenant-core plugin disable preconditions.
@@ -109,26 +109,27 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		middlewares = routes.Middlewares()
 		services    = registrar.Services()
 	)
-	if services == nil ||
-		services.Auth() == nil ||
+	if services == nil {
+		return gerror.New("linapro-tenant-core routes require host auth, authz, bizctx, user, plugin lifecycle, and plugin capability services")
+	}
+	tenantDomain := services.Tenant()
+	plugins := services.Plugins()
+	if services.Auth() == nil ||
 		services.Auth().Token() == nil ||
 		services.Auth().Authz() == nil ||
 		services.BizCtx() == nil ||
 		services.Users() == nil ||
-		services.Plugins() == nil ||
-		services.Admin() == nil ||
-		services.Admin().Plugins() == nil {
-		return gerror.New("linapro-tenant-core routes require host auth, authz, bizctx, user, and plugin capability services")
-	}
-	pluginLifecycleSvc := services.Plugins().Lifecycle()
-	if pluginLifecycleSvc == nil {
-		return gerror.New("linapro-tenant-core routes require host plugin lifecycle service")
+		tenantDomain == nil ||
+		tenantDomain.Plugins() == nil ||
+		plugins == nil ||
+		plugins.Lifecycle() == nil {
+		return gerror.New("linapro-tenant-core routes require host auth, authz, bizctx, user, plugin lifecycle, and plugin capability services")
 	}
 	var (
 		membershipSvc     = membership.New(services.BizCtx(), services.Users())
 		resolverConfigSvc = resolverconfig.New()
-		tenantPluginSvc   = tenantplugin.New(services.BizCtx(), pluginLifecycleSvc, services.Plugins(), services.Admin().Plugins())
-		tenantSvc         = tenantsvc.New(services.BizCtx(), resolverConfigSvc, tenantPluginSvc, pluginLifecycleSvc)
+		tenantPluginSvc   = tenantplugin.New(services.BizCtx(), tenantDomain, plugins)
+		tenantSvc         = tenantsvc.New(services.BizCtx(), resolverConfigSvc, tenantPluginSvc, plugins)
 		resolverSvc       = resolver.New(services.BizCtx(), membershipSvc)
 	)
 	providerSvc, err := provider.New(membershipSvc, resolverSvc, resolverConfigSvc, tenantPluginSvc)

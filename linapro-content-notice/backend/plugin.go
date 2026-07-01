@@ -41,18 +41,21 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		middlewares = routes.Middlewares()
 		services    = registrar.Services()
 	)
-	if services == nil ||
-		services.BizCtx() == nil ||
-		services.Admin() == nil ||
-		services.Admin().Notifications() == nil ||
-		services.TenantFilter() == nil ||
+	if services == nil {
+		return gerror.New("linapro-content-notice routes require host bizctx, notification, tenant-filter, and user capability services")
+	}
+	tenantSvc := services.Tenant()
+	if services.BizCtx() == nil ||
+		services.Notifications() == nil ||
+		tenantSvc == nil ||
+		tenantSvc.Filter() == nil ||
 		services.Users() == nil {
-		return gerror.New("linapro-content-notice routes require host bizctx, notification admin, tenant-filter, and user capability services")
+		return gerror.New("linapro-content-notice routes require host bizctx, notification, tenant-filter, and user capability services")
 	}
 	noticeSvc := noticesvc.New(
 		services.BizCtx(),
-		services.Admin().Notifications(),
-		services.TenantFilter(),
+		services.Notifications(),
+		tenantSvc,
 		services.Users(),
 	)
 	routes.Group(routes.APIPrefix(), func(group pluginhost.RouteGroup) {

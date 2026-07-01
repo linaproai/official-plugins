@@ -5,25 +5,23 @@
 package dynamicservice
 
 import (
+	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/cachecap"
 	"lina-core/pkg/plugin/capability/hostconfigcap"
+	"lina-core/pkg/plugin/capability/lockcap"
 	"lina-core/pkg/plugin/capability/manifestcap"
-	"lina-core/pkg/plugin/pluginbridge/recordstore"
+	"lina-core/pkg/plugin/capability/orgcap"
+	"lina-core/pkg/plugin/capability/plugincap"
 	"lina-core/pkg/plugin/capability/storagecap"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/pluginbridge"
+	"lina-core/pkg/plugin/pluginbridge/recordstore"
 )
 
 var guestServices = pluginbridge.Default()
 
-// recordStoreService abstracts the governed record store facade used by the sample service.
-type recordStoreService interface {
-	// Table starts one single-table governed record store query builder.
-	Table(table string) *recordstore.Query
-	// Transaction executes one governed structured mutation transaction.
-	Transaction(fn func(tx *recordstore.Tx) error) error
-}
-
 // newRuntimeHostService returns the guest-side runtime host client.
-func newRuntimeHostService() runtimeHostService {
+func newRuntimeHostService() pluginbridge.RuntimeHostService {
 	return guestServices.Runtime()
 }
 
@@ -33,18 +31,18 @@ func newStorageHostService() storagecap.Service {
 }
 
 // newNetworkHostService returns the guest-side outbound network host client.
-func newNetworkHostService() networkHostService {
+func newNetworkHostService() pluginbridge.NetworkHostService {
 	return guestServices.Network()
 }
 
 // newRecordStoreService returns the guest-side governed record store facade.
-func newRecordStoreService() recordStoreService {
+func newRecordStoreService() *recordstore.DB {
 	return guestServices.RecordStore()
 }
 
-// newPluginConfigService returns the guest-side plugin config client.
-func newPluginConfigService() pluginConfigService {
-	return guestServices.Plugins().Config()
+// newPluginsHostService returns the guest-side plugin-domain capability client.
+func newPluginsHostService() plugincap.Service {
+	return guestServices.Plugins()
 }
 
 // newManifestHostService returns the guest-side plugin manifest resource
@@ -59,12 +57,27 @@ func newHostConfigHostService() hostconfigcap.Service {
 	return guestServices.HostConfig()
 }
 
+// newBizCtxHostService returns the guest-side business context capability client.
+func newBizCtxHostService() bizctxcap.Service {
+	return guestServices.BizCtx()
+}
+
+// newCacheHostService returns the guest-side plugin cache capability client.
+func newCacheHostService() cachecap.Service {
+	return guestServices.Cache()
+}
+
+// newLockHostService returns the guest-side distributed lock capability client.
+func newLockHostService() lockcap.Service {
+	return guestServices.Lock()
+}
+
 // newOrgHostService returns the guest-side organization capability client.
-func newOrgHostService() orgHostService {
+func newOrgHostService() orgcap.Service {
 	return guestServices.Org()
 }
 
 // newTenantHostService returns the guest-side tenant capability client.
-func newTenantHostService() tenantHostService {
+func newTenantHostService() tenantcap.Service {
 	return guestServices.Tenant()
 }

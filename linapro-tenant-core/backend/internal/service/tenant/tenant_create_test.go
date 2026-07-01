@@ -47,7 +47,7 @@ func TestCreateRollsBackTenantWhenProvisioningFails(t *testing.T) {
 	}
 
 	svc := &serviceImpl{
-		bizCtxSvc:         bizctxcap.New(nil),
+		bizCtxSvc:         tenantGuardBizCtx{current: bizctxcap.CurrentContext{UserID: 1, PlatformBypass: true}},
 		resolverConfigSvc: resolverconfig.New(),
 		tenantPluginSvc:   failingTenantPluginService{err: gerror.New("tenant plugin provisioning failed")},
 	}

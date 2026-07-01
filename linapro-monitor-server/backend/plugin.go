@@ -105,11 +105,7 @@ func registerBuiltinJobs(ctx context.Context, registrar pluginhost.JobsRegistrar
 	if plugins == nil {
 		return gerror.New("linapro-monitor-server job requires plugin config service")
 	}
-	configSvc := plugins.Config()
-	if configSvc == nil {
-		return gerror.New("linapro-monitor-server job requires plugin config service")
-	}
-	monitorCfg, err := monitorconfig.Load(ctx, configSvc)
+	monitorCfg, err := monitorconfig.Load(ctx, plugins)
 	if err != nil {
 		return err
 	}
@@ -134,7 +130,7 @@ func registerBuiltinJobs(ctx context.Context, registrar pluginhost.JobsRegistrar
 		serviceMonitorCleanupDisplayName,
 		serviceMonitorCleanupDescription,
 		func(ctx context.Context) error {
-			return cleanupSnapshots(ctx, registrar.IsPrimaryNode(), configSvc, sharedMonitorSvc)
+			return cleanupSnapshots(ctx, registrar.IsPrimaryNode(), plugins, sharedMonitorSvc)
 		},
 	)
 }
@@ -155,17 +151,17 @@ func collectSnapshot(ctx context.Context, monitorSvc monitorsvc.Service) error {
 func cleanupSnapshots(
 	ctx context.Context,
 	primaryNode bool,
-	configSvc plugincap.ConfigService,
+	plugins plugincap.Service,
 	monitorSvc monitorsvc.Service,
 ) error {
 	if !primaryNode {
 		return nil
 	}
 
-	if configSvc == nil {
-		return gerror.New("linapro-monitor-server cleanup requires host config service")
+	if plugins == nil {
+		return gerror.New("linapro-monitor-server cleanup requires plugin service")
 	}
-	monitorCfg, err := monitorconfig.Load(ctx, configSvc)
+	monitorCfg, err := monitorconfig.Load(ctx, plugins)
 	if err != nil {
 		return err
 	}

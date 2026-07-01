@@ -100,9 +100,11 @@ func (s *serviceImpl) saveDemoAttachmentFile(
 		}
 	}()
 
-	now := gtime.Now()
-	ext := strings.TrimPrefix(filepath.Ext(sanitizedName), ".")
-	storedName := fmt.Sprintf("%s_%s", now.Format("Ymd_His"), grand.S(8))
+	var (
+		now        = gtime.Now()
+		ext        = strings.TrimPrefix(filepath.Ext(sanitizedName), ".")
+		storedName = fmt.Sprintf("%s_%s", now.Format("Ymd_His"), grand.S(8))
+	)
 	if ext != "" {
 		storedName += "." + gstr.ToLower(ext)
 	}

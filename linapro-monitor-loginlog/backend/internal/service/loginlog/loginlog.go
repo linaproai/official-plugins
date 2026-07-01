@@ -9,7 +9,7 @@ import (
 
 	"lina-core/pkg/plugin/capability/dictcap"
 	"lina-core/pkg/plugin/capability/i18ncap"
-	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	entitymodel "lina-plugin-linapro-monitor-loginlog/backend/internal/model/entity"
 )
 
@@ -28,8 +28,8 @@ const (
 // Login-log export and dictionary constants.
 const (
 	pluginID            = "linapro-monitor-loginlog"
-	MaxExportRows       = 10000
-	DictTypeLoginStatus = "sys_login_status"
+	maxExportRows       = 10000
+	dictTypeLoginStatus = "sys_login_status"
 )
 
 // Runtime i18n key fragments used by dictionary display projection.
@@ -44,8 +44,8 @@ const (
 
 // Login status values stored in plugin_linapro_monitor_loginlog.
 const (
-	LoginStatusSuccess = 0
-	LoginStatusFail    = 1
+	loginStatusSuccess = 0
+	loginStatusFail    = 1
 )
 
 // Service defines tenant-scoped login-log persistence, query, cleanup, and export.
@@ -70,7 +70,7 @@ type Service interface {
 	// the affected row count; rows outside data scope are ignored by the filter.
 	DeleteByIds(ctx context.Context, ids []int) (int, error)
 	// Export generates an Excel workbook for tenant-visible login logs using
-	// runtime i18n and dictionary fallbacks. It caps output at MaxExportRows.
+	// runtime i18n and dictionary fallbacks. It caps output at the plugin export row limit.
 	Export(ctx context.Context, in ExportInput) (data []byte, err error)
 }
 
@@ -79,18 +79,26 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	dictSvc      dictcap.Service                    // dictSvc resolves host dictionary-domain labels.
-	i18nSvc      i18ncap.Service                    // i18nSvc resolves host runtime translations for plugin data.
-	tenantFilter tenantspi.PluginTableFilterService // tenantFilter constrains plugin-owned login-log rows.
+	dictSvc   dictcap.Service   // dictSvc resolves host dictionary-domain labels.
+	i18nSvc   i18ncap.Service   // i18nSvc resolves host runtime translations for plugin data.
+	tenantSvc tenantcap.Service // tenantSvc provides tenant context and plugin table filtering.
 }
 
 // New creates and returns a new linapro-monitor-loginlog service instance.
-func New(dictSvc dictcap.Service, i18nSvc i18ncap.Service, tenantFilter tenantspi.PluginTableFilterService) Service {
+func New(dictSvc dictcap.Service, i18nSvc i18ncap.Service, tenantSvc tenantcap.Service) Service {
 	return &serviceImpl{
-		dictSvc:      dictSvc,
-		i18nSvc:      i18nSvc,
-		tenantFilter: tenantFilter,
+		dictSvc:   dictSvc,
+		i18nSvc:   i18nSvc,
+		tenantSvc: tenantSvc,
 	}
+}
+
+// pluginTableFilter returns the tenant table-filter slice from the injected tenant service.
+func (s *serviceImpl) pluginTableFilter() tenantcap.FilterService {
+	if s == nil || s.tenantSvc == nil {
+		return nil
+	}
+	return s.tenantSvc.Filter()
 }
 
 // LoginLogEntity mirrors the plugin-local generated plugin_linapro_monitor_loginlog entity.

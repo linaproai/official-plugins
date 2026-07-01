@@ -8,7 +8,6 @@ package membership
 import (
 	"context"
 	"strconv"
-	"time"
 
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/util/gconv"
@@ -22,8 +21,6 @@ import (
 	"lina-plugin-linapro-tenant-core/backend/internal/model/do"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/shared"
 )
-
-const membershipCapabilityPluginID = "linapro-tenant-core"
 
 // List queries tenant members by page.
 func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, error) {
@@ -125,9 +122,11 @@ func (s *serviceImpl) Remove(ctx context.Context, id int64) error {
 
 // Current returns the current user's membership in the current tenant.
 func (s *serviceImpl) Current(ctx context.Context) (*Entity, error) {
-	bizCtx := s.bizCtxSvc.Current(ctx)
-	userID := int64(bizCtx.UserID)
-	tenantID := int64(bizCtx.TenantID)
+	var (
+		bizCtx   = s.bizCtxSvc.Current(ctx)
+		userID   = int64(bizCtx.UserID)
+		tenantID = int64(bizCtx.TenantID)
+	)
 	if userID <= 0 || tenantID <= shared.PlatformTenantID {
 		return nil, bizerr.NewCode(CodeMembershipNotFound)
 	}
@@ -201,17 +200,17 @@ func (s *serviceImpl) ApplyUserTenantFilter(
 	return model.WhereIn(userIDColumn, activeMembershipUserModel(ctx, int64(tenantID))), false, nil
 }
 
-// ListUserTenantProjections returns tenant ownership labels for visible users.
-func (s *serviceImpl) ListUserTenantProjections(
+// ListUserTenantMemberships returns tenant ownership labels for visible users.
+func (s *serviceImpl) ListUserTenantMemberships(
 	ctx context.Context,
 	userIDs []int,
-) (map[int]*tenantcap.UserTenantProjection, error) {
-	result := make(map[int]*tenantcap.UserTenantProjection)
+) (map[int]*tenantcap.TenantMembershipInfo, error) {
+	result := make(map[int]*tenantcap.TenantMembershipInfo)
 	if len(userIDs) == 0 {
 		return result, nil
 	}
 
-	var rows []*userTenantProjectionRow
+	var rows []*userTenantMembershipRow
 	model := shared.Model(ctx, shared.TableMembership).As("m").
 		InnerJoin(shared.TableTenant+" t", "t.id = m.tenant_id AND t.deleted_at IS NULL").
 		Fields("m.user_id, m.tenant_id, t.name AS tenant_name").
@@ -232,7 +231,7 @@ func (s *serviceImpl) ListUserTenantProjections(
 		}
 		item := result[row.UserID]
 		if item == nil {
-			item = &tenantcap.UserTenantProjection{}
+			item = &tenantcap.TenantMembershipInfo{}
 			result[row.UserID] = item
 		}
 		item.TenantIDs = append(item.TenantIDs, tenantcap.TenantID(row.TenantID))
@@ -247,9 +246,11 @@ func (s *serviceImpl) ResolveUserTenantAssignment(
 	requested []tenantcap.TenantID,
 	mode tenantcap.UserTenantAssignmentMode,
 ) (*tenantcap.UserTenantAssignmentPlan, error) {
-	normalized := normalizeTenantIDs(requested)
-	bizCtx := s.bizCtxSvc.Current(ctx)
-	currentTenantID := int64(bizCtx.TenantID)
+	var (
+		normalized      = normalizeTenantIDs(requested)
+		bizCtx          = s.bizCtxSvc.Current(ctx)
+		currentTenantID = int64(bizCtx.TenantID)
+	)
 	if currentTenantID > shared.PlatformTenantID {
 		if mode == tenantcap.UserTenantAssignmentUpdate {
 			return &tenantcap.UserTenantAssignmentPlan{}, nil
@@ -353,7 +354,11 @@ func (s *serviceImpl) ValidateStartupConsistency(ctx context.Context) ([]string,
 			userIDs = append(userIDs, usercap.UserID(strconv.FormatInt(row.UserID, 10)))
 		}
 	}
-	out, err := s.users.BatchGet(ctx, s.startupConsistencyCapabilityContext(), userIDs)
+	systemCtx := bizctxcap.WithCurrentContext(ctx, bizctxcap.CurrentContext{
+		TenantID:       int(shared.PlatformTenantID),
+		PlatformBypass: true,
+	})
+	out, err := s.users.BatchGet(systemCtx, userIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -371,25 +376,6 @@ func (s *serviceImpl) ValidateStartupConsistency(ctx context.Context) ([]string,
 		}
 	}
 	return details, nil
-}
-
-// startupConsistencyCapabilityContext creates a host-owned system call context
-// for startup-only membership integrity checks.
-func (s *serviceImpl) startupConsistencyCapabilityContext() capmodel.CapabilityContext {
-	now := time.Now()
-	return capmodel.CapabilityContext{
-		PluginID: membershipCapabilityPluginID,
-		Actor: capmodel.CapabilityActor{
-			Type:         capmodel.ActorTypeSystem,
-			Name:         membershipCapabilityPluginID,
-			SystemReason: "tenant membership startup consistency",
-		},
-		TenantID:    capmodel.DomainID(strconv.FormatInt(shared.PlatformTenantID, 10)),
-		Source:      capmodel.CapabilitySourceHost,
-		SystemCall:  true,
-		Resource:    "membership.startup_consistency",
-		RequestedAt: now,
-	}
 }
 
 // getVisible retrieves one membership by primary key within the visible tenant.
@@ -414,11 +400,11 @@ func (s *serviceImpl) ensureUserCanJoinTenant(
 		return bizerr.NewCode(capmodel.CodeCapabilityUnavailable, bizerr.P("capability", "user"))
 	}
 	userDomainID := usercap.UserID(strconv.FormatInt(userID, 10))
-	out, err := s.users.BatchGet(ctx, s.capabilityContext(ctx, "membership.user_visibility"), []usercap.UserID{userDomainID})
+	out, err := s.users.BatchGet(ctx, []usercap.UserID{userDomainID})
 	if err != nil {
 		return err
 	}
-	user := (*usercap.UserProjection)(nil)
+	user := (*usercap.UserInfo)(nil)
 	if out != nil {
 		user = out.Items[userDomainID]
 	}
@@ -531,7 +517,7 @@ func (s *serviceImpl) hydrateUserLabels(ctx context.Context, list []*Entity) err
 		seen[id] = struct{}{}
 		ids = append(ids, id)
 	}
-	out, err := s.users.BatchGet(ctx, s.capabilityContext(ctx, "membership.list"), ids)
+	out, err := s.users.BatchGet(ctx, ids)
 	if err != nil {
 		return err
 	}
@@ -550,40 +536,6 @@ func (s *serviceImpl) hydrateUserLabels(ctx context.Context, list []*Entity) err
 		item.Nickname = projection.Nickname
 	}
 	return nil
-}
-
-// capabilityContext creates plugin-visible metadata for tenant membership
-// calls into host-owned domain capabilities.
-func (s *serviceImpl) capabilityContext(ctx context.Context, resource string) capmodel.CapabilityContext {
-	current := bizctxcap.CurrentContext{}
-	if s != nil && s.bizCtxSvc != nil {
-		current = s.bizCtxSvc.Current(ctx)
-	}
-	actorID := current.ActingUserID
-	if actorID == 0 {
-		actorID = current.UserID
-	}
-	actor := capmodel.CapabilityActor{
-		Type:   capmodel.ActorTypeUser,
-		UserID: int64(actorID),
-		Name:   current.Username,
-	}
-	if actorID == 0 {
-		actor = capmodel.CapabilityActor{
-			Type:         capmodel.ActorTypeSystem,
-			Name:         membershipCapabilityPluginID,
-			SystemReason: "tenant membership user projection",
-		}
-	}
-	return capmodel.CapabilityContext{
-		PluginID:    membershipCapabilityPluginID,
-		Actor:       actor,
-		TenantID:    capmodel.DomainID(strconv.Itoa(current.TenantID)),
-		Source:      capmodel.CapabilitySourceHTTP,
-		SystemCall:  actor.Type == capmodel.ActorTypeSystem,
-		Resource:    resource,
-		RequestedAt: time.Now(),
-	}
 }
 
 // activeMembershipUserModel returns the subquery for active users in one tenant.

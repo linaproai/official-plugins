@@ -126,7 +126,7 @@ func TestAnthropicAdapterMapsThinkingEffort(t *testing.T) {
 		EndpointBaseUrl:   server.URL,
 		EndpointSecretRef: "unit-secret",
 		ProviderName:      "Anthropic",
-		CapabilityType:    CapabilityTypeText,
+		CapabilityType:    capabilityTypeText,
 		DefaultEffort:     string(aitext.ThinkingEffortMax),
 	}, []aitext.Message{{Role: aitext.MessageRoleSystem, Content: "sys"}}, 128, nil, string(aitext.ThinkingEffortMax))
 	if err != nil {
@@ -165,7 +165,7 @@ func TestAnthropicAdapterRetriesVersionedURLAndCachesBase(t *testing.T) {
 	svc := New(nil, nil, server.Client()).(*serviceImpl)
 	binding := &resolvedTierBinding{
 		ModelName:         "unit-anthropic",
-		Protocol:          ProtocolAnthropicCompatible,
+		Protocol:          protocolAnthropicCompatible,
 		EndpointBaseUrl:   server.URL + "/anthropic",
 		EndpointSecretRef: "unit-secret",
 	}
@@ -215,7 +215,7 @@ func TestOpenAIModelListRetriesVersionedURLAndCachesBase(t *testing.T) {
 
 	svc := New(nil, nil, server.Client()).(*serviceImpl)
 	endpoint := &entity.ProviderEndpoint{
-		Protocol:  ProtocolOpenAICompatible,
+		Protocol:  protocolOpenAICompatible,
 		BaseUrl:   server.URL + "/proxy",
 		SecretRef: "unit-secret",
 	}
@@ -263,7 +263,7 @@ func TestAnthropicAdapterDoesNotDuplicateVersionSuffix(t *testing.T) {
 	svc := New(nil, nil, server.Client()).(*serviceImpl)
 	_, err := svc.callAnthropic(context.Background(), &resolvedTierBinding{
 		ModelName:       "unit-anthropic",
-		Protocol:        ProtocolAnthropicCompatible,
+		Protocol:        protocolAnthropicCompatible,
 		EndpointBaseUrl: server.URL + "/anthropic/v1",
 	}, []aitext.Message{{Role: aitext.MessageRoleUser, Content: "hello"}}, 128, nil, "")
 	if !bizerr.Is(err, CodeProviderHTTPError) {

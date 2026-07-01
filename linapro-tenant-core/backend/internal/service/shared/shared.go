@@ -61,20 +61,20 @@ const (
 	// OnAmbiguousReject rejects requests without an unambiguous tenant instead
 	// of presenting a selector.
 	OnAmbiguousReject = "reject"
-	// OnAmbiguousFirstOwned chooses the first active membership as a convenience
+	// onAmbiguousFirstOwned chooses the first active membership as a convenience
 	// fallback. It is retained as a supported runtime policy but is not the code
 	// default.
-	OnAmbiguousFirstOwned = "first_owned"
+	onAmbiguousFirstOwned = "first_owned"
 )
 
 // Built-in tenant configuration defaults. They are intentionally code-owned
 // instead of host config-file values so new installations cannot drift before
 // the tenant management UI exposes supported settings.
 const (
-	// DefaultIsolationMode selects the Pool model: one database/schema with
+	// defaultIsolationMode selects the Pool model: one database/schema with
 	// tenant_id columns on tenant-sensitive tables. This is the only supported
 	// isolation mode in the first linapro-tenant-core iteration.
-	DefaultIsolationMode = "pool"
+	defaultIsolationMode = "pool"
 	// DefaultCardinality allows one user identity to hold memberships in multiple
 	// tenants. This matches internal BU usage and is a superset of single-tenant
 	// membership.
@@ -120,7 +120,7 @@ func cloneStrings(values []string) []string {
 
 // Membership status values.
 const (
-	MembershipStatusDisabled = 0
+	membershipStatusDisabled = 0
 	MembershipStatusEnabled  = 1
 )
 

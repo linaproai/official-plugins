@@ -9,7 +9,9 @@ import (
 
 	"github.com/gogf/gf/v2/errors/gerror"
 
+	"lina-core/pkg/plugin/capability"
 	"lina-core/pkg/plugin/capability/hostconfigcap"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/pluginhost"
 	monitorloginlogplugin "lina-plugin-linapro-monitor-loginlog"
 	loginlogcontroller "lina-plugin-linapro-monitor-loginlog/backend/internal/controller/loginlog"
@@ -34,12 +36,6 @@ const (
 	// loginLogCleanupJobDescription is the English source description for the cleanup job.
 	loginLogCleanupJobDescription = "Cleans up expired login audit logs for the linapro-monitor-loginlog plugin."
 )
-
-// loginLogRetentionCleaner is the plugin service subset needed by the cleanup job.
-type loginLogRetentionCleaner interface {
-	// CleanupExpired hard-deletes login logs older than the given retention period.
-	CleanupExpired(ctx context.Context, retentionDays int) (int, error)
-}
 
 // init registers the linapro-monitor-loginlog source plugin and its host callbacks.
 func init() {
@@ -92,9 +88,6 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		middlewares = routes.Middlewares()
 		services    = registrar.Services()
 	)
-	if services == nil || services.Dict() == nil || services.I18n() == nil || services.TenantFilter() == nil {
-		return gerror.New("linapro-monitor-loginlog routes require host dict, i18n, and tenant-filter services")
-	}
 	loginLogSvc, err := loginLogServiceForHostServices(services)
 	if err != nil {
 		return err
@@ -124,9 +117,6 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 // handleAuthEvent persists one host authentication lifecycle event into the login-log table owned by this plugin.
 func handleAuthEvent(ctx context.Context, payload pluginhost.HookPayload) error {
 	services := payload.Services()
-	if services == nil || services.Dict() == nil || services.I18n() == nil || services.TenantFilter() == nil {
-		return gerror.New("linapro-monitor-loginlog hook requires host dict, i18n, and tenant-filter services")
-	}
 	loginLogSvc, err := loginLogServiceForHostServices(services)
 	if err != nil {
 		return err
@@ -151,16 +141,29 @@ func handleAuthEvent(ctx context.Context, payload pluginhost.HookPayload) error 
 // loginLogServiceForHostServices returns the shared login-log service used by
 // HTTP routes and auth hooks so event callbacks do not create a parallel service
 // graph after plugin startup.
-func loginLogServiceForHostServices(services pluginhost.Services) (loginlogsvc.Service, error) {
-	if services == nil || services.Dict() == nil || services.I18n() == nil || services.TenantFilter() == nil {
+func loginLogServiceForHostServices(services capability.Services) (loginlogsvc.Service, error) {
+	tenantSvc, err := tenantServiceForHostServices(services)
+	if err != nil || services.Dict() == nil || services.I18n() == nil {
 		return nil, gerror.New("linapro-monitor-loginlog requires host dict, i18n, and tenant-filter services")
 	}
 	loginLogSvcMu.Lock()
 	defer loginLogSvcMu.Unlock()
 	if sharedLoginLogSvc == nil {
-		sharedLoginLogSvc = loginlogsvc.New(services.Dict(), services.I18n(), services.TenantFilter())
+		sharedLoginLogSvc = loginlogsvc.New(services.Dict(), services.I18n(), tenantSvc)
 	}
 	return sharedLoginLogSvc, nil
+}
+
+// tenantServiceForHostServices returns the tenant-domain service required by login-log queries.
+func tenantServiceForHostServices(services capability.Services) (tenantcap.Service, error) {
+	if services == nil {
+		return nil, gerror.New("host services are nil")
+	}
+	tenantSvc := services.Tenant()
+	if tenantSvc == nil || tenantSvc.Filter() == nil {
+		return nil, gerror.New("host tenant-filter service is nil")
+	}
+	return tenantSvc, nil
 }
 
 // registerCleanupJob contributes the plugin-owned login-log retention cleanup job.
@@ -190,7 +193,7 @@ func cleanupExpiredLoginLogs(
 	ctx context.Context,
 	primaryNode bool,
 	hostConfigSvc hostconfigcap.Service,
-	cleaner loginLogRetentionCleaner,
+	cleaner loginlogsvc.Service,
 ) error {
 	if !primaryNode {
 		return nil

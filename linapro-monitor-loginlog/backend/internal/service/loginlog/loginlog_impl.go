@@ -1,7 +1,7 @@
 // loginlog_impl.go implements login-log persistence, tenant-filtered queries,
 // cleanup, and Excel export for the linapro-monitor-loginlog plugin. It resolves
 // dictionary and runtime i18n labels while keeping plugin table access scoped
-// through the injected tenant filter service.
+// through the injected tenant service's filter slice.
 
 package loginlog
 
@@ -18,8 +18,8 @@ import (
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/excelutil"
 	"lina-core/pkg/gdbutil"
-	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/dictcap"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/pluginhost"
 	"lina-plugin-linapro-monitor-loginlog/backend/internal/dao"
@@ -30,7 +30,7 @@ import (
 func (s *serviceImpl) Create(ctx context.Context, in CreateInput) error {
 	auditContext := resolveAuditTenantContext(
 		ctx,
-		s.tenantFilter,
+		s.pluginTableFilter(),
 		in.TenantID,
 		in.ActingUserID,
 		in.OnBehalfOfTenantID,
@@ -61,7 +61,7 @@ func timePtr(value time.Time) *time.Time {
 
 // List queries the paginated login-log list.
 func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, error) {
-	model := s.tenantFilter.Apply(ctx, dao.Loginlog.Ctx(ctx), "")
+	model := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Loginlog.Ctx(ctx), "")
 	model = applyLoginLogFilters(model, in.UserName, in.Ip, in.Status, in.BeginTime, in.EndTime)
 
 	total, err := model.Count()
@@ -97,7 +97,7 @@ func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, erro
 // GetById retrieves one login-log record by primary key.
 func (s *serviceImpl) GetById(ctx context.Context, id int) (*LoginLogEntity, error) {
 	var record *LoginLogEntity
-	err := s.tenantFilter.Apply(ctx, dao.Loginlog.Ctx(ctx), "").Where(colID, id).Scan(&record)
+	err := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Loginlog.Ctx(ctx), "").Where(colID, id).Scan(&record)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (s *serviceImpl) GetById(ctx context.Context, id int) (*LoginLogEntity, err
 
 // Clean hard-deletes login logs within one optional time range.
 func (s *serviceImpl) Clean(ctx context.Context, in CleanInput) (int, error) {
-	model := s.tenantFilter.Apply(ctx, dao.Loginlog.Ctx(ctx), "")
+	model := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Loginlog.Ctx(ctx), "")
 	hasFilter := false
 	if in.BeginTime != "" {
 		model = model.WhereGTE(colLoginTime, in.BeginTime)
@@ -159,7 +159,7 @@ func (s *serviceImpl) DeleteByIds(ctx context.Context, ids []int) (int, error) {
 	if len(ids) == 0 {
 		return 0, nil
 	}
-	result, err := s.tenantFilter.Apply(ctx, dao.Loginlog.Ctx(ctx), "").WhereIn(colID, ids).Delete()
+	result, err := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Loginlog.Ctx(ctx), "").WhereIn(colID, ids).Delete()
 	if err != nil {
 		return 0, err
 	}
@@ -172,13 +172,13 @@ func (s *serviceImpl) DeleteByIds(ctx context.Context, ids []int) (int, error) {
 
 // Export generates an Excel workbook for login logs.
 func (s *serviceImpl) Export(ctx context.Context, in ExportInput) (data []byte, err error) {
-	model := s.tenantFilter.Apply(ctx, dao.Loginlog.Ctx(ctx), "")
+	model := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Loginlog.Ctx(ctx), "")
 	if len(in.Ids) > 0 {
 		model = model.WhereIn(colID, in.Ids)
 	} else {
 		model = applyLoginLogFilters(model, in.UserName, in.Ip, in.Status, in.BeginTime, in.EndTime)
 	}
-	model = model.Limit(MaxExportRows)
+	model = model.Limit(maxExportRows)
 
 	allowedSortFields := map[string]string{
 		"id":         colID,
@@ -207,7 +207,7 @@ func (s *serviceImpl) Export(ctx context.Context, in ExportInput) (data []byte, 
 		}
 	}
 
-	statusMap := s.buildIntDictLabelMap(ctx, DictTypeLoginStatus)
+	statusMap := s.buildIntDictLabelMap(ctx, dictTypeLoginStatus)
 	for index, log := range list {
 		row := index + 2
 		if setErr := excelutil.SetCellValue(file, sheet, 1, row, log.UserName); setErr != nil {
@@ -262,7 +262,7 @@ func (s *serviceImpl) exportStatusText(ctx context.Context, status int, statusMa
 	if !ok {
 		statusText = defaultLoginStatusLabels[status]
 	}
-	return s.translateDictLabel(ctx, DictTypeLoginStatus, strconv.Itoa(status), statusText)
+	return s.translateDictLabel(ctx, dictTypeLoginStatus, strconv.Itoa(status), statusText)
 }
 
 // localizeRecords translates backend-owned display fields for login-log rows.
@@ -304,19 +304,22 @@ func (s *serviceImpl) translate(ctx context.Context, key string, fallback string
 }
 
 var defaultLoginStatusLabels = map[int]string{
-	LoginStatusSuccess: "Success",
-	LoginStatusFail:    "Failed",
+	loginStatusSuccess: "Success",
+	loginStatusFail:    "Failed",
 }
 
 // resolveAuditTenantContext resolves tenant audit metadata from bizctx and explicit overrides.
 func resolveAuditTenantContext(
 	ctx context.Context,
-	tenantFilter tenantspi.PluginTableFilterService,
+	tenantFilter tenantcap.FilterService,
 	tenantID *int,
 	actingUserID *int,
 	onBehalfOfTenantID *int,
 	isImpersonation *bool,
 ) auditTenantContext {
+	if tenantFilter == nil {
+		return auditTenantContext{}
+	}
 	current := tenantFilter.Context(ctx)
 	result := auditTenantContext{
 		TenantID:           current.TenantID,
@@ -408,7 +411,11 @@ func (s *serviceImpl) resolveDictLabels(ctx context.Context, dictType string, va
 	if s == nil || s.dictSvc == nil || len(values) == 0 {
 		return map[dictcap.Value]string{}
 	}
-	output, err := s.dictSvc.ResolveLabels(ctx, s.dictionaryCapabilityContext(ctx, dictType), dictcap.ResolveInput{
+	valueSvc := s.dictSvc.Value()
+	if valueSvc == nil {
+		return map[dictcap.Value]string{}
+	}
+	output, err := valueSvc.ResolveLabels(ctx, dictcap.ResolveInput{
 		Type:         dictcap.Type(dictType),
 		Values:       values,
 		IncludeLabel: true,
@@ -424,43 +431,6 @@ func (s *serviceImpl) resolveDictLabels(ctx context.Context, dictType string, va
 		labels[value] = projection.Label
 	}
 	return labels
-}
-
-// dictionaryCapabilityContext builds the audited context required by dictcap.
-func (s *serviceImpl) dictionaryCapabilityContext(ctx context.Context, dictType string) capmodel.CapabilityContext {
-	current := tenantspi.TenantFilterContext{}
-	if s != nil && s.tenantFilter != nil {
-		current = s.tenantFilter.Context(ctx)
-	}
-	actorID := current.UserID
-	if current.ActingUserID > 0 {
-		actorID = current.ActingUserID
-	}
-	actor := capmodel.CapabilityActor{
-		Type:   capmodel.ActorTypeUser,
-		UserID: int64(actorID),
-	}
-	if actorID == 0 {
-		actor = capmodel.CapabilityActor{
-			Type:         capmodel.ActorTypeSystem,
-			Name:         pluginID,
-			SystemReason: "login-log dictionary label projection",
-		}
-	}
-	return capmodel.CapabilityContext{
-		PluginID:   pluginID,
-		Actor:      actor,
-		TenantID:   capmodel.DomainID(strconv.Itoa(current.TenantID)),
-		Source:     capmodel.CapabilitySourceHTTP,
-		SystemCall: actor.Type == capmodel.ActorTypeSystem,
-		Resource:   dictType,
-		AuditReason: strings.Join([]string{
-			pluginID,
-			"resolve dictionary labels",
-			dictType,
-		}, ":"),
-		RequestedAt: time.Now(),
-	}
 }
 
 // normalizeEndTime expands date-only end values to the end of day.

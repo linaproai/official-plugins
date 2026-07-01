@@ -231,12 +231,12 @@
                 }
               },
               "meta": {
-                "dc": "演示动态插件通过统一宿主服务模型调用运行时、存储、网络、数据、插件配置、打包 manifest 资源、宿主公开配置、组织和租户能力。该接口会写入运行时日志、读写隔离插件存储、访问受治理的上游地址，对授权数据表执行结构化 CRUD，读取插件自有配置键，读取显式授权的 manifest.get 路径，读取白名单宿主公开配置键，并读取当前组织和租户投影。传入 skipNetwork=1 可跳过外部网络请求，便于离线验证。",
+                "dc": "演示动态插件通过统一宿主服务模型调用运行时、存储、网络、数据、插件配置、打包 manifest 资源、宿主公开配置、业务上下文、缓存、锁、组织和租户能力。该接口会写入运行时日志，读写隔离插件存储并验证批量元数据、游标列表和批量删除，访问受治理的上游地址，对授权数据表执行结构化 CRUD，读取插件自有配置键，读取显式授权的 manifest.get、manifest.get_many 和 manifest.list 路径，读取白名单宿主公开配置键，读取当前请求业务上下文，演示插件作用域缓存和锁原语，并读取当前组织和租户投影。传入 skipNetwork=1 可跳过外部网络请求，便于离线验证。",
                 "summary": "宿主调用能力演示",
                 "tags": "动态插件示例"
               },
               "schema": {
-                "dc": "演示动态插件通过统一宿主服务模型调用运行时、存储、网络、数据、插件配置、打包 manifest 资源、宿主公开配置、组织和租户能力。该接口会写入运行时日志、读写隔离插件存储、访问受治理的上游地址，对授权数据表执行结构化 CRUD，读取插件自有配置键，读取显式授权的 manifest.get 路径，读取白名单宿主公开配置键，并读取当前组织和租户投影。传入 skipNetwork=1 可跳过外部网络请求，便于离线验证。"
+                "dc": "演示动态插件通过统一宿主服务模型调用运行时、存储、网络、数据、插件配置、打包 manifest 资源、宿主公开配置、业务上下文、缓存、锁、组织和租户能力。该接口会写入运行时日志，读写隔离插件存储并验证批量元数据、游标列表和批量删除，访问受治理的上游地址，对授权数据表执行结构化 CRUD，读取插件自有配置键，读取显式授权的 manifest.get、manifest.get_many 和 manifest.list 路径，读取白名单宿主公开配置键，读取当前请求业务上下文，演示插件作用域缓存和锁原语，并读取当前组织和租户投影。传入 skipNetwork=1 可跳过外部网络请求，便于离线验证。"
               }
             },
             "HostCallDemoConfigRes": {
@@ -251,11 +251,20 @@
             },
             "HostCallDemoRes": {
               "fields": {
+                "bizctx": {
+                  "dc": "业务上下文宿主服务读取摘要"
+                },
+                "cache": {
+                  "dc": "插件作用域缓存宿主服务执行摘要"
+                },
                 "config": {
                   "dc": "插件配置和白名单宿主公开配置读取摘要"
                 },
                 "data": {
                   "dc": "数据宿主服务执行摘要"
+                },
+                "lock": {
+                  "dc": "插件作用域锁宿主服务执行摘要"
                 },
                 "message": {
                   "dc": "宿主调用演示信息"
@@ -282,7 +291,7 @@
                   "dc": "当前累计访问次数，通过 runtime.state 宿主服务实现持久化计数"
                 },
                 "manifest": {
-                  "dc": "显式授权 manifest.get 路径的打包 manifest 资源读取摘要"
+                  "dc": "显式授权 manifest.get、manifest.get_many 和 manifest.list 路径的打包 manifest 资源读取摘要"
                 }
               }
             },
@@ -392,6 +401,18 @@
             },
             "HostCallDemoStorageRes": {
               "fields": {
+                "batchDeleted": {
+                  "dc": "显式路径批量删除是否成功完成"
+                },
+                "batchStatCount": {
+                  "dc": "显式路径批量 stat 返回的对象数量"
+                },
+                "batchStatMissingCount": {
+                  "dc": "显式路径批量 stat 中没有返回元数据的请求路径数量"
+                },
+                "cursorListedCount": {
+                  "dc": "通过游标分页列出的对象数量"
+                },
                 "deleted": {
                   "dc": "临时对象是否成功删除"
                 },
@@ -406,6 +427,81 @@
                 },
                 "stored": {
                   "dc": "对象是否成功写入并回读"
+                }
+              }
+            },
+            "HostCallDemoBizCtxRes": {
+              "fields": {
+                "actingAsTenant": {
+                  "dc": "当前请求是否通过租户视图执行"
+                },
+                "isSuperAdmin": {
+                  "dc": "当前用户是否绕过常规权限检查"
+                },
+                "permissionCount": {
+                  "dc": "业务上下文携带的有效权限键数量"
+                },
+                "platformBypass": {
+                  "dc": "当前请求是否处于平台作用域并绕过租户过滤"
+                },
+                "tenantId": {
+                  "dc": "当前业务上下文中的租户标识"
+                },
+                "userId": {
+                  "dc": "当前业务上下文中的用户标识"
+                },
+                "username": {
+                  "dc": "当前业务上下文中的用户名"
+                }
+              }
+            },
+            "HostCallDemoCacheRes": {
+              "fields": {
+                "batchReadCount": {
+                  "dc": "cache.get_many 返回的条目数量"
+                },
+                "batchSetCount": {
+                  "dc": "cache.set_many 写入的条目数量"
+                },
+                "deleted": {
+                  "dc": "临时缓存项是否成功批量删除"
+                },
+                "expireUpdated": {
+                  "dc": "cache.expire 是否成功更新了过期策略"
+                },
+                "incrementedValue": {
+                  "dc": "cache.incr 返回的整数值"
+                },
+                "missingCount": {
+                  "dc": "cache.get_many 中未命中的请求键数量"
+                },
+                "namespace": {
+                  "dc": "本次 smoke 检查使用的插件作用域缓存命名空间"
+                },
+                "singleFound": {
+                  "dc": "单项 cache.get 是否命中已写入的值"
+                },
+                "valueKind": {
+                  "dc": "单项缓存值类型：1=字符串 2=整数"
+                }
+              }
+            },
+            "HostCallDemoLockRes": {
+              "fields": {
+                "acquired": {
+                  "dc": "lock.acquire 是否成功获取演示锁"
+                },
+                "name": {
+                  "dc": "本次 smoke 检查使用的插件作用域锁名称"
+                },
+                "released": {
+                  "dc": "lock.release 是否成功释放已获取的演示锁"
+                },
+                "renewed": {
+                  "dc": "lock.renew 是否成功续期已获取的演示锁"
+                },
+                "ticketIssued": {
+                  "dc": "宿主是否为锁获取返回了不透明票据"
                 }
               }
             },
@@ -444,6 +540,15 @@
             },
             "HostCallDemoManifestRes": {
               "fields": {
+                "batchReadCount": {
+                  "dc": "manifest.get_many 返回的资源数量"
+                },
+                "listedCount": {
+                  "dc": "manifest.list 在 config/ 前缀下返回的资源数量"
+                },
+                "missingPathCount": {
+                  "dc": "manifest.get_many 中没有返回资源的路径数量"
+                },
                 "profilePath": {
                   "dc": "用于读取打包 profile 资源的显式授权 manifest.get 路径"
                 },

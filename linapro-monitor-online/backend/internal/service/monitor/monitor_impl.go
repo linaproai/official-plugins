@@ -14,7 +14,7 @@ import (
 
 // List returns one paginated online-user list.
 func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, error) {
-	out, err := s.sessionSvc.Search(ctx, s.capabilityContext(ctx, monitorOnlineSessionResource), sessioncap.SearchInput{
+	out, err := s.sessionSvc.List(ctx, sessioncap.ListInput{
 		Username: in.Username,
 		IP:       in.Ip,
 		Page: capmodel.PageRequest{
@@ -26,12 +26,12 @@ func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, erro
 		return nil, err
 	}
 	if out == nil {
-		return &ListOutput{Items: []*sessioncap.Projection{}}, nil
+		return &ListOutput{Items: []*sessioncap.SessionInfo{}}, nil
 	}
 	return &ListOutput{Items: out.Items, Total: out.Total}, nil
 }
 
 // ForceLogout invalidates one online-user session by token ID.
 func (s *serviceImpl) ForceLogout(ctx context.Context, tokenID string) error {
-	return s.sessionAdminSvc.Revoke(ctx, s.capabilityContext(ctx, monitorOnlineSessionResource), sessioncap.SessionID(tokenID))
+	return s.sessionSvc.Revoke(ctx, sessioncap.SessionID(tokenID))
 }

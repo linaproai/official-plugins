@@ -20,7 +20,7 @@ func (s *serviceImpl) GenerateText(ctx context.Context, request aitext.ProviderR
 		string(request.Tier),
 	)
 	if err != nil {
-		s.writeInvocation(ctx, requestID, request, nil, InvocationStatusFailed, aitext.Usage{}, 0, err)
+		s.writeInvocation(ctx, requestID, request, nil, invocationStatusFailed, aitext.Usage{}, 0, err)
 		return nil, err
 	}
 	effort := binding.DefaultEffort
@@ -29,7 +29,7 @@ func (s *serviceImpl) GenerateText(ctx context.Context, request aitext.ProviderR
 	}
 	if !effortSupportedByBinding(binding, effort) {
 		err = bizerr.NewCode(CodeThinkingEffortUnsupported)
-		s.writeInvocation(ctx, requestID, request, binding, InvocationStatusFailed, aitext.Usage{}, 0, err)
+		s.writeInvocation(ctx, requestID, request, binding, invocationStatusFailed, aitext.Usage{}, 0, err)
 		return nil, err
 	}
 	result, err := s.callProvider(
@@ -41,7 +41,7 @@ func (s *serviceImpl) GenerateText(ctx context.Context, request aitext.ProviderR
 		effort,
 	)
 	if err != nil {
-		s.writeInvocation(ctx, requestID, request, binding, InvocationStatusFailed, aitext.Usage{}, 0, err)
+		s.writeInvocation(ctx, requestID, request, binding, invocationStatusFailed, aitext.Usage{}, 0, err)
 		return nil, err
 	}
 	s.writeInvocation(
@@ -49,7 +49,7 @@ func (s *serviceImpl) GenerateText(ctx context.Context, request aitext.ProviderR
 		requestID,
 		request,
 		binding,
-		InvocationStatusSuccess,
+		invocationStatusSuccess,
 		result.Usage,
 		result.LatencyMs,
 		nil,

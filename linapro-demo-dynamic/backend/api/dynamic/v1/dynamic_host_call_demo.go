@@ -6,7 +6,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // HostCallDemoReq is the request for invoking the host call demo endpoint.
 type HostCallDemoReq struct {
-	g.Meta      `path:"/host-call-demo" method:"post" tags:"Dynamic Plugin Demo" summary:"Host calling capability demonstration" dc:"Demonstrate dynamic plugin calls to runtime, storage, network, data, plugin config, packaged manifest resources, public host config, organization, and tenant capabilities through the unified host service model. The endpoint writes runtime logs, reads and writes isolated plugin storage, accesses governed upstreams, performs structured CRUD on authorized data tables, reads plugin-owned config keys, reads explicitly authorized manifest.get paths, reads whitelisted public host config keys, and reads current organization and tenant projections. Passing skipNetwork=1 skips external network requests for offline verification." access:"login" permission:"linapro-demo-dynamic:backend:view" operLog:"other"`
+	g.Meta      `path:"/host-call-demo" method:"post" tags:"Dynamic Plugin Demo" summary:"Host calling capability demonstration" dc:"Demonstrate dynamic plugin calls to runtime, storage, network, data, plugin config, packaged manifest resources, public host config, business context, cache, lock, organization, and tenant capabilities through the unified host service model. The endpoint writes runtime logs, reads and writes isolated plugin storage including batch metadata, cursor listing, and batch deletion, accesses governed upstreams, performs structured CRUD on authorized data tables, reads plugin-owned config keys, reads explicitly authorized manifest.get, manifest.get_many, and manifest.list resources, reads whitelisted public host config keys, reads current request business context, exercises plugin-scoped cache and lock primitives, and reads current organization and tenant projections. Passing skipNetwork=1 skips external network requests for offline verification." access:"login" permission:"linapro-demo-dynamic:backend:view" operLog:"other"`
 	SkipNetwork bool `json:"skipNetwork" dc:"Whether to skip external network requests: true=skip false=normal access, default is false when omitted" eg:"false"`
 }
 
@@ -15,14 +15,17 @@ type HostCallDemoRes struct {
 	VisitCount int                      `json:"visitCount" dc:"The current cumulative number of visits, implemented through the runtime.state host service to achieve persistent counting" eg:"1"`
 	PluginID   string                   `json:"pluginId" dc:"The unique identifier of the current plugin" eg:"linapro-demo-dynamic"`
 	Runtime    *HostCallDemoRuntimeRes  `json:"runtime" dc:"Summary of basic information returned by the runtime hosting service" eg:"{\"now\":1776132000000,\"uuid\":\"0d63c6a3-ec9d-4e39-a14f-d9b165a21ef9\",\"node\":\"node-1\"}"`
-	Storage    *HostCallDemoStorageRes  `json:"storage" dc:"storage hosting service executive summary" eg:"{\"pathPrefix\":\"host-call-demo/\",\"objectPath\":\"host-call-demo/demo.json\",\"stored\":true,\"listedCount\":1,\"deleted\":true}"`
+	Storage    *HostCallDemoStorageRes  `json:"storage" dc:"Storage host service execution summary including list, cursor list, batch stat, and batch delete smoke checks" eg:"{\"pathPrefix\":\"host-call-demo/\",\"objectPath\":\"host-call-demo/demo.json\",\"stored\":true,\"listedCount\":1,\"cursorListedCount\":1,\"batchStatCount\":1,\"batchStatMissingCount\":0,\"batchDeleted\":true,\"deleted\":true}"`
 	Network    *HostCallDemoNetworkRes  `json:"network" dc:"network hosting service executive summary" eg:"{\"url\":\"https://example.com\",\"skipped\":false,\"statusCode\":200,\"contentType\":\"text/html\"}"`
 	Data       *HostCallDemoDataRes     `json:"data" dc:"data host service executive summary" eg:"{\"table\":\"plugin_linapro_demo_dynamic_record\",\"recordKey\":\"host-call-demo-0d63c6a3-ec9d-4e39-a14f-d9b165a21ef9\",\"listTotal\":1,\"countTotal\":1,\"updated\":true,\"deleted\":true}"`
 	Config     *HostCallDemoConfigRes   `json:"config" dc:"Plugin config and whitelisted public host config read summary" eg:"{\"plugin\":{\"greeting\":\"Hello from dynamic plugin\",\"greetingFound\":true,\"featureEnabled\":true,\"featureEnabledFound\":true},\"hostConfig\":{\"workspaceBasePath\":\"/opt/linapro\",\"workspaceBasePathFound\":true,\"i18nDefault\":\"zh-CN\",\"i18nDefaultFound\":true,\"i18nEnabled\":true,\"i18nEnabledFound\":true}}"`
-	Manifest   *HostCallDemoManifestRes `json:"manifest" dc:"Packaged manifest resource read summary for explicitly authorized manifest.get paths" eg:"{\"profilePath\":\"config/profile.yaml\",\"profileFound\":true,\"profileName\":\"demo-dynamic-profile\",\"profileTier\":\"sample\",\"profileOwner\":\"linapro\",\"configPath\":\"config/config.yaml\",\"configFound\":true,\"configBodyPreview\":\"demo:\\n  greeting: Hello from dynamic plugin\"}"`
+	Manifest   *HostCallDemoManifestRes `json:"manifest" dc:"Packaged manifest resource read summary for explicitly authorized manifest.get, manifest.get_many, and manifest.list paths" eg:"{\"profilePath\":\"config/profile.yaml\",\"profileFound\":true,\"profileName\":\"demo-dynamic-profile\",\"profileTier\":\"sample\",\"profileOwner\":\"linapro\",\"configPath\":\"config/config.yaml\",\"configFound\":true,\"configBodyPreview\":\"demo:\\n  greeting: Hello from dynamic plugin\",\"batchReadCount\":2,\"missingPathCount\":0,\"listedCount\":2}"`
+	BizCtx     *HostCallDemoBizCtxRes   `json:"bizctx" dc:"Business context host service read summary for the current request" eg:"{\"userId\":1,\"username\":\"admin\",\"tenantId\":1,\"permissionCount\":3,\"isSuperAdmin\":false,\"platformBypass\":false,\"actingAsTenant\":true}"`
+	Cache      *HostCallDemoCacheRes    `json:"cache" dc:"Plugin-scoped cache host service summary covering get, get_many, set, set_many, delete, delete_many, incr, and expire methods" eg:"{\"namespace\":\"host-call-demo-cache\",\"valueKind\":1,\"singleFound\":true,\"batchSetCount\":2,\"batchReadCount\":3,\"missingCount\":1,\"incrementedValue\":2,\"expireUpdated\":true,\"deleted\":true}"`
+	Lock       *HostCallDemoLockRes     `json:"lock" dc:"Plugin-scoped lock host service summary covering acquire, renew, and release methods" eg:"{\"name\":\"host-call-demo-lock\",\"acquired\":true,\"renewed\":true,\"released\":true,\"ticketIssued\":true}"`
 	Org        *HostCallDemoOrgRes      `json:"org" dc:"Organization capability host service read summary" eg:"{\"available\":true,\"capabilityId\":\"framework.org.v1\",\"activeProvider\":\"linapro-org-core\",\"assignmentCount\":1,\"currentUserDeptCount\":1,\"currentUserPostCount\":2}"`
 	Tenant     *HostCallDemoTenantRes   `json:"tenant" dc:"Tenant capability host service read summary" eg:"{\"available\":true,\"capabilityId\":\"framework.tenant.v1\",\"activeProvider\":\"linapro-tenant-core\",\"currentTenantId\":1,\"platformBypass\":false,\"userTenantCount\":1,\"visible\":true}"`
-	Message    string                   `json:"message" dc:"Host call demonstration information" eg:"Host service demo executed through runtime, storage, network, data, plugins.config.get, manifest, hostConfig, org, and tenant services."`
+	Message    string                   `json:"message" dc:"Host call demonstration information" eg:"Host service demo executed through runtime, storage, network, data, plugins.config.get, manifest batch/list, hostConfig, bizctx, cache, lock, org, and tenant services."`
 }
 
 // HostCallDemoRuntimeRes describes runtime service results.
@@ -34,11 +37,15 @@ type HostCallDemoRuntimeRes struct {
 
 // HostCallDemoStorageRes describes storage service results.
 type HostCallDemoStorageRes struct {
-	PathPrefix  string `json:"pathPrefix" dc:"The authorized logical path prefix used this time" eg:"host-call-demo/"`
-	ObjectPath  string `json:"objectPath" dc:"The logical object path written this time" eg:"host-call-demo/demo.json"`
-	Stored      bool   `json:"stored" dc:"Whether the object was successfully written and read back" eg:"true"`
-	ListedCount int    `json:"listedCount" dc:"Number of objects listed by prefix" eg:"1"`
-	Deleted     bool   `json:"deleted" dc:"Whether the temporary object was successfully deleted" eg:"true"`
+	PathPrefix            string `json:"pathPrefix" dc:"The authorized logical path prefix used this time" eg:"host-call-demo/"`
+	ObjectPath            string `json:"objectPath" dc:"The logical object path written this time" eg:"host-call-demo/demo.json"`
+	Stored                bool   `json:"stored" dc:"Whether the object was successfully written and read back" eg:"true"`
+	ListedCount           int    `json:"listedCount" dc:"Number of objects listed by prefix" eg:"1"`
+	CursorListedCount     int    `json:"cursorListedCount" dc:"Number of objects listed by prefix through cursor pagination" eg:"1"`
+	BatchStatCount        int    `json:"batchStatCount" dc:"Number of object metadata records returned by explicit-path batch stat" eg:"1"`
+	BatchStatMissingCount int    `json:"batchStatMissingCount" dc:"Number of requested object paths without metadata in explicit-path batch stat" eg:"0"`
+	BatchDeleted          bool   `json:"batchDeleted" dc:"Whether explicit-path batch deletion completed successfully" eg:"true"`
+	Deleted               bool   `json:"deleted" dc:"Whether the temporary object was successfully deleted" eg:"true"`
 }
 
 // HostCallDemoNetworkRes describes network service results.
@@ -95,6 +102,42 @@ type HostCallDemoManifestRes struct {
 	ConfigPath        string `json:"configPath" dc:"The explicitly authorized manifest.get path used to read the packaged config resource as raw text" eg:"config/config.yaml"`
 	ConfigFound       bool   `json:"configFound" dc:"Whether config/config.yaml was found through the manifest host service" eg:"true"`
 	ConfigBodyPreview string `json:"configBodyPreview" dc:"A bounded preview of the packaged config/config.yaml manifest resource body read through manifest.get" eg:"demo:\\n  greeting: Hello from dynamic plugin"`
+	BatchReadCount    int    `json:"batchReadCount" dc:"Number of resources returned by manifest.get_many for explicit authorized paths" eg:"2"`
+	MissingPathCount  int    `json:"missingPathCount" dc:"Number of explicit manifest.get_many paths that did not return a resource" eg:"0"`
+	ListedCount       int    `json:"listedCount" dc:"Number of resource metadata entries returned by manifest.list under the config prefix" eg:"2"`
+}
+
+// HostCallDemoBizCtxRes describes business context service results.
+type HostCallDemoBizCtxRes struct {
+	UserID          int    `json:"userId" dc:"Current authenticated user identifier from the business context" eg:"1"`
+	Username        string `json:"username" dc:"Current authenticated username from the business context" eg:"admin"`
+	TenantID        int    `json:"tenantId" dc:"Current tenant identifier from the business context" eg:"1"`
+	PermissionCount int    `json:"permissionCount" dc:"Number of effective permission keys carried by the business context" eg:"3"`
+	IsSuperAdmin    bool   `json:"isSuperAdmin" dc:"Whether the current user bypasses normal permission checks" eg:"false"`
+	PlatformBypass  bool   `json:"platformBypass" dc:"Whether the current request runs in platform scope and bypasses tenant filtering" eg:"false"`
+	ActingAsTenant  bool   `json:"actingAsTenant" dc:"Whether the current request acts through a tenant view" eg:"true"`
+}
+
+// HostCallDemoCacheRes describes cache service results.
+type HostCallDemoCacheRes struct {
+	Namespace        string `json:"namespace" dc:"Plugin-local authorized cache namespace used for the smoke check" eg:"host-call-demo-cache"`
+	ValueKind        int    `json:"valueKind" dc:"Value kind of the single cache item: 1=string 2=integer" eg:"1"`
+	SingleFound      bool   `json:"singleFound" dc:"Whether the single cache get found the value written by cache.set" eg:"true"`
+	BatchSetCount    int    `json:"batchSetCount" dc:"Number of entries written by cache.set_many" eg:"2"`
+	BatchReadCount   int    `json:"batchReadCount" dc:"Number of entries returned by cache.get_many" eg:"3"`
+	MissingCount     int    `json:"missingCount" dc:"Number of requested keys that were missing in cache.get_many" eg:"1"`
+	IncrementedValue int64  `json:"incrementedValue" dc:"Integer value returned by cache.incr after applying the demo delta" eg:"2"`
+	ExpireUpdated    bool   `json:"expireUpdated" dc:"Whether cache.expire updated the expiration policy for the demo item" eg:"true"`
+	Deleted          bool   `json:"deleted" dc:"Whether cache.delete_many removed the temporary demo entries" eg:"true"`
+}
+
+// HostCallDemoLockRes describes lock service results.
+type HostCallDemoLockRes struct {
+	Name         string `json:"name" dc:"Plugin-local authorized lock name used for the smoke check" eg:"host-call-demo-lock"`
+	Acquired     bool   `json:"acquired" dc:"Whether lock.acquire acquired the demo lock" eg:"true"`
+	Renewed      bool   `json:"renewed" dc:"Whether lock.renew renewed the acquired demo lock" eg:"true"`
+	Released     bool   `json:"released" dc:"Whether lock.release released the acquired demo lock" eg:"true"`
+	TicketIssued bool   `json:"ticketIssued" dc:"Whether the host returned an opaque lock ticket after acquisition" eg:"true"`
 }
 
 // HostCallDemoOrgRes describes organization capability results.

@@ -8,6 +8,7 @@ import (
 	"context"
 	"strconv"
 
+	usermsgv1 "lina-core/api/usermsg/v1"
 	"lina-core/pkg/plugin/capability/notifycap"
 )
 
@@ -32,8 +33,8 @@ func (s *serviceImpl) dispatchPublishedNotice(
 	noticeType int,
 	senderUserID int64,
 ) error {
-	_, err := s.notifySvc.Send(ctx, s.capabilityContext(ctx, "notice.publish"), notifycap.SendInput{
-		SourceType:   notifycap.SourceTypeNotice,
+	_, err := s.notifySvc.Send(ctx, notifycap.SendInput{
+		SourceType:   usermsgv1.SourceTypeNotice,
 		SourceID:     strconv.FormatInt(noticeID, 10),
 		Title:        title,
 		Content:      content,
@@ -47,7 +48,7 @@ func (s *serviceImpl) dispatchPublishedNotice(
 // notify inbox category codes.
 func (s *serviceImpl) noticeTypeToCategoryCode(noticeType int) notifycap.CategoryCode {
 	switch noticeType {
-	case NoticeTypeAnnouncement:
+	case noticeTypeAnnouncement:
 		return noticeCategoryCodeAnnouncement
 	default:
 		return noticeCategoryCodeNotice

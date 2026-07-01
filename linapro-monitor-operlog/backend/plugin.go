@@ -42,16 +42,20 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		middlewares = routes.Middlewares()
 		services    = registrar.Services()
 	)
-	if services == nil ||
-		services.APIDoc() == nil ||
+	if services == nil {
+		return gerror.New("linapro-monitor-operlog routes require host apidoc, bizctx, dict, i18n, route, and tenant-filter services")
+	}
+	tenantSvc := services.Tenant()
+	if services.APIDoc() == nil ||
 		services.BizCtx() == nil ||
 		services.Dict() == nil ||
 		services.I18n() == nil ||
 		services.Route() == nil ||
-		services.TenantFilter() == nil {
+		tenantSvc == nil ||
+		tenantSvc.Filter() == nil {
 		return gerror.New("linapro-monitor-operlog routes require host apidoc, bizctx, dict, i18n, route, and tenant-filter services")
 	}
-	operLogSvc := operlogsvc.New(services.APIDoc(), services.Dict(), services.I18n(), services.TenantFilter())
+	operLogSvc := operlogsvc.New(services.APIDoc(), services.Dict(), services.I18n(), tenantSvc)
 	auditMiddlewareSvc := middlewaresvc.New(services.Route(), services.BizCtx(), operLogSvc)
 	if err := registrar.GlobalMiddlewares().Bind("/*", auditMiddlewareSvc.Audit); err != nil {
 		return err

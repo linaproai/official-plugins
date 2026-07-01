@@ -7,6 +7,7 @@ import (
 
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/plugincap"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/capability/usercap"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/membership"
@@ -19,10 +20,9 @@ import (
 // New creates the tenant framework capability provider from host-published services.
 func New(
 	bizCtxSvc bizctxcap.Service,
-	pluginLifecycleSvc plugincap.LifecycleService,
+	tenantSvc tenantcap.Service,
 	users usercap.Service,
 	plugins plugincap.Service,
-	pluginAdmin plugincap.AdminService,
 ) (tenantspi.Provider, error) {
 	if bizCtxSvc == nil {
 		return nil, gerror.New("linapro-tenant-core provider requires host bizctx service")
@@ -30,12 +30,17 @@ func New(
 	if users == nil {
 		return nil, gerror.New("linapro-tenant-core provider requires host user capability service")
 	}
-	if plugins == nil || pluginAdmin == nil {
+	if plugins == nil {
 		return nil, gerror.New("linapro-tenant-core provider requires host plugin capability services")
 	}
-	membershipSvc := membership.New(bizCtxSvc, users)
-	resolverConfigSvc := resolverconfig.New()
-	tenantPluginSvc := tenantplugin.New(bizCtxSvc, pluginLifecycleSvc, plugins, pluginAdmin)
-	resolverSvc := resolver.New(bizCtxSvc, membershipSvc)
+	if tenantSvc == nil || tenantSvc.Plugins() == nil {
+		return nil, gerror.New("linapro-tenant-core provider requires host tenant plugin governance service")
+	}
+	var (
+		membershipSvc     = membership.New(bizCtxSvc, users)
+		resolverConfigSvc = resolverconfig.New()
+		tenantPluginSvc   = tenantplugin.New(bizCtxSvc, tenantSvc, plugins)
+		resolverSvc       = resolver.New(bizCtxSvc, membershipSvc)
+	)
 	return provider.New(membershipSvc, resolverSvc, resolverConfigSvc, tenantPluginSvc)
 }
