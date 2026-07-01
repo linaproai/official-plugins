@@ -31,6 +31,17 @@ export class PostPage {
     await waitForRouteReady(this.page);
   }
 
+  /** Check whether a dept node is visible in the left DeptTree sidebar. */
+  async hasVisibleDeptNode(deptName: string): Promise<boolean> {
+    return this.page
+      .locator(".ant-tree-node-content-wrapper .ant-tree-title", {
+        hasText: deptName,
+      })
+      .first()
+      .isVisible({ timeout: 5000 })
+      .catch(() => false);
+  }
+
   /** Create a new post by clicking toolbar "新增", filling the drawer */
   async createPost(deptName: string, code: string, name: string) {
     await this.page
