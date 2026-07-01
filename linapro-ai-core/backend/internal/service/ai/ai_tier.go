@@ -294,7 +294,7 @@ func (s *serviceImpl) publishTierCacheRevision(ctx context.Context) (int64, erro
 	if s == nil || s.cacheSvc == nil {
 		return 0, nil
 	}
-	item, err := s.cacheSvc.Incr(ctx, tierCacheNamespace, tierCacheRevisionKey, 1, 0)
+	item, err := s.cacheSvc.Incr(ctx, tierCacheNamespace, tierCacheRevisionKey, 1, tierCacheRevisionTTL)
 	if err != nil {
 		return 0, gerror.Wrap(err, "publish AI tier cache revision failed")
 	}

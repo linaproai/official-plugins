@@ -969,6 +969,7 @@ func TestTierCacheSharedRevisionInvalidatesPeerService(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("bind first tier: %v", err)
 	}
+	assertTierRevisionExpires(t, ctx, cacheSvc)
 	firstBinding, err := reader.resolveTierBinding(ctx, capabilityTypeText, capabilityMethodGenerate, tierCodeAdvanced)
 	if err != nil {
 		t.Fatalf("resolve first binding: %v", err)
@@ -989,6 +990,7 @@ func TestTierCacheSharedRevisionInvalidatesPeerService(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("bind second tier: %v", err)
 	}
+	assertTierRevisionExpires(t, ctx, cacheSvc)
 	secondBinding, err := reader.resolveTierBinding(ctx, capabilityTypeText, capabilityMethodGenerate, tierCodeAdvanced)
 	if err != nil {
 		t.Fatalf("resolve second binding: %v", err)
@@ -1342,6 +1344,9 @@ func (s *memoryCacheService) Set(
 	value string,
 	ttl time.Duration,
 ) (*cachecap.CacheItem, error) {
+	if err := requireMemoryCachePositiveTTL(ttl); err != nil {
+		return nil, err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	item := &cachecap.CacheItem{
@@ -1359,6 +1364,11 @@ func (s *memoryCacheService) SetMany(
 	_ context.Context,
 	in cachecap.SetManyInput,
 ) (*cachecap.SetManyOutput, error) {
+	for _, input := range in.Items {
+		if err := requireMemoryCachePositiveTTL(input.TTL); err != nil {
+			return nil, err
+		}
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	output := &cachecap.SetManyOutput{
@@ -1401,6 +1411,9 @@ func (s *memoryCacheService) Incr(
 	delta int64,
 	ttl time.Duration,
 ) (*cachecap.CacheItem, error) {
+	if err := requireMemoryCachePositiveTTL(ttl); err != nil {
+		return nil, err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	cacheKey := memoryCacheKey(namespace, key)
@@ -1410,9 +1423,7 @@ func (s *memoryCacheService) Incr(
 		s.items[cacheKey] = item
 	}
 	item.IntValue += delta
-	if ttl > 0 {
-		item.ExpireAt = memoryCacheExpireAt(ttl)
-	}
+	item.ExpireAt = memoryCacheExpireAt(ttl)
 	copied := *item
 	return &copied, nil
 }
@@ -1423,6 +1434,9 @@ func (s *memoryCacheService) Expire(
 	key string,
 	ttl time.Duration,
 ) (bool, *time.Time, error) {
+	if err := requireMemoryCachePositiveTTL(ttl); err != nil {
+		return false, nil, err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	item := s.items[memoryCacheKey(namespace, key)]
@@ -1437,12 +1451,32 @@ func memoryCacheKey(namespace string, key string) string {
 	return namespace + "\x00" + key
 }
 
+// requireMemoryCachePositiveTTL mirrors the host cache contract for test doubles.
+func requireMemoryCachePositiveTTL(ttl time.Duration) error {
+	if ttl <= 0 {
+		return gerror.New("test memory cache requires positive ttl")
+	}
+	return nil
+}
+
 func memoryCacheExpireAt(ttl time.Duration) *time.Time {
 	if ttl <= 0 {
 		return nil
 	}
 	expireAt := time.Now().Add(ttl)
 	return &expireAt
+}
+
+// assertTierRevisionExpires verifies shared tier cache revisions use a finite positive lifetime.
+func assertTierRevisionExpires(t *testing.T, ctx context.Context, cacheSvc cachecap.Service) {
+	t.Helper()
+	item, found, err := cacheSvc.Get(ctx, tierCacheNamespace, tierCacheRevisionKey)
+	if err != nil {
+		t.Fatalf("read tier revision cache: %v", err)
+	}
+	if !found || item == nil || item.ExpireAt == nil || !item.ExpireAt.After(time.Now()) {
+		t.Fatalf("expected tier revision cache item with future expiration, got found=%v item=%#v", found, item)
+	}
 }
 
 type tierSnapshot struct {

@@ -56,9 +56,11 @@ const (
 	enabledYes             = 1
 	enabledNo              = 0
 	tierCacheTTL           = 30 * time.Second
-	tierCacheNamespace     = "tier-binding"
-	tierCacheRevisionKey   = "revision"
-	tierTestTimeout        = 60 * time.Second
+	// tierCacheRevisionTTL keeps cross-instance invalidation visible longer than any local tier cache entry.
+	tierCacheRevisionTTL = 10 * tierCacheTTL
+	tierCacheNamespace   = "tier-binding"
+	tierCacheRevisionKey = "revision"
+	tierTestTimeout      = 60 * time.Second
 )
 
 // Service defines Smart Center management, text-generation, and lifecycle cleanup operations.

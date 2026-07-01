@@ -47,12 +47,32 @@ function unwrapApiData(payload: any) {
 async function assertOk(
   response: Awaited<ReturnType<APIRequestContext["get"]>>,
   message: string,
-) {
+): Promise<any> {
+  const body = await response.text();
+  let payload: any;
+  if (body.trim()) {
+    try {
+      payload = JSON.parse(body);
+    } catch {
+      if (!response.ok()) {
+        throw new Error(`${message}, status=${response.status()}, body=${body}`);
+      }
+    }
+  }
   if (!response.ok()) {
     throw new Error(
-      `${message}, status=${response.status()}, body=${await response.text()}`,
+      `${message}, status=${response.status()}, body=${body}`,
     );
   }
+  if (
+    payload &&
+    typeof payload === "object" &&
+    typeof payload.code === "number" &&
+    payload.code !== 0
+  ) {
+    throw new Error(`${message}, businessCode=${payload.code}, body=${body}`);
+  }
+  return payload;
 }
 
 export async function withAdminApi<T>(
@@ -93,8 +113,9 @@ export async function createProviderWithModel(
       },
     },
   );
-  await assertOk(providerResponse, "创建 AI 渠道失败");
-  const provider = unwrapApiData(await providerResponse.json());
+  const provider = unwrapApiData(
+    await assertOk(providerResponse, "创建 AI 渠道失败"),
+  );
   const providerId = Number(provider?.id || 0);
   const endpointId = await createProviderEndpoint(api, providerId, {
     baseUrl: openaiEndpointUrl,
@@ -120,8 +141,9 @@ export async function createProviderWithModel(
       },
     },
   );
-  await assertOk(modelResponse, "创建 AI 模型失败");
-  const model = unwrapApiData(await modelResponse.json());
+  const model = unwrapApiData(
+    await assertOk(modelResponse, "创建 AI 模型失败"),
+  );
 
   return {
     anthropicEndpointUrl: input.anthropicEndpointUrl,
@@ -159,8 +181,9 @@ export async function createProviderEndpoint(
       },
     },
   );
-  await assertOk(response, "创建 AI 渠道端点失败");
-  const endpoint = unwrapApiData(await response.json());
+  const endpoint = unwrapApiData(
+    await assertOk(response, "创建 AI 渠道端点失败"),
+  );
   return Number(endpoint?.id || 0);
 }
 
@@ -173,8 +196,9 @@ export async function listProviderEndpoints(
     pluginApiPath(pluginId, `ai/providers/${providerId}/endpoints`),
     { params },
   );
-  await assertOk(response, "查询 AI 渠道端点失败");
-  const out = unwrapApiData(await response.json());
+  const out = unwrapApiData(
+    await assertOk(response, "查询 AI 渠道端点失败"),
+  );
   return out?.list ?? [];
 }
 
@@ -212,8 +236,7 @@ export async function createProviderModel(
       },
     },
   );
-  await assertOk(response, "创建 AI 模型失败");
-  const model = unwrapApiData(await response.json());
+  const model = unwrapApiData(await assertOk(response, "创建 AI 模型失败"));
   return Number(model?.id || 0);
 }
 
@@ -268,8 +291,9 @@ export async function listModelCapabilities(
   const response = await api.get(
     pluginApiPath(pluginId, `ai/models/${modelId}/capabilities`),
   );
-  await assertOk(response, "查询 AI 模型能力失败");
-  const out = unwrapApiData(await response.json());
+  const out = unwrapApiData(
+    await assertOk(response, "查询 AI 模型能力失败"),
+  );
   return out?.list ?? [];
 }
 
@@ -360,8 +384,7 @@ export async function listTiers(
       capabilityType,
     },
   });
-  await assertOk(response, "查询 AI 档位失败");
-  const out = unwrapApiData(await response.json());
+  const out = unwrapApiData(await assertOk(response, "查询 AI 档位失败"));
   return out?.list ?? [];
 }
 
@@ -377,8 +400,7 @@ export async function findProviderByName(api: APIRequestContext, name: string) {
       pageSize: 10,
     },
   });
-  await assertOk(response, "查询 AI 渠道失败");
-  const out = unwrapApiData(await response.json());
+  const out = unwrapApiData(await assertOk(response, "查询 AI 渠道失败"));
   return (out?.list || []).find((item: any) => item?.name === name);
 }
 
@@ -395,8 +417,7 @@ export async function listProviderModels(
       },
     },
   );
-  await assertOk(response, "查询 AI 模型失败");
-  const out = unwrapApiData(await response.json());
+  const out = unwrapApiData(await assertOk(response, "查询 AI 模型失败"));
   return out?.list ?? [];
 }
 
@@ -533,8 +554,7 @@ export async function listInvocations(
   const response = await api.get(pluginApiPath(pluginId, "ai/invocations"), {
     params,
   });
-  await assertOk(response, "查询 AI 调用日志失败");
-  return unwrapApiData(await response.json());
+  return unwrapApiData(await assertOk(response, "查询 AI 调用日志失败"));
 }
 
 export function insertProviderOperation(input: {
@@ -605,8 +625,9 @@ export async function listProviderOperations(
       params,
     },
   );
-  await assertOk(response, "查询 AI provider operation 失败");
-  const out = unwrapApiData(await response.json());
+  const out = unwrapApiData(
+    await assertOk(response, "查询 AI provider operation 失败"),
+  );
   return out;
 }
 
