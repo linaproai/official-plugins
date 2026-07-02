@@ -114,7 +114,7 @@ the repository root. Build commands run from the plugin root.
 
 | Value | Meaning | Lifecycle |
 |-------|---------|-----------|
-| `marketplace` | Ordinary managed plugin. This is the default when `distribution` is omitted. | Visible in plugin management and can be installed, enabled, disabled, upgraded, uninstalled, or auto-enabled through `plugin.autoEnable`. |
+| `managed` | Ordinary managed plugin. This is the default when `distribution` is omitted. | Visible in plugin management and can be installed, enabled, disabled, upgraded, uninstalled, or auto-enabled through `plugin.autoEnable`. |
 | `builtin` | Project built-in source plugin compiled with the host. | Installed, enabled, and safely upgraded during host startup. Ordinary plugin-management write actions are rejected. |
 
 `distribution: builtin` is only valid for `type: source` plugins that are registered by the source-plugin registry with the same plugin ID. Dynamic plugins must not declare `distribution: builtin`.

@@ -99,7 +99,7 @@ build:
 
 | 取值 | 语义 | 生命周期 |
 |------|------|----------|
-| `marketplace` | 普通可管理插件。省略`distribution`时默认使用该值。 | 在插件管理中可见，可安装、启用、禁用、升级、卸载，也可通过`plugin.autoEnable`托管启用。 |
+| `managed` | 普通可管理插件。省略`distribution`时默认使用该值。 | 在插件管理中可见，可安装、启用、禁用、升级、卸载，也可通过`plugin.autoEnable`托管启用。 |
 | `builtin` | 随宿主编译交付的项目内建源码插件。 | 宿主启动时自动安装、启用和安全升级；普通插件管理写操作会被拒绝。 |
 
 `distribution: builtin`只允许`type: source`插件使用，并且插件必须以相同 ID 注册到源码插件注册表。动态插件不得声明`distribution: builtin`。

@@ -40,7 +40,7 @@ linapro-demo-source/
 
 `plugin.yaml` keeps the plugin metadata, menu declarations, and button permissions. Pages and SQL assets still follow directory conventions instead of being duplicated in metadata.
 
-The sample declares `distribution: marketplace`, so it remains an ordinary plugin that is explicitly installed, enabled, upgraded, disabled, and uninstalled through plugin management. Use `distribution: builtin` only for registered source plugins that are project components and must be installed, enabled, and safely upgraded by host startup.
+The sample declares `distribution: managed`, so it remains an ordinary plugin that is explicitly installed, enabled, upgraded, disabled, and uninstalled through plugin management. Use `distribution: builtin` only for registered source plugins that are project components and must be installed, enabled, and safely upgraded by host startup.
 
 `plugin.yaml` does not declare source-plugin HTTP routes. Workspace navigation still comes from `menus`, while backend routes are registered by plugin code.
 
