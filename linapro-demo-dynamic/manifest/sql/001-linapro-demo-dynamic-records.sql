@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_demo_dynamic_record (
     "content"         VARCHAR(1000) NOT NULL DEFAULT '',
     "attachment_name" VARCHAR(255) NOT NULL DEFAULT '',
     "attachment_path" VARCHAR(500) NOT NULL DEFAULT '',
-    "created_at"      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at"      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "created_at"      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at"      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 COMMENT ON TABLE plugin_linapro_demo_dynamic_record IS 'Dynamic plugin demo record table';

@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_monitor_operlog (
     "status"          SMALLINT                         NOT NULL DEFAULT 0,
     "error_msg"       TEXT                             NOT NULL,
     "cost_time"       INT                              NOT NULL DEFAULT 0,
-    "oper_time"       TIMESTAMP                        NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "oper_time"       TIMESTAMPTZ                        NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 COMMENT ON TABLE plugin_linapro_monitor_operlog IS 'Operation log table';

@@ -16,9 +16,9 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_org_core_dept (
     "email"       VARCHAR(128) NOT NULL DEFAULT '',
     "status"      SMALLINT     NOT NULL DEFAULT 1,
     "remark"      VARCHAR(512) NOT NULL DEFAULT '',
-    "created_at"  TIMESTAMP,
-    "updated_at"  TIMESTAMP,
-    "deleted_at"  TIMESTAMP
+    "created_at"  TIMESTAMPTZ,
+    "updated_at"  TIMESTAMPTZ,
+    "deleted_at"  TIMESTAMPTZ
 );
 
 -- Purpose: Stores tenant-scoped posts that can be associated with departments and assigned to users.
@@ -32,9 +32,9 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_org_core_post (
     "sort"        INT          NOT NULL DEFAULT 0,
     "status"      SMALLINT     NOT NULL DEFAULT 1,
     "remark"      VARCHAR(512) NOT NULL DEFAULT '',
-    "created_at"  TIMESTAMP,
-    "updated_at"  TIMESTAMP,
-    "deleted_at"  TIMESTAMP
+    "created_at"  TIMESTAMPTZ,
+    "updated_at"  TIMESTAMPTZ,
+    "deleted_at"  TIMESTAMPTZ
 );
 
 -- Purpose: Stores tenant-scoped user-to-department membership relations.

@@ -8,9 +8,9 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_tenant_core_tenant (
     "remark" VARCHAR(512) NOT NULL DEFAULT '',
     "created_by" BIGINT NOT NULL DEFAULT 0,
     "updated_by" BIGINT NOT NULL DEFAULT 0,
-    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "deleted_at" TIMESTAMP,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     CONSTRAINT uk_plugin_linapro_tenant_core_tenant_code UNIQUE ("code")
 );
 
@@ -24,12 +24,12 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_tenant_core_user_membership (
     "user_id" BIGINT NOT NULL,
     "tenant_id" BIGINT NOT NULL,
     "status" SMALLINT NOT NULL DEFAULT 1,
-    "joined_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "joined_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "created_by" BIGINT NOT NULL DEFAULT 0,
     "updated_by" BIGINT NOT NULL DEFAULT 0,
-    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "deleted_at" TIMESTAMP,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     CONSTRAINT uk_plugin_linapro_tenant_core_membership_user_tenant UNIQUE ("user_id", "tenant_id")
 );
 
@@ -48,8 +48,8 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_tenant_core_config_override (
     "config_key" VARCHAR(128) NOT NULL,
     "config_value" TEXT NOT NULL DEFAULT '',
     "enabled" BOOLEAN NOT NULL DEFAULT TRUE,
-    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "deleted_at" TIMESTAMP,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     CONSTRAINT uk_plugin_linapro_tenant_core_config_override UNIQUE ("tenant_id", "config_key")
 );

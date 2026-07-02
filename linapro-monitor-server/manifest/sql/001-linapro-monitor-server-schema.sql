@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_monitor_server (
     "node_name"   VARCHAR(128) NOT NULL DEFAULT '',
     "node_ip"     VARCHAR(64)  NOT NULL DEFAULT '',
     "data"        TEXT                            NOT NULL,
-    "created_at"  TIMESTAMP                       NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at"  TIMESTAMP                       NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "created_at"  TIMESTAMPTZ                       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at"  TIMESTAMPTZ                       NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 COMMENT ON TABLE plugin_linapro_monitor_server IS 'Server monitoring table';

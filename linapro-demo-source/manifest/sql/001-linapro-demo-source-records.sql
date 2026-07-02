@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_demo_source_record (
     "content"         VARCHAR(1000) NOT NULL DEFAULT '',
     "attachment_name" VARCHAR(255) NOT NULL DEFAULT '',
     "attachment_path" VARCHAR(500) NOT NULL DEFAULT '',
-    "created_at"      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "updated_at"      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    "created_at"      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "updated_at"      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 COMMENT ON TABLE plugin_linapro_demo_source_record IS 'Source plugin demo record table';
