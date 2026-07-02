@@ -44,15 +44,6 @@ func IsDemoRecordInvalidInput(err error) bool {
 		bizerr.Is(err, CodeDynamicDemoRecordIDRequired)
 }
 
-// newDemoRecordInvalidInputError creates one invalid-input business error that
-// should be translated into a bad-request bridge response.
-func newDemoRecordInvalidInputError(message string) error {
-	return bizerr.NewCode(
-		CodeDynamicDemoRecordInvalidInput,
-		bizerr.P("reason", strings.TrimSpace(message)),
-	)
-}
-
 // IsDemoRecordNotFound reports whether the error should be exposed as one not-found response.
 func IsDemoRecordNotFound(err error) bool {
 	return bizerr.Is(err, CodeDynamicDemoRecordNotFound) ||

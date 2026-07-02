@@ -13,12 +13,6 @@ import (
 	"lina-core/pkg/plugin/capability/usercap"
 )
 
-// Dict types used in notice
-const (
-	dictTypeNoticeType   = "sys_notice_type"   // Notice type dictionary
-	dictTypeNoticeStatus = "sys_notice_status" // Notice status dictionary
-)
-
 // Notice type values (matching sys_notice_type dictionary)
 const (
 	noticeTypeNotice       = 1 // Notice

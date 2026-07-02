@@ -536,28 +536,6 @@ func (s *serviceImpl) requireProviderEndpoint(ctx context.Context, providerID in
 	return row, nil
 }
 
-func (s *serviceImpl) enabledEndpointForProtocol(ctx context.Context, providerID int64, protocol string) (*entity.ProviderEndpoint, error) {
-	protocol = normalizeProtocol(protocol)
-	if providerID <= 0 || protocol == "" {
-		return nil, bizerr.NewCode(CodeProviderProtocolRequired)
-	}
-	var row *entity.ProviderEndpoint
-	if err := dao.ProviderEndpoint.Ctx(ctx).
-		Where(do.ProviderEndpoint{
-			ProviderId: providerID,
-			Protocol:   protocol,
-			Enabled:    enabledYes,
-		}).
-		OrderAsc(dao.ProviderEndpoint.Columns().Id).
-		Scan(&row); err != nil {
-		return nil, err
-	}
-	if row == nil {
-		return nil, bizerr.NewCode(CodeProviderProtocolRequired)
-	}
-	return row, nil
-}
-
 func (s *serviceImpl) enabledSyncEndpoints(ctx context.Context, providerID int64, protocol string) ([]*entity.ProviderEndpoint, error) {
 	if providerID <= 0 {
 		return nil, bizerr.NewCode(CodeProviderProtocolRequired)

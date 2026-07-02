@@ -241,9 +241,9 @@ func (s *serviceImpl) UpdateRecord(ctx context.Context, in *UpdateRecordInput) (
 		updateData.AttachmentPath = stringPointer("")
 	}
 
-	newAttachmentName := ""
 	newAttachmentPath := ""
 	if in.File != nil {
+		var newAttachmentName string
 		newAttachmentName, newAttachmentPath, err = s.saveDemoAttachmentFile(ctx, in.File)
 		if err != nil {
 			return nil, err

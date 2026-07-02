@@ -527,9 +527,9 @@ func addBearerAuth(req *http.Request, secretRef string) {
 // addAnthropicHeaders applies Anthropic-compatible authentication headers.
 func addAnthropicHeaders(req *http.Request, secretRef string) {
 	if strings.TrimSpace(secretRef) != "" {
-		req.Header.Set("x-api-key", strings.TrimSpace(secretRef))
+		req.Header.Set("X-Api-Key", strings.TrimSpace(secretRef))
 	}
-	req.Header.Set("anthropic-version", "2023-06-01")
+	req.Header.Set("Anthropic-Version", "2023-06-01")
 }
 
 // readProviderHTTPError reports provider HTTP failures without exposing the
