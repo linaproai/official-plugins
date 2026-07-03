@@ -6,7 +6,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // ListReq defines the request for listing all AI models.
 type ListReq struct {
-	g.Meta     `path:"/ai/models" method:"get" tags:"AI Models" summary:"List AI models" dc:"List all AI model identities from the platform Smart Center with bounded pagination and provider and endpoint projections assembled in batches. Model management does not filter by capability method declarations." permission:"ai:provider:list"`
+	g.Meta     `path:"/ai/models" method:"get" tags:"Smart Center/Model Management" summary:"List AI models" dc:"List all AI model identities from the platform Smart Center with bounded pagination and provider and endpoint projections assembled in batches. Model management does not filter by capability method declarations." permission:"ai:provider:list"`
 	PageNum    int    `json:"pageNum" d:"1" v:"min:1" dc:"Page number" eg:"1"`
 	PageSize   int    `json:"pageSize" d:"10" v:"min:1|max:100" dc:"Page size, capped at 100" eg:"10"`
 	Keyword    string `json:"keyword" dc:"Optional model name keyword filter" eg:"gpt"`

@@ -6,7 +6,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // UpdateReq defines the request for updating an AI model.
 type UpdateReq struct {
-	g.Meta     `path:"/ai/models/{id}" method:"put" tags:"AI Models" summary:"Update AI model" dc:"Update one AI model identity after verifying the default endpoint still belongs to the provider and protocol. Model management does not maintain capability method declarations." permission:"ai:provider:update"`
+	g.Meta     `path:"/ai/models/{id}" method:"put" tags:"Smart Center/Model Management" summary:"Update AI model" dc:"Update one AI model identity after verifying the default endpoint still belongs to the provider and protocol. Model management does not maintain capability method declarations." permission:"ai:provider:update"`
 	Id         int64  `json:"id" v:"required|min:1" dc:"Model ID" eg:"1"`
 	EndpointId int64  `json:"endpointId" v:"required|min:1" dc:"Default provider endpoint ID used by this model" eg:"1"`
 	ModelName  string `json:"modelName" v:"required|max-length:128" dc:"Provider model name" eg:"gpt-4.1-mini"`
@@ -19,7 +19,7 @@ type UpdateRes struct{}
 
 // DeleteReq defines the request for deleting an AI model.
 type DeleteReq struct {
-	g.Meta `path:"/ai/models/{id}" method:"delete" tags:"AI Models" summary:"Delete AI model" dc:"Delete all provider-local model records sharing the target model name after verifying none of them is referenced by an AI capability tier binding." permission:"ai:provider:delete"`
+	g.Meta `path:"/ai/models/{id}" method:"delete" tags:"Smart Center/Model Management" summary:"Delete AI model" dc:"Delete all provider-local model records sharing the target model name after verifying none of them is referenced by an AI capability tier binding." permission:"ai:provider:delete"`
 	Id     int64 `json:"id" v:"required|min:1" dc:"Model ID" eg:"1"`
 }
 

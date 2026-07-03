@@ -6,7 +6,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // GetReq defines the request for reading an AI provider.
 type GetReq struct {
-	g.Meta `path:"/ai/providers/{id}" method:"get" tags:"AI Providers" summary:"Get AI provider" dc:"Get one AI provider detail and aggregated model counts by provider ID." permission:"ai:provider:list"`
+	g.Meta `path:"/ai/providers/{id}" method:"get" tags:"Smart Center/Channel Management" summary:"Get AI provider" dc:"Get one AI provider detail and aggregated model counts by provider ID." permission:"ai:provider:list"`
 	Id     int64 `json:"id" v:"required|min:1" dc:"Provider ID" eg:"1"`
 }
 

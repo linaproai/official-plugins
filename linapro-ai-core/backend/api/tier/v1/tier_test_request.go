@@ -6,7 +6,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // TestReq defines the request for testing a saved or draft AI tier binding.
 type TestReq struct {
-	g.Meta           `path:"/ai/tiers/{code}/test" method:"post" tags:"AI Tiers" summary:"Test AI capability tier" dc:"Execute a lightweight provider test against a saved or draft tier binding within one capability method without persisting draft binding changes. Text methods use messages; other methods may return provider-unavailable until an adapter supports that method." permission:"ai:tier:test"`
+	g.Meta           `path:"/ai/tiers/{code}/test" method:"post" tags:"Smart Center/Tier Management" summary:"Test AI capability tier" dc:"Execute a lightweight provider test against a saved or draft tier binding within one capability method without persisting draft binding changes. Text methods use messages; other methods may return provider-unavailable until an adapter supports that method." permission:"ai:tier:test"`
 	CapabilityType   string        `json:"capabilityType" d:"text" dc:"Capability type such as text, image, embedding, audio, vision, document, safety, or video" eg:"text"`
 	CapabilityMethod string        `json:"capabilityMethod" d:"generate" dc:"Capability method within the type, such as generate, create, transcribe, analyze, moderate, or operation.get" eg:"generate"`
 	Code             string        `json:"code" v:"required|in:basic,standard,advanced" dc:"Tier code: basic, standard, advanced" eg:"basic"`
