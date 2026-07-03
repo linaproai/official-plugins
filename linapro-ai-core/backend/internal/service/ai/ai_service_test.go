@@ -43,7 +43,7 @@ func TestProviderModelTierAndInvocationFlow(t *testing.T) {
 	server := testOpenAIServer(t)
 	ctx = context.WithValue(ctx, providerBaseURLKey{}, server.URL+"/v1")
 	svc := New(testBizCtx{}, nil, server.Client()).(*serviceImpl)
-	snapshot := snapshotTier(t, ctx, svc, TierCodeBasic)
+	snapshot := snapshotTier(t, ctx, svc, tierCodeBasic)
 	t.Cleanup(func() { restoreTier(t, ctx, snapshot) })
 
 	providerID := createTestProvider(t, ctx, svc, "flow")
@@ -62,7 +62,7 @@ func TestProviderModelTierAndInvocationFlow(t *testing.T) {
 	}
 
 	if err = svc.UpdateTier(ctx, TierUpdateInput{
-		Code:          TierCodeBasic,
+		Code:          tierCodeBasic,
 		ProviderId:    providerID,
 		ModelId:       modelID,
 		DefaultEffort: string(aitext.ThinkingEffortLow),
@@ -71,18 +71,18 @@ func TestProviderModelTierAndInvocationFlow(t *testing.T) {
 		t.Fatalf("update tier: %v", err)
 	}
 	if err = svc.UpdateTier(ctx, TierUpdateInput{
-		Code:          TierCodeBasic,
+		Code:          tierCodeBasic,
 		DefaultEffort: string(aitext.ThinkingEffortLow),
 		Enabled:       enabledNo,
 	}); err != nil {
 		t.Fatalf("disable tier without rebinding: %v", err)
 	}
-	preserved := snapshotTier(t, ctx, svc, TierCodeBasic)
+	preserved := snapshotTier(t, ctx, svc, tierCodeBasic)
 	if preserved.binding == nil || preserved.binding.ProviderId != providerID || preserved.binding.ModelId != modelID {
 		t.Fatalf("expected disabling tier to preserve binding, got %#v", preserved.binding)
 	}
 	if err = svc.UpdateTier(ctx, TierUpdateInput{
-		Code:          TierCodeBasic,
+		Code:          tierCodeBasic,
 		ProviderId:    providerID,
 		ModelId:       modelID,
 		DefaultEffort: string(aitext.ThinkingEffortLow),
@@ -90,7 +90,7 @@ func TestProviderModelTierAndInvocationFlow(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("re-enable tier: %v", err)
 	}
-	syncOut, err := svc.SyncModels(ctx, ModelSyncInput{ProviderId: providerID, Protocol: ProtocolOpenAI})
+	syncOut, err := svc.SyncModels(ctx, ModelSyncInput{ProviderId: providerID, Protocol: protocolOpenAI})
 	if err != nil {
 		t.Fatalf("sync models: %v", err)
 	}
@@ -99,9 +99,9 @@ func TestProviderModelTierAndInvocationFlow(t *testing.T) {
 	}
 	if err = svc.UpdateModel(ctx, ModelSaveInput{
 		Id:         modelID,
-		EndpointId: defaultTestEndpointID(t, ctx, svc, providerID, ProtocolOpenAI),
+		EndpointId: defaultTestEndpointID(t, ctx, svc, providerID, protocolOpenAI),
 		ModelName:  "flow-model-renamed",
-		Protocol:   ProtocolOpenAI,
+		Protocol:   protocolOpenAI,
 		Enabled:    enabledYes,
 	}); err != nil {
 		t.Fatalf("update model identity: %v", err)
@@ -159,14 +159,14 @@ func TestProviderModelTierAndInvocationFlow(t *testing.T) {
 	logs, err := svc.ListInvocations(ctx, InvocationListInput{
 		PageNum:          1,
 		PageSize:         10,
-		CapabilityMethod: CapabilityMethodGenerate,
+		CapabilityMethod: capabilityMethodGenerate,
 		Purpose:          "unit.flow",
-		Status:           InvocationStatusSuccess,
+		Status:           invocationStatusSuccess,
 	})
 	if err != nil {
 		t.Fatalf("list invocations: %v", err)
 	}
-	if logs.Total < 1 || logs.List[0].CapabilityMethod != CapabilityMethodGenerate || strings.Contains(logs.List[0].ErrorSummary, "full prompt") {
+	if logs.Total < 1 || logs.List[0].CapabilityMethod != capabilityMethodGenerate || strings.Contains(logs.List[0].ErrorSummary, "full prompt") {
 		t.Fatalf("expected masked invocation log, got %#v", logs)
 	}
 }
@@ -183,7 +183,7 @@ func TestProviderModelSummaryAggregatesByNameAndDeleteRemovesGroup(t *testing.T)
 	t.Cleanup(func() { deleteProviderFixture(t, ctx, providerID) })
 	anthropicEndpointID, err := svc.CreateProviderEndpoint(ctx, ProviderEndpointSaveInput{
 		ProviderId: providerID,
-		Protocol:   ProtocolAnthropic,
+		Protocol:   protocolAnthropic,
 		BaseUrl:    "https://unit.example/anthropic/v1",
 		SecretRef:  "unit-secret",
 		Enabled:    enabledYes,
@@ -198,7 +198,7 @@ func TestProviderModelSummaryAggregatesByNameAndDeleteRemovesGroup(t *testing.T)
 		ProviderId: providerID,
 		EndpointId: anthropicEndpointID,
 		ModelName:  sharedModelName,
-		Protocol:   ProtocolAnthropic,
+		Protocol:   protocolAnthropic,
 		Enabled:    enabledYes,
 	}); err != nil {
 		t.Fatalf("create duplicate-name anthropic model: %v", err)
@@ -241,16 +241,16 @@ func TestProviderModelSummaryAggregatesByNameAndDeleteRemovesGroup(t *testing.T)
 		ProviderId: providerID,
 		EndpointId: anthropicEndpointID,
 		ModelName:  referencedModelName,
-		Protocol:   ProtocolAnthropic,
+		Protocol:   protocolAnthropic,
 		Enabled:    enabledYes,
 	})
 	if err != nil {
 		t.Fatalf("create referenced duplicate-name model: %v", err)
 	}
-	snapshot := snapshotTier(t, ctx, svc, TierCodeBasic)
+	snapshot := snapshotTier(t, ctx, svc, tierCodeBasic)
 	t.Cleanup(func() { restoreTier(t, ctx, snapshot) })
 	if err = svc.UpdateTier(ctx, TierUpdateInput{
-		Code:          TierCodeBasic,
+		Code:          tierCodeBasic,
 		ProviderId:    providerID,
 		ModelId:       referencedAnthropicID,
 		DefaultEffort: string(aitext.ThinkingEffortLow),
@@ -288,11 +288,13 @@ func TestCleanInvocationsDeletesAllOrTimeRange(t *testing.T) {
 	svc := New(testBizCtx{}, nil, nil).(*serviceImpl)
 	const rollbackMessage = "rollback invocation cleanup test transaction"
 	err := dao.Invocation.Transaction(ctx, func(txCtx context.Context, _ gdb.TX) error {
-		base := time.Now().Add(-2 * time.Hour).Truncate(time.Millisecond)
-		prefix := base.Format("20060102150405")
-		oldRequestID := "unit-clean-old-" + prefix
-		midRequestID := "unit-clean-mid-" + prefix
-		newRequestID := "unit-clean-new-" + prefix
+		var (
+			base         = time.Now().Add(-2 * time.Hour).Truncate(time.Millisecond)
+			prefix       = base.Format("20060102150405")
+			oldRequestID = "unit-clean-old-" + prefix
+			midRequestID = "unit-clean-mid-" + prefix
+			newRequestID = "unit-clean-new-" + prefix
+		)
 		insertInvocationFixture(t, txCtx, oldRequestID, base)
 		insertInvocationFixture(t, txCtx, midRequestID, base.Add(time.Hour))
 		insertInvocationFixture(t, txCtx, newRequestID, base.Add(2*time.Hour))
@@ -335,10 +337,12 @@ func TestCleanupExpiredInvocationsDeletesOnlyOldLogs(t *testing.T) {
 	svc := New(testBizCtx{}, nil, nil).(*serviceImpl)
 	const rollbackMessage = "rollback invocation retention cleanup test transaction"
 	err := dao.Invocation.Transaction(ctx, func(txCtx context.Context, _ gdb.TX) error {
-		base := time.Now().AddDate(0, 0, -2).Truncate(time.Millisecond)
-		prefix := time.Now().Format("20060102150405")
-		oldRequestID := "unit-retention-old-" + prefix
-		newRequestID := "unit-retention-new-" + prefix
+		var (
+			base         = time.Now().AddDate(0, 0, -2).Truncate(time.Millisecond)
+			prefix       = time.Now().Format("20060102150405")
+			oldRequestID = "unit-retention-old-" + prefix
+			newRequestID = "unit-retention-new-" + prefix
+		)
 		insertInvocationFixture(t, txCtx, oldRequestID, base)
 		insertInvocationFixture(t, txCtx, newRequestID, time.Now())
 
@@ -391,7 +395,7 @@ func TestSyncModelsAggregatesEnabledEndpoints(t *testing.T) {
 	createTestModel(t, ctx, svc, providerID, "sync-existing")
 	if _, err := svc.CreateProviderEndpoint(ctx, ProviderEndpointSaveInput{
 		ProviderId: providerID,
-		Protocol:   ProtocolAnthropic,
+		Protocol:   protocolAnthropic,
 		BaseUrl:    failingServer.URL + "/v1",
 		SecretRef:  "unit-secret",
 		Enabled:    enabledYes,
@@ -430,7 +434,7 @@ func TestSyncModelsAggregatesEnabledEndpoints(t *testing.T) {
 	}
 	if models.List[0].ProviderName == "" ||
 		models.List[0].EndpointBaseUrl != openAIServer.URL+"/v1" ||
-		models.List[0].Protocol != ProtocolOpenAI {
+		models.List[0].Protocol != protocolOpenAI {
 		t.Fatalf("expected synced model provider and endpoint projection, got %#v", models.List[0])
 	}
 	capabilities, err := svc.ListModelCapabilities(ctx, models.List[0].Id)
@@ -480,7 +484,7 @@ func TestSyncModelsAggregatesEnabledEndpoints(t *testing.T) {
 		t.Fatalf("create all-failing provider: %v", err)
 	}
 	t.Cleanup(func() { deleteProviderFixture(t, ctx, failingProviderID) })
-	for _, protocol := range []string{ProtocolOpenAI, ProtocolAnthropic} {
+	for _, protocol := range []string{protocolOpenAI, protocolAnthropic} {
 		if _, err = svc.CreateProviderEndpoint(ctx, ProviderEndpointSaveInput{
 			ProviderId: failingProviderID,
 			Protocol:   protocol,
@@ -508,24 +512,24 @@ func TestConfirmedRemoteCapabilitiesInsertMissingOnly(t *testing.T) {
 	providerID := createTestProvider(t, ctx, svc, "confirmed-capability")
 	t.Cleanup(func() { deleteProviderFixture(t, ctx, providerID) })
 	modelID := createTestModel(t, ctx, svc, providerID, "confirmed-capability-model")
-	endpointID := defaultTestEndpointID(t, ctx, svc, providerID, ProtocolOpenAI)
+	endpointID := defaultTestEndpointID(t, ctx, svc, providerID, protocolOpenAI)
 	if err := svc.UpsertModelCapabilities(ctx, modelID, []ModelCapabilitySaveInput{{
 		EndpointId:        endpointID,
-		CapabilityType:    CapabilityTypeText,
-		CapabilityMethod:  CapabilityMethodGenerate,
+		CapabilityType:    capabilityTypeText,
+		CapabilityMethod:  capabilityMethodGenerate,
 		InputModalities:   []string{"manual"},
 		OutputModalities:  []string{"text"},
 		MaxOutputTokens:   256,
 		SupportsOperation: enabledNo,
 		Enabled:           enabledYes,
 	}}); err != nil {
-		t.Fatalf("create manual text capability: %v", err)
+		t.Fatalf("create manual text state: %v", err)
 	}
 	model := &entity.Model{
 		Id:         modelID,
 		ProviderId: providerID,
 		EndpointId: endpointID,
-		Protocol:   ProtocolOpenAI,
+		Protocol:   protocolOpenAI,
 	}
 
 	existingCapabilityKeys, err := svc.modelCapabilityKeysByModel(ctx, []int64{modelID})
@@ -534,8 +538,8 @@ func TestConfirmedRemoteCapabilitiesInsertMissingOnly(t *testing.T) {
 	}
 	if err := svc.insertConfirmedRemoteModelCapabilities(ctx, existingCapabilityKeys, model, endpointID, []remoteModelCapability{
 		{
-			CapabilityType:   CapabilityTypeText,
-			CapabilityMethod: CapabilityMethodGenerate,
+			CapabilityType:   capabilityTypeText,
+			CapabilityMethod: capabilityMethodGenerate,
 			InputModalities:  []string{"remote"},
 			OutputModalities: []string{"remote"},
 		},
@@ -557,7 +561,7 @@ func TestConfirmedRemoteCapabilitiesInsertMissingOnly(t *testing.T) {
 		t.Fatalf("expected manual text capability plus inserted image capability, got %#v", capabilities)
 	}
 	for _, capability := range capabilities {
-		if capability.CapabilityType == CapabilityTypeText &&
+		if capability.CapabilityType == capabilityTypeText &&
 			(capability.MaxOutputTokens != 256 || strings.Join(capability.InputModalities, ",") == "remote") {
 			t.Fatalf("remote sync must not overwrite manual text capability, got %#v", capability)
 		}
@@ -575,7 +579,7 @@ func TestModelCapabilityReplacementAllowsMethodEditAndProtectsTierBindings(t *te
 
 	providerID := createTestProvider(t, ctx, svc, "capability-replace")
 	t.Cleanup(func() { deleteProviderFixture(t, ctx, providerID) })
-	endpointID := defaultTestEndpointID(t, ctx, svc, providerID, ProtocolOpenAI)
+	endpointID := defaultTestEndpointID(t, ctx, svc, providerID, protocolOpenAI)
 	modelID := createTestModel(t, ctx, svc, providerID, "capability-replace-model")
 
 	if err := svc.UpsertModelCapabilities(ctx, modelID, []ModelCapabilitySaveInput{{
@@ -617,24 +621,24 @@ func TestModelCapabilityReplacementAllowsMethodEditAndProtectsTierBindings(t *te
 	referencedModelID := createTestModel(t, ctx, svc, providerID, "capability-replace-referenced")
 	if err := svc.UpsertModelCapabilities(ctx, referencedModelID, []ModelCapabilitySaveInput{{
 		EndpointId:        endpointID,
-		CapabilityType:    CapabilityTypeText,
-		CapabilityMethod:  CapabilityMethodGenerate,
+		CapabilityType:    capabilityTypeText,
+		CapabilityMethod:  capabilityMethodGenerate,
 		InputModalities:   []string{"text"},
 		OutputModalities:  []string{"text"},
 		SupportsOperation: enabledNo,
 		Enabled:           enabledYes,
 	}}); err != nil {
-		t.Fatalf("create referenced text capability: %v", err)
+		t.Fatalf("create referenced text state: %v", err)
 	}
-	snapshot := snapshotTier(t, ctx, svc, TierCodeStandard)
+	snapshot := snapshotTier(t, ctx, svc, tierCodeStandard)
 	t.Cleanup(func() { restoreTier(t, ctx, snapshot) })
 	if err = svc.UpdateTier(ctx, TierUpdateInput{
-		Code:       TierCodeStandard,
+		Code:       tierCodeStandard,
 		ProviderId: providerID,
 		ModelId:    referencedModelID,
 		Enabled:    enabledYes,
 	}); err != nil {
-		t.Fatalf("bind referenced model capability: %v", err)
+		t.Fatalf("bind referenced model state: %v", err)
 	}
 	err = svc.UpsertModelCapabilities(ctx, referencedModelID, []ModelCapabilitySaveInput{{
 		EndpointId:       endpointID,
@@ -650,8 +654,8 @@ func TestModelCapabilityReplacementAllowsMethodEditAndProtectsTierBindings(t *te
 		t.Fatalf("list referenced model capabilities after rejected replacement: %v", err)
 	}
 	if len(capabilities) != 1 ||
-		capabilities[0].CapabilityType != CapabilityTypeText ||
-		capabilities[0].CapabilityMethod != CapabilityMethodGenerate {
+		capabilities[0].CapabilityType != capabilityTypeText ||
+		capabilities[0].CapabilityMethod != capabilityMethodGenerate {
 		t.Fatalf("expected referenced capability to remain unchanged, got %#v", capabilities)
 	}
 }
@@ -664,16 +668,16 @@ func TestTierBindingAllowsModelWithoutCapabilityDeclaration(t *testing.T) {
 	server := testOpenAIServer(t)
 	ctx = context.WithValue(ctx, providerBaseURLKey{}, server.URL+"/v1")
 	svc := New(testBizCtx{}, nil, server.Client()).(*serviceImpl)
-	snapshot := snapshotTier(t, ctx, svc, TierCodeBasic)
+	snapshot := snapshotTier(t, ctx, svc, tierCodeBasic)
 	t.Cleanup(func() { restoreTier(t, ctx, snapshot) })
 
 	providerID := createTestProvider(t, ctx, svc, "wrong-method")
 	t.Cleanup(func() { deleteProviderFixture(t, ctx, providerID) })
 	modelID, err := svc.CreateModel(ctx, ModelSaveInput{
 		ProviderId: providerID,
-		EndpointId: defaultTestEndpointID(t, ctx, svc, providerID, ProtocolOpenAI),
+		EndpointId: defaultTestEndpointID(t, ctx, svc, providerID, protocolOpenAI),
 		ModelName:  "capability-free-model",
-		Protocol:   ProtocolOpenAI,
+		Protocol:   protocolOpenAI,
 		Enabled:    enabledYes,
 	})
 	if err != nil {
@@ -681,9 +685,9 @@ func TestTierBindingAllowsModelWithoutCapabilityDeclaration(t *testing.T) {
 	}
 
 	err = svc.UpdateTier(ctx, TierUpdateInput{
-		CapabilityType:   CapabilityTypeText,
-		CapabilityMethod: CapabilityMethodGenerate,
-		Code:             TierCodeBasic,
+		CapabilityType:   capabilityTypeText,
+		CapabilityMethod: capabilityMethodGenerate,
+		Code:             tierCodeBasic,
 		ProviderId:       providerID,
 		ModelId:          modelID,
 		DefaultEffort:    string(aitext.ThinkingEffortMax),
@@ -692,7 +696,7 @@ func TestTierBindingAllowsModelWithoutCapabilityDeclaration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected tier binding to allow model without declaration, got %v", err)
 	}
-	binding, err := svc.resolveTierBinding(ctx, CapabilityTypeText, CapabilityMethodGenerate, TierCodeBasic)
+	binding, err := svc.resolveTierBinding(ctx, capabilityTypeText, capabilityMethodGenerate, tierCodeBasic)
 	if err != nil {
 		t.Fatalf("resolve capability-free tier binding: %v", err)
 	}
@@ -712,16 +716,16 @@ func TestMultimodalTierBindingRequiresModelCapabilityDeclaration(t *testing.T) {
 	server := testOpenAIServer(t)
 	ctx = context.WithValue(ctx, providerBaseURLKey{}, server.URL+"/v1")
 	svc := New(testBizCtx{}, nil, server.Client()).(*serviceImpl)
-	snapshot := snapshotTierFor(t, ctx, svc, "document", "analyze", TierCodeStandard)
+	snapshot := snapshotTierFor(t, ctx, svc, "document", "analyze", tierCodeStandard)
 	t.Cleanup(func() { restoreTier(t, ctx, snapshot) })
 
 	providerID := createTestProvider(t, ctx, svc, "document-capability-required")
 	t.Cleanup(func() { deleteProviderFixture(t, ctx, providerID) })
 	modelID, err := svc.CreateModel(ctx, ModelSaveInput{
 		ProviderId: providerID,
-		EndpointId: defaultTestEndpointID(t, ctx, svc, providerID, ProtocolOpenAI),
+		EndpointId: defaultTestEndpointID(t, ctx, svc, providerID, protocolOpenAI),
 		ModelName:  "capability-free-document-model",
-		Protocol:   ProtocolOpenAI,
+		Protocol:   protocolOpenAI,
 		Enabled:    enabledYes,
 	})
 	if err != nil {
@@ -731,7 +735,7 @@ func TestMultimodalTierBindingRequiresModelCapabilityDeclaration(t *testing.T) {
 	err = svc.UpdateTier(ctx, TierUpdateInput{
 		CapabilityType:   "document",
 		CapabilityMethod: "analyze",
-		Code:             TierCodeStandard,
+		Code:             tierCodeStandard,
 		ProviderId:       providerID,
 		ModelId:          modelID,
 		Enabled:          enabledYes,
@@ -743,7 +747,7 @@ func TestMultimodalTierBindingRequiresModelCapabilityDeclaration(t *testing.T) {
 	_, err = svc.TestTier(ctx, TierTestInput{
 		CapabilityType:   "document",
 		CapabilityMethod: "analyze",
-		Code:             TierCodeStandard,
+		Code:             tierCodeStandard,
 		ProviderId:       providerID,
 		ModelId:          modelID,
 	})
@@ -760,7 +764,7 @@ func TestTierDraftTestDoesNotPersistBinding(t *testing.T) {
 	server := testOpenAIServer(t)
 	ctx = context.WithValue(ctx, providerBaseURLKey{}, server.URL+"/v1")
 	svc := New(testBizCtx{}, nil, server.Client()).(*serviceImpl)
-	snapshot := snapshotTier(t, ctx, svc, TierCodeStandard)
+	snapshot := snapshotTier(t, ctx, svc, tierCodeStandard)
 	t.Cleanup(func() { restoreTier(t, ctx, snapshot) })
 
 	providerID := createTestProvider(t, ctx, svc, "draft")
@@ -768,7 +772,7 @@ func TestTierDraftTestDoesNotPersistBinding(t *testing.T) {
 	modelID := createTestModel(t, ctx, svc, providerID, "draft-model")
 
 	out, err := svc.TestTier(ctx, TierTestInput{
-		Code:           TierCodeStandard,
+		Code:           tierCodeStandard,
 		ProviderId:     providerID,
 		ModelId:        modelID,
 		ThinkingEffort: string(aitext.ThinkingEffortLow),
@@ -777,20 +781,20 @@ func TestTierDraftTestDoesNotPersistBinding(t *testing.T) {
 	if err != nil {
 		t.Fatalf("test draft tier: %v", err)
 	}
-	if out.Status != InvocationStatusSuccess || out.ModelName != "draft-model" {
+	if out.Status != invocationStatusSuccess || out.ModelName != "draft-model" {
 		t.Fatalf("unexpected draft test output: %#v", out)
 	}
 	draftLogs, err := svc.ListInvocations(ctx, InvocationListInput{
 		PageNum:          1,
 		PageSize:         10,
-		CapabilityType:   CapabilityTypeText,
-		CapabilityMethod: CapabilityMethodGenerate,
-		Purpose:          InvocationPurposeTierTest,
-		TierCode:         TierCodeStandard,
+		CapabilityType:   capabilityTypeText,
+		CapabilityMethod: capabilityMethodGenerate,
+		Purpose:          invocationPurposeTierTest,
+		TierCode:         tierCodeStandard,
 		SourcePluginId:   aitext.ProviderPluginID,
 		ProviderId:       providerID,
 		ModelId:          modelID,
-		Status:           InvocationStatusSuccess,
+		Status:           invocationStatusSuccess,
 	})
 	if err != nil {
 		t.Fatalf("list draft tier test invocation logs: %v", err)
@@ -812,7 +816,7 @@ func TestTierDraftTestDoesNotPersistBinding(t *testing.T) {
 	if count != 0 {
 		t.Fatalf("draft tier test persisted binding count=%d", count)
 	}
-	afterDraft := snapshotTier(t, ctx, svc, TierCodeStandard)
+	afterDraft := snapshotTier(t, ctx, svc, tierCodeStandard)
 	if afterDraft.tier.LastTestStatus != snapshot.tier.LastTestStatus ||
 		afterDraft.tier.LastTestLatencyMs != snapshot.tier.LastTestLatencyMs ||
 		afterDraft.tier.LastTestErrorSummary != snapshot.tier.LastTestErrorSummary ||
@@ -821,7 +825,7 @@ func TestTierDraftTestDoesNotPersistBinding(t *testing.T) {
 	}
 
 	if err = svc.UpdateTier(ctx, TierUpdateInput{
-		Code:          TierCodeStandard,
+		Code:          tierCodeStandard,
 		ProviderId:    providerID,
 		ModelId:       modelID,
 		DefaultEffort: string(aitext.ThinkingEffortLow),
@@ -829,19 +833,19 @@ func TestTierDraftTestDoesNotPersistBinding(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("save tier binding: %v", err)
 	}
-	beforeSavedTest := snapshotTier(t, ctx, svc, TierCodeStandard)
+	beforeSavedTest := snapshotTier(t, ctx, svc, tierCodeStandard)
 	savedOut, err := svc.TestTier(ctx, TierTestInput{
-		Code:     TierCodeStandard,
+		Code:     tierCodeStandard,
 		Messages: []aitext.Message{{Role: aitext.MessageRoleUser, Content: "ping"}},
 	})
 	if err != nil {
 		t.Fatalf("test saved tier: %v", err)
 	}
-	if savedOut.Status != InvocationStatusSuccess || savedOut.ModelName != "draft-model" {
+	if savedOut.Status != invocationStatusSuccess || savedOut.ModelName != "draft-model" {
 		t.Fatalf("unexpected saved test output: %#v", savedOut)
 	}
-	afterSavedTest := snapshotTier(t, ctx, svc, TierCodeStandard)
-	if afterSavedTest.tier.LastTestStatus != InvocationStatusSuccess ||
+	afterSavedTest := snapshotTier(t, ctx, svc, tierCodeStandard)
+	if afterSavedTest.tier.LastTestStatus != invocationStatusSuccess ||
 		afterSavedTest.tier.LastTestAt == nil ||
 		sameOptionalTime(afterSavedTest.tier.LastTestAt, beforeSavedTest.tier.LastTestAt) {
 		t.Fatalf("saved tier test did not update last test summary, before=%#v after=%#v", beforeSavedTest.tier, afterSavedTest.tier)
@@ -849,14 +853,14 @@ func TestTierDraftTestDoesNotPersistBinding(t *testing.T) {
 	savedLogs, err := svc.ListInvocations(ctx, InvocationListInput{
 		PageNum:          1,
 		PageSize:         10,
-		CapabilityType:   CapabilityTypeText,
-		CapabilityMethod: CapabilityMethodGenerate,
-		Purpose:          InvocationPurposeTierTest,
-		TierCode:         TierCodeStandard,
+		CapabilityType:   capabilityTypeText,
+		CapabilityMethod: capabilityMethodGenerate,
+		Purpose:          invocationPurposeTierTest,
+		TierCode:         tierCodeStandard,
 		SourcePluginId:   aitext.ProviderPluginID,
 		ProviderId:       providerID,
 		ModelId:          modelID,
-		Status:           InvocationStatusSuccess,
+		Status:           invocationStatusSuccess,
 	})
 	if err != nil {
 		t.Fatalf("list saved tier test invocation logs: %v", err)
@@ -878,7 +882,7 @@ func TestTierTestAppliesProviderCallTimeout(t *testing.T) {
 	})}
 	ctx = context.WithValue(ctx, providerBaseURLKey{}, "http://unit.local/v1")
 	svc := New(testBizCtx{}, nil, client).(*serviceImpl)
-	snapshot := snapshotTier(t, ctx, svc, TierCodeBasic)
+	snapshot := snapshotTier(t, ctx, svc, tierCodeBasic)
 	t.Cleanup(func() { restoreTier(t, ctx, snapshot) })
 
 	providerID := createTestProvider(t, ctx, svc, "timeout")
@@ -887,7 +891,7 @@ func TestTierTestAppliesProviderCallTimeout(t *testing.T) {
 
 	startedAt := time.Now()
 	out, err := svc.TestTier(ctx, TierTestInput{
-		Code:            TierCodeBasic,
+		Code:            tierCodeBasic,
 		ProviderId:      providerID,
 		ModelId:         modelID,
 		ThinkingEffort:  string(aitext.ThinkingEffortLow),
@@ -901,20 +905,20 @@ func TestTierTestAppliesProviderCallTimeout(t *testing.T) {
 	if elapsed := time.Since(startedAt); elapsed > time.Second {
 		t.Fatalf("expected provider test timeout to release quickly, elapsed=%s", elapsed)
 	}
-	if out.Status != InvocationStatusFailed || strings.TrimSpace(out.ErrorSummary) == "" {
+	if out.Status != invocationStatusFailed || strings.TrimSpace(out.ErrorSummary) == "" {
 		t.Fatalf("expected failed timeout output with summary, got %#v", out)
 	}
 	logs, err := svc.ListInvocations(ctx, InvocationListInput{
 		PageNum:          1,
 		PageSize:         10,
-		CapabilityType:   CapabilityTypeText,
-		CapabilityMethod: CapabilityMethodGenerate,
-		Purpose:          InvocationPurposeTierTest,
-		TierCode:         TierCodeBasic,
+		CapabilityType:   capabilityTypeText,
+		CapabilityMethod: capabilityMethodGenerate,
+		Purpose:          invocationPurposeTierTest,
+		TierCode:         tierCodeBasic,
 		SourcePluginId:   aitext.ProviderPluginID,
 		ProviderId:       providerID,
 		ModelId:          modelID,
-		Status:           InvocationStatusFailed,
+		Status:           invocationStatusFailed,
 	})
 	if err != nil {
 		t.Fatalf("list failed tier test invocation logs: %v", err)
@@ -945,17 +949,19 @@ func TestTierCacheSharedRevisionInvalidatesPeerService(t *testing.T) {
 	prepareDatabase(t, ctx)
 	server := testOpenAIServer(t)
 	ctx = context.WithValue(ctx, providerBaseURLKey{}, server.URL+"/v1")
-	cacheSvc := newMemoryCacheService()
-	writer := New(testBizCtx{}, cacheSvc, server.Client()).(*serviceImpl)
-	reader := New(testBizCtx{}, cacheSvc, server.Client()).(*serviceImpl)
-	snapshot := snapshotTier(t, ctx, writer, TierCodeAdvanced)
+	var (
+		cacheSvc = newMemoryCacheService()
+		writer   = New(testBizCtx{}, cacheSvc, server.Client()).(*serviceImpl)
+		reader   = New(testBizCtx{}, cacheSvc, server.Client()).(*serviceImpl)
+		snapshot = snapshotTier(t, ctx, writer, tierCodeAdvanced)
+	)
 	t.Cleanup(func() { restoreTier(t, ctx, snapshot) })
 
 	firstProviderID := createTestProvider(t, ctx, writer, "revision-first")
 	t.Cleanup(func() { deleteProviderFixture(t, ctx, firstProviderID) })
 	firstModelID := createTestModel(t, ctx, writer, firstProviderID, "revision-first-model")
 	if err := writer.UpdateTier(ctx, TierUpdateInput{
-		Code:          TierCodeAdvanced,
+		Code:          tierCodeAdvanced,
 		ProviderId:    firstProviderID,
 		ModelId:       firstModelID,
 		DefaultEffort: string(aitext.ThinkingEffortLow),
@@ -963,7 +969,8 @@ func TestTierCacheSharedRevisionInvalidatesPeerService(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("bind first tier: %v", err)
 	}
-	firstBinding, err := reader.resolveTierBinding(ctx, CapabilityTypeText, CapabilityMethodGenerate, TierCodeAdvanced)
+	assertTierRevisionExpires(t, ctx, cacheSvc)
+	firstBinding, err := reader.resolveTierBinding(ctx, capabilityTypeText, capabilityMethodGenerate, tierCodeAdvanced)
 	if err != nil {
 		t.Fatalf("resolve first binding: %v", err)
 	}
@@ -975,7 +982,7 @@ func TestTierCacheSharedRevisionInvalidatesPeerService(t *testing.T) {
 	t.Cleanup(func() { deleteProviderFixture(t, ctx, secondProviderID) })
 	secondModelID := createTestModel(t, ctx, writer, secondProviderID, "revision-second-model")
 	if err = writer.UpdateTier(ctx, TierUpdateInput{
-		Code:          TierCodeAdvanced,
+		Code:          tierCodeAdvanced,
 		ProviderId:    secondProviderID,
 		ModelId:       secondModelID,
 		DefaultEffort: string(aitext.ThinkingEffortLow),
@@ -983,7 +990,8 @@ func TestTierCacheSharedRevisionInvalidatesPeerService(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("bind second tier: %v", err)
 	}
-	secondBinding, err := reader.resolveTierBinding(ctx, CapabilityTypeText, CapabilityMethodGenerate, TierCodeAdvanced)
+	assertTierRevisionExpires(t, ctx, cacheSvc)
+	secondBinding, err := reader.resolveTierBinding(ctx, capabilityTypeText, capabilityMethodGenerate, tierCodeAdvanced)
 	if err != nil {
 		t.Fatalf("resolve second binding: %v", err)
 	}
@@ -1004,14 +1012,14 @@ func TestProviderSaveSynchronizesFormEndpointsTransactionally(t *testing.T) {
 		Enabled: enabledYes,
 		Endpoints: []ProviderEndpointSaveInput{
 			{
-				Protocol:     ProtocolOpenAI,
+				Protocol:     protocolOpenAI,
 				BaseUrl:      "https://unit.example/openai/v1",
 				SecretRef:    "sk-unit-openai",
 				Enabled:      enabledYes,
 				MetadataJson: "{}",
 			},
 			{
-				Protocol:     ProtocolAnthropic,
+				Protocol:     protocolAnthropic,
 				BaseUrl:      "https://unit.example/anthropic/v1",
 				SecretRef:    "sk-unit-anthropic",
 				Enabled:      enabledYes,
@@ -1028,9 +1036,11 @@ func TestProviderSaveSynchronizesFormEndpointsTransactionally(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list created endpoints: %v", err)
 	}
-	endpointsByProtocol := providerEndpointsByProtocol(endpoints)
-	openaiEndpoint := endpointsByProtocol[ProtocolOpenAI]
-	anthropicEndpoint := endpointsByProtocol[ProtocolAnthropic]
+	var (
+		endpointsByProtocol = providerEndpointsByProtocol(endpoints)
+		openaiEndpoint      = endpointsByProtocol[protocolOpenAI]
+		anthropicEndpoint   = endpointsByProtocol[protocolAnthropic]
+	)
 	if len(endpoints) != 2 || openaiEndpoint == nil || anthropicEndpoint == nil {
 		t.Fatalf("expected two fixed endpoints, got %#v", endpoints)
 	}
@@ -1045,7 +1055,7 @@ func TestProviderSaveSynchronizesFormEndpointsTransactionally(t *testing.T) {
 		Endpoints: []ProviderEndpointSaveInput{
 			{
 				Id:           openaiEndpoint.Id,
-				Protocol:     ProtocolOpenAI,
+				Protocol:     protocolOpenAI,
 				BaseUrl:      "https://unit.example/openai/v2",
 				SecretRef:    openaiEndpoint.SecretRef,
 				Enabled:      enabledYes,
@@ -1053,7 +1063,7 @@ func TestProviderSaveSynchronizesFormEndpointsTransactionally(t *testing.T) {
 			},
 			{
 				Id:       anthropicEndpoint.Id,
-				Protocol: ProtocolAnthropic,
+				Protocol: protocolAnthropic,
 				BaseUrl:  "",
 				Enabled:  enabledYes,
 			},
@@ -1066,7 +1076,7 @@ func TestProviderSaveSynchronizesFormEndpointsTransactionally(t *testing.T) {
 		t.Fatalf("list updated endpoints: %v", err)
 	}
 	endpointsByProtocol = providerEndpointsByProtocol(endpoints)
-	openaiEndpoint = endpointsByProtocol[ProtocolOpenAI]
+	openaiEndpoint = endpointsByProtocol[protocolOpenAI]
 	if len(endpoints) != 1 || openaiEndpoint == nil || openaiEndpoint.BaseUrl != "https://unit.example/openai/v2" {
 		t.Fatalf("expected one updated OpenAI endpoint, got %#v", endpoints)
 	}
@@ -1075,7 +1085,7 @@ func TestProviderSaveSynchronizesFormEndpointsTransactionally(t *testing.T) {
 		ProviderId: providerID,
 		EndpointId: openaiEndpoint.Id,
 		ModelName:  "form-endpoint-model",
-		Protocol:   ProtocolOpenAI,
+		Protocol:   protocolOpenAI,
 		Enabled:    enabledYes,
 	}); err != nil {
 		t.Fatalf("create model referencing endpoint: %v", err)
@@ -1086,7 +1096,7 @@ func TestProviderSaveSynchronizesFormEndpointsTransactionally(t *testing.T) {
 		Enabled: enabledNo,
 		Endpoints: []ProviderEndpointSaveInput{{
 			Id:       openaiEndpoint.Id,
-			Protocol: ProtocolOpenAI,
+			Protocol: protocolOpenAI,
 			BaseUrl:  "",
 			Enabled:  enabledYes,
 		}},
@@ -1113,12 +1123,12 @@ func TestMultimodalMetadataManagementFlow(t *testing.T) {
 
 	providerID := createTestProvider(t, ctx, svc, "multimodal")
 	t.Cleanup(func() { deleteProviderFixture(t, ctx, providerID) })
-	snapshot := snapshotTierFor(t, ctx, svc, "image", "generate", TierCodeBasic)
+	snapshot := snapshotTierFor(t, ctx, svc, "image", "generate", tierCodeBasic)
 	t.Cleanup(func() { restoreTier(t, ctx, snapshot) })
 
 	endpointID, err := svc.CreateProviderEndpoint(ctx, ProviderEndpointSaveInput{
 		ProviderId:   providerID,
-		Protocol:     ProtocolOpenAICompatible,
+		Protocol:     protocolOpenAICompatible,
 		BaseUrl:      "https://unit.example/v1",
 		SecretRef:    "sk-unit-endpoint",
 		Enabled:      enabledYes,
@@ -1129,7 +1139,7 @@ func TestMultimodalMetadataManagementFlow(t *testing.T) {
 	}
 	endpoints, err := svc.ListProviderEndpoints(ctx, ProviderEndpointListInput{
 		ProviderId: providerID,
-		Protocol:   ProtocolOpenAICompatible,
+		Protocol:   protocolOpenAICompatible,
 	})
 	if err != nil {
 		t.Fatalf("list endpoints: %v", err)
@@ -1140,7 +1150,7 @@ func TestMultimodalMetadataManagementFlow(t *testing.T) {
 	if err = svc.UpdateProviderEndpoint(ctx, ProviderEndpointSaveInput{
 		Id:           endpointID,
 		ProviderId:   providerID,
-		Protocol:     ProtocolOpenAICompatible,
+		Protocol:     protocolOpenAICompatible,
 		BaseUrl:      "https://unit.example/v2",
 		SecretRef:    endpoints[0].SecretRef,
 		Enabled:      enabledYes,
@@ -1153,7 +1163,7 @@ func TestMultimodalMetadataManagementFlow(t *testing.T) {
 		ProviderId: providerID,
 		EndpointId: endpointID,
 		ModelName:  "unit-image-model",
-		Protocol:   ProtocolOpenAICompatible,
+		Protocol:   protocolOpenAICompatible,
 		Enabled:    enabledYes,
 	})
 	if err != nil {
@@ -1194,7 +1204,7 @@ func TestMultimodalMetadataManagementFlow(t *testing.T) {
 		Enabled:           enabledYes,
 		SupportsStreaming: enabledNo,
 	}}); err != nil {
-		t.Fatalf("upsert model capability: %v", err)
+		t.Fatalf("upsert model state: %v", err)
 	}
 	capabilities, err = svc.ListModelCapabilities(ctx, modelID)
 	if err != nil {
@@ -1206,14 +1216,14 @@ func TestMultimodalMetadataManagementFlow(t *testing.T) {
 	if err = svc.UpdateTier(ctx, TierUpdateInput{
 		CapabilityType:   "image",
 		CapabilityMethod: "generate",
-		Code:             TierCodeBasic,
+		Code:             tierCodeBasic,
 		ProviderId:       providerID,
 		ModelId:          modelID,
 		Enabled:          enabledYes,
 	}); err != nil {
 		t.Fatalf("bind image tier: %v", err)
 	}
-	if _, err = svc.resolveTierBinding(ctx, "image", "generate", TierCodeBasic); err != nil {
+	if _, err = svc.resolveTierBinding(ctx, "image", "generate", tierCodeBasic); err != nil {
 		t.Fatalf("resolve image tier binding: %v", err)
 	}
 	if err = svc.DeleteProviderEndpoint(ctx, providerID, endpointID); !bizerr.Is(err, CodeProviderEndpointInUse) {
@@ -1231,7 +1241,7 @@ func TestMultimodalMetadataManagementFlow(t *testing.T) {
 		ModelId:          modelID,
 		ProviderName:     "Unit Provider",
 		ModelName:        "unit-image-model",
-		Protocol:         ProtocolOpenAICompatible,
+		Protocol:         protocolOpenAICompatible,
 		Status:           "running",
 		NextPollAfterMs:  3000,
 		ExpiresAt:        &expiresAt,
@@ -1334,6 +1344,9 @@ func (s *memoryCacheService) Set(
 	value string,
 	ttl time.Duration,
 ) (*cachecap.CacheItem, error) {
+	if err := requireMemoryCachePositiveTTL(ttl); err != nil {
+		return nil, err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	item := &cachecap.CacheItem{
@@ -1351,6 +1364,11 @@ func (s *memoryCacheService) SetMany(
 	_ context.Context,
 	in cachecap.SetManyInput,
 ) (*cachecap.SetManyOutput, error) {
+	for _, input := range in.Items {
+		if err := requireMemoryCachePositiveTTL(input.TTL); err != nil {
+			return nil, err
+		}
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	output := &cachecap.SetManyOutput{
@@ -1393,6 +1411,9 @@ func (s *memoryCacheService) Incr(
 	delta int64,
 	ttl time.Duration,
 ) (*cachecap.CacheItem, error) {
+	if err := requireMemoryCachePositiveTTL(ttl); err != nil {
+		return nil, err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	cacheKey := memoryCacheKey(namespace, key)
@@ -1402,9 +1423,7 @@ func (s *memoryCacheService) Incr(
 		s.items[cacheKey] = item
 	}
 	item.IntValue += delta
-	if ttl > 0 {
-		item.ExpireAt = memoryCacheExpireAt(ttl)
-	}
+	item.ExpireAt = memoryCacheExpireAt(ttl)
 	copied := *item
 	return &copied, nil
 }
@@ -1415,6 +1434,9 @@ func (s *memoryCacheService) Expire(
 	key string,
 	ttl time.Duration,
 ) (bool, *time.Time, error) {
+	if err := requireMemoryCachePositiveTTL(ttl); err != nil {
+		return false, nil, err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	item := s.items[memoryCacheKey(namespace, key)]
@@ -1429,12 +1451,32 @@ func memoryCacheKey(namespace string, key string) string {
 	return namespace + "\x00" + key
 }
 
+// requireMemoryCachePositiveTTL mirrors the host cache contract for test doubles.
+func requireMemoryCachePositiveTTL(ttl time.Duration) error {
+	if ttl <= 0 {
+		return gerror.New("test memory cache requires positive ttl")
+	}
+	return nil
+}
+
 func memoryCacheExpireAt(ttl time.Duration) *time.Time {
 	if ttl <= 0 {
 		return nil
 	}
 	expireAt := time.Now().Add(ttl)
 	return &expireAt
+}
+
+// assertTierRevisionExpires verifies shared tier cache revisions use a finite positive lifetime.
+func assertTierRevisionExpires(t *testing.T, ctx context.Context, cacheSvc cachecap.Service) {
+	t.Helper()
+	item, found, err := cacheSvc.Get(ctx, tierCacheNamespace, tierCacheRevisionKey)
+	if err != nil {
+		t.Fatalf("read tier revision cache: %v", err)
+	}
+	if !found || item == nil || item.ExpireAt == nil || !item.ExpireAt.After(time.Now()) {
+		t.Fatalf("expected tier revision cache item with future expiration, got found=%v item=%#v", found, item)
+	}
 }
 
 type tierSnapshot struct {
@@ -1496,7 +1538,7 @@ func createTestProvider(t *testing.T, ctx context.Context, svc *serviceImpl, suf
 	}
 	if _, err = svc.CreateProviderEndpoint(ctx, ProviderEndpointSaveInput{
 		ProviderId: id,
-		Protocol:   ProtocolOpenAI,
+		Protocol:   protocolOpenAI,
 		BaseUrl:    testProviderBaseURL(ctx),
 		SecretRef:  "unit-secret",
 		Enabled:    enabledYes,
@@ -1510,9 +1552,9 @@ func createTestModel(t *testing.T, ctx context.Context, svc *serviceImpl, provid
 	t.Helper()
 	id, err := svc.CreateModel(ctx, ModelSaveInput{
 		ProviderId: providerID,
-		EndpointId: defaultTestEndpointID(t, ctx, svc, providerID, ProtocolOpenAI),
+		EndpointId: defaultTestEndpointID(t, ctx, svc, providerID, protocolOpenAI),
 		ModelName:  modelName,
-		Protocol:   ProtocolOpenAI,
+		Protocol:   protocolOpenAI,
 		Enabled:    enabledYes,
 	})
 	if err != nil {
@@ -1556,30 +1598,18 @@ func insertInvocationFixture(t *testing.T, ctx context.Context, requestID string
 	t.Helper()
 	if _, err := dao.Invocation.Ctx(ctx).Data(do.Invocation{
 		RequestId:            requestID,
-		CapabilityType:       CapabilityTypeText,
-		CapabilityMethod:     CapabilityMethodGenerate,
+		CapabilityType:       capabilityTypeText,
+		CapabilityMethod:     capabilityMethodGenerate,
 		Purpose:              "unit.clean",
-		TierCode:             TierCodeBasic,
+		TierCode:             tierCodeBasic,
 		SourcePluginId:       "unit-test",
-		Status:               InvocationStatusSuccess,
+		Status:               invocationStatusSuccess,
 		AssetSummaryJson:     "{}",
 		OperationSummaryJson: "{}",
 		MetadataSummaryJson:  "{}",
 		CreatedAt:            &createdAt,
 	}).Insert(); err != nil {
 		t.Fatalf("insert invocation fixture: %v", err)
-	}
-}
-
-func deleteInvocationFixtures(t *testing.T, ctx context.Context, requestIDs ...string) {
-	t.Helper()
-	if len(requestIDs) == 0 {
-		return
-	}
-	if _, err := dao.Invocation.Ctx(ctx).
-		WhereIn(dao.Invocation.Columns().RequestId, requestIDs).
-		Delete(); err != nil {
-		t.Fatalf("delete invocation fixtures: %v", err)
 	}
 }
 
@@ -1594,7 +1624,7 @@ func invocationExists(t *testing.T, ctx context.Context, requestID string) bool 
 
 func snapshotTier(t *testing.T, ctx context.Context, svc *serviceImpl, code string) tierSnapshot {
 	t.Helper()
-	return snapshotTierFor(t, ctx, svc, CapabilityTypeText, CapabilityMethodGenerate, code)
+	return snapshotTierFor(t, ctx, svc, capabilityTypeText, capabilityMethodGenerate, code)
 }
 
 func snapshotTierFor(t *testing.T, ctx context.Context, svc *serviceImpl, capabilityType string, capabilityMethod string, code string) tierSnapshot {

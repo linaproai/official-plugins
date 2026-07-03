@@ -114,15 +114,9 @@ func (r subdomainResolver) Resolve(ctx context.Context, request *ghttp.Request, 
 	return findTenantByCode(ctx, label, shared.ResolverSubdomain)
 }
 
-// userTenantLister lists tenant memberships needed by the default resolver.
-type userTenantLister interface {
-	// ListUserTenants returns enabled tenant memberships for one user.
-	ListUserTenants(ctx context.Context, userID int64) ([]*membership.TenantInfo, error)
-}
-
 // defaultResolver chooses the first enabled membership for tenant users.
 type defaultResolver struct {
-	membershipSvc userTenantLister
+	membershipSvc membership.Service
 }
 
 // Name returns the configured resolver name.

@@ -14,6 +14,8 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcfg"
+
+	"lina-core/pkg/plugin/capability/plugincap"
 )
 
 // demoControlTestResponse stores one HTTP response snapshot used by the tests.
@@ -22,26 +24,66 @@ type demoControlTestResponse struct {
 	body   string
 }
 
+// demoControlTestPlugins exposes the plugin-domain state service used by the guard tests.
+type demoControlTestPlugins struct {
+	state plugincap.StateService
+}
+
+// Config is unused by guard tests.
+func (p demoControlTestPlugins) Config() plugincap.ConfigService {
+	return nil
+}
+
+// Registry is unused by guard tests.
+func (p demoControlTestPlugins) Registry() plugincap.RegistryService {
+	return nil
+}
+
+// State returns the configured fake plugin-state service.
+func (p demoControlTestPlugins) State() plugincap.StateService {
+	return p.state
+}
+
+// Lifecycle is unused by guard tests.
+func (p demoControlTestPlugins) Lifecycle() plugincap.LifecycleService {
+	return nil
+}
+
 // staticDemoControlEnablementReader returns one fixed enablement value for tests.
 type staticDemoControlEnablementReader bool
 
 // IsEnabledAuthoritative reports the fixed test enablement value.
-func (r staticDemoControlEnablementReader) IsEnabledAuthoritative(_ context.Context, _ string) bool {
-	return bool(r)
+func (r staticDemoControlEnablementReader) IsEnabledAuthoritative(_ context.Context, _ plugincap.PluginID) (bool, error) {
+	return bool(r), nil
+}
+
+// IsEnabled reports the fixed test enablement value.
+func (r staticDemoControlEnablementReader) IsEnabled(_ context.Context, _ plugincap.PluginID) (bool, error) {
+	return bool(r), nil
+}
+
+// IsProviderEnabled reports the fixed test enablement value.
+func (r staticDemoControlEnablementReader) IsProviderEnabled(_ context.Context, _ plugincap.PluginID) (bool, error) {
+	return bool(r), nil
 }
 
 // staleDemoControlEnablementReader simulates a process-local snapshot that no
 // longer matches the authoritative registry state.
 type staleDemoControlEnablementReader struct{}
 
-// IsEnabled reports the stale non-authoritative value that must not gate demo protection.
-func (staleDemoControlEnablementReader) IsEnabled(_ context.Context, _ string) bool {
-	return true
+// IsEnabledAuthoritative reports the persisted registry value used by the guard.
+func (staleDemoControlEnablementReader) IsEnabledAuthoritative(_ context.Context, _ plugincap.PluginID) (bool, error) {
+	return false, nil
 }
 
-// IsEnabledAuthoritative reports the persisted registry value used by the guard.
-func (staleDemoControlEnablementReader) IsEnabledAuthoritative(_ context.Context, _ string) bool {
-	return false
+// IsEnabled simulates a stale process-local enabled snapshot.
+func (staleDemoControlEnablementReader) IsEnabled(_ context.Context, _ plugincap.PluginID) (bool, error) {
+	return true, nil
+}
+
+// IsProviderEnabled simulates a stale process-local provider-enabled snapshot.
+func (staleDemoControlEnablementReader) IsProviderEnabled(_ context.Context, _ plugincap.PluginID) (bool, error) {
+	return true, nil
 }
 
 // TestGuardBypassesWriteRequestsWhenPluginDisabled verifies an unenabled
@@ -63,7 +105,7 @@ func TestGuardBypassesWriteRequestsWhenPluginDisabled(t *testing.T) {
 // source-plugin route snapshots cannot keep demo write protection active after
 // the plugin has become disabled in the persisted registry.
 func TestGuardBypassesStaleSnapshotWhenAuthoritativeStateDisabled(t *testing.T) {
-	baseURL, shutdown := startDemoControlTestServerWithReader(t, staleDemoControlEnablementReader{})
+	baseURL, shutdown := startDemoControlTestServerWithPlugins(t, demoControlTestPlugins{state: staleDemoControlEnablementReader{}})
 	defer shutdown()
 
 	response := doDemoControlRequest(t, http.MethodPost, baseURL+"/api/v1/resource")
@@ -258,19 +300,19 @@ func TestGuardAllowsPluginManagementReadRequests(t *testing.T) {
 func startDemoControlTestServer(t *testing.T, enabled bool) (string, func()) {
 	t.Helper()
 
-	return startDemoControlTestServerWithReader(t, staticDemoControlEnablementReader(enabled))
+	return startDemoControlTestServerWithPlugins(t, demoControlTestPlugins{state: staticDemoControlEnablementReader(enabled)})
 }
 
-// startDemoControlTestServerWithReader boots one ephemeral HTTP server with the
-// linapro-ops-demo-guard middleware and a caller-supplied plugin-state reader.
-func startDemoControlTestServerWithReader(t *testing.T, reader EnablementReader) (string, func()) {
+// startDemoControlTestServerWithPlugins boots one ephemeral HTTP server with the
+// linapro-ops-demo-guard middleware and a caller-supplied plugin-domain service.
+func startDemoControlTestServerWithPlugins(t *testing.T, plugins plugincap.Service) (string, func()) {
 	t.Helper()
 
 	server := g.Server(fmt.Sprintf("linapro-ops-demo-guard-middleware-test-%d", time.Now().UnixNano()))
 	server.SetDumpRouterMap(false)
 	server.SetPort(0)
 
-	guardSvc := New(nil, reader)
+	guardSvc := New(nil, plugins)
 	server.BindMiddleware("/*", guardSvc.Guard)
 	server.Group("/api/v1", func(group *ghttp.RouterGroup) {
 		group.ALL("/ping", func(request *ghttp.Request) {

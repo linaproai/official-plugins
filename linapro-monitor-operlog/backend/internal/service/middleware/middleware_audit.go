@@ -126,7 +126,7 @@ func (s *serviceImpl) resolveAuditRouteMetadata(request *ghttp.Request) auditRou
 	if s == nil || s.routeMetaSvc == nil {
 		return metadata
 	}
-	dynamicMetadata := s.routeMetaSvc.DynamicRouteMetadata(request.GetCtx())
+	dynamicMetadata := s.routeMetaSvc.GetMetadata(request.GetCtx())
 	if dynamicMetadata == nil {
 		return metadata
 	}

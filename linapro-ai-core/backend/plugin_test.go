@@ -5,6 +5,7 @@ package backend
 import (
 	"context"
 	"lina-core/pkg/plugin/capability/hostconfigcap"
+	aisvc "lina-plugin-linapro-ai-core/backend/internal/service/ai"
 	"testing"
 
 	"github.com/gogf/gf/v2/container/gvar"
@@ -18,12 +19,13 @@ type invocationCleanupHostConfigStub struct {
 }
 
 // Get returns the configured retention value.
-func (s invocationCleanupHostConfigStub) Get(context.Context, string) (*gvar.Var, error) {
+func (s invocationCleanupHostConfigStub) Get(context.Context, string, any) (*gvar.Var, error) {
 	return s.value, s.err
 }
 
 // invocationCleanupCleanerStub records cleanup calls.
 type invocationCleanupCleanerStub struct {
+	aisvc.Service
 	called bool
 	days   int
 	err    error

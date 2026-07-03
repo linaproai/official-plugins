@@ -14,9 +14,9 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_content_notice (
     "remark"      VARCHAR(500) NOT NULL DEFAULT '',
     "created_by"  BIGINT       NOT NULL DEFAULT 0,
     "updated_by"  BIGINT       NOT NULL DEFAULT 0,
-    "created_at"  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at"  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "deleted_at"  TIMESTAMP    NULL DEFAULT NULL
+    "created_at"  TIMESTAMPTZ    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at"  TIMESTAMPTZ    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at"  TIMESTAMPTZ    NULL DEFAULT NULL
 );
 
 COMMENT ON TABLE plugin_linapro_content_notice IS 'Notice table';

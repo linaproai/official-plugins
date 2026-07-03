@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_monitor_loginlog (
     "browser"     VARCHAR(200) NOT NULL DEFAULT '',
     "os"          VARCHAR(200) NOT NULL DEFAULT '',
     "msg"         VARCHAR(500) NOT NULL DEFAULT '',
-    "login_time"  TIMESTAMP                       NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "login_time"  TIMESTAMPTZ                       NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 COMMENT ON TABLE plugin_linapro_monitor_loginlog IS 'System login log table';

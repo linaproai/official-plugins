@@ -35,8 +35,12 @@ type rawConfig struct {
 	RetentionMultiplier int `json:"retentionMultiplier"`
 }
 
-// Load reads and validates linapro-monitor-server configuration through an explicit host reader.
-func Load(ctx context.Context, reader plugincap.ConfigService) (*Config, error) {
+// Load reads and validates linapro-monitor-server configuration through the plugin-domain service.
+func Load(ctx context.Context, plugins plugincap.Service) (*Config, error) {
+	if plugins == nil {
+		return nil, gerror.New("monitor server plugin service cannot be nil")
+	}
+	reader := plugins.Config()
 	if reader == nil {
 		return nil, gerror.New("monitor server config reader cannot be nil")
 	}

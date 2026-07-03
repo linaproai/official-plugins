@@ -1,0 +1,9 @@
+# Dynamic demo plugin development tool configuration.
+# 动态示例插件开发期工具配置。
+
+wasm:
+  lifecycle:
+    # Give the install precondition callback enough time on slower CI runners.
+    # 为较慢的 CI 运行器给安装前置生命周期回调预留足够时间。
+    timeouts:
+      BeforeInstall: 120s

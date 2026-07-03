@@ -13,7 +13,7 @@ import (
 	"lina-core/pkg/bizerr"
 	_ "lina-core/pkg/dbdriver"
 	"lina-core/pkg/plugin/capability/bizctxcap"
-	pluginbizctx "lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-core/pkg/plugin/capability/plugincap"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/resolverconfig"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/shared"
 	"lina-plugin-linapro-tenant-core/backend/internal/service/tenantplugin"
@@ -50,6 +50,17 @@ func (s *fakePluginLifecycleService) NotifyTenantDeleted(ctx context.Context, te
 	s.notifyDeleteTenantID = tenantID
 }
 
+// fakeTenantDeletePlugins exposes plugin lifecycle callbacks through plugincap.Service.
+type fakeTenantDeletePlugins struct {
+	plugincap.Service
+	lifecycle plugincap.LifecycleService
+}
+
+// Lifecycle returns the configured fake lifecycle service.
+func (s fakeTenantDeletePlugins) Lifecycle() plugincap.LifecycleService {
+	return s.lifecycle
+}
+
 // tenantDeleteTestInsertData is the typed insert payload for tenant deletion tests.
 type tenantDeleteTestInsertData struct {
 	Code   string `orm:"code"`
@@ -79,10 +90,10 @@ func TestDeleteRunsLifecyclePreconditionBeforeSoftDelete(t *testing.T) {
 
 	lifecycleSvc := &fakePluginLifecycleService{deleteErr: errors.New("tenant delete vetoed")}
 	err = New(
-		pluginbizctx.New(tenantDeletePlatformBizCtx{}),
+		tenantDeletePlatformBizCtx{},
 		resolverconfig.New(),
-		tenantplugin.New(pluginbizctx.New(nil), nil, nil, nil),
-		lifecycleSvc,
+		tenantplugin.New(tenantDeletePlatformBizCtx{}, nil, nil),
+		fakeTenantDeletePlugins{lifecycle: lifecycleSvc},
 	).Delete(ctx, tenantID)
 	if !bizerr.Is(err, CodeTenantDeletePreconditionVetoed) {
 		t.Fatalf("expected lifecycle precondition veto error, got %v", err)
@@ -124,10 +135,10 @@ func TestDeleteNotifiesLifecycleAfterSoftDelete(t *testing.T) {
 
 	lifecycleSvc := &fakePluginLifecycleService{}
 	err = New(
-		pluginbizctx.New(tenantDeletePlatformBizCtx{}),
+		tenantDeletePlatformBizCtx{},
 		resolverconfig.New(),
-		tenantplugin.New(pluginbizctx.New(nil), nil, nil, nil),
-		lifecycleSvc,
+		tenantplugin.New(tenantDeletePlatformBizCtx{}, nil, nil),
+		fakeTenantDeletePlugins{lifecycle: lifecycleSvc},
 	).Delete(ctx, tenantID)
 	if err != nil {
 		t.Fatalf("expected tenant delete to succeed, got %v", err)

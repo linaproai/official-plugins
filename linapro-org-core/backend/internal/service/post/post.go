@@ -6,7 +6,7 @@ package post
 import (
 	"context"
 	"lina-core/pkg/plugin/capability/i18ncap"
-	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
+	"lina-core/pkg/plugin/capability/tenantcap"
 
 	entitymodel "lina-plugin-linapro-org-core/backend/internal/model/entity"
 )
@@ -72,16 +72,32 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	i18nSvc      i18ncap.Service                    // i18nSvc resolves plugin runtime translations.
-	tenantFilter tenantspi.PluginTableFilterService // tenantFilter constrains plugin-owned post rows.
+	i18nSvc   i18ncap.Service   // i18nSvc resolves plugin runtime translations.
+	tenantSvc tenantcap.Service // tenantSvc provides tenant context and plugin table filtering.
 }
 
 // New creates and returns a new post service instance.
-func New(i18nSvc i18ncap.Service, tenantFilter tenantspi.PluginTableFilterService) Service {
+func New(i18nSvc i18ncap.Service, tenantSvc tenantcap.Service) Service {
 	return &serviceImpl{
-		i18nSvc:      i18nSvc,
-		tenantFilter: tenantFilter,
+		i18nSvc:   i18nSvc,
+		tenantSvc: tenantSvc,
 	}
+}
+
+// pluginTableFilter returns the tenant table-filter slice from the injected tenant service.
+func (s *serviceImpl) pluginTableFilter() tenantcap.FilterService {
+	if s == nil || s.tenantSvc == nil {
+		return nil
+	}
+	return s.tenantSvc.Filter()
+}
+
+// tenantFilterContext returns current tenant metadata for write ownership fields.
+func (s *serviceImpl) tenantFilterContext(ctx context.Context) tenantcap.TenantFilterContext {
+	if filter := s.pluginTableFilter(); filter != nil {
+		return filter.Context(ctx)
+	}
+	return tenantcap.TenantFilterContext{}
 }
 
 // PostEntity mirrors the plugin-local generated plugin_linapro_org_core_post entity.

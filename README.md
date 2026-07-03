@@ -28,7 +28,7 @@ The workspace currently contains source plugins compiled into the host, plus one
 | Path | Purpose |
 |------|---------|
 | `<plugin-id>/hack/config.yaml` | Plugin-local tool configuration, including code generation, custom build commands, and other plugin-owned tooling |
-| `<plugin-id>/plugin.yaml` | Plugin manifest, metadata, menus, install mode, `i18n`, assets, dependencies, and host service declarations |
+| `<plugin-id>/plugin.yaml` | Plugin manifest, metadata, distribution governance, menus, install mode, `i18n`, assets, dependencies, and host service declarations |
 | `<plugin-id>/Makefile` | Plugin-local code generation wrapper that includes the shared root `hack/makefiles/plugin.codegen.mk` target fragment |
 | `<plugin-id>/README.md` | English plugin-level guide |
 | `<plugin-id>/README.zh-CN.md` | Chinese plugin-level guide |
@@ -107,6 +107,17 @@ build:
 the repository root. Build commands run from the plugin root.
 
 `backend/internal/service/` is the only valid location for plugin business services. Do not create `backend/service/`. Dynamic plugins keep the same `backend/api/`, `backend/plugin.go`, `backend/internal/controller/`, and `backend/internal/service/` shape; their bridge files only adapt `WASM` and `pluginbridge` protocols. Guest business capability clients must come from `lina-core/pkg/plugin/pluginbridge`, not from the `pluginbridge` root package.
+
+## Distribution Governance
+
+`plugin.yaml` may declare `distribution` to describe how the host governs the plugin lifecycle.
+
+| Value | Meaning | Lifecycle |
+|-------|---------|-----------|
+| `managed` | Ordinary managed plugin. This is the default when `distribution` is omitted. | Visible in plugin management and can be installed, enabled, disabled, upgraded, uninstalled, or auto-enabled through `plugin.autoEnable`. |
+| `builtin` | Project built-in source plugin compiled with the host. | Installed, enabled, and safely upgraded during host startup. Ordinary plugin-management write actions are rejected. |
+
+`distribution: builtin` is only valid for `type: source` plugins that are registered by the source-plugin registry with the same plugin ID. Dynamic plugins must not declare `distribution: builtin`.
 
 ## Source Plugins
 

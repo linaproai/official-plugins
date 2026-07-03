@@ -103,6 +103,9 @@ type hostCallDemoPayload struct {
 	Data       hostCallDemoDataPayload     `json:"data"`
 	Config     hostCallDemoConfigPayload   `json:"config"`
 	Manifest   hostCallDemoManifestPayload `json:"manifest"`
+	BizCtx     hostCallDemoBizCtxPayload   `json:"bizctx"`
+	Cache      hostCallDemoCachePayload    `json:"cache"`
+	Lock       hostCallDemoLockPayload     `json:"lock"`
 	Org        hostCallDemoOrgPayload      `json:"org"`
 	Tenant     hostCallDemoTenantPayload   `json:"tenant"`
 	Message    string                      `json:"message"`
@@ -117,11 +120,15 @@ type hostCallDemoRuntimePayload struct {
 
 // hostCallDemoStoragePayload summarizes storage host-call results.
 type hostCallDemoStoragePayload struct {
-	PathPrefix  string `json:"pathPrefix"`
-	ObjectPath  string `json:"objectPath"`
-	Stored      bool   `json:"stored"`
-	ListedCount int    `json:"listedCount"`
-	Deleted     bool   `json:"deleted"`
+	PathPrefix            string `json:"pathPrefix"`
+	ObjectPath            string `json:"objectPath"`
+	Stored                bool   `json:"stored"`
+	ListedCount           int    `json:"listedCount"`
+	CursorListedCount     int    `json:"cursorListedCount"`
+	BatchStatCount        int    `json:"batchStatCount"`
+	BatchStatMissingCount int    `json:"batchStatMissingCount"`
+	BatchDeleted          bool   `json:"batchDeleted"`
+	Deleted               bool   `json:"deleted"`
 }
 
 // hostCallDemoStorageRecord is the JSON object persisted into governed storage
@@ -186,6 +193,9 @@ type hostCallDemoManifestPayload struct {
 	ConfigPath        string `json:"configPath"`
 	ConfigFound       bool   `json:"configFound"`
 	ConfigBodyPreview string `json:"configBodyPreview"`
+	BatchReadCount    int    `json:"batchReadCount"`
+	MissingPathCount  int    `json:"missingPathCount"`
+	ListedCount       int    `json:"listedCount"`
 }
 
 // hostCallDemoManifestProfile defines the profile manifest shape read from
@@ -194,6 +204,39 @@ type hostCallDemoManifestProfile struct {
 	Name  string `json:"name" yaml:"name"`
 	Tier  string `json:"tier" yaml:"tier"`
 	Owner string `json:"owner" yaml:"owner"`
+}
+
+// hostCallDemoBizCtxPayload summarizes current request business context reads.
+type hostCallDemoBizCtxPayload struct {
+	UserID          int    `json:"userId"`
+	Username        string `json:"username"`
+	TenantID        int    `json:"tenantId"`
+	PermissionCount int    `json:"permissionCount"`
+	IsSuperAdmin    bool   `json:"isSuperAdmin"`
+	PlatformBypass  bool   `json:"platformBypass"`
+	ActingAsTenant  bool   `json:"actingAsTenant"`
+}
+
+// hostCallDemoCachePayload summarizes plugin-scoped cache capability calls.
+type hostCallDemoCachePayload struct {
+	Namespace        string `json:"namespace"`
+	ValueKind        int    `json:"valueKind"`
+	SingleFound      bool   `json:"singleFound"`
+	BatchSetCount    int    `json:"batchSetCount"`
+	BatchReadCount   int    `json:"batchReadCount"`
+	MissingCount     int    `json:"missingCount"`
+	IncrementedValue int64  `json:"incrementedValue"`
+	ExpireUpdated    bool   `json:"expireUpdated"`
+	Deleted          bool   `json:"deleted"`
+}
+
+// hostCallDemoLockPayload summarizes plugin-scoped lock capability calls.
+type hostCallDemoLockPayload struct {
+	Name         string `json:"name"`
+	Acquired     bool   `json:"acquired"`
+	Renewed      bool   `json:"renewed"`
+	Released     bool   `json:"released"`
+	TicketIssued bool   `json:"ticketIssued"`
 }
 
 // hostCallDemoOrgPayload summarizes organization capability host-service reads.

@@ -90,9 +90,11 @@ func (s *serviceImpl) CleanInvocations(ctx context.Context, in InvocationCleanIn
 	if err := s.ensurePlatform(ctx); err != nil {
 		return 0, err
 	}
-	cols := dao.Invocation.Columns()
-	model := dao.Invocation.Ctx(ctx)
-	hasFilter := false
+	var (
+		cols      = dao.Invocation.Columns()
+		model     = dao.Invocation.Ctx(ctx)
+		hasFilter = false
+	)
 	if in.StartedAt > 0 {
 		model = model.WhereGTE(cols.CreatedAt, time.UnixMilli(in.StartedAt))
 		hasFilter = true
@@ -175,11 +177,13 @@ func (s *serviceImpl) writeInvocationRecord(ctx context.Context, input invocatio
 	if s != nil && s.bizCtxSvc != nil {
 		current = s.bizCtxSvc.Current(ctx)
 	}
-	providerID := int64(0)
-	modelID := int64(0)
-	providerName := ""
-	modelName := ""
-	protocol := ""
+	var (
+		providerID   = int64(0)
+		modelID      = int64(0)
+		providerName = ""
+		modelName    = ""
+		protocol     = ""
+	)
 	if input.binding != nil {
 		providerID = input.binding.ProviderId
 		modelID = input.binding.ModelId

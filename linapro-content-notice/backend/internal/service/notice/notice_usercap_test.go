@@ -1,4 +1,4 @@
-// This file verifies that notice creator projections go through the host
+// This file verifies that notice creator info goes through the host
 // user-domain capability instead of plugin-local host user table access.
 
 package notice
@@ -8,12 +8,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gogf/gf/v2/database/gdb"
-
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/capmodel"
-	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/capability/usercap"
+	"lina-core/pkg/statusflag"
 )
 
 // TestResolveCreatorNameMapUsesSingleUserBatch verifies current-page creators
@@ -21,8 +20,8 @@ import (
 func TestResolveCreatorNameMapUsesSingleUserBatch(t *testing.T) {
 	ctx := context.Background()
 	userSvc := &fakeNoticeUserService{
-		batchResult: &capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]{
-			Items: map[usercap.UserID]*usercap.UserProjection{
+		batchResult: &capmodel.BatchResult[*usercap.UserInfo, usercap.UserID]{
+			Items: map[usercap.UserID]*usercap.UserInfo{
 				"7": {ID: "7", Username: "alice"},
 			},
 			MissingIDs: []usercap.UserID{"9"},
@@ -34,9 +33,11 @@ func TestResolveCreatorNameMapUsesSingleUserBatch(t *testing.T) {
 			Username: "operator",
 			TenantID: 2,
 		}},
-		tenantFilter: fakeNoticeTenantFilter{tenantCtx: tenantspi.TenantFilterContext{
-			UserID:   3,
-			TenantID: 2,
+		tenantSvc: fakeNoticeTenantService{filter: fakeNoticeTenantFilter{
+			tenantCtx: tenantcap.TenantFilterContext{
+				UserID:   3,
+				TenantID: 2,
+			},
 		}},
 		userSvc: userSvc,
 	}
@@ -59,24 +60,15 @@ func TestResolveCreatorNameMapUsesSingleUserBatch(t *testing.T) {
 	if _, ok := names[9]; ok {
 		t.Fatal("expected missing creator 9 to stay absent from resolved names")
 	}
-	if userSvc.batchCapCtx.PluginID != pluginID {
-		t.Fatalf("expected plugin id %q, got %q", pluginID, userSvc.batchCapCtx.PluginID)
-	}
-	if userSvc.batchCapCtx.TenantID != "2" {
-		t.Fatalf("expected tenant id 2, got %q", userSvc.batchCapCtx.TenantID)
-	}
-	if userSvc.batchCapCtx.Actor.UserID != 3 {
-		t.Fatalf("expected actor user 3, got %d", userSvc.batchCapCtx.Actor.UserID)
-	}
 }
 
 // TestSearchCreatorUserIDsUsesBoundedUserSearch verifies creator keyword
-// filtering is delegated to usercap.Search with a bounded request.
+// filtering is delegated to usercap.List with a bounded request.
 func TestSearchCreatorUserIDsUsesBoundedUserSearch(t *testing.T) {
 	ctx := context.Background()
 	userSvc := &fakeNoticeUserService{
-		searchResult: &capmodel.PageResult[*usercap.UserProjection]{
-			Items: []*usercap.UserProjection{
+		searchResult: &capmodel.PageResult[*usercap.UserInfo]{
+			Items: []*usercap.UserInfo{
 				{ID: "5", Username: "alice"},
 				{ID: "not-a-storage-id", Username: "external"},
 				{ID: "8", Username: "alex"},
@@ -90,9 +82,11 @@ func TestSearchCreatorUserIDsUsesBoundedUserSearch(t *testing.T) {
 			Username: "reviewer",
 			TenantID: 6,
 		}},
-		tenantFilter: fakeNoticeTenantFilter{tenantCtx: tenantspi.TenantFilterContext{
-			UserID:   4,
-			TenantID: 6,
+		tenantSvc: fakeNoticeTenantService{filter: fakeNoticeTenantFilter{
+			tenantCtx: tenantcap.TenantFilterContext{
+				UserID:   4,
+				TenantID: 6,
+			},
 		}},
 		userSvc: userSvc,
 	}
@@ -111,47 +105,44 @@ func TestSearchCreatorUserIDsUsesBoundedUserSearch(t *testing.T) {
 		userSvc.searchInput.Page.Limit != noticeCreatorSearchLimit {
 		t.Fatalf("expected bounded page %d, got %+v", noticeCreatorSearchLimit, userSvc.searchInput.Page)
 	}
-	if userSvc.searchCapCtx.Resource != noticeCreatorCapabilityResource {
-		t.Fatalf("expected resource %q, got %q", noticeCreatorCapabilityResource, userSvc.searchCapCtx.Resource)
-	}
 }
 
 type fakeNoticeUserService struct {
 	batchIDs    []usercap.UserID
-	batchCapCtx capmodel.CapabilityContext
-	batchResult *capmodel.BatchResult[*usercap.UserProjection, usercap.UserID]
+	batchResult *capmodel.BatchResult[*usercap.UserInfo, usercap.UserID]
 
-	searchInput  usercap.SearchInput
-	searchCapCtx capmodel.CapabilityContext
-	searchResult *capmodel.PageResult[*usercap.UserProjection]
+	searchInput  usercap.ListInput
+	searchResult *capmodel.PageResult[*usercap.UserInfo]
 }
 
 func (s *fakeNoticeUserService) Current(
 	context.Context,
-	capmodel.CapabilityContext,
-) (*usercap.UserProjection, error) {
+) (*usercap.UserInfo, error) {
+	return nil, nil
+}
+
+func (s *fakeNoticeUserService) Get(
+	context.Context,
+	usercap.UserID,
+) (*usercap.UserInfo, error) {
 	return nil, nil
 }
 
 func (s *fakeNoticeUserService) BatchGet(
-	_ context.Context,
-	capCtx capmodel.CapabilityContext,
+	ctx context.Context,
 	ids []usercap.UserID,
-) (*capmodel.BatchResult[*usercap.UserProjection, usercap.UserID], error) {
-	s.batchCapCtx = capCtx
+) (*capmodel.BatchResult[*usercap.UserInfo, usercap.UserID], error) {
 	s.batchIDs = append([]usercap.UserID(nil), ids...)
 	return s.batchResult, nil
 }
 
 func (s *fakeNoticeUserService) BatchResolve(
-	_ context.Context,
-	capCtx capmodel.CapabilityContext,
+	ctx context.Context,
 	input usercap.BatchResolveInput,
-) (*capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey], error) {
-	s.batchCapCtx = capCtx
+) (*capmodel.BatchResult[*usercap.UserInfo, usercap.ResolveKey], error) {
 	s.batchIDs = append([]usercap.UserID(nil), input.IDs...)
-	result := &capmodel.BatchResult[*usercap.UserProjection, usercap.ResolveKey]{
-		Items:      map[usercap.ResolveKey]*usercap.UserProjection{},
+	result := &capmodel.BatchResult[*usercap.UserInfo, usercap.ResolveKey]{
+		Items:      map[usercap.ResolveKey]*usercap.UserInfo{},
 		MissingIDs: []usercap.ResolveKey{},
 	}
 	if s.batchResult == nil {
@@ -172,17 +163,48 @@ func (s *fakeNoticeUserService) BatchResolve(
 	return result, nil
 }
 
-func (s *fakeNoticeUserService) Search(
-	_ context.Context,
-	capCtx capmodel.CapabilityContext,
-	input usercap.SearchInput,
-) (*capmodel.PageResult[*usercap.UserProjection], error) {
-	s.searchCapCtx = capCtx
+func (s *fakeNoticeUserService) List(
+	ctx context.Context,
+	input usercap.ListInput,
+) (*capmodel.PageResult[*usercap.UserInfo], error) {
 	s.searchInput = input
 	return s.searchResult, nil
 }
 
-func (s *fakeNoticeUserService) EnsureVisible(_ context.Context, _ capmodel.CapabilityContext, _ []usercap.UserID) error {
+func (s *fakeNoticeUserService) EnsureVisible(_ context.Context, _ []usercap.UserID) error {
+	return nil
+}
+
+func (s *fakeNoticeUserService) Create(context.Context, usercap.CreateInput) (usercap.UserID, error) {
+	return "", nil
+}
+
+func (s *fakeNoticeUserService) Update(context.Context, usercap.UpdateInput) error {
+	return nil
+}
+
+func (s *fakeNoticeUserService) Delete(context.Context, usercap.UserID) error {
+	return nil
+}
+
+func (s *fakeNoticeUserService) SetStatus(_ context.Context, _ usercap.UserID, _ statusflag.Enabled) error {
+	return nil
+}
+
+func (s *fakeNoticeUserService) ResetPassword(context.Context, usercap.UserID, string) error {
+	return nil
+}
+
+// Assignment returns user-role assignment operations unused by notice tests.
+func (s *fakeNoticeUserService) Assignment() usercap.AssignmentService {
+	return fakeNoticeUserAssignments{}
+}
+
+// fakeNoticeUserAssignments accepts unused role replacements.
+type fakeNoticeUserAssignments struct{}
+
+// ReplaceRoles is unused by notice tests.
+func (fakeNoticeUserAssignments) ReplaceRoles(context.Context, usercap.UserID, []int) error {
 	return nil
 }
 
@@ -195,13 +217,41 @@ func (s fakeNoticeBizCtxService) Current(context.Context) bizctxcap.CurrentConte
 }
 
 type fakeNoticeTenantFilter struct {
-	tenantCtx tenantspi.TenantFilterContext
+	tenantCtx tenantcap.TenantFilterContext
 }
 
-func (s fakeNoticeTenantFilter) Context(context.Context) tenantspi.TenantFilterContext {
+func (s fakeNoticeTenantFilter) Context(context.Context) tenantcap.TenantFilterContext {
 	return s.tenantCtx
 }
 
-func (s fakeNoticeTenantFilter) Apply(_ context.Context, model *gdb.Model, _ string) *gdb.Model {
-	return model
+type fakeNoticeTenantService struct {
+	filter tenantcap.FilterService
+}
+
+func (s fakeNoticeTenantService) Available(context.Context) bool {
+	return true
+}
+
+func (s fakeNoticeTenantService) Status(context.Context) capmodel.CapabilityStatus {
+	return capmodel.CapabilityStatus{Available: true}
+}
+
+func (s fakeNoticeTenantService) Context() tenantcap.ContextService {
+	return nil
+}
+
+func (s fakeNoticeTenantService) Directory() tenantcap.DirectoryService {
+	return nil
+}
+
+func (s fakeNoticeTenantService) Membership() tenantcap.MembershipService {
+	return nil
+}
+
+func (s fakeNoticeTenantService) Plugins() tenantcap.PluginService {
+	return nil
+}
+
+func (s fakeNoticeTenantService) Filter() tenantcap.FilterService {
+	return s.filter
 }

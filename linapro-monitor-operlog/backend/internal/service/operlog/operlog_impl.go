@@ -19,8 +19,8 @@ import (
 	"lina-core/pkg/excelutil"
 	"lina-core/pkg/gdbutil"
 	"lina-core/pkg/plugin/capability/apidoccap"
-	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/dictcap"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-plugin-linapro-monitor-operlog/backend/internal/dao"
 	"lina-plugin-linapro-monitor-operlog/backend/internal/model/do"
@@ -35,7 +35,7 @@ func (s *serviceImpl) Create(ctx context.Context, in CreateInput) error {
 	}
 	auditContext := resolveAuditTenantContext(
 		ctx,
-		s.tenantFilter,
+		s.pluginTableFilter(),
 		in.TenantID,
 		in.ActingUserID,
 		in.OnBehalfOfTenantID,
@@ -77,7 +77,7 @@ func timePtr(value time.Time) *time.Time {
 
 // List queries the paginated operation-log list.
 func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, error) {
-	model := s.tenantFilter.Apply(ctx, dao.Operlog.Ctx(ctx), "")
+	model := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Operlog.Ctx(ctx), "")
 	titleOperationKeys := s.findLocalizedRouteTitleOperationKeys(ctx, in.Title)
 	model = applyOperLogFilters(model, in.Title, titleOperationKeys, in.OperName, in.OperType, in.Status, in.BeginTime, in.EndTime)
 
@@ -116,7 +116,7 @@ func (s *serviceImpl) List(ctx context.Context, in ListInput) (*ListOutput, erro
 // GetById retrieves one operation-log record by primary key.
 func (s *serviceImpl) GetById(ctx context.Context, id int) (*OperLogEntity, error) {
 	var record *OperLogEntity
-	err := s.tenantFilter.Apply(ctx, dao.Operlog.Ctx(ctx), "").Where(colID, id).Scan(&record)
+	err := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Operlog.Ctx(ctx), "").Where(colID, id).Scan(&record)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (s *serviceImpl) GetById(ctx context.Context, id int) (*OperLogEntity, erro
 
 // Clean hard-deletes operation logs within one optional time range.
 func (s *serviceImpl) Clean(ctx context.Context, in CleanInput) (int, error) {
-	model := s.tenantFilter.Apply(ctx, dao.Operlog.Ctx(ctx), "")
+	model := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Operlog.Ctx(ctx), "")
 	hasFilter := false
 	if in.BeginTime != "" {
 		model = model.WhereGTE(colOperTime, in.BeginTime)
@@ -159,7 +159,7 @@ func (s *serviceImpl) DeleteByIds(ctx context.Context, ids []int) (int, error) {
 	if len(ids) == 0 {
 		return 0, nil
 	}
-	result, err := s.tenantFilter.Apply(ctx, dao.Operlog.Ctx(ctx), "").WhereIn(colID, ids).Delete()
+	result, err := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Operlog.Ctx(ctx), "").WhereIn(colID, ids).Delete()
 	if err != nil {
 		return 0, err
 	}
@@ -172,14 +172,14 @@ func (s *serviceImpl) DeleteByIds(ctx context.Context, ids []int) (int, error) {
 
 // Export generates an Excel workbook for operation logs.
 func (s *serviceImpl) Export(ctx context.Context, in ExportInput) (data []byte, err error) {
-	model := s.tenantFilter.Apply(ctx, dao.Operlog.Ctx(ctx), "")
+	model := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.Operlog.Ctx(ctx), "")
 	if len(in.Ids) > 0 {
 		model = model.WhereIn(colID, in.Ids)
 	} else {
 		titleOperationKeys := s.findLocalizedRouteTitleOperationKeys(ctx, in.Title)
 		model = applyOperLogFilters(model, in.Title, titleOperationKeys, in.OperName, in.OperType, in.Status, in.BeginTime, in.EndTime)
 	}
-	model = model.Limit(MaxExportRows)
+	model = model.Limit(maxExportRows)
 
 	allowedSortFields := map[string]string{
 		"id":        colID,
@@ -211,8 +211,8 @@ func (s *serviceImpl) Export(ctx context.Context, in ExportInput) (data []byte, 
 		}
 	}
 
-	operTypeMap := s.buildStringDictLabelMap(ctx, DictTypeOperType)
-	statusMap := s.buildIntDictLabelMap(ctx, DictTypeOperStatus)
+	operTypeMap := s.buildStringDictLabelMap(ctx, dictTypeOperType)
+	statusMap := s.buildIntDictLabelMap(ctx, dictTypeOperStatus)
 	for index, log := range list {
 		row := index + 2
 		if setErr := excelutil.SetCellValue(file, sheet, 1, row, log.Title); setErr != nil {
@@ -296,7 +296,7 @@ func (s *serviceImpl) exportHeaders(ctx context.Context) []string {
 func (s *serviceImpl) exportOperTypeText(ctx context.Context, operType string, operTypeMap map[string]string) string {
 	operTypeText, ok := operTypeMap[operType]
 	if !ok {
-		operTypeText = s.localizeDictValue(ctx, DictTypeOperType, operType, defaultOperTypeLabels[operlogtype.Normalize(operType)])
+		operTypeText = s.localizeDictValue(ctx, dictTypeOperType, operType, defaultOperTypeLabels[operlogtype.Normalize(operType)])
 	}
 	if operTypeText == "" {
 		return operType
@@ -308,7 +308,7 @@ func (s *serviceImpl) exportOperTypeText(ctx context.Context, operType string, o
 func (s *serviceImpl) exportStatusText(ctx context.Context, status int, statusMap map[int]string) string {
 	statusText, ok := statusMap[status]
 	if !ok {
-		statusText = s.localizeDictValue(ctx, DictTypeOperStatus, strconv.Itoa(status), defaultOperStatusLabels[status])
+		statusText = s.localizeDictValue(ctx, dictTypeOperStatus, strconv.Itoa(status), defaultOperStatusLabels[status])
 	}
 	return statusText
 }
@@ -390,9 +390,11 @@ func (s *serviceImpl) findLocalizedRouteTitleOperationKeys(ctx context.Context, 
 // buildStringDictLabelMap builds one localized string-value dictionary label map
 // through the host dictionary-domain capability.
 func (s *serviceImpl) buildStringDictLabelMap(ctx context.Context, dictType string) map[string]string {
-	fallbacks := defaultOperTypeLabelFallbacks()
-	values := make([]dictcap.Value, 0, len(fallbacks))
-	labels := make(map[string]string, len(fallbacks))
+	var (
+		fallbacks = defaultOperTypeLabelFallbacks()
+		values    = make([]dictcap.Value, 0, len(fallbacks))
+		labels    = make(map[string]string, len(fallbacks))
+	)
 	for _, value := range operlogtype.PublishedValues() {
 		values = append(values, dictcap.Value(value))
 		labels[value] = s.localizeDictValue(ctx, dictType, value, fallbacks[value])
@@ -437,7 +439,11 @@ func (s *serviceImpl) resolveDictLabels(ctx context.Context, dictType string, va
 	if s == nil || s.dictSvc == nil || len(values) == 0 {
 		return map[dictcap.Value]string{}
 	}
-	output, err := s.dictSvc.ResolveLabels(ctx, s.dictionaryCapabilityContext(ctx, dictType), dictcap.ResolveInput{
+	valueSvc := s.dictSvc.Value()
+	if valueSvc == nil {
+		return map[dictcap.Value]string{}
+	}
+	output, err := valueSvc.ResolveLabels(ctx, dictcap.ResolveInput{
 		Type:         dictcap.Type(dictType),
 		Values:       values,
 		IncludeLabel: true,
@@ -453,43 +459,6 @@ func (s *serviceImpl) resolveDictLabels(ctx context.Context, dictType string, va
 		labels[value] = projection.Label
 	}
 	return labels
-}
-
-// dictionaryCapabilityContext builds the audited context required by dictcap.
-func (s *serviceImpl) dictionaryCapabilityContext(ctx context.Context, dictType string) capmodel.CapabilityContext {
-	current := tenantspi.TenantFilterContext{}
-	if s != nil && s.tenantFilter != nil {
-		current = s.tenantFilter.Context(ctx)
-	}
-	actorID := current.UserID
-	if current.ActingUserID > 0 {
-		actorID = current.ActingUserID
-	}
-	actor := capmodel.CapabilityActor{
-		Type:   capmodel.ActorTypeUser,
-		UserID: int64(actorID),
-	}
-	if actorID == 0 {
-		actor = capmodel.CapabilityActor{
-			Type:         capmodel.ActorTypeSystem,
-			Name:         pluginID,
-			SystemReason: "operation-log dictionary label projection",
-		}
-	}
-	return capmodel.CapabilityContext{
-		PluginID:   pluginID,
-		Actor:      actor,
-		TenantID:   capmodel.DomainID(strconv.Itoa(current.TenantID)),
-		Source:     capmodel.CapabilitySourceHTTP,
-		SystemCall: actor.Type == capmodel.ActorTypeSystem,
-		Resource:   dictType,
-		AuditReason: strings.Join([]string{
-			pluginID,
-			"resolve dictionary labels",
-			dictType,
-		}, ":"),
-		RequestedAt: time.Now(),
-	}
 }
 
 // localizeDictValue translates one dictionary label by stable dictionary key.
@@ -528,12 +497,15 @@ var defaultOperStatusLabels = map[int]string{
 // resolveAuditTenantContext resolves tenant audit metadata from bizctx and explicit overrides.
 func resolveAuditTenantContext(
 	ctx context.Context,
-	tenantFilter tenantspi.PluginTableFilterService,
+	tenantFilter tenantcap.FilterService,
 	tenantID *int,
 	actingUserID *int,
 	onBehalfOfTenantID *int,
 	isImpersonation *bool,
 ) auditTenantContext {
+	if tenantFilter == nil {
+		return auditTenantContext{}
+	}
 	current := tenantFilter.Context(ctx)
 	result := auditTenantContext{
 		TenantID:           current.TenantID,

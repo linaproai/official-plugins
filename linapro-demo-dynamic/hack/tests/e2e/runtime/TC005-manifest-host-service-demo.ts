@@ -62,8 +62,8 @@ const dynamicHostServiceAuthorization = {
     },
     {
       service: "manifest",
-      methods: ["get"],
-      paths: ["config/config.yaml", "config/profile.yaml"],
+      methods: ["get", "get_many", "list"],
+      paths: ["config/"],
     },
     {
       service: "hostConfig",

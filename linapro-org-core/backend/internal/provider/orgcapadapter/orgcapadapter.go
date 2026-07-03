@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gogf/gf/v2/database/gdb"
 
@@ -15,17 +14,17 @@ import (
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/orgcap"
 	"lina-core/pkg/plugin/capability/orgcap/orgspi"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
 	"lina-core/pkg/plugin/capability/usercap"
 	"lina-plugin-linapro-org-core/backend/internal/dao"
 	"lina-plugin-linapro-org-core/backend/internal/model/do"
 	entitymodel "lina-plugin-linapro-org-core/backend/internal/model/entity"
 	deptsvc "lina-plugin-linapro-org-core/backend/internal/service/dept"
+	postsvc "lina-plugin-linapro-org-core/backend/internal/service/post"
 )
 
 const (
-	// postStatusEnabled is the enabled status value used by linapro-org-core posts.
-	postStatusEnabled = 1
 	// orgCapUnassignedDeptLabelKey is the runtime i18n key for the synthetic
 	// Unassigned node exposed through the host orgcap contract.
 	orgCapUnassignedDeptLabelKey = "plugin.linapro-org-core.post.tree.unassignedDept"
@@ -33,32 +32,50 @@ const (
 
 // Provider implements the stable host organization-capability contract.
 type Provider struct {
-	deptSvc      deptsvc.Service                    // deptSvc resolves department tree relationships.
-	tenantFilter tenantspi.PluginTableFilterService // tenantFilter constrains organization provider queries.
-	users        usercap.Service                    // users resolves host-owned user projections.
+	deptSvc   deptsvc.Service   // deptSvc resolves department tree relationships.
+	postSvc   postsvc.Service   // postSvc owns post CRUD and option queries.
+	tenantSvc tenantcap.Service // tenantSvc provides tenant context and plugin table filtering.
+	users     usercap.Service   // users resolves host-owned user projections.
 }
 
 // Ensure Provider implements the published organization-capability provider.
 var _ orgspi.Provider = (*Provider)(nil)
 
 // New creates and returns a new provider instance.
-func New(tenantFilter tenantspi.PluginTableFilterService, users usercap.Service) *Provider {
+func New(tenantSvc tenantcap.Service, users usercap.Service) *Provider {
 	return &Provider{
-		deptSvc:      deptsvc.New(tenantFilter, users),
-		tenantFilter: tenantFilter,
-		users:        users,
+		deptSvc:   deptsvc.New(tenantSvc, users),
+		postSvc:   postsvc.New(nil, tenantSvc),
+		tenantSvc: tenantSvc,
+		users:     users,
 	}
 }
 
-// ListUserDeptAssignments returns user -> department projections for the provided users.
-func (p *Provider) ListUserDeptAssignments(ctx context.Context, userIDs []int) (map[int]*orgcap.UserDeptAssignment, error) {
+// pluginTableFilter returns the tenant table-filter slice from the injected tenant service.
+func (p *Provider) pluginTableFilter() tenantcap.FilterService {
+	if p == nil || p.tenantSvc == nil {
+		return nil
+	}
+	return p.tenantSvc.Filter()
+}
+
+// tenantFilterContext returns current tenant metadata for write ownership fields.
+func (p *Provider) tenantFilterContext(ctx context.Context) tenantcap.TenantFilterContext {
+	if filter := p.pluginTableFilter(); filter != nil {
+		return filter.Context(ctx)
+	}
+	return tenantcap.TenantFilterContext{}
+}
+
+// listUserDeptAssignments returns user -> department projections for the provided users.
+func (p *Provider) listUserDeptAssignments(ctx context.Context, userIDs []int) (map[int]*orgcap.UserDeptAssignment, error) {
 	assignments := make(map[int]*orgcap.UserDeptAssignment)
 	if len(userIDs) == 0 {
 		return assignments, nil
 	}
 
 	var userDepts []*entitymodel.UserDept
-	if err := p.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx), "").
+	if err := tenantspi.ApplyPluginTableFilter(ctx, p.pluginTableFilter(), dao.UserDept.Ctx(ctx), "").
 		WhereIn(dao.UserDept.Columns().UserId, userIDs).
 		Scan(&userDepts); err != nil {
 		return nil, err
@@ -77,7 +94,7 @@ func (p *Provider) ListUserDeptAssignments(ctx context.Context, userIDs []int) (
 	}
 
 	var deptList []*entitymodel.Dept
-	if err := p.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
+	if err := tenantspi.ApplyPluginTableFilter(ctx, p.pluginTableFilter(), dao.Dept.Ctx(ctx), "").
 		WhereIn(dao.Dept.Columns().Id, deptIDs).
 		Scan(&deptList); err != nil {
 		return nil, err
@@ -98,28 +115,10 @@ func (p *Provider) ListUserDeptAssignments(ctx context.Context, userIDs []int) (
 	return assignments, nil
 }
 
-// GetUserDeptInfo returns one user's department projection.
-func (p *Provider) GetUserDeptInfo(ctx context.Context, userID int) (int, string, error) {
-	var userDept *entitymodel.UserDept
-	if err := p.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx), "").
-		Where(dao.UserDept.Columns().UserId, userID).
-		Scan(&userDept); err != nil || userDept == nil {
-		return 0, "", err
-	}
-
-	var deptItem *entitymodel.Dept
-	if err := p.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
-		Where(dao.Dept.Columns().Id, userDept.DeptId).
-		Scan(&deptItem); err != nil || deptItem == nil {
-		return 0, "", err
-	}
-	return deptItem.Id, deptItem.Name, nil
-}
-
-// GetUserDeptIDs returns one user's department identifier list.
-func (p *Provider) GetUserDeptIDs(ctx context.Context, userID int) ([]int, error) {
+// userDeptIDs returns one user's department identifier list.
+func (p *Provider) userDeptIDs(ctx context.Context, userID int) ([]int, error) {
 	var userDepts []*entitymodel.UserDept
-	if err := p.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx), "").
+	if err := tenantspi.ApplyPluginTableFilter(ctx, p.pluginTableFilter(), dao.UserDept.Ctx(ctx), "").
 		Where(dao.UserDept.Columns().UserId, userID).
 		Scan(&userDepts); err != nil {
 		return nil, err
@@ -140,21 +139,6 @@ func (p *Provider) GetUserDeptIDs(ctx context.Context, userID int) ([]int, error
 	return deptIDs, nil
 }
 
-// ApplyUserDeptScope injects an EXISTS-based department membership constraint
-// into a host-owned query without materializing all visible user IDs in memory.
-func (p *Provider) ApplyUserDeptScope(
-	ctx context.Context,
-	model *gdb.Model,
-	userIDColumn string,
-	currentUserID int,
-) (*gdb.Model, bool, error) {
-	subQuery, empty, err := p.BuildUserDeptScopeExists(ctx, userIDColumn, currentUserID)
-	if err != nil || empty {
-		return model, empty, err
-	}
-	return model.Where("EXISTS ?", subQuery), false, nil
-}
-
 // BuildUserDeptScopeExists builds an EXISTS subquery for department membership
 // without applying it immediately, allowing host callers to compose it with
 // additional OR branches.
@@ -172,7 +156,7 @@ func (p *Provider) BuildUserDeptScopeExists(
 	}
 
 	cols := dao.UserDept.Columns()
-	subQuery := p.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx), dao.UserDept.Table()).
+	subQuery := tenantspi.ApplyPluginTableFilter(ctx, p.pluginTableFilter(), dao.UserDept.Ctx(ctx), dao.UserDept.Table()).
 		Fields(cols.UserId).
 		Where(fmt.Sprintf("%s = %s", qualifiedUserDeptColumn(cols.UserId), userIDColumn)).
 		WhereIn(cols.DeptId, deptIDs)
@@ -196,7 +180,7 @@ func (p *Provider) ApplyUserDeptFilter(
 	}
 
 	cols := dao.UserDept.Columns()
-	subQuery := p.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx), dao.UserDept.Table()).
+	subQuery := tenantspi.ApplyPluginTableFilter(ctx, p.pluginTableFilter(), dao.UserDept.Ctx(ctx), dao.UserDept.Table()).
 		Fields(cols.UserId).
 		Where(fmt.Sprintf("%s = %s", qualifiedUserDeptColumn(cols.UserId), userIDColumn)).
 		WhereIn(cols.DeptId, deptIDs)
@@ -211,7 +195,7 @@ func (p *Provider) ApplyUserDeptUnassignedFilter(
 	userIDColumn string,
 ) (*gdb.Model, bool, error) {
 	cols := dao.UserDept.Columns()
-	subQuery := p.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx), dao.UserDept.Table()).
+	subQuery := tenantspi.ApplyPluginTableFilter(ctx, p.pluginTableFilter(), dao.UserDept.Ctx(ctx), dao.UserDept.Table()).
 		Fields(cols.UserId).
 		Where(fmt.Sprintf("%s = %s", qualifiedUserDeptColumn(cols.UserId), userIDColumn))
 	return model.WhereNotExists(subQuery), false, nil
@@ -220,7 +204,7 @@ func (p *Provider) ApplyUserDeptUnassignedFilter(
 // currentVisibleDeptIDs returns the current user's department IDs plus all
 // descendant department IDs with duplicates removed.
 func (p *Provider) currentVisibleDeptIDs(ctx context.Context, currentUserID int) ([]int, error) {
-	deptIDs, err := p.GetUserDeptIDs(ctx, currentUserID)
+	deptIDs, err := p.userDeptIDs(ctx, currentUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -252,25 +236,6 @@ func qualifiedUserDeptColumn(column string) string {
 	return fmt.Sprintf("%s.%s", dao.UserDept.Table(), column)
 }
 
-// GetUserPostIDs returns one user's post association list.
-func (p *Provider) GetUserPostIDs(ctx context.Context, userID int) ([]int, error) {
-	var userPosts []*entitymodel.UserPost
-	if err := p.tenantFilter.Apply(ctx, dao.UserPost.Ctx(ctx), "").
-		Where(dao.UserPost.Columns().UserId, userID).
-		Scan(&userPosts); err != nil {
-		return nil, err
-	}
-
-	ids := make([]int, 0, len(userPosts))
-	for _, item := range userPosts {
-		if item == nil {
-			continue
-		}
-		ids = append(ids, item.PostId)
-	}
-	return ids, nil
-}
-
 // BatchGetUserOrgProfiles returns stable organization profiles for provided users.
 func (p *Provider) BatchGetUserOrgProfiles(
 	ctx context.Context,
@@ -287,7 +252,7 @@ func (p *Provider) BatchGetUserOrgProfiles(
 	for _, userID := range normalized {
 		result.Items[userID] = &orgcap.UserOrgProfile{UserID: userID}
 	}
-	assignments, err := p.ListUserDeptAssignments(ctx, normalized)
+	assignments, err := p.listUserDeptAssignments(ctx, normalized)
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +270,7 @@ func (p *Provider) BatchGetUserOrgProfiles(
 	}
 
 	userPosts := make([]*entitymodel.UserPost, 0)
-	if err = p.tenantFilter.Apply(ctx, dao.UserPost.Ctx(ctx), "").
+	if err = tenantspi.ApplyPluginTableFilter(ctx, p.pluginTableFilter(), dao.UserPost.Ctx(ctx), "").
 		Fields(dao.UserPost.Columns().UserId, dao.UserPost.Columns().PostId).
 		WhereIn(dao.UserPost.Columns().UserId, normalized).
 		Scan(&userPosts); err != nil {
@@ -343,7 +308,7 @@ func (p *Provider) BatchGetUserOrgProfiles(
 
 // ListDeptTree returns a bounded ordinary department tree projection.
 func (p *Provider) ListDeptTree(ctx context.Context, input orgcap.DeptTreeInput) (*orgcap.DeptTreeResult, error) {
-	nodes, err := p.UserDeptTree(ctx)
+	nodes, err := p.userDeptTree(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -356,13 +321,46 @@ func (p *Provider) ListDeptTree(ctx context.Context, input orgcap.DeptTreeInput)
 	return &orgcap.DeptTreeResult{Items: items, Total: total, Truncated: truncated}, nil
 }
 
+// BatchGetDepartments returns visible department projections and opaque missing IDs.
+func (p *Provider) BatchGetDepartments(
+	ctx context.Context,
+	deptIDs []int,
+) (*capmodel.BatchResult[*orgcap.DeptInfo, int], error) {
+	result := &capmodel.BatchResult[*orgcap.DeptInfo, int]{
+		Items:      make(map[int]*orgcap.DeptInfo),
+		MissingIDs: make([]int, 0),
+	}
+	normalized := uniquePositiveInts(deptIDs)
+	if len(normalized) == 0 {
+		return result, nil
+	}
+	depts := make([]*entitymodel.Dept, 0, len(normalized))
+	if err := tenantspi.ApplyPluginTableFilter(ctx, p.pluginTableFilter(), dao.Dept.Ctx(ctx), "").
+		WhereIn(dao.Dept.Columns().Id, normalized).
+		Scan(&depts); err != nil {
+		return nil, err
+	}
+	for _, deptItem := range depts {
+		if deptItem == nil {
+			continue
+		}
+		result.Items[deptItem.Id] = toDeptInfo(deptItem)
+	}
+	for _, deptID := range normalized {
+		if _, ok := result.Items[deptID]; !ok {
+			result.MissingIDs = append(result.MissingIDs, deptID)
+		}
+	}
+	return result, nil
+}
+
 // SearchDepartments returns bounded department candidates.
 func (p *Provider) SearchDepartments(
 	ctx context.Context,
-	input orgcap.DeptSearchInput,
-) (*capmodel.PageResult[*orgcap.DeptProjection], error) {
+	input orgcap.DeptListInput,
+) (*capmodel.PageResult[*orgcap.DeptInfo], error) {
 	pageNum, pageSize := normalizeProviderPage(input.Page, orgcap.MaxDeptSearchPageSize)
-	model := p.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "")
+	model := tenantspi.ApplyPluginTableFilter(ctx, p.pluginTableFilter(), dao.Dept.Ctx(ctx), "")
 	if keyword := strings.TrimSpace(input.Keyword); keyword != "" {
 		keywordFilter := model.Builder().
 			WhereLike(dao.Dept.Columns().Name, "%"+keyword+"%").
@@ -380,33 +378,94 @@ func (p *Provider) SearchDepartments(
 	if err = model.Page(pageNum, pageSize).OrderAsc(dao.Dept.Columns().OrderNum).Scan(&depts); err != nil {
 		return nil, err
 	}
-	items := make([]*orgcap.DeptProjection, 0, len(depts))
+	items := make([]*orgcap.DeptInfo, 0, len(depts))
 	for _, deptItem := range depts {
 		if deptItem == nil {
 			continue
 		}
-		items = append(items, &orgcap.DeptProjection{
-			DeptID:   deptItem.Id,
-			ParentID: deptItem.ParentId,
-			DeptName: deptItem.Name,
-			DeptCode: deptItem.Code,
-			Status:   deptItem.Status,
-		})
+		items = append(items, toDeptInfo(deptItem))
 	}
-	return &capmodel.PageResult[*orgcap.DeptProjection]{Items: items, Total: total}, nil
+	return &capmodel.PageResult[*orgcap.DeptInfo]{Items: items, Total: total}, nil
 }
 
-// ListPostOptionsPage returns bounded post candidates.
-func (p *Provider) ListPostOptionsPage(
+// CreateDepartment creates one department through the plugin-owned department service.
+func (p *Provider) CreateDepartment(ctx context.Context, input orgcap.DeptCreateInput) (int, error) {
+	return p.deptSvc.Create(ctx, deptsvc.CreateInput{
+		ParentId: input.ParentID,
+		Name:     input.DeptName,
+		Code:     input.DeptCode,
+		OrderNum: input.OrderNum,
+		Leader:   input.LeaderUserID,
+		Phone:    input.Phone,
+		Email:    input.Email,
+		Status:   input.Status,
+		Remark:   input.Remark,
+	})
+}
+
+// UpdateDepartment updates one department through the plugin-owned department service.
+func (p *Provider) UpdateDepartment(ctx context.Context, input orgcap.DeptUpdateInput) error {
+	return p.deptSvc.Update(ctx, deptsvc.UpdateInput{
+		Id:       input.DeptID,
+		ParentId: input.ParentID,
+		Name:     input.DeptName,
+		Code:     input.DeptCode,
+		OrderNum: input.OrderNum,
+		Leader:   input.LeaderUserID,
+		Phone:    input.Phone,
+		Email:    input.Email,
+		Status:   input.Status,
+		Remark:   input.Remark,
+	})
+}
+
+// DeleteDepartment deletes one department through the plugin-owned department service.
+func (p *Provider) DeleteDepartment(ctx context.Context, deptID int) error {
+	return p.deptSvc.Delete(ctx, deptID)
+}
+
+// BatchGetPosts returns visible post projections and opaque missing IDs.
+func (p *Provider) BatchGetPosts(
 	ctx context.Context,
-	input orgcap.PostOptionsInput,
-) (*capmodel.PageResult[*orgcap.PostOption], error) {
+	postIDs []int,
+) (*capmodel.BatchResult[*orgcap.PostInfo, int], error) {
+	result := &capmodel.BatchResult[*orgcap.PostInfo, int]{
+		Items:      make(map[int]*orgcap.PostInfo),
+		MissingIDs: make([]int, 0),
+	}
+	normalized := uniquePositiveInts(postIDs)
+	if len(normalized) == 0 {
+		return result, nil
+	}
+	posts := make([]*entitymodel.Post, 0, len(normalized))
+	if err := tenantspi.ApplyPluginTableFilter(ctx, p.pluginTableFilter(), dao.Post.Ctx(ctx), "").
+		WhereIn(dao.Post.Columns().Id, normalized).
+		Scan(&posts); err != nil {
+		return nil, err
+	}
+	for _, postItem := range posts {
+		if postItem == nil {
+			continue
+		}
+		result.Items[postItem.Id] = toPostInfo(postItem)
+	}
+	for _, postID := range normalized {
+		if _, ok := result.Items[postID]; !ok {
+			result.MissingIDs = append(result.MissingIDs, postID)
+		}
+	}
+	return result, nil
+}
+
+// ListPosts returns bounded post projections.
+func (p *Provider) ListPosts(
+	ctx context.Context,
+	input orgcap.PostListInput,
+) (*capmodel.PageResult[*orgcap.PostInfo], error) {
 	pageNum, pageSize := normalizeProviderPage(input.Page, orgcap.MaxPostOptionsPageSize)
-	model := p.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx), "")
+	model := tenantspi.ApplyPluginTableFilter(ctx, p.pluginTableFilter(), dao.Post.Ctx(ctx), "")
 	if input.Status != nil {
 		model = model.Where(dao.Post.Columns().Status, *input.Status)
-	} else {
-		model = model.Where(dao.Post.Columns().Status, postStatusEnabled)
 	}
 	if input.DeptID != nil {
 		deptIDs, err := p.deptSvc.DescendantDeptIDs(ctx, *input.DeptID)
@@ -429,65 +488,57 @@ func (p *Provider) ListPostOptionsPage(
 	if err = model.Page(pageNum, pageSize).OrderAsc(dao.Post.Columns().Sort).Scan(&posts); err != nil {
 		return nil, err
 	}
-	options := make([]*orgcap.PostOption, 0, len(posts))
+	items := make([]*orgcap.PostInfo, 0, len(posts))
 	for _, postItem := range posts {
 		if postItem == nil {
 			continue
 		}
-		options = append(options, &orgcap.PostOption{PostID: postItem.Id, PostName: postItem.Name})
+		items = append(items, toPostInfo(postItem))
 	}
-	return &capmodel.PageResult[*orgcap.PostOption]{Items: options, Total: total}, nil
+	return &capmodel.PageResult[*orgcap.PostInfo]{Items: items, Total: total}, nil
 }
 
-// EnsureDepartmentsVisible verifies all department identifiers are visible.
-func (p *Provider) EnsureDepartmentsVisible(ctx context.Context, deptIDs []int) error {
-	normalized := uniquePositiveInts(deptIDs)
-	if len(normalized) == 0 {
-		return nil
-	}
-	count, err := p.tenantFilter.Apply(ctx, dao.Dept.Ctx(ctx), "").
-		WhereIn(dao.Dept.Columns().Id, normalized).
-		Count()
-	if err != nil {
-		return err
-	}
-	if count != len(normalized) {
-		return bizerr.NewCode(capmodel.CodeCapabilityDenied)
-	}
-	return nil
+// CreatePost creates one post through the plugin-owned post service.
+func (p *Provider) CreatePost(ctx context.Context, input orgcap.PostCreateInput) (int, error) {
+	return p.postSvc.Create(ctx, postsvc.CreateInput{
+		DeptId: input.DeptID,
+		Code:   input.PostCode,
+		Name:   input.PostName,
+		Sort:   input.Sort,
+		Status: input.Status,
+		Remark: input.Remark,
+	})
 }
 
-// EnsurePostsVisible verifies all post identifiers are visible.
-func (p *Provider) EnsurePostsVisible(ctx context.Context, postIDs []int) error {
-	normalized := uniquePositiveInts(postIDs)
-	if len(normalized) == 0 {
-		return nil
-	}
-	count, err := p.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx), "").
-		WhereIn(dao.Post.Columns().Id, normalized).
-		Count()
-	if err != nil {
-		return err
-	}
-	if count != len(normalized) {
-		return bizerr.NewCode(capmodel.CodeCapabilityDenied)
-	}
-	return nil
+// UpdatePost updates one post through the plugin-owned post service.
+func (p *Provider) UpdatePost(ctx context.Context, input orgcap.PostUpdateInput) error {
+	return p.postSvc.Update(ctx, postsvc.UpdateInput{
+		Id:     input.PostID,
+		DeptId: input.DeptID,
+		Code:   input.PostCode,
+		Name:   input.PostName,
+		Sort:   input.Sort,
+		Status: input.Status,
+		Remark: input.Remark,
+	})
+}
+
+// DeletePost deletes one post through the plugin-owned post service.
+func (p *Provider) DeletePost(ctx context.Context, postID int) error {
+	return p.postSvc.Delete(ctx, strconv.Itoa(postID))
 }
 
 // ReplaceUserAssignments rewrites one user's department and post associations.
 func (p *Provider) ReplaceUserAssignments(ctx context.Context, userID int, deptID *int, postIDs []int) error {
-	tenantID := p.tenantFilter.Context(ctx).TenantID
-	return dao.UserDept.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
-		if _, err := tx.Model(dao.UserDept.Table()).
-			Ctx(ctx).
+	tenantID := p.tenantFilterContext(ctx).TenantID
+	return dao.UserDept.Transaction(ctx, func(ctx context.Context, _ gdb.TX) error {
+		if _, err := dao.UserDept.Ctx(ctx).
 			Where(tenantspi.TenantFilterColumn, tenantID).
 			Where(dao.UserDept.Columns().UserId, userID).
 			Delete(); err != nil {
 			return err
 		}
-		if _, err := tx.Model(dao.UserPost.Table()).
-			Ctx(ctx).
+		if _, err := dao.UserPost.Ctx(ctx).
 			Where(tenantspi.TenantFilterColumn, tenantID).
 			Where(dao.UserPost.Columns().UserId, userID).
 			Delete(); err != nil {
@@ -495,16 +546,14 @@ func (p *Provider) ReplaceUserAssignments(ctx context.Context, userID int, deptI
 		}
 
 		if deptID != nil && *deptID > 0 {
-			if _, err := tx.Model(dao.UserDept.Table()).
-				Ctx(ctx).
+			if _, err := dao.UserDept.Ctx(ctx).
 				Data(do.UserDept{TenantId: tenantID, UserId: userID, DeptId: *deptID}).
 				Insert(); err != nil {
 				return err
 			}
 		}
 		for _, postID := range postIDs {
-			if _, err := tx.Model(dao.UserPost.Table()).
-				Ctx(ctx).
+			if _, err := dao.UserPost.Ctx(ctx).
 				Data(do.UserPost{TenantId: tenantID, UserId: userID, PostId: postID}).
 				Insert(); err != nil {
 				return err
@@ -516,17 +565,15 @@ func (p *Provider) ReplaceUserAssignments(ctx context.Context, userID int, deptI
 
 // CleanupUserAssignments deletes one user's optional organization associations.
 func (p *Provider) CleanupUserAssignments(ctx context.Context, userID int) error {
-	tenantID := p.tenantFilter.Context(ctx).TenantID
-	return dao.UserDept.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
-		if _, err := tx.Model(dao.UserDept.Table()).
-			Ctx(ctx).
+	tenantID := p.tenantFilterContext(ctx).TenantID
+	return dao.UserDept.Transaction(ctx, func(ctx context.Context, _ gdb.TX) error {
+		if _, err := dao.UserDept.Ctx(ctx).
 			Where(tenantspi.TenantFilterColumn, tenantID).
 			Where(dao.UserDept.Columns().UserId, userID).
 			Delete(); err != nil {
 			return err
 		}
-		if _, err := tx.Model(dao.UserPost.Table()).
-			Ctx(ctx).
+		if _, err := dao.UserPost.Ctx(ctx).
 			Where(tenantspi.TenantFilterColumn, tenantID).
 			Where(dao.UserPost.Columns().UserId, userID).
 			Delete(); err != nil {
@@ -536,8 +583,8 @@ func (p *Provider) CleanupUserAssignments(ctx context.Context, userID int) error
 	})
 }
 
-// UserDeptTree returns the optional department tree used by host user management.
-func (p *Provider) UserDeptTree(ctx context.Context) ([]*orgcap.DeptTreeNode, error) {
+// userDeptTree returns the optional department tree used by host user management.
+func (p *Provider) userDeptTree(ctx context.Context) ([]*orgcap.DeptTreeNode, error) {
 	if p == nil || p.users == nil {
 		return nil, bizerr.NewCode(capmodel.CodeCapabilityUnavailable, bizerr.P("capability", "user"))
 	}
@@ -547,7 +594,7 @@ func (p *Provider) UserDeptTree(ctx context.Context) ([]*orgcap.DeptTreeNode, er
 	}
 
 	var userDepts []*entitymodel.UserDept
-	if err = p.tenantFilter.Apply(ctx, dao.UserDept.Ctx(ctx), "").
+	if err = tenantspi.ApplyPluginTableFilter(ctx, p.pluginTableFilter(), dao.UserDept.Ctx(ctx), "").
 		Fields(dao.UserDept.Columns().DeptId, dao.UserDept.Columns().UserId).
 		Scan(&userDepts); err != nil {
 		return nil, err
@@ -565,7 +612,7 @@ func (p *Provider) UserDeptTree(ctx context.Context) ([]*orgcap.DeptTreeNode, er
 		seenUsers[item.UserId] = struct{}{}
 		userIDs = append(userIDs, usercap.UserID(strconv.Itoa(item.UserId)))
 	}
-	visibleUsers, err := p.users.BatchGet(ctx, p.capabilityContext(ctx, "org.user_dept_tree"), userIDs)
+	visibleUsers, err := p.users.BatchGet(ctx, userIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -593,7 +640,7 @@ func (p *Provider) UserDeptTree(ctx context.Context) ([]*orgcap.DeptTreeNode, er
 	nodes := convertDeptTreeNodes(plainTree)
 	applyDeptUserCount(nodes, countMap)
 
-	totalOut, err := p.users.Search(ctx, p.capabilityContext(ctx, "org.user_dept_tree"), usercap.SearchInput{
+	totalOut, err := p.users.List(ctx, usercap.ListInput{
 		Page: capmodel.PageRequest{PageSize: 1},
 	})
 	if err != nil {
@@ -612,66 +659,34 @@ func (p *Provider) UserDeptTree(ctx context.Context) ([]*orgcap.DeptTreeNode, er
 	return append(nodes, newUnassignedDeptNode(totalUsers, assignedUsers)), nil
 }
 
-// capabilityContext creates provider-call metadata for usercap calls made by
-// the organization provider.
-func (p *Provider) capabilityContext(ctx context.Context, resource string) capmodel.CapabilityContext {
-	tenantCtx := tenantspi.TenantFilterContext{}
-	if p != nil && p.tenantFilter != nil {
-		tenantCtx = p.tenantFilter.Context(ctx)
+// toDeptInfo converts one plugin-local department row to the shared capability projection.
+func toDeptInfo(deptItem *entitymodel.Dept) *orgcap.DeptInfo {
+	if deptItem == nil {
+		return nil
 	}
-	actorID := tenantCtx.ActingUserID
-	if actorID == 0 {
-		actorID = tenantCtx.UserID
-	}
-	actor := capmodel.CapabilityActor{
-		Type:   capmodel.ActorTypeUser,
-		UserID: int64(actorID),
-	}
-	if actorID == 0 {
-		actor = capmodel.CapabilityActor{
-			Type:         capmodel.ActorTypeSystem,
-			Name:         orgcap.ProviderPluginID,
-			SystemReason: "organization provider user projection",
-		}
-	}
-	return capmodel.CapabilityContext{
-		PluginID:    orgcap.ProviderPluginID,
-		Actor:       actor,
-		TenantID:    capmodel.DomainID(strconv.Itoa(tenantCtx.TenantID)),
-		Source:      capmodel.CapabilitySourceProvider,
-		SystemCall:  actor.Type == capmodel.ActorTypeSystem,
-		Resource:    resource,
-		RequestedAt: time.Now(),
+	return &orgcap.DeptInfo{
+		DeptID:   deptItem.Id,
+		ParentID: deptItem.ParentId,
+		DeptName: deptItem.Name,
+		DeptCode: deptItem.Code,
+		Status:   deptItem.Status,
 	}
 }
 
-// ListPostOptions returns selectable post options for one department subtree.
-func (p *Provider) ListPostOptions(ctx context.Context, deptID *int) ([]*orgcap.PostOption, error) {
-	model := p.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx), "").Where(dao.Post.Columns().Status, postStatusEnabled)
-	if deptID != nil {
-		deptIDs, err := p.deptSvc.DescendantDeptIDs(ctx, *deptID)
-		if err != nil {
-			return nil, err
-		}
-		model = model.WhereIn(dao.Post.Columns().DeptId, deptIDs)
+// toPostInfo converts one plugin-local post row to the shared capability projection.
+func toPostInfo(postItem *entitymodel.Post) *orgcap.PostInfo {
+	if postItem == nil {
+		return nil
 	}
-
-	var posts []*entitymodel.Post
-	if err := model.OrderAsc(dao.Post.Columns().Sort).Scan(&posts); err != nil {
-		return nil, err
+	return &orgcap.PostInfo{
+		PostID:   postItem.Id,
+		DeptID:   postItem.DeptId,
+		PostCode: postItem.Code,
+		PostName: postItem.Name,
+		Sort:     postItem.Sort,
+		Status:   postItem.Status,
+		Remark:   postItem.Remark,
 	}
-
-	options := make([]*orgcap.PostOption, 0, len(posts))
-	for _, postItem := range posts {
-		if postItem == nil {
-			continue
-		}
-		options = append(options, &orgcap.PostOption{
-			PostID:   postItem.Id,
-			PostName: postItem.Name,
-		})
-	}
-	return options, nil
 }
 
 // convertDeptTreeNodes converts plugin-local tree nodes into the shared host contract.
@@ -729,7 +744,7 @@ func (p *Provider) postNames(ctx context.Context, postIDs []int) (map[int]string
 		return result, nil
 	}
 	posts := make([]*entitymodel.Post, 0, len(normalized))
-	if err := p.tenantFilter.Apply(ctx, dao.Post.Ctx(ctx), "").
+	if err := tenantspi.ApplyPluginTableFilter(ctx, p.pluginTableFilter(), dao.Post.Ctx(ctx), "").
 		Fields(dao.Post.Columns().Id, dao.Post.Columns().Name).
 		WhereIn(dao.Post.Columns().Id, normalized).
 		Scan(&posts); err != nil {

@@ -15,8 +15,6 @@ import (
 
 type testAuditReq struct{}
 
-type testSourceAuditReq struct{}
-
 func testAuditHandler(context.Context, *testAuditReq) (any, error) {
 	return nil, nil
 }

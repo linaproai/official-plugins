@@ -9,9 +9,9 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_ai_provider (
     "website_url" VARCHAR(512) NOT NULL DEFAULT '',
     "remark"      VARCHAR(512) NOT NULL DEFAULT '',
     "enabled"     SMALLINT NOT NULL DEFAULT 1,
-    "created_at"  TIMESTAMP,
-    "updated_at"  TIMESTAMP,
-    "deleted_at"  TIMESTAMP
+    "created_at"  TIMESTAMPTZ,
+    "updated_at"  TIMESTAMPTZ,
+    "deleted_at"  TIMESTAMPTZ
 );
 
 COMMENT ON TABLE plugin_linapro_ai_provider IS 'AI provider table';
@@ -41,9 +41,9 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_ai_provider_endpoint (
     "secret_ref"    VARCHAR(256) NOT NULL DEFAULT '',
     "enabled"       SMALLINT NOT NULL DEFAULT 1,
     "metadata_json" TEXT NOT NULL DEFAULT '{}',
-    "created_at"    TIMESTAMP,
-    "updated_at"    TIMESTAMP,
-    "deleted_at"    TIMESTAMP
+    "created_at"    TIMESTAMPTZ,
+    "updated_at"    TIMESTAMPTZ,
+    "deleted_at"    TIMESTAMPTZ
 );
 
 COMMENT ON TABLE plugin_linapro_ai_provider_endpoint IS 'AI provider protocol endpoint table';
@@ -75,9 +75,9 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_ai_model (
     "protocol"    VARCHAR(32) NOT NULL,
     "source"      VARCHAR(32) NOT NULL DEFAULT 'manual',
     "enabled"     SMALLINT NOT NULL DEFAULT 1,
-    "created_at"  TIMESTAMP,
-    "updated_at"  TIMESTAMP,
-    "deleted_at"  TIMESTAMP
+    "created_at"  TIMESTAMPTZ,
+    "updated_at"  TIMESTAMPTZ,
+    "deleted_at"  TIMESTAMPTZ
 );
 
 COMMENT ON TABLE plugin_linapro_ai_model IS 'AI provider model table';
@@ -122,9 +122,9 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_ai_model_capability (
     "supports_streaming"  SMALLINT NOT NULL DEFAULT 0,
     "supports_operation"  SMALLINT NOT NULL DEFAULT 0,
     "enabled"             SMALLINT NOT NULL DEFAULT 1,
-    "created_at"          TIMESTAMP,
-    "updated_at"          TIMESTAMP,
-    "deleted_at"          TIMESTAMP
+    "created_at"          TIMESTAMPTZ,
+    "updated_at"          TIMESTAMPTZ,
+    "deleted_at"          TIMESTAMPTZ
 );
 
 COMMENT ON TABLE plugin_linapro_ai_model_capability IS 'AI model method capability declaration table';
@@ -174,9 +174,9 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_ai_tier (
     "last_test_status"        VARCHAR(32) NOT NULL DEFAULT '',
     "last_test_latency_ms"    INTEGER NOT NULL DEFAULT 0,
     "last_test_error_summary" VARCHAR(512) NOT NULL DEFAULT '',
-    "last_test_at"            TIMESTAMP,
-    "created_at"              TIMESTAMP,
-    "updated_at"              TIMESTAMP,
+    "last_test_at"            TIMESTAMPTZ,
+    "created_at"              TIMESTAMPTZ,
+    "updated_at"              TIMESTAMPTZ,
     CONSTRAINT uk_plugin_linapro_ai_tier_capability_code UNIQUE ("capability_type", "capability_method", "code")
 );
 
@@ -209,9 +209,9 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_ai_tier_binding (
     "model_id"    BIGINT NOT NULL,
     "priority"    INTEGER NOT NULL DEFAULT 0,
     "enabled"     SMALLINT NOT NULL DEFAULT 1,
-    "created_at"  TIMESTAMP,
-    "updated_at"  TIMESTAMP,
-    "deleted_at"  TIMESTAMP
+    "created_at"  TIMESTAMPTZ,
+    "updated_at"  TIMESTAMPTZ,
+    "deleted_at"  TIMESTAMPTZ
 );
 
 COMMENT ON TABLE plugin_linapro_ai_tier_binding IS 'AI tier provider-model binding table';
@@ -262,7 +262,7 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_ai_invocation (
     "asset_summary_json"     TEXT NOT NULL DEFAULT '{}',
     "operation_summary_json" TEXT NOT NULL DEFAULT '{}',
     "metadata_summary_json"  TEXT NOT NULL DEFAULT '{}',
-    "created_at"             TIMESTAMP
+    "created_at"             TIMESTAMPTZ
 );
 
 COMMENT ON TABLE plugin_linapro_ai_invocation IS 'AI invocation audit log table';
@@ -321,13 +321,13 @@ CREATE TABLE IF NOT EXISTS plugin_linapro_ai_provider_operation (
     "protocol"           VARCHAR(64) NOT NULL DEFAULT '',
     "status"             VARCHAR(32) NOT NULL,
     "next_poll_after_ms" BIGINT NOT NULL DEFAULT 0,
-    "expires_at"         TIMESTAMP,
+    "expires_at"         TIMESTAMPTZ,
     "asset_summary_json" TEXT NOT NULL DEFAULT '{}',
     "error_code"         VARCHAR(128) NOT NULL DEFAULT '',
     "error_summary"      VARCHAR(512) NOT NULL DEFAULT '',
-    "created_at"         TIMESTAMP,
-    "updated_at"         TIMESTAMP,
-    "deleted_at"         TIMESTAMP
+    "created_at"         TIMESTAMPTZ,
+    "updated_at"         TIMESTAMPTZ,
+    "deleted_at"         TIMESTAMPTZ
 );
 
 COMMENT ON TABLE plugin_linapro_ai_provider_operation IS 'AI provider operation projection table';

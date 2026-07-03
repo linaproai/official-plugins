@@ -22,13 +22,6 @@ import (
 	"lina-plugin-linapro-tenant-core/backend/internal/service/shared"
 )
 
-const (
-	// membershipTableAlias is the provider SQL alias for membership rows.
-	membershipTableAlias = "m"
-	// tenantTableAlias is the provider SQL alias for tenant rows.
-	tenantTableAlias = "t"
-)
-
 // ResolveTenant resolves a tenant from request metadata.
 func (p *Provider) ResolveTenant(ctx context.Context, request *ghttp.Request) (*tenantcap.ResolverResult, error) {
 	config, err := p.resolverConfigSvc.Get(ctx)
@@ -74,58 +67,12 @@ func (p *Provider) ListUserTenants(ctx context.Context, userID int) ([]tenantcap
 	return result, nil
 }
 
-// BatchListUserTenants returns active tenant memberships for visible users.
-func (p *Provider) BatchListUserTenants(ctx context.Context, userIDs []int) (map[int][]tenantcap.TenantInfo, error) {
-	result := make(map[int][]tenantcap.TenantInfo)
-	normalized := normalizePositiveUserIDs(userIDs)
-	if len(normalized) == 0 {
-		return result, nil
-	}
-	membershipCols := dao.UserMembership.Columns()
-	tenantCols := dao.Tenant.Columns()
-	rows := make([]*userTenantInfoRow, 0)
-	err := shared.Model(ctx, shared.TableMembership).As(membershipTableAlias).
-		InnerJoin(
-			shared.TableTenant+" "+tenantTableAlias,
-			qualifiedProviderColumn(tenantTableAlias, tenantCols.Id)+" = "+
-				qualifiedProviderColumn(membershipTableAlias, membershipCols.TenantId)+" AND "+
-				qualifiedProviderColumn(tenantTableAlias, tenantCols.DeletedAt)+" IS NULL",
-		).
-		Fields(
-			providerSelectColumn(membershipTableAlias, membershipCols.UserId, membershipCols.UserId),
-			providerSelectColumn(tenantTableAlias, tenantCols.Id, tenantCols.Id),
-			providerSelectColumn(tenantTableAlias, tenantCols.Code, tenantCols.Code),
-			providerSelectColumn(tenantTableAlias, tenantCols.Name, tenantCols.Name),
-			providerSelectColumn(tenantTableAlias, tenantCols.Status, tenantCols.Status),
-		).
-		WhereIn(qualifiedProviderColumn(membershipTableAlias, membershipCols.UserId), normalized).
-		Where(qualifiedProviderColumn(membershipTableAlias, membershipCols.Status), shared.MembershipStatusEnabled).
-		Where(qualifiedProviderColumn(tenantTableAlias, tenantCols.Status), string(shared.TenantStatusActive)).
-		OrderAsc(qualifiedProviderColumn(membershipTableAlias, membershipCols.Id)).
-		Scan(&rows)
-	if err != nil {
-		return nil, err
-	}
-	for _, row := range rows {
-		if row == nil {
-			continue
-		}
-		result[row.UserID] = append(result[row.UserID], tenantcap.TenantInfo{
-			ID:     tenantcap.TenantID(row.ID),
-			Code:   row.Code,
-			Name:   row.Name,
-			Status: row.Status,
-		})
-	}
-	return result, nil
-}
-
-// CurrentTenantInfo returns one tenant projection visible in the current context.
-func (p *Provider) CurrentTenantInfo(ctx context.Context, tenantID tenantcap.TenantID) (*tenantcap.TenantInfo, error) {
+// Info returns one tenant projection visible in the current context.
+func (p *Provider) Info(ctx context.Context, tenantID tenantcap.TenantID) (*tenantcap.TenantInfo, error) {
 	if tenantID <= tenantcap.PLATFORM {
 		return &tenantcap.TenantInfo{ID: tenantcap.PLATFORM, Code: "platform", Name: "Platform", Status: string(shared.TenantStatusActive)}, nil
 	}
-	result, err := p.BatchGetTenants(ctx, []tenantcap.TenantID{tenantID})
+	result, err := p.BatchGet(ctx, []tenantcap.TenantID{tenantID})
 	if err != nil {
 		return nil, err
 	}
@@ -135,8 +82,8 @@ func (p *Provider) CurrentTenantInfo(ctx context.Context, tenantID tenantcap.Ten
 	return result.Items[tenantID], nil
 }
 
-// BatchGetTenants returns visible tenant projections and opaque missing IDs.
-func (p *Provider) BatchGetTenants(
+// BatchGet returns visible tenant projections and opaque missing IDs.
+func (p *Provider) BatchGet(
 	ctx context.Context,
 	tenantIDs []tenantcap.TenantID,
 ) (*capmodel.BatchResult[*tenantcap.TenantInfo, tenantcap.TenantID], error) {
@@ -181,10 +128,10 @@ func (p *Provider) BatchGetTenants(
 	return result, nil
 }
 
-// SearchTenants returns bounded tenant candidates visible to the caller.
-func (p *Provider) SearchTenants(
+// List returns bounded tenant candidates visible to the caller.
+func (p *Provider) List(
 	ctx context.Context,
-	input tenantcap.SearchInput,
+	input tenantcap.ListInput,
 ) (*capmodel.PageResult[*tenantcap.TenantInfo], error) {
 	pageNum, pageSize := normalizeTenantSearchPage(input.Page)
 	tenantCols := dao.Tenant.Columns()
@@ -221,13 +168,13 @@ func (p *Provider) SearchTenants(
 	return &capmodel.PageResult[*tenantcap.TenantInfo]{Items: items, Total: total}, nil
 }
 
-// EnsureTenantsVisible validates that every tenant identifier is visible.
-func (p *Provider) EnsureTenantsVisible(ctx context.Context, tenantIDs []tenantcap.TenantID) error {
+// EnsureVisible validates that every tenant identifier is visible.
+func (p *Provider) EnsureVisible(ctx context.Context, tenantIDs []tenantcap.TenantID) error {
 	normalized := normalizeTenantIDs(tenantIDs)
 	if len(normalized) == 0 {
 		return nil
 	}
-	result, err := p.BatchGetTenants(ctx, normalized)
+	result, err := p.BatchGet(ctx, normalized)
 	if err != nil {
 		return err
 	}
@@ -265,12 +212,12 @@ func (p *Provider) ApplyUserTenantFilter(
 	return p.membershipSvc.ApplyUserTenantFilter(ctx, model, userIDColumn, tenantID)
 }
 
-// ListUserTenantProjections returns tenant ownership labels for visible users.
-func (p *Provider) ListUserTenantProjections(
+// ListUserTenantMemberships returns tenant ownership labels for visible users.
+func (p *Provider) ListUserTenantMemberships(
 	ctx context.Context,
 	userIDs []int,
-) (map[int]*tenantcap.UserTenantProjection, error) {
-	return p.membershipSvc.ListUserTenantProjections(ctx, userIDs)
+) (map[int]*tenantcap.TenantMembershipInfo, error) {
+	return p.membershipSvc.ListUserTenantMemberships(ctx, userIDs)
 }
 
 // ResolveUserTenantAssignment validates requested memberships and returns a host write plan.
@@ -328,15 +275,6 @@ func (p *Provider) ProvisionAutoEnabledTenantPlugins(ctx context.Context) error 
 	return nil
 }
 
-// userTenantInfoRow is the batch user-to-tenant projection row.
-type userTenantInfoRow struct {
-	UserID int    `json:"userId" orm:"user_id"`
-	ID     int64  `json:"id" orm:"id"`
-	Code   string `json:"code" orm:"code"`
-	Name   string `json:"name" orm:"name"`
-	Status string `json:"status" orm:"status"`
-}
-
 // toTenantInfo converts a plugin tenant row to the public capability DTO.
 func toTenantInfo(row *entity.Tenant) *tenantcap.TenantInfo {
 	if row == nil {
@@ -348,16 +286,6 @@ func toTenantInfo(row *entity.Tenant) *tenantcap.TenantInfo {
 		Name:   row.Name,
 		Status: row.Status,
 	}
-}
-
-// qualifiedProviderColumn returns an aliased table column expression.
-func qualifiedProviderColumn(tableAlias string, column string) string {
-	return tableAlias + "." + column
-}
-
-// providerSelectColumn returns a qualified column with a stable scan alias.
-func providerSelectColumn(tableAlias string, column string, scanAlias string) string {
-	return qualifiedProviderColumn(tableAlias, column) + " AS " + scanAlias
 }
 
 // normalizeTenantSearchPage applies provider-side tenant search bounds.
@@ -385,23 +313,6 @@ func normalizeTenantIDs(ids []tenantcap.TenantID) []tenantcap.TenantID {
 	seen := make(map[tenantcap.TenantID]struct{}, len(ids))
 	for _, id := range ids {
 		if id < tenantcap.PLATFORM {
-			continue
-		}
-		if _, ok := seen[id]; ok {
-			continue
-		}
-		seen[id] = struct{}{}
-		result = append(result, id)
-	}
-	return result
-}
-
-// normalizePositiveUserIDs removes duplicate positive user identifiers.
-func normalizePositiveUserIDs(ids []int) []int {
-	result := make([]int, 0, len(ids))
-	seen := make(map[int]struct{}, len(ids))
-	for _, id := range ids {
-		if id <= 0 {
 			continue
 		}
 		if _, ok := seen[id]; ok {

@@ -225,9 +225,11 @@ func collectAPIDocI18NFiles(t *testing.T, root string) []string {
 
 // apiDTOKey builds a stable API-relative key for a type declaration.
 func apiDTOKey(root string, file string, typeName string) string {
-	apiRoot := filepath.Join(root, "backend", "api")
-	rel := slashPath(apiRoot, file)
-	dir := strings.TrimSuffix(rel, "/"+filepath.Base(file))
+	var (
+		apiRoot = filepath.Join(root, "backend", "api")
+		rel     = slashPath(apiRoot, file)
+		dir     = strings.TrimSuffix(rel, "/"+filepath.Base(file))
+	)
 	return dir + "/" + typeName
 }
 

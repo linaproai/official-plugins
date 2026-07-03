@@ -52,7 +52,7 @@ func normalizeEnabled(value int) int {
 func normalizeCapabilityType(value string) string {
 	trimmed := strings.TrimSpace(strings.ToLower(value))
 	if trimmed == "" {
-		return CapabilityTypeText
+		return capabilityTypeText
 	}
 	return trimmed
 }
@@ -61,7 +61,7 @@ func normalizeCapabilityType(value string) string {
 func normalizeCapabilityMethod(value string) string {
 	trimmed := strings.TrimSpace(strings.ToLower(value))
 	if trimmed == "" {
-		return CapabilityMethodGenerate
+		return capabilityMethodGenerate
 	}
 	return trimmed
 }
@@ -69,16 +69,16 @@ func normalizeCapabilityMethod(value string) string {
 // normalizeProtocol returns a supported provider protocol or an empty string.
 func normalizeProtocol(value string) string {
 	switch strings.TrimSpace(strings.ToLower(value)) {
-	case ProtocolOpenAI:
-		return ProtocolOpenAI
-	case ProtocolAnthropic:
-		return ProtocolAnthropic
-	case ProtocolVoyage:
-		return ProtocolVoyage
-	case ProtocolOpenAICompatible:
-		return ProtocolOpenAICompatible
-	case ProtocolAnthropicCompatible:
-		return ProtocolAnthropicCompatible
+	case protocolOpenAI:
+		return protocolOpenAI
+	case protocolAnthropic:
+		return protocolAnthropic
+	case protocolVoyage:
+		return protocolVoyage
+	case protocolOpenAICompatible:
+		return protocolOpenAICompatible
+	case protocolAnthropicCompatible:
+		return protocolAnthropicCompatible
 	default:
 		return ""
 	}
@@ -105,12 +105,12 @@ func providerRequestModelName(modelName string) string {
 // normalizeTierCode returns one fixed tier code or an empty string.
 func normalizeTierCode(value string) string {
 	switch strings.TrimSpace(strings.ToLower(value)) {
-	case TierCodeBasic:
-		return TierCodeBasic
-	case TierCodeStandard:
-		return TierCodeStandard
-	case TierCodeAdvanced:
-		return TierCodeAdvanced
+	case tierCodeBasic:
+		return tierCodeBasic
+	case tierCodeStandard:
+		return tierCodeStandard
+	case tierCodeAdvanced:
+		return tierCodeAdvanced
 	default:
 		return ""
 	}
@@ -169,23 +169,6 @@ func splitEfforts(value string) []string {
 	return out
 }
 
-// effortSupported reports whether effort is supported by the model method capability declaration.
-func effortSupported(capability *entity.ModelCapability, effort string) bool {
-	normalized, err := normalizeEffort(effort)
-	if err != nil || normalized == "" {
-		return err == nil
-	}
-	if capability == nil || capability.SupportsThinking != enabledYes {
-		return false
-	}
-	for _, supported := range splitEfforts(capability.SupportedEfforts) {
-		if supported == normalized {
-			return true
-		}
-	}
-	return false
-}
-
 // maskSecretRef returns a stable masked projection of a secret reference.
 func maskSecretRef(value string) string {
 	trimmed := strings.TrimSpace(value)
@@ -223,9 +206,11 @@ func sanitizeErrorSummary(err error) string {
 
 // sanitizeText masks sensitive text and truncates it to maxLen runes.
 func sanitizeText(value string, maxLen int) string {
-	text := strings.TrimSpace(value)
-	replacements := []string{"authorization", "api-key", "apikey", "bearer", "sk-"}
-	lower := strings.ToLower(text)
+	var (
+		text         = strings.TrimSpace(value)
+		replacements = []string{"authorization", "api-key", "apikey", "bearer", "sk-"}
+		lower        = strings.ToLower(text)
+	)
 	for _, marker := range replacements {
 		if strings.Contains(lower, marker) {
 			text = "[redacted sensitive provider error]"

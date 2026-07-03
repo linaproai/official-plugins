@@ -10,7 +10,7 @@ import (
 	"lina-core/pkg/plugin/capability/apidoccap"
 	"lina-core/pkg/plugin/capability/dictcap"
 	"lina-core/pkg/plugin/capability/i18ncap"
-	"lina-core/pkg/plugin/capability/tenantcap/tenantspi"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	entitymodel "lina-plugin-linapro-monitor-operlog/backend/internal/model/entity"
 	"lina-plugin-linapro-monitor-operlog/backend/internal/model/operlogtype"
 )
@@ -47,9 +47,9 @@ const (
 // Operation-log export limit and dictionary constants.
 const (
 	pluginID           = "linapro-monitor-operlog"
-	MaxExportRows      = 10000
-	DictTypeOperType   = "sys_oper_type"
-	DictTypeOperStatus = "sys_oper_status"
+	maxExportRows      = 10000
+	dictTypeOperType   = "sys_oper_type"
+	dictTypeOperStatus = "sys_oper_status"
 )
 
 // Operation status values stored in plugin_linapro_monitor_operlog.
@@ -76,7 +76,7 @@ type Service interface {
 	// returns the affected row count; rows outside data scope are ignored.
 	DeleteByIds(ctx context.Context, ids []int) (int, error)
 	// Export generates an Excel workbook for tenant-visible operation logs using
-	// apidoc/runtime i18n and dictionary fallbacks. It caps output at MaxExportRows.
+	// apidoc/runtime i18n and dictionary fallbacks. It caps output at the plugin export row limit.
 	Export(ctx context.Context, in ExportInput) (data []byte, err error)
 }
 
@@ -85,10 +85,10 @@ var _ Service = (*serviceImpl)(nil)
 
 // serviceImpl implements Service.
 type serviceImpl struct {
-	apiDocSvc    apidoccap.Service                  // host apidoc translation service
-	dictSvc      dictcap.Service                    // host dictionary-domain label projection service
-	i18nSvc      i18ncap.Service                    // host runtime translation service
-	tenantFilter tenantspi.PluginTableFilterService // tenantFilter constrains plugin-owned operation-log rows.
+	apiDocSvc apidoccap.Service // host apidoc translation service
+	dictSvc   dictcap.Service   // host dictionary-domain label projection service
+	i18nSvc   i18ncap.Service   // host runtime translation service
+	tenantSvc tenantcap.Service // tenantSvc provides tenant context and plugin table filtering.
 }
 
 // New creates and returns a new linapro-monitor-operlog service instance.
@@ -96,14 +96,22 @@ func New(
 	apiDocSvc apidoccap.Service,
 	dictSvc dictcap.Service,
 	i18nSvc i18ncap.Service,
-	tenantFilter tenantspi.PluginTableFilterService,
+	tenantSvc tenantcap.Service,
 ) Service {
 	return &serviceImpl{
-		apiDocSvc:    apiDocSvc,
-		dictSvc:      dictSvc,
-		i18nSvc:      i18nSvc,
-		tenantFilter: tenantFilter,
+		apiDocSvc: apiDocSvc,
+		dictSvc:   dictSvc,
+		i18nSvc:   i18nSvc,
+		tenantSvc: tenantSvc,
 	}
+}
+
+// pluginTableFilter returns the tenant table-filter slice from the injected tenant service.
+func (s *serviceImpl) pluginTableFilter() tenantcap.FilterService {
+	if s == nil || s.tenantSvc == nil {
+		return nil
+	}
+	return s.tenantSvc.Filter()
 }
 
 // OperLogEntity mirrors the plugin-local generated plugin_linapro_monitor_operlog entity.

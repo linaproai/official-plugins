@@ -16,36 +16,36 @@ import (
 )
 
 const (
-	// CapabilityTypeText identifies the first supported AI capability family.
-	CapabilityTypeText = string(aitext.CapabilityTypeText)
-	// CapabilityMethodGenerate identifies synchronous text generation.
-	CapabilityMethodGenerate = string(aitext.CapabilityMethodGenerate)
-	// ProtocolOpenAI identifies the OpenAI-compatible adapter.
-	ProtocolOpenAI = "openai"
-	// ProtocolAnthropic identifies the Anthropic-compatible adapter.
-	ProtocolAnthropic = "anthropic"
-	// ProtocolVoyage identifies the Voyage-compatible adapter.
-	ProtocolVoyage = "voyage"
-	// ProtocolOpenAICompatible identifies a generic OpenAI-compatible adapter.
-	ProtocolOpenAICompatible = "openai-compatible"
-	// ProtocolAnthropicCompatible identifies a generic Anthropic-compatible adapter.
-	ProtocolAnthropicCompatible = "anthropic-compatible"
+	// capabilityTypeText identifies the first supported AI capability family.
+	capabilityTypeText = string(aitext.CapabilityTypeText)
+	// capabilityMethodGenerate identifies synchronous text generation.
+	capabilityMethodGenerate = string(aitext.CapabilityMethodGenerate)
+	// protocolOpenAI identifies the OpenAI-compatible adapter.
+	protocolOpenAI = "openai"
+	// protocolAnthropic identifies the Anthropic-compatible adapter.
+	protocolAnthropic = "anthropic"
+	// protocolVoyage identifies the Voyage-compatible adapter.
+	protocolVoyage = "voyage"
+	// protocolOpenAICompatible identifies a generic OpenAI-compatible adapter.
+	protocolOpenAICompatible = "openai-compatible"
+	// protocolAnthropicCompatible identifies a generic Anthropic-compatible adapter.
+	protocolAnthropicCompatible = "anthropic-compatible"
 	// ModelSourceManual identifies a manually maintained model row.
 	ModelSourceManual = "manual"
-	// ModelSourceAPI identifies a model row imported from a provider API.
-	ModelSourceAPI = "api"
-	// TierCodeBasic identifies the basic text AI tier.
-	TierCodeBasic = string(aitext.TierBasic)
-	// TierCodeStandard identifies the standard text AI tier.
-	TierCodeStandard = string(aitext.TierStandard)
-	// TierCodeAdvanced identifies the advanced text AI tier.
-	TierCodeAdvanced = string(aitext.TierAdvanced)
-	// InvocationStatusSuccess identifies a successful AI invocation.
-	InvocationStatusSuccess = "success"
-	// InvocationStatusFailed identifies a failed AI invocation.
-	InvocationStatusFailed = "failed"
-	// InvocationPurposeTierTest identifies invocation logs emitted by tier tests.
-	InvocationPurposeTierTest = "linapro-ai-core.tier.test"
+	// modelSourceAPI identifies a model row imported from a provider API.
+	modelSourceAPI = "api"
+	// tierCodeBasic identifies the basic text AI tier.
+	tierCodeBasic = string(aitext.TierBasic)
+	// tierCodeStandard identifies the standard text AI tier.
+	tierCodeStandard = string(aitext.TierStandard)
+	// tierCodeAdvanced identifies the advanced text AI tier.
+	tierCodeAdvanced = string(aitext.TierAdvanced)
+	// invocationStatusSuccess identifies a successful AI invocation.
+	invocationStatusSuccess = "success"
+	// invocationStatusFailed identifies a failed AI invocation.
+	invocationStatusFailed = "failed"
+	// invocationPurposeTierTest identifies invocation logs emitted by tier tests.
+	invocationPurposeTierTest = "linapro-ai-core.tier.test"
 )
 
 const (
@@ -56,26 +56,15 @@ const (
 	enabledYes             = 1
 	enabledNo              = 0
 	tierCacheTTL           = 30 * time.Second
-	tierCacheNamespace     = "tier-binding"
-	tierCacheRevisionKey   = "revision"
-	tierTestTimeout        = 60 * time.Second
+	// tierCacheRevisionTTL keeps cross-instance invalidation visible longer than any local tier cache entry.
+	tierCacheRevisionTTL = 10 * tierCacheTTL
+	tierCacheNamespace   = "tier-binding"
+	tierCacheRevisionKey = "revision"
+	tierTestTimeout      = 60 * time.Second
 )
 
-// Service aggregates Smart Center management, text-generation, and tier-cache
-// operations while keeping each functional contract separately named.
+// Service defines Smart Center management, text-generation, and lifecycle cleanup operations.
 type Service interface {
-	ProviderService
-	ProviderEndpointService
-	ModelService
-	ModelCapabilityService
-	TierService
-	InvocationService
-	TextGenerationService
-	TierCacheService
-}
-
-// ProviderService defines provider metadata management operations.
-type ProviderService interface {
 	// ListProviders returns a platform-only paged provider list with model counts
 	// assembled in one batch query. It returns business errors for non-platform contexts.
 	ListProviders(ctx context.Context, in ProviderListInput) (*ProviderListOutput, error)
@@ -91,10 +80,7 @@ type ProviderService interface {
 	// DeleteProvider soft-deletes one provider and its unreferenced models after
 	// verifying no active tier binding references that provider.
 	DeleteProvider(ctx context.Context, id int64) error
-}
 
-// ProviderEndpointService defines provider protocol endpoint management operations.
-type ProviderEndpointService interface {
 	// ListProviderEndpoints returns provider protocol endpoints using bounded provider-scoped queries.
 	ListProviderEndpoints(ctx context.Context, in ProviderEndpointListInput) ([]*ProviderEndpointItem, error)
 	// CreateProviderEndpoint creates one provider protocol endpoint without returning secret plaintext.
@@ -103,10 +89,7 @@ type ProviderEndpointService interface {
 	UpdateProviderEndpoint(ctx context.Context, in ProviderEndpointSaveInput) error
 	// DeleteProviderEndpoint soft-deletes one endpoint after verifying model references.
 	DeleteProviderEndpoint(ctx context.Context, providerID int64, id int64) error
-}
 
-// ModelService defines provider-owned model identity and synchronization operations.
-type ModelService interface {
 	// ListModels returns one bounded provider-owned model page using database-side filters.
 	ListModels(ctx context.Context, in ModelListInput) (*ModelListOutput, error)
 	// ListAllModels returns one bounded platform model page with provider and endpoint
@@ -122,18 +105,12 @@ type ModelService interface {
 	// SyncModels imports public model metadata from enabled provider endpoints.
 	// Endpoint failures are tolerated when at least one endpoint returns models.
 	SyncModels(ctx context.Context, in ModelSyncInput) (*ModelSyncOutput, error)
-}
 
-// ModelCapabilityService defines explicit model method capability metadata operations.
-type ModelCapabilityService interface {
 	// ListModelCapabilities returns explicit method capability declarations for one model.
 	ListModelCapabilities(ctx context.Context, modelID int64) ([]*ModelCapabilityItem, error)
 	// UpsertModelCapabilities replaces explicit method capability declarations for one model.
 	UpsertModelCapabilities(ctx context.Context, modelID int64, items []ModelCapabilitySaveInput) error
-}
 
-// TierService defines fixed AI tier management and saved or draft tier test operations.
-type TierService interface {
 	// ListTiers returns the fixed AI tier list for one capability method with primary binding
 	// projections assembled through batch queries.
 	ListTiers(ctx context.Context, capabilityType string, capabilityMethod string) ([]*TierItem, error)
@@ -143,10 +120,7 @@ type TierService interface {
 	// TestTier executes a lightweight test against a saved or draft tier binding
 	// without persisting draft binding changes.
 	TestTier(ctx context.Context, in TierTestInput) (*TierTestOutput, error)
-}
 
-// InvocationService defines invocation and provider-operation observation operations.
-type InvocationService interface {
 	// ListInvocations returns masked AI invocation logs with database-side
 	// filtering, sorting, and pagination.
 	ListInvocations(ctx context.Context, in InvocationListInput) (*InvocationListOutput, error)
@@ -161,20 +135,10 @@ type InvocationService interface {
 	ListProviderOperations(ctx context.Context, in ProviderOperationListInput) (*ProviderOperationListOutput, error)
 	// GetProviderOperation returns one provider operation projection by opaque reference.
 	GetProviderOperation(ctx context.Context, operationRef string) (*ProviderOperationItem, error)
-}
 
-// TextGenerationService defines the framework-facing text AI provider operation.
-type TextGenerationService interface {
 	// GenerateText executes one framework text AI request through the resolved
 	// tier binding, provider protocol adapter, and masked invocation logging.
 	GenerateText(ctx context.Context, request aitext.ProviderRequest) (*aitext.GenerateResponse, error)
-}
-
-// TierCacheService defines explicit tier cache invalidation operations.
-type TierCacheService interface {
-	// InvalidateTierCache publishes a shared tier-cache revision and removes
-	// local tier bindings after successful provider, model, tier, or binding mutations.
-	InvalidateTierCache(ctx context.Context, capabilityType string, capabilityMethod string, tierCode string) error
 }
 
 // ProviderListInput defines provider list filters.

@@ -11,10 +11,15 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 
+	"lina-core/pkg/plugin/capability/cachecap"
+	"lina-core/pkg/plugin/capability/lockcap"
+	"lina-core/pkg/plugin/capability/manifestcap"
 	"lina-core/pkg/plugin/capability/storagecap"
+	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/pluginbridge/protocol"
 )
 
@@ -30,7 +35,7 @@ const (
 	hostCallDemoDataTable           = demoRecordTable
 	hostCallDemoRecordTitlePrefix   = "Host call demo"
 	hostCallDemoAnonymousUser       = "anonymous"
-	hostCallDemoSummaryMessage      = "Host service demo executed through runtime, storage, network, data, plugins.config.get, manifest, hostConfig, org, and tenant services."
+	hostCallDemoSummaryMessage      = "Host service demo executed through runtime, storage, network, data, plugins.config.get, manifest batch/list, hostConfig, bizctx, cache, lock, org, and tenant services."
 	hostCallDemoNetworkPreview      = 120
 	hostCallDemoPluginGreetingKey   = "demo.greeting"
 	hostCallDemoPluginFeatureKey    = "demo.featureEnabled"
@@ -39,6 +44,11 @@ const (
 	hostCallDemoWorkspaceKey        = "workspace.basePath"
 	hostCallDemoI18nDefaultKey      = "i18n.default"
 	hostCallDemoI18nEnabledKey      = "i18n.enabled"
+	hostCallDemoCacheNamespace      = "host-call-demo-cache"
+	hostCallDemoCacheTTL            = time.Minute
+	hostCallDemoCacheExpireTTL      = 2 * time.Minute
+	hostCallDemoLockName            = "host-call-demo-lock"
+	hostCallDemoLockLease           = 5 * time.Second
 )
 
 // BuildHostCallDemoPayload executes the host service demo and returns the
@@ -89,6 +99,18 @@ func (s *serviceImpl) BuildHostCallDemoPayload(ctx context.Context, input *HostC
 	if err != nil {
 		return nil, err
 	}
+	bizCtxSummary, err := s.runHostCallDemoBizCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	cacheSummary, err := s.runHostCallDemoCache(ctx, uuidValue)
+	if err != nil {
+		return nil, err
+	}
+	lockSummary, err := s.runHostCallDemoLock(ctx)
+	if err != nil {
+		return nil, err
+	}
 	orgSummary, err := s.runHostCallDemoOrg(ctx, input)
 	if err != nil {
 		return nil, err
@@ -112,6 +134,9 @@ func (s *serviceImpl) BuildHostCallDemoPayload(ctx context.Context, input *HostC
 		Data:     *dataSummary,
 		Config:   *configSummary,
 		Manifest: *manifestSummary,
+		BizCtx:   *bizCtxSummary,
+		Cache:    *cacheSummary,
+		Lock:     *lockSummary,
 		Org:      *orgSummary,
 		Tenant:   *tenantSummary,
 		Message:  hostCallDemoSummaryMessage,
@@ -196,7 +221,15 @@ func (s *serviceImpl) runHostCallDemoStorage(
 	if err != nil {
 		return nil, err
 	}
-	if err = s.storageSvc.Delete(ctx, storagecap.DeleteInput{Path: objectPath}); err != nil {
+	cursorOutput, err := s.storageSvc.ListCursor(ctx, storagecap.ListCursorInput{Prefix: hostCallDemoStoragePrefix, Limit: 10})
+	if err != nil {
+		return nil, err
+	}
+	batchStatOutput, err := s.storageSvc.BatchStat(ctx, storagecap.BatchStatInput{Paths: []string{objectPath}})
+	if err != nil {
+		return nil, err
+	}
+	if err = s.storageSvc.DeleteMany(ctx, storagecap.DeleteManyInput{Paths: []string{objectPath}}); err != nil {
 		return nil, err
 	}
 	deleted = true
@@ -209,12 +242,26 @@ func (s *serviceImpl) runHostCallDemoStorage(
 	if listOutput != nil {
 		listedCount = len(listOutput.Objects)
 	}
+	cursorListedCount := 0
+	if cursorOutput != nil {
+		cursorListedCount = len(cursorOutput.Objects)
+	}
+	batchStatCount := 0
+	batchStatMissingCount := 0
+	if batchStatOutput != nil {
+		batchStatCount = len(batchStatOutput.Objects)
+		batchStatMissingCount = len(batchStatOutput.MissingPaths)
+	}
 	return &hostCallDemoStoragePayload{
-		PathPrefix:  hostCallDemoStoragePath,
-		ObjectPath:  objectPath,
-		Stored:      true,
-		ListedCount: listedCount,
-		Deleted:     statOutput == nil || !statOutput.Found,
+		PathPrefix:            hostCallDemoStoragePath,
+		ObjectPath:            objectPath,
+		Stored:                true,
+		ListedCount:           listedCount,
+		CursorListedCount:     cursorListedCount,
+		BatchStatCount:        batchStatCount,
+		BatchStatMissingCount: batchStatMissingCount,
+		BatchDeleted:          true,
+		Deleted:               statOutput == nil || !statOutput.Found,
 	}, nil
 }
 
@@ -336,26 +383,30 @@ func (s *serviceImpl) runHostCallDemoNetwork(input *HostCallDemoInput, demoKey s
 // runHostCallDemoConfig demonstrates reading plugin-owned config and
 // whitelisted public host config through dynamic-plugin host services.
 func (s *serviceImpl) runHostCallDemoConfig(ctx context.Context) (*hostCallDemoConfigPayload, error) {
-	if s.pluginConfigSvc == nil {
+	if s.pluginsSvc == nil {
+		return nil, gerror.New("plugin service is unavailable")
+	}
+	configSvc := s.pluginsSvc.Config()
+	if configSvc == nil {
 		return nil, gerror.New("plugin config service is unavailable")
 	}
 	if s.hostConfigSvc == nil {
 		return nil, gerror.New("hostConfig service is unavailable")
 	}
 
-	greetingFound, err := s.pluginConfigSvc.Exists(ctx, hostCallDemoPluginGreetingKey)
+	greetingFound, err := configSvc.Exists(ctx, hostCallDemoPluginGreetingKey)
 	if err != nil {
 		return nil, err
 	}
-	greeting, err := s.pluginConfigSvc.String(ctx, hostCallDemoPluginGreetingKey, "")
+	greeting, err := configSvc.String(ctx, hostCallDemoPluginGreetingKey, "")
 	if err != nil {
 		return nil, err
 	}
-	featureEnabledFound, err := s.pluginConfigSvc.Exists(ctx, hostCallDemoPluginFeatureKey)
+	featureEnabledFound, err := configSvc.Exists(ctx, hostCallDemoPluginFeatureKey)
 	if err != nil {
 		return nil, err
 	}
-	featureEnabled, err := s.pluginConfigSvc.Bool(ctx, hostCallDemoPluginFeatureKey, false)
+	featureEnabled, err := configSvc.Bool(ctx, hostCallDemoPluginFeatureKey, false)
 	if err != nil {
 		return nil, err
 	}
@@ -423,6 +474,26 @@ func (s *serviceImpl) runHostCallDemoManifest(ctx context.Context) (*hostCallDem
 		return nil, err
 	}
 	configFound := len(configContent) > 0
+	getManyOutput, err := s.manifestSvc.GetMany(ctx, manifestcap.GetManyInput{
+		Paths: []string{hostCallDemoManifestProfilePath, hostCallDemoManifestConfigPath},
+	})
+	if err != nil {
+		return nil, err
+	}
+	listOutput, err := s.manifestSvc.List(ctx, manifestcap.ListInput{Prefix: "config/", Limit: 10})
+	if err != nil {
+		return nil, err
+	}
+	batchReadCount := 0
+	missingPathCount := 0
+	if getManyOutput != nil {
+		batchReadCount = len(getManyOutput.Resources)
+		missingPathCount = len(getManyOutput.MissingPaths)
+	}
+	listedCount := 0
+	if listOutput != nil {
+		listedCount = len(listOutput.Resources)
+	}
 
 	return &hostCallDemoManifestPayload{
 		ProfilePath:       hostCallDemoManifestProfilePath,
@@ -433,7 +504,186 @@ func (s *serviceImpl) runHostCallDemoManifest(ctx context.Context) (*hostCallDem
 		ConfigPath:        hostCallDemoManifestConfigPath,
 		ConfigFound:       configFound,
 		ConfigBodyPreview: buildHostCallDemoBodyPreview(configContent),
+		BatchReadCount:    batchReadCount,
+		MissingPathCount:  missingPathCount,
+		ListedCount:       listedCount,
 	}, nil
+}
+
+// runHostCallDemoBizCtx demonstrates read-only request business context access.
+func (s *serviceImpl) runHostCallDemoBizCtx(ctx context.Context) (*hostCallDemoBizCtxPayload, error) {
+	if s.bizCtxSvc == nil {
+		return nil, gerror.New("bizctx host service is unavailable")
+	}
+
+	current := s.bizCtxSvc.Current(ctx)
+	return &hostCallDemoBizCtxPayload{
+		UserID:          current.UserID,
+		Username:        current.Username,
+		TenantID:        current.TenantID,
+		PermissionCount: len(current.Permissions),
+		IsSuperAdmin:    current.IsSuperAdmin,
+		PlatformBypass:  current.PlatformBypass,
+		ActingAsTenant:  current.ActingAsTenant,
+	}, nil
+}
+
+// runHostCallDemoCache demonstrates plugin-scoped cache read, write, batch,
+// increment, expiration, and deletion operations.
+func (s *serviceImpl) runHostCallDemoCache(
+	ctx context.Context,
+	demoKey string,
+) (payload *hostCallDemoCachePayload, err error) {
+	if s.cacheSvc == nil {
+		return nil, gerror.New("cache host service is unavailable")
+	}
+
+	var (
+		valueKey   = "value-" + demoKey
+		batchKeyA  = "batch-" + demoKey + "-a"
+		batchKeyB  = "batch-" + demoKey + "-b"
+		deleteKey  = "delete-" + demoKey
+		counterKey = "counter-" + demoKey
+		allKeys    = []string{valueKey, batchKeyA, batchKeyB, deleteKey, counterKey}
+	)
+	defer func() {
+		if cleanupErr := s.cacheSvc.DeleteMany(ctx, cachecap.DeleteManyInput{
+			Namespace: hostCallDemoCacheNamespace,
+			Keys:      allKeys,
+		}); cleanupErr != nil && err == nil {
+			err = cleanupErr
+		}
+	}()
+
+	if _, err = s.cacheSvc.Set(ctx, hostCallDemoCacheNamespace, valueKey, "value-"+demoKey, hostCallDemoCacheTTL); err != nil {
+		return nil, err
+	}
+	if _, err = s.cacheSvc.Set(ctx, hostCallDemoCacheNamespace, deleteKey, "delete-me", hostCallDemoCacheTTL); err != nil {
+		return nil, err
+	}
+	if err = s.cacheSvc.Delete(ctx, hostCallDemoCacheNamespace, deleteKey); err != nil {
+		return nil, err
+	}
+	setManyOutput, err := s.cacheSvc.SetMany(ctx, cachecap.SetManyInput{
+		Namespace: hostCallDemoCacheNamespace,
+		Items: []cachecap.SetManyItem{
+			{Key: batchKeyA, Value: "batch-a", TTL: hostCallDemoCacheTTL},
+			{Key: batchKeyB, Value: "batch-b", TTL: hostCallDemoCacheTTL},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	valueItem, found, err := s.cacheSvc.Get(ctx, hostCallDemoCacheNamespace, valueKey)
+	if err != nil {
+		return nil, err
+	}
+	getManyOutput, err := s.cacheSvc.GetMany(ctx, cachecap.GetManyInput{
+		Namespace: hostCallDemoCacheNamespace,
+		Keys:      []string{valueKey, batchKeyA, batchKeyB, "missing-" + demoKey},
+	})
+	if err != nil {
+		return nil, err
+	}
+	counterItem, err := s.cacheSvc.Incr(ctx, hostCallDemoCacheNamespace, counterKey, 2, hostCallDemoCacheTTL)
+	if err != nil {
+		return nil, err
+	}
+	expireUpdated, _, err := s.cacheSvc.Expire(ctx, hostCallDemoCacheNamespace, valueKey, hostCallDemoCacheExpireTTL)
+	if err != nil {
+		return nil, err
+	}
+	if err = s.cacheSvc.DeleteMany(ctx, cachecap.DeleteManyInput{
+		Namespace: hostCallDemoCacheNamespace,
+		Keys:      []string{valueKey, batchKeyA, batchKeyB, counterKey},
+	}); err != nil {
+		return nil, err
+	}
+	_, foundAfterDelete, err := s.cacheSvc.Get(ctx, hostCallDemoCacheNamespace, valueKey)
+	if err != nil {
+		return nil, err
+	}
+
+	batchSetCount := 0
+	if setManyOutput != nil {
+		batchSetCount = len(setManyOutput.Items)
+	}
+	batchReadCount := 0
+	missingCount := 0
+	if getManyOutput != nil {
+		batchReadCount = len(getManyOutput.Items)
+		missingCount = len(getManyOutput.MissingKeys)
+	}
+	valueKind := 0
+	if valueItem != nil {
+		valueKind = valueItem.ValueKind
+	}
+	incrementedValue := int64(0)
+	if counterItem != nil {
+		incrementedValue = counterItem.IntValue
+	}
+	return &hostCallDemoCachePayload{
+		Namespace:        hostCallDemoCacheNamespace,
+		ValueKind:        valueKind,
+		SingleFound:      found,
+		BatchSetCount:    batchSetCount,
+		BatchReadCount:   batchReadCount,
+		MissingCount:     missingCount,
+		IncrementedValue: incrementedValue,
+		ExpireUpdated:    expireUpdated,
+		Deleted:          !foundAfterDelete,
+	}, nil
+}
+
+// runHostCallDemoLock demonstrates plugin-scoped lock acquire, renew, and release.
+func (s *serviceImpl) runHostCallDemoLock(ctx context.Context) (payload *hostCallDemoLockPayload, err error) {
+	if s.lockSvc == nil {
+		return nil, gerror.New("lock host service is unavailable")
+	}
+
+	acquireOutput, err := s.lockSvc.Acquire(ctx, lockcap.AcquireInput{
+		Name:  hostCallDemoLockName,
+		Lease: hostCallDemoLockLease,
+	})
+	if err != nil {
+		return nil, err
+	}
+	payload = &hostCallDemoLockPayload{Name: hostCallDemoLockName}
+	if acquireOutput == nil || !acquireOutput.Acquired {
+		return payload, nil
+	}
+	payload.Acquired = true
+	payload.TicketIssued = strings.TrimSpace(acquireOutput.Ticket) != ""
+
+	released := false
+	defer func() {
+		if !released && acquireOutput.Ticket != "" {
+			if cleanupErr := s.lockSvc.Release(ctx, lockcap.ReleaseInput{
+				Name:   hostCallDemoLockName,
+				Ticket: acquireOutput.Ticket,
+			}); cleanupErr != nil && err == nil {
+				err = cleanupErr
+			}
+		}
+	}()
+
+	renewOutput, err := s.lockSvc.Renew(ctx, lockcap.RenewInput{
+		Name:   hostCallDemoLockName,
+		Ticket: acquireOutput.Ticket,
+	})
+	if err != nil {
+		return nil, err
+	}
+	payload.Renewed = renewOutput != nil
+	if err = s.lockSvc.Release(ctx, lockcap.ReleaseInput{
+		Name:   hostCallDemoLockName,
+		Ticket: acquireOutput.Ticket,
+	}); err != nil {
+		return nil, err
+	}
+	released = true
+	payload.Released = true
+	return payload, nil
 }
 
 // runHostCallDemoOrg demonstrates read-only organization capability calls
@@ -457,19 +707,19 @@ func (s *serviceImpl) runHostCallDemoOrg(ctx context.Context, input *HostCallDem
 		return payload, nil
 	}
 
-	assignments, err := s.orgSvc.ListUserDeptAssignments(ctx, []int{userID})
+	assignments, err := s.orgSvc.Assignment().BatchListByUsers(ctx, []int{userID})
 	if err != nil {
 		return nil, err
 	}
 	payload.AssignmentCount = len(assignments)
 
-	deptIDs, err := s.orgSvc.GetUserDeptIDs(ctx, userID)
+	deptIDs, err := s.orgSvc.Assignment().GetUserDeptIDs(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 	payload.CurrentUserDeptCount = len(deptIDs)
 
-	postIDs, err := s.orgSvc.GetUserPostIDs(ctx, userID)
+	postIDs, err := s.orgSvc.Assignment().GetUserPostIDs(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -484,12 +734,14 @@ func (s *serviceImpl) runHostCallDemoTenant(ctx context.Context, input *HostCall
 		return nil, gerror.New("tenant host service is unavailable")
 	}
 
-	status := s.tenantSvc.Status(ctx)
-	available := s.tenantSvc.Available(ctx)
-	currentTenantID := s.tenantSvc.Current(ctx)
-	platformBypass := s.tenantSvc.PlatformBypass(ctx)
+	var (
+		status          = s.tenantSvc.Status(ctx)
+		available       = s.tenantSvc.Available(ctx)
+		currentTenantID = s.tenantSvc.Context().Current(ctx)
+		platformBypass  = s.tenantSvc.Context().PlatformBypass(ctx)
+	)
 	var err error
-	if err = s.tenantSvc.EnsureTenantVisible(ctx, currentTenantID); err != nil {
+	if err = s.tenantSvc.Directory().EnsureVisible(ctx, []tenantcap.TenantID{currentTenantID}); err != nil {
 		return nil, err
 	}
 
@@ -507,7 +759,7 @@ func (s *serviceImpl) runHostCallDemoTenant(ctx context.Context, input *HostCall
 		return payload, nil
 	}
 
-	tenants, err := s.tenantSvc.ListUserTenants(ctx, userID)
+	tenants, err := s.tenantSvc.Membership().ListByUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -530,14 +782,6 @@ func hostCallDemoRequestID(input *HostCallDemoInput) string {
 		return ""
 	}
 	return strings.TrimSpace(input.RequestID)
-}
-
-// hostCallDemoRoutePath returns the normalized route path from the input.
-func hostCallDemoRoutePath(input *HostCallDemoInput) string {
-	if input == nil {
-		return ""
-	}
-	return strings.TrimSpace(input.RoutePath)
 }
 
 // hostCallDemoUserID returns the authenticated user identifier from the input.

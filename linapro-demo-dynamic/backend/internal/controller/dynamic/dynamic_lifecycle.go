@@ -13,10 +13,6 @@ import (
 	"lina-core/pkg/plugin/pluginbridge/protocol"
 )
 
-// BeforeInstallTimeoutMs demonstrates a code-owned lifecycle timeout override
-// for the dynamic plugin builder.
-const BeforeInstallTimeoutMs = 120000
-
 // BeforeInstall logs the dynamic plugin install precondition.
 func (c *Controller) BeforeInstall(ctx context.Context, req *v1.BeforeInstallReq) (*v1.LifecycleDecisionRes, error) {
 	return c.runLifecycleDebugHook(ctx, req)

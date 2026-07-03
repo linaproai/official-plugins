@@ -17,14 +17,14 @@ import (
 
 // List returns tenant-controllable plugins with current tenant enablement.
 func (s *serviceImpl) List(ctx context.Context) (*ListOutput, error) {
-	tenantID, err := s.requireTenantID(ctx)
+	_, err := s.requireTenantID(ctx)
 	if err != nil {
 		return nil, err
 	}
 	if err = s.requirePlugincap(); err != nil {
 		return nil, err
 	}
-	out, err := s.plugins.ListTenantPlugins(ctx, s.capabilityContext(ctx, tenantID, "tenant_plugin.list"), plugincap.TenantListInput{})
+	out, err := s.plugins.Registry().ListTenantPlugins(ctx, plugincap.TenantListInput{})
 	if err != nil {
 		return nil, err
 	}
@@ -50,25 +50,29 @@ func (s *serviceImpl) SetEnabled(ctx context.Context, pluginID string, enabled b
 	if err = s.requirePlugincap(); err != nil {
 		return err
 	}
+	if err = s.requirePluginGovernance(); err != nil {
+		return err
+	}
+	pluginGovernance := s.tenantSvc.Plugins()
 	normalizedPluginID := strings.TrimSpace(pluginID)
 	if normalizedPluginID == "" {
 		return bizerr.NewCode(CodePluginNotFound)
 	}
-	if !enabled && s.pluginLifecycleSvc != nil {
-		if err = s.pluginLifecycleSvc.EnsureTenantPluginDisableAllowed(ctx, normalizedPluginID, int(tenantID)); err != nil {
+	lifecycleSvc := s.plugins.Lifecycle()
+	if !enabled && lifecycleSvc != nil {
+		if err = lifecycleSvc.EnsureTenantPluginDisableAllowed(ctx, normalizedPluginID, int(tenantID)); err != nil {
 			return err
 		}
 	}
-	if err = s.pluginAdmin.SetEnabled(
+	if err = pluginGovernance.SetTenantPluginEnabled(
 		ctx,
-		s.capabilityContext(ctx, tenantID, "tenant_plugin.set_enabled"),
 		plugincap.PluginID(normalizedPluginID),
 		enabled,
 	); err != nil {
 		return err
 	}
-	if !enabled && s.pluginLifecycleSvc != nil {
-		s.pluginLifecycleSvc.NotifyTenantPluginDisabled(ctx, normalizedPluginID, int(tenantID))
+	if !enabled && lifecycleSvc != nil {
+		lifecycleSvc.NotifyTenantPluginDisabled(ctx, normalizedPluginID, int(tenantID))
 	}
 	return nil
 }
@@ -83,9 +87,12 @@ func (s *serviceImpl) ProvisionForTenant(ctx context.Context, tenantID int64) er
 	if err := s.requirePlugincap(); err != nil {
 		return err
 	}
-	return s.pluginAdmin.ProvisionTenantDefaults(
+	if err := s.requirePluginGovernance(); err != nil {
+		return err
+	}
+	pluginGovernance := s.tenantSvc.Plugins()
+	return pluginGovernance.ProvisionTenantPluginDefaults(
 		ctx,
-		s.capabilityContext(ctx, tenantID, "tenant_plugin.provision"),
 		plugincapTenantID(tenantID),
 	)
 }
@@ -101,7 +108,7 @@ func (s *serviceImpl) requireTenantID(ctx context.Context) (int64, error) {
 }
 
 // pluginEntity converts plugincap's tenant projection into this plugin's API shape.
-func pluginEntity(row *plugincap.TenantProjection) *Entity {
+func pluginEntity(row *plugincap.TenantPluginInfo) *Entity {
 	if row == nil {
 		return nil
 	}
@@ -109,12 +116,12 @@ func pluginEntity(row *plugincap.TenantProjection) *Entity {
 		Id:            string(row.ID),
 		Name:          row.Name,
 		Version:       row.Version,
-		Type:          row.Type,
+		Type:          string(row.Type),
 		Description:   row.Description,
 		Installed:     boolInt(row.Installed),
 		Enabled:       boolInt(row.Enabled),
-		ScopeNature:   row.ScopeNature,
-		InstallMode:   row.InstallMode,
+		ScopeNature:   string(row.ScopeNature),
+		InstallMode:   string(row.InstallMode),
 		TenantEnabled: boolInt(row.TenantEnabled),
 	}
 }

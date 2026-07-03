@@ -21,10 +21,11 @@ type Provider struct {
 }
 
 // Ensure Provider implements the host tenant capability provider contract.
-var _ tenantspi.Provider = (*Provider)(nil)
-var _ tenantspi.UserMembershipProvider = (*Provider)(nil)
-var _ tenantspi.TenantProjectionProvider = (*Provider)(nil)
-var _ tenantspi.PluginProvisioningProvider = (*Provider)(nil)
+var (
+	_ tenantspi.Provider               = (*Provider)(nil)
+	_ tenantspi.UserMembershipProvider = (*Provider)(nil)
+	_ tenantspi.DirectoryProvider      = (*Provider)(nil)
+)
 
 // New creates and returns a Provider instance.
 func New(

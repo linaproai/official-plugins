@@ -76,7 +76,7 @@ WITH v("tenant_code", "username", "password", "nickname", "email", "phone", "sta
         ('read-random-reply-service', 'tenant_read_random_reply_service_user', '$2a$10$6u4IIEd63chleDWJIY6.NewSU7YrpBQ0Tbp.KfLiG71NQrRlL9qTe', '已读乱回 演示用户', 'read.random.reply.service.user@example.com', '13860170001', 1, '已读乱回客服外包有限公司用户列表演示用户', '2026-05-01 12:30:00', '2026-05-01 12:30:00')
 )
 INSERT INTO sys_user ("tenant_id", "username", "password", "nickname", "email", "phone", "status", "remark", "created_at", "updated_at")
-SELECT t."id", v."username", v."password", v."nickname", v."email", v."phone", v."status", v."remark", CAST(v."created_at" AS TIMESTAMP), CAST(v."updated_at" AS TIMESTAMP)
+SELECT t."id", v."username", v."password", v."nickname", v."email", v."phone", v."status", v."remark", CAST(v."created_at" AS TIMESTAMPTZ), CAST(v."updated_at" AS TIMESTAMPTZ)
 FROM v
 JOIN plugin_linapro_tenant_core_tenant t ON t."code" = v."tenant_code"
 WHERE 1 = 1
@@ -123,7 +123,7 @@ WITH v("username", "tenant_code", "status", "joined_at") AS (
         ('tenant_read_random_reply_service_user', 'read-random-reply-service', 1, '2026-05-01 12:30:00')
 )
 INSERT INTO plugin_linapro_tenant_core_user_membership ("user_id", "tenant_id", "status", "joined_at", "created_by", "updated_by", "created_at", "updated_at")
-SELECT u."id", t."id", v."status", CAST(v."joined_at" AS TIMESTAMP), 0, 0, NOW(), NOW()
+SELECT u."id", t."id", v."status", CAST(v."joined_at" AS TIMESTAMPTZ), 0, 0, NOW(), NOW()
 FROM v
 JOIN sys_user u ON u."username" = v."username"
 JOIN plugin_linapro_tenant_core_tenant t ON t."code" = v."tenant_code"

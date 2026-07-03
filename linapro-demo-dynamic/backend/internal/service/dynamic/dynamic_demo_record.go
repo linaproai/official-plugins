@@ -44,15 +44,6 @@ func IsDemoRecordInvalidInput(err error) bool {
 		bizerr.Is(err, CodeDynamicDemoRecordIDRequired)
 }
 
-// NewDemoRecordInvalidInputError creates one invalid-input business error that
-// should be translated into a bad-request bridge response.
-func NewDemoRecordInvalidInputError(message string) error {
-	return bizerr.NewCode(
-		CodeDynamicDemoRecordInvalidInput,
-		bizerr.P("reason", strings.TrimSpace(message)),
-	)
-}
-
 // IsDemoRecordNotFound reports whether the error should be exposed as one not-found response.
 func IsDemoRecordNotFound(err error) bool {
 	return bizerr.Is(err, CodeDynamicDemoRecordNotFound) ||
@@ -164,9 +155,11 @@ func (s *serviceImpl) UpdateDemoRecordPayload(ctx context.Context, recordID stri
 	if err != nil {
 		return nil, err
 	}
-	newAttachmentName := existingRecord.AttachmentName
-	newAttachmentPath := existingRecord.AttachmentPath
-	replacedAttachmentPath := ""
+	var (
+		newAttachmentName      = existingRecord.AttachmentName
+		newAttachmentPath      = existingRecord.AttachmentPath
+		replacedAttachmentPath = ""
+	)
 	if normalizedInput.RemoveAttachment {
 		newAttachmentName = ""
 		newAttachmentPath = ""
@@ -487,9 +480,11 @@ func parseDemoRecordTimezoneOffset(value string) (int, bool) {
 // normalizeDemoRecordListInput applies paging defaults and trims the keyword
 // filter for list requests.
 func normalizeDemoRecordListInput(input *DemoRecordListInput) (int, int, string) {
-	pageNum := demoRecordDefaultPageNum
-	pageSize := demoRecordDefaultPageSize
-	keyword := ""
+	var (
+		pageNum  = demoRecordDefaultPageNum
+		pageSize = demoRecordDefaultPageSize
+		keyword  = ""
+	)
 	if input == nil {
 		return pageNum, pageSize, keyword
 	}

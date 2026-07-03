@@ -130,7 +130,7 @@ func (s *serviceImpl) CreateProvider(ctx context.Context, in ProviderSaveInput) 
 	if err != nil {
 		return 0, err
 	}
-	if err = s.InvalidateTierCache(ctx, "", "", ""); err != nil {
+	if err = s.invalidateTierCache(ctx, "", "", ""); err != nil {
 		return 0, err
 	}
 	return id, nil
@@ -165,7 +165,7 @@ func (s *serviceImpl) UpdateProvider(ctx context.Context, in ProviderSaveInput) 
 	if err != nil {
 		return err
 	}
-	return s.InvalidateTierCache(ctx, "", "", "")
+	return s.invalidateTierCache(ctx, "", "", "")
 }
 
 // DeleteProvider soft-deletes one provider and its models after reference checks.
@@ -208,7 +208,7 @@ func (s *serviceImpl) DeleteProvider(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
-	return s.InvalidateTierCache(ctx, "", "", "")
+	return s.invalidateTierCache(ctx, "", "", "")
 }
 
 // ListModels returns one bounded provider-owned model page.
@@ -330,7 +330,7 @@ func (s *serviceImpl) CreateModel(ctx context.Context, in ModelSaveInput) (int64
 	if err != nil {
 		return 0, err
 	}
-	if err := s.InvalidateTierCache(ctx, "", "", ""); err != nil {
+	if err := s.invalidateTierCache(ctx, "", "", ""); err != nil {
 		return 0, err
 	}
 	return id, nil
@@ -366,7 +366,7 @@ func (s *serviceImpl) UpdateModel(ctx context.Context, in ModelSaveInput) error 
 	if err != nil {
 		return err
 	}
-	return s.InvalidateTierCache(ctx, "", "", "")
+	return s.invalidateTierCache(ctx, "", "", "")
 }
 
 // DeleteModel soft-deletes all provider-local rows sharing the target model name
@@ -408,7 +408,7 @@ func (s *serviceImpl) DeleteModel(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
-	return s.InvalidateTierCache(ctx, "", "", "")
+	return s.invalidateTierCache(ctx, "", "", "")
 }
 
 // SyncModels imports public model metadata from provider endpoints.
@@ -470,7 +470,7 @@ func (s *serviceImpl) SyncModels(ctx context.Context, in ModelSyncInput) (*Model
 					EndpointId: success.endpoint.Id,
 					ModelName:  modelName,
 					Protocol:   success.endpoint.Protocol,
-					Source:     ModelSourceAPI,
+					Source:     modelSourceAPI,
 					Enabled:    enabledYes,
 				}).InsertAndGetId()
 				if err != nil {
@@ -490,7 +490,7 @@ func (s *serviceImpl) SyncModels(ctx context.Context, in ModelSyncInput) (*Model
 	if err != nil {
 		return nil, err
 	}
-	if err = s.InvalidateTierCache(ctx, "", "", ""); err != nil {
+	if err = s.invalidateTierCache(ctx, "", "", ""); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -680,35 +680,6 @@ func (s *serviceImpl) listModelSummariesByProvider(ctx context.Context, provider
 	return result, nil
 }
 
-// modelCapabilitiesByModelMethod loads one method capability per model in a single query.
-func (s *serviceImpl) modelCapabilitiesByModelMethod(
-	ctx context.Context,
-	modelIDs []int64,
-	capabilityType string,
-	capabilityMethod string,
-) (map[int64]*entity.ModelCapability, error) {
-	result := make(map[int64]*entity.ModelCapability, len(modelIDs))
-	if len(modelIDs) == 0 {
-		return result, nil
-	}
-	rows := make([]*entity.ModelCapability, 0)
-	if err := dao.ModelCapability.Ctx(ctx).
-		WhereIn(dao.ModelCapability.Columns().ModelId, modelIDs).
-		Where(do.ModelCapability{
-			CapabilityType:   normalizeCapabilityType(capabilityType),
-			CapabilityMethod: normalizeCapabilityMethod(capabilityMethod),
-		}).
-		Scan(&rows); err != nil {
-		return nil, err
-	}
-	for _, row := range rows {
-		if row != nil {
-			result[row.ModelId] = row
-		}
-	}
-	return result, nil
-}
-
 // modelCapabilitiesByModel loads all method capability rows for a model set in one query.
 func (s *serviceImpl) modelCapabilitiesByModel(ctx context.Context, modelIDs []int64) ([]*entity.ModelCapability, error) {
 	if len(modelIDs) == 0 {
@@ -727,55 +698,6 @@ func (s *serviceImpl) modelCapabilitiesByModel(ctx context.Context, modelIDs []i
 	return rows, nil
 }
 
-// firstModelCapabilitiesByModel loads one stable capability projection per model in a single query.
-func (s *serviceImpl) firstModelCapabilitiesByModel(ctx context.Context, modelIDs []int64) (map[int64]*entity.ModelCapability, error) {
-	result := make(map[int64]*entity.ModelCapability, len(modelIDs))
-	rows, err := s.modelCapabilitiesByModel(ctx, modelIDs)
-	if err != nil {
-		return nil, err
-	}
-	for _, row := range rows {
-		if row == nil {
-			continue
-		}
-		if _, exists := result[row.ModelId]; exists {
-			continue
-		}
-		result[row.ModelId] = row
-	}
-	return result, nil
-}
-
-// ensureModelCapabilityEndpointsMatchProtocol rejects model protocol changes that would leave method endpoint overrides inconsistent.
-func (s *serviceImpl) ensureModelCapabilityEndpointsMatchProtocol(ctx context.Context, modelID int64, providerID int64, protocol string) error {
-	capRows := make([]*entity.ModelCapability, 0)
-	capCols := dao.ModelCapability.Columns()
-	if err := dao.ModelCapability.Ctx(ctx).
-		Fields(capCols.EndpointId).
-		Where(do.ModelCapability{ModelId: modelID}).
-		WhereGT(capCols.EndpointId, 0).
-		Scan(&capRows); err != nil {
-		return err
-	}
-	endpointIDs := make([]int64, 0, len(capRows))
-	for _, row := range capRows {
-		if row != nil && row.EndpointId > 0 {
-			endpointIDs = append(endpointIDs, row.EndpointId)
-		}
-	}
-	endpoints, err := s.endpointsByID(ctx, endpointIDs)
-	if err != nil {
-		return err
-	}
-	for _, row := range capRows {
-		endpoint := endpoints[row.EndpointId]
-		if endpoint == nil || endpoint.ProviderId != providerID || endpoint.Protocol != protocol {
-			return bizerr.NewCode(CodeProviderProtocolRequired)
-		}
-	}
-	return nil
-}
-
 // providerReferenced reports whether active tier bindings reference one provider.
 func (s *serviceImpl) providerReferenced(ctx context.Context, providerID int64) (bool, error) {
 	count, err := dao.TierBinding.Ctx(ctx).Where(do.TierBinding{ProviderId: providerID}).Count()
@@ -791,29 +713,6 @@ func (s *serviceImpl) modelsReferenced(ctx context.Context, modelIDs []int64) (b
 		WhereIn(dao.TierBinding.Columns().ModelId, modelIDs).
 		Count()
 	return count > 0, err
-}
-
-// existingModelNames returns provider model names for one protocol in a single query.
-func (s *serviceImpl) existingModelNames(ctx context.Context, providerID int64, protocol string) (map[string]struct{}, error) {
-	result := make(map[string]struct{})
-	rows := make([]*entity.Model, 0)
-	cols := dao.Model.Columns()
-	if err := dao.Model.Ctx(ctx).
-		Fields(cols.ModelName).
-		Where(do.Model{
-			ProviderId: providerID,
-			Protocol:   protocol,
-		}).
-		Scan(&rows); err != nil {
-		return nil, err
-	}
-	for _, row := range rows {
-		name := strings.TrimSpace(row.ModelName)
-		if name != "" {
-			result[name] = struct{}{}
-		}
-	}
-	return result, nil
 }
 
 // existingModelsByProtocol returns provider models grouped by protocol and model name in one query.
@@ -848,103 +747,6 @@ func (s *serviceImpl) existingModelsByProtocol(ctx context.Context, providerID i
 		models[modelName] = row
 	}
 	return result, nil
-}
-
-// existingSyncModelCapabilityKeys loads existing capability identities for synced models in one query.
-func (s *serviceImpl) existingSyncModelCapabilityKeys(
-	ctx context.Context,
-	successes []modelSyncEndpointResult,
-	existingModelsByProtocol map[string]map[string]*entity.Model,
-) (map[string]struct{}, error) {
-	modelIDs := make([]int64, 0)
-	seen := make(map[int64]struct{})
-	for _, success := range successes {
-		if success.endpoint == nil {
-			continue
-		}
-		existingModels := existingModelsByProtocol[success.endpoint.Protocol]
-		if len(existingModels) == 0 {
-			continue
-		}
-		for _, remote := range success.models {
-			if len(remote.Capabilities) == 0 {
-				continue
-			}
-			modelName := strings.TrimSpace(remote.Name)
-			if modelName == "" {
-				continue
-			}
-			model := existingModels[modelName]
-			if model == nil || model.Id <= 0 {
-				continue
-			}
-			if _, ok := seen[model.Id]; ok {
-				continue
-			}
-			seen[model.Id] = struct{}{}
-			modelIDs = append(modelIDs, model.Id)
-		}
-	}
-	return s.modelCapabilityKeysByModel(ctx, modelIDs)
-}
-
-// modelCapabilityKeysByModel loads persisted capability identities for a model set in one query.
-func (s *serviceImpl) modelCapabilityKeysByModel(ctx context.Context, modelIDs []int64) (map[string]struct{}, error) {
-	rows, err := s.modelCapabilitiesByModel(ctx, modelIDs)
-	if err != nil {
-		return nil, err
-	}
-	result := make(map[string]struct{}, len(rows))
-	for _, row := range rows {
-		if row == nil {
-			continue
-		}
-		result[modelCapabilityKey(row.ModelId, row.CapabilityType, row.CapabilityMethod)] = struct{}{}
-	}
-	return result, nil
-}
-
-// insertConfirmedRemoteModelCapabilities inserts only capabilities explicitly returned by the provider.
-func (s *serviceImpl) insertConfirmedRemoteModelCapabilities(
-	ctx context.Context,
-	existing map[string]struct{},
-	model *entity.Model,
-	endpointID int64,
-	capabilities []remoteModelCapability,
-) error {
-	if model == nil || len(capabilities) == 0 {
-		return nil
-	}
-	if existing == nil {
-		existing = make(map[string]struct{})
-	}
-	for _, capability := range capabilities {
-		capabilityType := normalizeCapabilityType(capability.CapabilityType)
-		capabilityMethod := normalizeCapabilityMethod(capability.CapabilityMethod)
-		if capabilityType == "" || capabilityMethod == "" {
-			continue
-		}
-		key := modelCapabilityKey(model.Id, capabilityType, capabilityMethod)
-		if _, ok := existing[key]; ok {
-			continue
-		}
-		if _, err := dao.ModelCapability.Ctx(ctx).Data(do.ModelCapability{
-			ModelId:           model.Id,
-			EndpointId:        endpointID,
-			CapabilityType:    capabilityType,
-			CapabilityMethod:  capabilityMethod,
-			InputModalities:   joinCSV(capability.InputModalities),
-			OutputModalities:  joinCSV(capability.OutputModalities),
-			SupportsOperation: enabledNo,
-			SupportsStreaming: enabledNo,
-			SupportsThinking:  enabledNo,
-			Enabled:           enabledYes,
-		}).Insert(); err != nil {
-			return err
-		}
-		existing[key] = struct{}{}
-	}
-	return nil
 }
 
 type modelSyncEndpointResult struct {

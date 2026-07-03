@@ -109,7 +109,7 @@ func insertLoginLogFixture(t *testing.T, ctx context.Context, suffix string, log
 	t.Helper()
 	insertID, err := dao.Loginlog.Ctx(ctx).Data(do.Loginlog{
 		UserName:  "unit-" + suffix,
-		Status:    LoginStatusSuccess,
+		Status:    loginStatusSuccess,
 		Ip:        "127.0.0.1",
 		Browser:   "unit",
 		Os:        "unit",

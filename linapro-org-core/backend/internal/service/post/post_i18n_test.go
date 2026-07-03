@@ -25,11 +25,6 @@ func (s fakeI18nService) Translate(_ context.Context, key string, fallback strin
 	return fallback
 }
 
-// FindMessageKeys is unused by these tests and returns no matches.
-func (s fakeI18nService) FindMessageKeys(_ context.Context, _ string, _ string) []string {
-	return []string{}
-}
-
 // TestExportHeadersUseRuntimeI18N verifies post export headers resolve through
 // runtime i18n keys.
 func TestExportHeadersUseRuntimeI18N(t *testing.T) {
