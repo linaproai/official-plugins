@@ -48,7 +48,7 @@ type ModelCapabilityInput struct {
 
 // ListCapabilitiesReq defines the request for listing advanced model capability metadata.
 type ListCapabilitiesReq struct {
-	g.Meta `path:"/ai/models/{id}/capabilities" method:"get" tags:"AI Model Capability Metadata" summary:"List model capability metadata" dc:"List advanced model capability metadata for compatibility and diagnostics. Model management, tier candidates, and tier binding validation do not depend on these records." permission:"ai:provider:list"`
+	g.Meta `path:"/ai/models/{id}/capabilities" method:"get" tags:"Smart Center/Model Management" summary:"List model capability metadata" dc:"List advanced model capability metadata for compatibility and diagnostics. Model management, tier candidates, and tier binding validation do not depend on these records." permission:"ai:provider:list"`
 	Id     int64 `json:"id" v:"required|min:1" dc:"Model ID" eg:"1"`
 }
 
@@ -59,7 +59,7 @@ type ListCapabilitiesRes struct {
 
 // UpsertCapabilitiesReq defines the request for replacing advanced model capability metadata.
 type UpsertCapabilitiesReq struct {
-	g.Meta `path:"/ai/models/{id}/capabilities" method:"put" tags:"AI Model Capability Metadata" summary:"Save model capability metadata" dc:"Replace advanced capability metadata for one AI model. Endpoint references must belong to the same provider as the model, but model management and tier candidates do not depend on these records." permission:"ai:provider:update"`
+	g.Meta `path:"/ai/models/{id}/capabilities" method:"put" tags:"Smart Center/Model Management" summary:"Save model capability metadata" dc:"Replace advanced capability metadata for one AI model. Endpoint references must belong to the same provider as the model, but model management and tier candidates do not depend on these records." permission:"ai:provider:update"`
 	Id     int64                  `json:"id" v:"required|min:1" dc:"Model ID" eg:"1"`
 	Items  []ModelCapabilityInput `json:"items" v:"required" dc:"Capability method save items" eg:"[]"`
 }

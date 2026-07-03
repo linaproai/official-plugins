@@ -6,7 +6,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // ListModelsReq defines the request for listing provider models.
 type ListModelsReq struct {
-	g.Meta     `path:"/ai/providers/{providerId}/models" method:"get" tags:"AI Provider Models" summary:"List provider models" dc:"List model identities belonging to one AI provider with bounded pagination. Model candidates are not filtered by capability method declarations." permission:"ai:provider:list"`
+	g.Meta     `path:"/ai/providers/{providerId}/models" method:"get" tags:"Smart Center/Model Management" summary:"List provider models" dc:"List model identities belonging to one AI provider with bounded pagination. Model candidates are not filtered by capability method declarations." permission:"ai:provider:list"`
 	ProviderId int64 `json:"providerId" v:"required|min:1" dc:"Provider ID" eg:"1"`
 	PageNum    int   `json:"pageNum" d:"1" v:"min:1" dc:"Page number" eg:"1"`
 	PageSize   int   `json:"pageSize" d:"10" v:"min:1|max:100" dc:"Page size, capped at 100" eg:"10"`
@@ -21,7 +21,7 @@ type ListModelsRes struct {
 
 // CreateModelReq defines the request for creating a provider model.
 type CreateModelReq struct {
-	g.Meta     `path:"/ai/providers/{providerId}/models" method:"post" tags:"AI Provider Models" summary:"Create provider model" dc:"Create one model identity under an AI provider. Capability method support is decided by administrators through tier selection and tests, not by model declarations." permission:"ai:provider:create"`
+	g.Meta     `path:"/ai/providers/{providerId}/models" method:"post" tags:"Smart Center/Model Management" summary:"Create provider model" dc:"Create one model identity under an AI provider. Capability method support is decided by administrators through tier selection and tests, not by model declarations." permission:"ai:provider:create"`
 	ProviderId int64  `json:"providerId" v:"required|min:1" dc:"Provider ID" eg:"1"`
 	EndpointId int64  `json:"endpointId" v:"required|min:1" dc:"Provider endpoint ID used for this model" eg:"1"`
 	ModelName  string `json:"modelName" v:"required|max-length:128" dc:"Provider model name" eg:"gpt-4.1-mini"`
@@ -36,7 +36,7 @@ type CreateModelRes struct {
 
 // SyncModelsReq defines the request for synchronizing provider models.
 type SyncModelsReq struct {
-	g.Meta     `path:"/ai/providers/{providerId}/models/sync" method:"post" tags:"AI Provider Models" summary:"Sync provider models" dc:"Synchronize public model metadata from enabled provider endpoints. When protocol is omitted, all enabled syncable endpoints are queried and partial endpoint failures keep successful endpoint results." permission:"ai:provider:update"`
+	g.Meta     `path:"/ai/providers/{providerId}/models/sync" method:"post" tags:"Smart Center/Model Management" summary:"Sync provider models" dc:"Synchronize public model metadata from enabled provider endpoints. When protocol is omitted, all enabled syncable endpoints are queried and partial endpoint failures keep successful endpoint results." permission:"ai:provider:update"`
 	ProviderId int64  `json:"providerId" v:"required|min:1" dc:"Provider ID" eg:"1"`
 	Protocol   string `json:"protocol" v:"in:openai,anthropic,voyage,openai-compatible,anthropic-compatible" dc:"Optional protocol used for narrow model synchronization; empty queries all enabled syncable endpoints" eg:"openai"`
 }

@@ -6,7 +6,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // UpdateReq defines the request for updating an AI provider.
 type UpdateReq struct {
-	g.Meta     `path:"/ai/providers/{id}" method:"put" tags:"AI Providers" summary:"Update AI provider" dc:"Update one AI provider metadata row and its OpenAI or Anthropic endpoint configuration in one database transaction. Empty or masked endpoint secrets keep the existing references." permission:"ai:provider:update"`
+	g.Meta     `path:"/ai/providers/{id}" method:"put" tags:"Smart Center/Channel Management" summary:"Update AI provider" dc:"Update one AI provider metadata row and its OpenAI or Anthropic endpoint configuration in one database transaction. Empty or masked endpoint secrets keep the existing references." permission:"ai:provider:update"`
 	Id         int64                       `json:"id" v:"required|min:1" dc:"Provider ID" eg:"1"`
 	Name       string                      `json:"name" v:"required|max-length:128" dc:"Provider display name" eg:"OpenAI"`
 	WebsiteUrl string                      `json:"websiteUrl" v:"max-length:512" dc:"Provider website URL" eg:"https://openai.com"`

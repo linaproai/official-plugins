@@ -6,7 +6,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // DeleteReq defines the request for deleting an AI provider.
 type DeleteReq struct {
-	g.Meta `path:"/ai/providers/{id}" method:"delete" tags:"AI Providers" summary:"Delete AI provider" dc:"Delete one AI provider after verifying no AI capability tier references any of its models." permission:"ai:provider:delete"`
+	g.Meta `path:"/ai/providers/{id}" method:"delete" tags:"Smart Center/Channel Management" summary:"Delete AI provider" dc:"Delete one AI provider after verifying no AI capability tier references any of its models." permission:"ai:provider:delete"`
 	Id     int64 `json:"id" v:"required|min:1" dc:"Provider ID" eg:"1"`
 }
 

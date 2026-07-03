@@ -29,7 +29,7 @@ type ProviderOperationItem struct {
 
 // ListProviderOperationsReq defines the request for querying provider operations.
 type ListProviderOperationsReq struct {
-	g.Meta           `path:"/ai/provider-operations" method:"get" tags:"AI Provider Operations" summary:"List AI provider operations" dc:"Query masked provider operation projections by page with filters for capability method, purpose, status, provider, model, source plugin, and time range. Business task state and provider secret data are never returned." permission:"ai:invocation:list"`
+	g.Meta           `path:"/ai/provider-operations" method:"get" tags:"Smart Center/Invocation Logs" summary:"List AI provider operations" dc:"Query masked provider operation projections by page with filters for capability method, purpose, status, provider, model, source plugin, and time range. Business task state and provider secret data are never returned." permission:"ai:invocation:list"`
 	PageNum          int    `json:"pageNum" d:"1" v:"min:1" dc:"Page number" eg:"1"`
 	PageSize         int    `json:"pageSize" d:"10" v:"min:1|max:100" dc:"Number of items per page" eg:"10"`
 	CapabilityType   string `json:"capabilityType" dc:"Capability type filter" eg:"video"`
@@ -51,7 +51,7 @@ type ListProviderOperationsRes struct {
 
 // GetProviderOperationReq defines the request for reading one provider operation.
 type GetProviderOperationReq struct {
-	g.Meta       `path:"/ai/provider-operations/{operationRef}" method:"get" tags:"AI Provider Operations" summary:"Get AI provider operation" dc:"Get one masked provider operation projection by opaque operation reference. Business task state and provider secret data are never returned." permission:"ai:invocation:list"`
+	g.Meta       `path:"/ai/provider-operations/{operationRef}" method:"get" tags:"Smart Center/Invocation Logs" summary:"Get AI provider operation" dc:"Get one masked provider operation projection by opaque operation reference. Business task state and provider secret data are never returned." permission:"ai:invocation:list"`
 	OperationRef string `json:"operationRef" v:"required" dc:"Opaque provider operation reference" eg:"op_opaque_123"`
 }
 
