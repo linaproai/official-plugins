@@ -8,6 +8,7 @@ import (
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/cachecap"
 	"lina-core/pkg/plugin/capability/hostconfigcap"
+	"lina-core/pkg/plugin/capability/jobcap"
 	"lina-core/pkg/plugin/capability/lockcap"
 	"lina-core/pkg/plugin/capability/manifestcap"
 	"lina-core/pkg/plugin/capability/orgcap"
@@ -64,6 +65,7 @@ type serviceImpl struct {
 	bizCtxSvc      bizctxcap.Service
 	cacheSvc       cachecap.Service
 	lockSvc        lockcap.Service
+	jobsSvc        jobcap.Service
 	orgSvc         orgcap.Service
 	tenantSvc      tenantcap.Service
 	recordStoreSvc *recordstore.DB
@@ -81,6 +83,7 @@ func New() Service {
 		bizCtxSvc:      newBizCtxHostService(),
 		cacheSvc:       newCacheHostService(),
 		lockSvc:        newLockHostService(),
+		jobsSvc:        newJobsHostService(),
 		orgSvc:         newOrgHostService(),
 		tenantSvc:      newTenantHostService(),
 		recordStoreSvc: newRecordStoreService(),

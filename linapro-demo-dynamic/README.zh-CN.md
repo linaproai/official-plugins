@@ -80,7 +80,7 @@ public_assets:
 
 `manifest`宿主服务示例授权`config/`打包清单前缀。`/api/v1/manifest-demo`路由会通过`manifest.get`读取`config/profile.yaml`和`config/config.yaml`，并在内嵌页面展示返回的 profile 与配置预览，从而完整演示从声明到使用的流程。`/api/v1/host-call-demo`路由还会在同一前缀内额外演示`manifest.get_many`、`manifest.list`以及`bizctx`、`cache`、`lock`宿主服务的低风险 smoke 投影。运行期实际生效插件配置通过`Plugins().Config()`读取，并授权为`plugins.config.get`；SQL 和 i18n 生命周期资源不放入本次`manifest`宿主服务授权示例。
 
-该样例还通过`service: jobs`和`method: jobs.register`声明一个内置定时任务。同一个`RegisterPlugin`函数会通过`plugin.Jobs().Register(...)`声明内置任务；宿主 Jobs 发现期使用`pluginbridge.NewDeclarations()`执行该声明，将结果投影到`Jobs`管理中，并通过声明的`JobHeartbeat`路由执行心跳任务。
+该样例还通过`service: jobs`和`method: jobs.register`声明一个内置定时任务。同一个`RegisterPlugin`函数会通过`plugin.Jobs().Register(...)`声明内置任务；宿主 Jobs 发现期使用`pluginbridge.NewDeclarations()`执行该声明，将结果投影到`Jobs`管理中，并通过声明的`JobHeartbeat`路由执行心跳任务。同一个`jobs`宿主服务声明还授权后端测试使用运行期`pluginbridge.Default().Jobs()`领域方法，包括批量读取、有界列表、可见性校验、创建、更新、删除、运行和状态变更，并覆盖任务级日志清理字段。
 
 ## 生命周期日志
 

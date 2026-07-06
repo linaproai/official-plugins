@@ -8,6 +8,7 @@ import (
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/cachecap"
 	"lina-core/pkg/plugin/capability/hostconfigcap"
+	"lina-core/pkg/plugin/capability/jobcap"
 	"lina-core/pkg/plugin/capability/lockcap"
 	"lina-core/pkg/plugin/capability/manifestcap"
 	"lina-core/pkg/plugin/capability/orgcap"
@@ -70,6 +71,11 @@ func newCacheHostService() cachecap.Service {
 // newLockHostService returns the guest-side distributed lock capability client.
 func newLockHostService() lockcap.Service {
 	return guestServices.Lock()
+}
+
+// newJobsHostService returns the guest-side scheduled-job capability client.
+func newJobsHostService() jobcap.Service {
+	return guestServices.Jobs()
 }
 
 // newOrgHostService returns the guest-side organization capability client.
