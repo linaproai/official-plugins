@@ -14,6 +14,10 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
+
+	"lina-core/pkg/plugin/pluginbridge/protocol"
 )
 
 // TestDemoDynamicAPIsDoNotDependOnGeneratedEntities ensures public API contracts do not import database entities.
@@ -45,6 +49,55 @@ func TestDemoDynamicAPIPackagesDoNotDeclareRouteGroupPrefix(t *testing.T) {
 // TestDemoDynamicAPIDocI18NDoesNotReferenceRemovedDTOFields keeps apidoc translations aligned with DTOs.
 func TestDemoDynamicAPIDocI18NDoesNotReferenceRemovedDTOFields(t *testing.T) {
 	assertAPIDocI18NExcludesTokens(t, demoDynamicPluginRoot(t), removedAPIDocTokens())
+}
+
+// TestDemoDynamicJobHostServicesDeclareRuntimeMethods ensures the sample
+// manifest authorizes every runtime Jobs method used by the jobcap client.
+func TestDemoDynamicJobHostServicesDeclareRuntimeMethods(t *testing.T) {
+	root := demoDynamicPluginRoot(t)
+	content, err := os.ReadFile(filepath.Join(root, "plugin.yaml"))
+	if err != nil {
+		t.Fatalf("read plugin.yaml: %v", err)
+	}
+
+	var manifest struct {
+		HostServices []struct {
+			Service string   `yaml:"service"`
+			Methods []string `yaml:"methods"`
+		} `yaml:"hostServices"`
+	}
+	if err = yaml.Unmarshal(content, &manifest); err != nil {
+		t.Fatalf("parse plugin.yaml: %v", err)
+	}
+
+	required := []string{
+		protocol.HostServiceMethodJobsBatchGet,
+		protocol.HostServiceMethodJobsList,
+		protocol.HostServiceMethodJobsEnsureVisible,
+		protocol.HostServiceMethodJobsCreate,
+		protocol.HostServiceMethodJobsUpdate,
+		protocol.HostServiceMethodJobsDelete,
+		protocol.HostServiceMethodJobsRun,
+		protocol.HostServiceMethodJobsSetStatus,
+		protocol.HostServiceMethodJobsRegister,
+	}
+	methods := map[string]bool{}
+	for _, service := range manifest.HostServices {
+		if service.Service != protocol.HostServiceJobs {
+			continue
+		}
+		for _, method := range service.Methods {
+			methods[method] = true
+		}
+	}
+	if len(methods) == 0 {
+		t.Fatalf("plugin.yaml missing %q host service declaration", protocol.HostServiceJobs)
+	}
+	for _, method := range required {
+		if !methods[method] {
+			t.Fatalf("plugin.yaml jobs host service missing method %q", method)
+		}
+	}
 }
 
 // demoDynamicPluginRoot returns the plugin root directory for path-based contract checks.

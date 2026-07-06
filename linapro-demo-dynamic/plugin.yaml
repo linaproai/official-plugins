@@ -260,10 +260,18 @@ hostServices:
       - release
     resources:
       - ref: host-call-demo-lock
-  # Host service enum. `jobs` declares plugin-owned built-in scheduled jobs during host discovery.
-  # 宿主服务枚举。`jobs` 用于在宿主发现阶段声明插件内置定时任务。
+  # Host service enum. `jobs` declares plugin-owned built-in scheduled jobs and authorizes runtime jobcap methods.
+  # 宿主服务枚举。`jobs` 用于声明插件内置定时任务，并授权运行期 jobcap 方法。
   - service: jobs
     methods:
+      - jobs.batch_get
+      - jobs.list
+      - jobs.visible.ensure
+      - jobs.create
+      - jobs.update
+      - jobs.delete
+      - jobs.run
+      - jobs.status.set
       - jobs.register
   # Host service enum. `manifest` reads this plugin's own packaged manifest resources as raw bytes.
   # Paths are relative to the plugin `manifest/` root and do not replace config, SQL, or i18n lifecycle pipelines.
