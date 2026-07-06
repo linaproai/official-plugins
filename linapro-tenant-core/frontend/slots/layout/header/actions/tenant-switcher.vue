@@ -14,7 +14,7 @@ import { computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { IconifyIcon } from '@vben/icons';
-import { useUserStore } from '@vben/stores';
+import { useAccessStore, useUserStore } from '@vben/stores';
 
 import { Select, Spin } from 'ant-design-vue';
 
@@ -22,6 +22,7 @@ import { $t } from '#/locales';
 import { useTenantStore } from '#/store';
 
 const router = useRouter();
+const accessStore = useAccessStore();
 const userStore = useUserStore();
 const tenantStore = useTenantStore();
 
@@ -50,6 +51,7 @@ watch(
   () => ({
     enabled: tenantStore.enabled,
     isPlatform: tenantStore.isPlatform,
+    permissions: accessStore.accessCodes.join('\u0000'),
     userId: Number(userStore.userInfo?.userId || 0),
   }),
   ({ enabled, isPlatform, userId }) => {
