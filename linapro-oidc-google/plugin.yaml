@@ -1,0 +1,114 @@
+# Plugin identifier, unique across the host and source plugin directories; use `kebab-case`.
+# 插件唯一标识，必须在宿主和源码插件目录中保持唯一，并使用 `kebab-case` 命名风格。
+id: linapro-oidc-google
+
+# Plugin display name used in plugin management pages, developer docs, and presentation.
+# 插件显示名称，用于插件管理页面、开发文档和展示。
+name: Google OIDC Login
+
+# Plugin semantic version; examples in this repo use the `v` prefix.
+# 插件语义化版本号，当前示例统一使用带 `v` 前缀的写法。
+version: v0.1.0
+
+# Plugin type enum. Allowed values: `source` is compiled with the host; `dynamic` is loaded as a runtime plugin artifact.
+# 插件类型枚举。可选值：`source` 表示随宿主源码编译交付；`dynamic` 表示作为运行时动态插件产物加载。
+type: source
+
+# Plugin distribution governance enum. `managed` keeps this plugin explicitly governed through plugin management or `plugin.autoEnable`. Use `builtin` only for registered source plugins that host startup must install, enable, and safely upgrade.
+# 插件分发治理枚举。`managed`表示本示例仍通过插件管理或`plugin.autoEnable`显式治理。只有需要宿主启动自动安装、启用和安全升级的已注册源码插件才使用`builtin`。
+distribution: managed
+
+# Multi-tenant scope enum. Allowed values: `platform_only` is platform-context only; `tenant_aware` is governed by tenant context.
+# 多租户作用域枚举。可选值：`platform_only` 表示仅平台上下文可见和治理；`tenant_aware` 表示按租户上下文治理。
+scope_nature: platform_only
+
+# Multi-tenant support flag. `true` means the plugin supports tenant-level installation and provisioning governance.
+# 多租户支持标记。`true` 表示插件支持租户级安装与开通治理。
+supports_multi_tenant: false
+
+# Default install mode enum. Allowed values: `global` enables one shared installation; `tenant_scoped` enables or disables per tenant.
+# 默认安装模式枚举。可选值：`global` 表示全局统一安装启用；`tenant_scoped` 表示按租户独立启用或禁用。
+default_install_mode: global
+
+# Plugin description summarizing the capability boundary.
+# 插件说明，概述插件的能力边界。
+description: Reference source plugin that demonstrates Google OIDC third-party login on the framework external-identity seam.
+
+# Plugin author or owning team.
+# 插件作者或归属团队。
+author: linapro
+
+# Plugin homepage or documentation URL for extra project, design, or external references.
+# 插件主页或文档地址，用于补充项目介绍、设计文档或外部说明链接。
+homepage: https://example.com/lina/plugins/linapro-oidc-google
+
+# Plugin license identifier.
+# 插件许可证标识。
+license: Apache-2.0
+
+# Plugin internationalization config. This follows the host i18n config shape;
+# enabled plugins must ship manifest/i18n resources for the listed locales.
+# 插件国际化配置。该配置与宿主 i18n 配置结构保持一致；启用后需提供对应语言资源。
+i18n:
+  enabled: true
+  default: en-US
+  locales:
+    - locale: en-US
+      nativeName: English
+    - locale: zh-CN
+      nativeName: 简体中文
+
+# Plugin menu declaration list; the host syncs menus, button permissions, and route entries from it.
+# 插件菜单声明列表，宿主按该列表同步菜单、按钮权限和路由入口。
+menus:
+  # Unique menu key; it must use the `plugin:<plugin-id>:<menu-key>` format.
+  # 菜单唯一键，必须使用 `plugin:<plugin-id>:<menu-key>` 格式。
+  - key: plugin:linapro-oidc-google:settings
+    # Parent menu key pointing to the host extension center catalog.
+    # 父级菜单键，指向宿主扩展中心目录。
+    parent_key: extension
+    # Menu display name.
+    # 菜单显示名称。
+    name: Google OIDC 设置
+    # Source plugin host route segment mounted into the governed dynamic route tree.
+    # 源码插件宿主内路由片段，会挂到插件治理后的动态路由树中。
+    path: linapro-oidc-google-settings
+    # Menu render component; the dynamic page shell hosts plugin pages.
+    # 菜单渲染组件，动态页壳用于承载插件页面。
+    component: system/plugin/dynamic-page
+    # Permission code required to access this menu.
+    # 菜单访问权限标识。
+    perms: linapro-oidc-google:settings:view
+    # Menu icon using an Iconify icon name.
+    # 菜单图标，使用 Iconify 图标名称。
+    icon: logos:google-icon
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
+    type: M
+    # Menu sort order; lower values appear earlier.
+    # 菜单排序值，数值越小越靠前。
+    sort: 10
+    # Menu remark stored in host menu governance data.
+    # 菜单备注，写入宿主菜单治理数据。
+    remark: Google OIDC 登录设置页
+  # Unique button key mounted under the Google OIDC settings menu.
+  # 按钮唯一键，挂载在 Google OIDC 设置菜单下。
+  - key: plugin:linapro-oidc-google:settings-update
+    # Parent menu key pointing to the Google OIDC settings menu.
+    # 父级菜单键，指向 Google OIDC 设置菜单。
+    parent_key: plugin:linapro-oidc-google:settings
+    # Button display name.
+    # 按钮显示名称。
+    name: Google OIDC 设置保存
+    # Button permission code.
+    # 按钮权限标识。
+    perms: linapro-oidc-google:settings:update
+    # Menu type enum. Allowed values: `D` directory, `M` menu page, `B` button permission node.
+    # 菜单类型枚举。可选值：`D` 表示目录，`M` 表示菜单页面，`B` 表示按钮权限点。
+    type: B
+    # Button sort order; lower values appear earlier.
+    # 按钮排序值，数值越小越靠前。
+    sort: 1
+    # Button remark stored in host menu governance data.
+    # 按钮备注，写入宿主菜单治理数据。
+    remark: Google OIDC 设置保存权限

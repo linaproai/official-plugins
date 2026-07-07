@@ -1,0 +1,44 @@
+{
+  "plugin": {
+    "linapro-oidc-google": {
+      "description": "Reference source plugin that demonstrates Google OIDC third-party login on the framework external-identity seam.",
+      "name": "Google OIDC Login",
+      "login": {
+        "button": "Continue with Google",
+        "callback": {
+          "error": "Google login failed. Please try again.",
+          "unlinked": "This Google account is not linked to any local user. Please contact the administrator."
+        }
+      },
+      "settings": {
+        "title": "Google OIDC Settings",
+        "description": "Configure the Google OAuth 2.0 client used by the login button. The redirect URL must match the callback URL registered in Google Cloud Console.",
+        "clientIdLabel": "Client ID",
+        "clientIdPlaceholder": "Enter the Google OAuth 2.0 client ID",
+        "clientSecretLabel": "Client Secret",
+        "clientSecretPlaceholder": "Enter the Google OAuth 2.0 client secret",
+        "clientSecretKeepPlaceholder": "Leave unchanged to keep the stored secret",
+        "redirectUrlLabel": "Callback URL",
+        "redirectUrlPlaceholder": "https://your-host/portal/linapro-oidc-google/callback",
+        "redirectUrlHint": "Fixed by the plugin. Copy this URL into the Authorized redirect URIs of your Google Cloud OAuth client.",
+        "copyCallbackUrl": "Copy",
+        "save": "Save",
+        "saveSuccess": "Google OIDC settings saved.",
+        "saveFailed": "Failed to save Google OIDC settings.",
+        "loadFailed": "Failed to load Google OIDC settings.",
+        "defaultRedirectLabel": "Workspace Landing Path",
+        "defaultRedirectPlaceholder": "/dashboard/analytics",
+        "enableSsoLabel": "Enable SSO token delivery",
+        "enableSsoHint": "When enabled, logins started with a matching state key deliver the tokens straight to the configured third-party receiver URL instead of the workspace.",
+        "rulesTitle": "SSO Delivery Rules",
+        "addRule": "Add Rule",
+        "ruleKeyPlaceholder": "State key",
+        "ruleUrlPlaceholder": "https://third-party.example.com/sso/receive",
+        "copyLoginUrl": "Copy Login URL",
+        "copied": "Login URL copied.",
+        "copyFailed": "Failed to copy the login URL.",
+        "deleteRule": "Delete"
+      }
+    }
+  }
+}

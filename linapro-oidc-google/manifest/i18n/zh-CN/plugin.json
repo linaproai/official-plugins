@@ -1,0 +1,44 @@
+{
+  "plugin": {
+    "linapro-oidc-google": {
+      "description": "演示如何在框架外部身份接缝上接入 Google OIDC 第三方登录的参考源码插件。",
+      "name": "Google OIDC 登录",
+      "login": {
+        "button": "使用 Google 账号登录",
+        "callback": {
+          "error": "Google 登录失败，请稍后重试。",
+          "unlinked": "该 Google 账号尚未绑定本地用户，请联系管理员。"
+        }
+      },
+      "settings": {
+        "title": "Google OIDC 设置",
+        "description": "配置登录按钮使用的 Google OAuth 2.0 客户端。回调 URL 必须与 Google Cloud Console 中注册的回调地址一致。",
+        "clientIdLabel": "客户端 ID",
+        "clientIdPlaceholder": "请输入 Google OAuth 2.0 客户端 ID",
+        "clientSecretLabel": "客户端密钥",
+        "clientSecretPlaceholder": "请输入 Google OAuth 2.0 客户端密钥",
+        "clientSecretKeepPlaceholder": "留空则保留已存储的密钥",
+        "redirectUrlLabel": "回调 URL",
+        "redirectUrlPlaceholder": "https://your-host/portal/linapro-oidc-google/callback",
+        "redirectUrlHint": "由插件固定，无需配置。复制此地址到 Google Cloud OAuth 客户端的「已获授权的重定向 URI」中。",
+        "copyCallbackUrl": "复制",
+        "save": "保存",
+        "saveSuccess": "Google OIDC 设置已保存。",
+        "saveFailed": "保存 Google OIDC 设置失败。",
+        "loadFailed": "加载 Google OIDC 设置失败。",
+        "defaultRedirectLabel": "工作台落地页",
+        "defaultRedirectPlaceholder": "/dashboard/analytics",
+        "enableSsoLabel": "启用 SSO 令牌投递",
+        "enableSsoHint": "启用后，携带匹配 state key 发起的登录会把令牌直接投递到配置的第三方接收地址，而不进入工作台。",
+        "rulesTitle": "SSO 投递规则",
+        "addRule": "添加规则",
+        "ruleKeyPlaceholder": "State key",
+        "ruleUrlPlaceholder": "https://third-party.example.com/sso/receive",
+        "copyLoginUrl": "复制登录链接",
+        "copied": "登录链接已复制。",
+        "copyFailed": "复制登录链接失败。",
+        "deleteRule": "删除"
+      }
+    }
+  }
+}
