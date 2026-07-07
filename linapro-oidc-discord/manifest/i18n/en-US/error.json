@@ -1,0 +1,42 @@
+{
+  "error": {
+    "plugin": {
+      "oidc": {
+        "discord": {
+          "config": {
+            "missing": "Discord OIDC client configuration is missing"
+          },
+          "state": {
+            "generate": {
+              "failed": "Failed to generate OIDC state value"
+            }
+          },
+          "callback": {
+            "code": {
+              "required": "Authorization code is required"
+            },
+            "state": {
+              "mismatch": "OIDC state value mismatch"
+            }
+          },
+          "identity": {
+            "verify": {
+              "failed": "Failed to verify Discord identity"
+            }
+          },
+          "email": {
+            "not": {
+              "verified": "Discord account email is not verified"
+            }
+          },
+          "external": {
+            "login": {
+              "unavailable": "External-login service is unavailable",
+              "failed": "Discord external login failed"
+            }
+          }
+        }
+      }
+    }
+  }
+}
