@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/gogf/gf/v2 v2.10.1
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	lina-core v0.0.0
 )
 

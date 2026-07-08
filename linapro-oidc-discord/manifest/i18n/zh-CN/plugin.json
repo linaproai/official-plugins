@@ -37,7 +37,9 @@
         "copyLoginUrl": "复制登录链接",
         "copied": "登录链接已复制。",
         "copyFailed": "复制登录链接失败。",
-        "deleteRule": "删除"
+        "deleteRule": "删除",
+        "autoProvisionLabel": "自动注册新用户",
+        "autoProvisionHint": "开启后，已验证但未绑定本地账号的 Discord 身份会自动创建最小权限的平台账号。若邮箱已属于现有账号，登录会被拒绝，需先登录该账号完成绑定。"
       }
     }
   }

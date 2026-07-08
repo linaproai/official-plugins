@@ -17,6 +17,10 @@ type SaveSettingsReq struct {
 	DefaultBackendRedirect string `json:"defaultBackendRedirect" v:"max-length:512" dc:"Workspace landing path after a normal external login; empty string keeps the host default" eg:"/dashboard/analytics"`
 	// BackendRedirects sets the state-key-to-receiver-URL JSON object.
 	BackendRedirects string `json:"backendRedirects" v:"max-length:4096" dc:"JSON object mapping business state keys to third-party SSO receiver URLs; empty string clears all rules" eg:"{\"crm\":\"https://crm.example.com/sso\"}"`
+	// AllowAutoProvision toggles host auto-provisioning for unlinked identities.
+	AllowAutoProvision bool `json:"allowAutoProvision" dc:"Allow the host to auto-provision a least-privilege platform user when a verified Google identity has no linked local account" eg:"false"`
+	// EnableOneTap toggles the embeddable One Tap login endpoint.
+	EnableOneTap bool `json:"enableOneTap" dc:"Enable the embeddable Google One Tap endpoint that accepts GSI ID Token credentials" eg:"false"`
 }
 
 // SaveSettingsRes is the response for saving the linapro-oidc-google settings.

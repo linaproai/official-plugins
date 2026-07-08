@@ -30,6 +30,10 @@ const (
 	// ConfigKeyBackendRedirects is the sys_config key holding the JSON object
 	// that maps business state keys to third-party SSO receiver URLs.
 	ConfigKeyBackendRedirects hostconfigcap.SysConfigKey = "plugin.linapro-oidc-discord.backend_redirects"
+	// ConfigKeyAllowAutoProvision is the sys_config key holding the
+	// auto-provision enablement flag ("1" allows the host to create a
+	// least-privilege platform user for unlinked verified identities).
+	ConfigKeyAllowAutoProvision hostconfigcap.SysConfigKey = "plugin.linapro-oidc-discord.allow_auto_provision"
 )
 
 // SecretMask is the fixed indicator returned to the client whenever a client
@@ -57,6 +61,9 @@ type Snapshot struct {
 	// BackendRedirects is the raw JSON object mapping business state keys to
 	// third-party SSO receiver URLs.
 	BackendRedirects string
+	// AllowAutoProvision reports whether the host may auto-provision platform
+	// users for unlinked verified identities from this provider.
+	AllowAutoProvision bool
 }
 
 // Projection is the masked settings projection returned to the admin settings
@@ -79,6 +86,8 @@ type Projection struct {
 	DefaultBackendRedirect string
 	// BackendRedirects is the raw JSON object of state key to receiver URL.
 	BackendRedirects string
+	// AllowAutoProvision reports whether auto-provisioning is enabled.
+	AllowAutoProvision bool
 }
 
 // SaveInput carries the caller-supplied settings values submitted through the
@@ -98,6 +107,8 @@ type SaveInput struct {
 	// BackendRedirects replaces the stored state-key-to-receiver JSON object.
 	// A non-empty value must parse as a JSON object of string values.
 	BackendRedirects string
+	// AllowAutoProvision replaces the stored auto-provision enablement flag.
+	AllowAutoProvision bool
 }
 
 // Service defines the linapro-oidc-discord settings service surface used by

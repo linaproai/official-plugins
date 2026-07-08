@@ -48,6 +48,9 @@
                 },
                 "backendRedirects": {
                   "dc": "业务 state key 到第三方 SSO 接收地址的 JSON 对象；空字符串清除所有规则"
+                },
+                "allowAutoProvision": {
+                  "dc": "允许宿主为未绑定的已验证 Discord 身份自动创建最小权限平台账号"
                 }
               }
             },
@@ -80,6 +83,9 @@
                 },
                 "backendRedirects": {
                   "dc": "业务 state key 到第三方 SSO 接收地址的 JSON 对象"
+                },
+                "allowAutoProvision": {
+                  "dc": "当前是否允许自动注册未绑定的已验证 Discord 身份"
                 }
               }
             }

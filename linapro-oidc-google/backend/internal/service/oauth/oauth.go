@@ -40,6 +40,13 @@ type Service interface {
 	// after the host external-login exchange completes. It reflects the
 	// configured LoginReturnPath value so wiring stays in one place.
 	LoginReturnPath() string
+	// CompleteOneTap validates one Google One Tap ID Token credential and
+	// exchanges the verified identity for a host login outcome. The stateKey
+	// comes from the embed's login_uri query and selects the SSO delivery
+	// rule; the ID Token's own signature, audience, and expiry provide the
+	// integrity guarantees that the authorize-code flow gets from the signed
+	// state token.
+	CompleteOneTap(ctx context.Context, credential string, stateKey string) (*CallbackOutput, error)
 }
 
 // AuthorizeRequest describes the authorize redirect the browser should follow.
@@ -94,6 +101,7 @@ type serviceImpl struct {
 	configResolver   *ConfigResolver       // configResolver layers persisted settings over static defaults per request.
 	verifier         IdentityVerifier      // verifier exchanges an OAuth code for a verified identity.
 	stateCodec       StateCodec            // stateCodec signs and validates self-contained state tokens.
+	idTokenVerifier  IDTokenVerifier       // idTokenVerifier validates One Tap ID Token credentials; nil disables One Tap.
 }
 
 // New creates and returns a new Google OIDC login service instance. Each
@@ -101,17 +109,20 @@ type serviceImpl struct {
 // production HTTP verifier at real deployment time while unit tests inject a
 // deterministic verifier. The shared configResolver is also consumed by the
 // HTTP identity verifier so both read identical request-time settings.
+// idTokenVerifier may be nil, which disables the One Tap endpoint fail-closed.
 func New(
 	externalLoginSvc externallogin.Service,
 	configResolver *ConfigResolver,
 	verifier IdentityVerifier,
 	stateCodec StateCodec,
+	idTokenVerifier IDTokenVerifier,
 ) Service {
 	return &serviceImpl{
 		externalLoginSvc: externalLoginSvc,
 		configResolver:   configResolver,
 		verifier:         verifier,
 		stateCodec:       stateCodec,
+		idTokenVerifier:  idTokenVerifier,
 	}
 }
 

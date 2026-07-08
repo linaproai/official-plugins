@@ -29,6 +29,14 @@
               "verified": "Google 账号邮箱未通过验证"
             }
           },
+          "one": {
+            "tap": {
+              "disabled": "Google One Tap 登录未启用",
+              "csrf": {
+                "mismatch": "One Tap CSRF 校验失败"
+              }
+            }
+          },
           "external": {
             "login": {
               "unavailable": "外部登录服务不可用",

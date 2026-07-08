@@ -30,6 +30,13 @@ const (
 	// ConfigKeyBackendRedirects is the sys_config key holding the JSON object
 	// that maps business state keys to third-party SSO receiver URLs.
 	ConfigKeyBackendRedirects hostconfigcap.SysConfigKey = "plugin.linapro-oidc-google.backend_redirects"
+	// ConfigKeyAllowAutoProvision is the sys_config key holding the
+	// auto-provision enablement flag ("1" allows the host to create a
+	// least-privilege platform user for unlinked verified identities).
+	ConfigKeyAllowAutoProvision hostconfigcap.SysConfigKey = "plugin.linapro-oidc-google.allow_auto_provision"
+	// ConfigKeyEnableOneTap is the sys_config key holding the Google One Tap
+	// embed enablement flag ("1" accepts ID Token credentials on /onetap).
+	ConfigKeyEnableOneTap hostconfigcap.SysConfigKey = "plugin.linapro-oidc-google.enable_one_tap"
 )
 
 // SecretMask is the fixed indicator returned to the client whenever a client
@@ -57,6 +64,12 @@ type Snapshot struct {
 	// BackendRedirects is the raw JSON object mapping business state keys to
 	// third-party SSO receiver URLs.
 	BackendRedirects string
+	// AllowAutoProvision reports whether the host may auto-provision platform
+	// users for unlinked verified identities from this provider.
+	AllowAutoProvision bool
+	// EnableOneTap reports whether the One Tap embed endpoint accepts
+	// ID Token credentials.
+	EnableOneTap bool
 }
 
 // Projection is the masked settings projection returned to the admin settings
@@ -79,6 +92,10 @@ type Projection struct {
 	DefaultBackendRedirect string
 	// BackendRedirects is the raw JSON object of state key to receiver URL.
 	BackendRedirects string
+	// AllowAutoProvision reports whether auto-provisioning is enabled.
+	AllowAutoProvision bool
+	// EnableOneTap reports whether the One Tap embed endpoint is enabled.
+	EnableOneTap bool
 }
 
 // SaveInput carries the caller-supplied settings values submitted through the
@@ -98,6 +115,10 @@ type SaveInput struct {
 	// BackendRedirects replaces the stored state-key-to-receiver JSON object.
 	// A non-empty value must parse as a JSON object of string values.
 	BackendRedirects string
+	// AllowAutoProvision replaces the stored auto-provision enablement flag.
+	AllowAutoProvision bool
+	// EnableOneTap replaces the stored One Tap enablement flag.
+	EnableOneTap bool
 }
 
 // Service defines the linapro-oidc-google settings service surface used by

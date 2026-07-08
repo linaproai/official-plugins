@@ -82,6 +82,7 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		configResolver,
 		oauthsvc.NewHTTPIdentityVerifier(configResolver),
 		oauthsvc.NewHMACStateCodec(),
+		oauthsvc.NewJWKSIDTokenVerifier(configResolver),
 	)
 	loginController := loginctrl.NewV1(loginSvc, pluginSettingsSvc)
 	settingsController := settingsctrl.NewV1(pluginSettingsSvc)
@@ -94,6 +95,7 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		)
 		group.GET("/login", loginController.Start)
 		group.GET("/callback", loginController.Callback)
+		group.POST("/onetap", loginController.OneTap)
 	})
 	routes.Group(routes.APIPrefix(), func(group pluginhost.RouteGroup) {
 		group.Group("/api/v1", func(group pluginhost.RouteGroup) {

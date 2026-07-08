@@ -18,6 +18,20 @@ import (
 	"lina-core/pkg/plugin/capability/authcap/externallogin"
 )
 
+// resolveAllowAutoProvision reads the admin-controlled auto-provision flag at
+// request time so settings edits apply without a restart. A missing resolver
+// or settings load failure keeps auto-provisioning disabled fail-closed.
+func (s *serviceImpl) resolveAllowAutoProvision(ctx context.Context) bool {
+	if s == nil || s.configResolver == nil || s.configResolver.settingsSvc == nil {
+		return false
+	}
+	snapshot, err := s.configResolver.settingsSvc.Load(ctx)
+	if err != nil || snapshot == nil {
+		return false
+	}
+	return snapshot.AllowAutoProvision
+}
+
 // CompleteCallback validates the signed callback state, exchanges the code
 // for a verified identity, and hands the identity to the host external-login
 // seam. Provisioning, tenant resolution, and token minting stay host-owned;
@@ -64,10 +78,11 @@ func (s *serviceImpl) CompleteCallback(ctx context.Context, in CallbackInput) (*
 		identity.Email,
 	)
 	loginOut, err := s.externalLoginSvc.LoginByVerifiedIdentity(ctx, externallogin.LoginInput{
-		Provider:    Provider,
-		Subject:     identity.Subject,
-		Email:       identity.Email,
-		DisplayName: identity.DisplayName,
+		Provider:           Provider,
+		Subject:            identity.Subject,
+		Email:              identity.Email,
+		DisplayName:        identity.DisplayName,
+		AllowAutoProvision: s.resolveAllowAutoProvision(ctx),
 	})
 	if err != nil {
 		return nil, bizerr.WrapCode(err, CodeExternalLoginFailed)

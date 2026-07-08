@@ -59,6 +59,13 @@ func (s *serviceImpl) Save(ctx context.Context, in SaveInput) (*Projection, erro
 	if err := s.setValue(ctx, ConfigKeyBackendRedirects, rules); err != nil {
 		return nil, err
 	}
+	autoProvisionFlag := ""
+	if in.AllowAutoProvision {
+		autoProvisionFlag = enabledFlagValue
+	}
+	if err := s.setValue(ctx, ConfigKeyAllowAutoProvision, autoProvisionFlag); err != nil {
+		return nil, err
+	}
 	if nextSecret != current.ClientSecret {
 		if err := s.setValue(ctx, ConfigKeyClientSecret, nextSecret); err != nil {
 			return nil, err
@@ -78,6 +85,7 @@ func (s *serviceImpl) Save(ctx context.Context, in SaveInput) (*Projection, erro
 		EnableBackendRedirect:  in.EnableBackendRedirect,
 		DefaultBackendRedirect: strings.TrimSpace(in.DefaultBackendRedirect),
 		BackendRedirects:       rules,
+		AllowAutoProvision:     in.AllowAutoProvision,
 	}), nil
 }
 

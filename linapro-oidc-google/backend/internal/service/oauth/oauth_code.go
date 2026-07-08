@@ -58,4 +58,17 @@ var (
 		"Google external login failed",
 		gcode.CodeInternalError,
 	)
+	// CodeOneTapCSRFMismatch reports that the GSI double-submit CSRF check failed.
+	CodeOneTapCSRFMismatch = bizerr.MustDefine(
+		"PLUGIN_OIDC_GOOGLE_ONE_TAP_CSRF_MISMATCH",
+		"One Tap CSRF validation failed",
+		gcode.CodeSecurityReason,
+	)
+	// CodeOneTapDisabled reports that the One Tap endpoint was called while the
+	// admin switch is off.
+	CodeOneTapDisabled = bizerr.MustDefine(
+		"PLUGIN_OIDC_GOOGLE_ONE_TAP_DISABLED",
+		"Google One Tap login is disabled",
+		gcode.CodeInvalidOperation,
+	)
 )

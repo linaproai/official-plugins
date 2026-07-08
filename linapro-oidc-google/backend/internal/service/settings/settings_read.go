@@ -24,6 +24,8 @@ func allSettingsKeys() []hostconfigcap.SysConfigKey {
 		ConfigKeyEnableBackendRedirect,
 		ConfigKeyDefaultBackendRedirect,
 		ConfigKeyBackendRedirects,
+		ConfigKeyAllowAutoProvision,
+		ConfigKeyEnableOneTap,
 	}
 }
 
@@ -74,6 +76,12 @@ func (s *serviceImpl) Load(ctx context.Context) (*Snapshot, error) {
 		if info := result.Items[ConfigKeyBackendRedirects]; info != nil {
 			snapshot.BackendRedirects = info.Value
 		}
+		if info := result.Items[ConfigKeyAllowAutoProvision]; info != nil {
+			snapshot.AllowAutoProvision = info.Value == enabledFlagValue
+		}
+		if info := result.Items[ConfigKeyEnableOneTap]; info != nil {
+			snapshot.EnableOneTap = info.Value == enabledFlagValue
+		}
 	}
 	return snapshot, nil
 }
@@ -89,6 +97,8 @@ func projectFromSnapshot(snapshot *Snapshot) *Projection {
 	projection.EnableBackendRedirect = snapshot.EnableBackendRedirect
 	projection.DefaultBackendRedirect = snapshot.DefaultBackendRedirect
 	projection.BackendRedirects = snapshot.BackendRedirects
+	projection.AllowAutoProvision = snapshot.AllowAutoProvision
+	projection.EnableOneTap = snapshot.EnableOneTap
 	if snapshot.ClientSecret != "" {
 		projection.ClientSecretConfigured = true
 		projection.ClientSecretMasked = SecretMask

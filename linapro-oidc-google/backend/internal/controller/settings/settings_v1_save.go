@@ -21,6 +21,8 @@ func (c *ControllerV1) SaveSettings(ctx context.Context, req *v1.SaveSettingsReq
 		EnableBackendRedirect:  req.EnableBackendRedirect,
 		DefaultBackendRedirect: req.DefaultBackendRedirect,
 		BackendRedirects:       req.BackendRedirects,
+		AllowAutoProvision:     req.AllowAutoProvision,
+		EnableOneTap:           req.EnableOneTap,
 	})
 	if err != nil {
 		return nil, err
@@ -41,5 +43,7 @@ func projectSettingsItem(projection *settingssvc.Projection) *v1.SettingsItem {
 		EnableBackendRedirect:  projection.EnableBackendRedirect,
 		DefaultBackendRedirect: projection.DefaultBackendRedirect,
 		BackendRedirects:       projection.BackendRedirects,
+		AllowAutoProvision:     projection.AllowAutoProvision,
+		EnableOneTap:           projection.EnableOneTap,
 	}
 }

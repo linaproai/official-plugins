@@ -37,7 +37,15 @@
         "copyLoginUrl": "Copy Login URL",
         "copied": "Login URL copied.",
         "copyFailed": "Failed to copy the login URL.",
-        "deleteRule": "Delete"
+        "deleteRule": "Delete",
+        "autoProvisionLabel": "Auto-provision new users",
+        "autoProvisionHint": "When enabled, a verified Google identity without a linked local account gets a least-privilege platform account automatically. If the email already belongs to an existing account, login is rejected until the identity is linked from that account.",
+        "oneTapLabel": "Enable One Tap embed",
+        "oneTapHint": "Accept Google One Tap ID Token sign-ins posted by the embeddable snippet below. Third-party pages hosting the snippet must be registered as Authorized JavaScript origins in Google Cloud Console, and the onetap URL as an Authorized redirect URI.",
+        "oneTapEmbedTitle": "Embeddable Snippet",
+        "oneTapStateKeyPlaceholder": "SSO state key (optional)",
+        "copyEmbed": "Copy Snippet",
+        "oneTapEmbedHint": "Paste this snippet into any page. After a successful sign-in the outcome follows the SSO delivery rules: a matching state key redirects to the configured receiver URL with the tokens; otherwise the browser lands on the workspace login handoff."
       }
     }
   }

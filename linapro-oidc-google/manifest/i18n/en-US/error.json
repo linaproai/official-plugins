@@ -29,6 +29,14 @@
               "verified": "Google account email is not verified"
             }
           },
+          "one": {
+            "tap": {
+              "disabled": "Google One Tap login is disabled",
+              "csrf": {
+                "mismatch": "One Tap CSRF validation failed"
+              }
+            }
+          },
           "external": {
             "login": {
               "unavailable": "External-login service is unavailable",

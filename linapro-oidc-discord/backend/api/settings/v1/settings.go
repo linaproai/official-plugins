@@ -25,4 +25,7 @@ type SettingsItem struct {
 	DefaultBackendRedirect string `json:"defaultBackendRedirect" dc:"Workspace landing path used after a normal external login; empty keeps the host default" eg:"/dashboard/analytics"`
 	// BackendRedirects is the JSON object mapping state keys to receiver URLs.
 	BackendRedirects string `json:"backendRedirects" dc:"JSON object mapping business state keys to third-party SSO receiver URLs" eg:"{\"crm\":\"https://crm.example.com/sso\"}"`
+	// AllowAutoProvision reports whether unlinked verified identities may be
+	// auto-provisioned as least-privilege platform users.
+	AllowAutoProvision bool `json:"allowAutoProvision" dc:"True when the host may auto-provision a least-privilege platform user for an unlinked verified Discord identity" eg:"false"`
 }

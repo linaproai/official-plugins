@@ -34,6 +34,8 @@ interface SettingsItem {
   enableBackendRedirect: boolean;
   defaultBackendRedirect: string;
   backendRedirects: string;
+  allowAutoProvision: boolean;
+  enableOneTap: boolean;
 }
 
 interface RedirectRule {
@@ -71,7 +73,42 @@ const formState = reactive({
   enableBackendRedirect: false,
   defaultBackendRedirect: '',
   rules: [] as RedirectRule[],
+  allowAutoProvision: false,
+  enableOneTap: false,
 });
+
+/** oneTapStateKey lets the admin pick which SSO rule the embed targets. */
+const oneTapStateKey = ref('');
+
+/**
+ * oneTapEmbedCode renders the copy-paste GSI snippet for third-party pages.
+ * The login_uri points at the plugin's public One Tap endpoint; an optional
+ * state key routes the outcome to the matching SSO delivery rule.
+ */
+const oneTapEmbedCode = computed(() => {
+  const stateQuery = oneTapStateKey.value.trim()
+    ? `?state=${encodeURIComponent(oneTapStateKey.value.trim())}`
+    : '';
+  const loginUri = `${window.location.origin}/portal/${pluginID}/onetap${stateQuery}`;
+  return [
+    '<script src="https://accounts.google.com/gsi/client" async><' + '/script>',
+    '<div id="g_id_onload"',
+    `     data-client_id="${formState.clientId || 'YOUR_GOOGLE_CLIENT_ID'}"`,
+    `     data-login_uri="${loginUri}"`,
+    '     data-auto_select="true"',
+    '     data-itp_support="true"></div>',
+  ].join('\n');
+});
+
+/** copyOneTapEmbed copies the embeddable snippet to the clipboard. */
+async function copyOneTapEmbed() {
+  try {
+    await navigator.clipboard.writeText(oneTapEmbedCode.value);
+    message.success($t('plugin.linapro-oidc-google.settings.copied'));
+  } catch {
+    message.error($t('plugin.linapro-oidc-google.settings.copyFailed'));
+  }
+}
 
 function settingsApi() {
   return pluginApiPath(pluginID, 'plugins/linapro-oidc-google/settings');
@@ -119,6 +156,8 @@ function applySettings(settings: null | SettingsItem) {
   formState.enableBackendRedirect = settings?.enableBackendRedirect ?? false;
   formState.defaultBackendRedirect = settings?.defaultBackendRedirect ?? '';
   formState.rules = parseRules(settings?.backendRedirects ?? '');
+  formState.allowAutoProvision = settings?.allowAutoProvision ?? false;
+  formState.enableOneTap = settings?.enableOneTap ?? false;
   secretConfigured.value = settings?.clientSecretConfigured ?? false;
 }
 
@@ -176,6 +215,8 @@ async function saveSettings() {
         enableBackendRedirect: formState.enableBackendRedirect,
         defaultBackendRedirect: formState.defaultBackendRedirect,
         backendRedirects: serializeRules(formState.rules),
+        allowAutoProvision: formState.allowAutoProvision,
+        enableOneTap: formState.enableOneTap,
       },
     );
     applySettings(res?.settings ?? null);
@@ -259,6 +300,19 @@ onMounted(loadSettings);
             allow-clear
           />
         </Form.Item>
+        <Form.Item name="allowAutoProvision">
+          <div class="flex items-center gap-3">
+            <Switch v-model:checked="formState.allowAutoProvision" />
+            <span class="font-medium">
+              {{
+                $t('plugin.linapro-oidc-google.settings.autoProvisionLabel')
+              }}
+            </span>
+          </div>
+          <p class="text-muted-foreground mt-1 text-xs">
+            {{ $t('plugin.linapro-oidc-google.settings.autoProvisionHint') }}
+          </p>
+        </Form.Item>
         <Form.Item name="enableBackendRedirect">
           <div class="flex items-center gap-3">
             <Switch v-model:checked="formState.enableBackendRedirect" />
@@ -309,6 +363,43 @@ onMounted(loadSettings);
               </Button>
             </div>
           </div>
+        </template>
+        <Form.Item name="enableOneTap">
+          <div class="flex items-center gap-3">
+            <Switch v-model:checked="formState.enableOneTap" />
+            <span class="font-medium">
+              {{ $t('plugin.linapro-oidc-google.settings.oneTapLabel') }}
+            </span>
+          </div>
+          <p class="text-muted-foreground mt-1 text-xs">
+            {{ $t('plugin.linapro-oidc-google.settings.oneTapHint') }}
+          </p>
+        </Form.Item>
+        <template v-if="formState.enableOneTap">
+          <div class="mb-2 flex items-center justify-between">
+            <span class="font-medium">
+              {{ $t('plugin.linapro-oidc-google.settings.oneTapEmbedTitle') }}
+            </span>
+            <div class="flex items-center gap-2">
+              <Input
+                v-model:value="oneTapStateKey"
+                :placeholder="
+                  $t('plugin.linapro-oidc-google.settings.oneTapStateKeyPlaceholder')
+                "
+                class="w-40"
+                size="small"
+              />
+              <Button size="small" @click="copyOneTapEmbed">
+                {{ $t('plugin.linapro-oidc-google.settings.copyEmbed') }}
+              </Button>
+            </div>
+          </div>
+          <pre
+            class="bg-muted mb-2 overflow-x-auto rounded p-3 text-xs"
+          ><code>{{ oneTapEmbedCode }}</code></pre>
+          <p class="text-muted-foreground mb-4 text-xs">
+            {{ $t('plugin.linapro-oidc-google.settings.oneTapEmbedHint') }}
+          </p>
         </template>
         <Form.Item class="mt-4">
           <Button :loading="saving" type="primary" @click="saveSettings">

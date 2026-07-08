@@ -34,6 +34,7 @@ interface SettingsItem {
   enableBackendRedirect: boolean;
   defaultBackendRedirect: string;
   backendRedirects: string;
+  allowAutoProvision: boolean;
 }
 
 interface RedirectRule {
@@ -71,6 +72,7 @@ const formState = reactive({
   enableBackendRedirect: false,
   defaultBackendRedirect: '',
   rules: [] as RedirectRule[],
+  allowAutoProvision: false,
 });
 
 function settingsApi() {
@@ -119,6 +121,7 @@ function applySettings(settings: null | SettingsItem) {
   formState.enableBackendRedirect = settings?.enableBackendRedirect ?? false;
   formState.defaultBackendRedirect = settings?.defaultBackendRedirect ?? '';
   formState.rules = parseRules(settings?.backendRedirects ?? '');
+  formState.allowAutoProvision = settings?.allowAutoProvision ?? false;
   secretConfigured.value = settings?.clientSecretConfigured ?? false;
 }
 
@@ -176,6 +179,7 @@ async function saveSettings() {
         enableBackendRedirect: formState.enableBackendRedirect,
         defaultBackendRedirect: formState.defaultBackendRedirect,
         backendRedirects: serializeRules(formState.rules),
+        allowAutoProvision: formState.allowAutoProvision,
       },
     );
     applySettings(res?.settings ?? null);
@@ -258,6 +262,19 @@ onMounted(loadSettings);
             "
             allow-clear
           />
+        </Form.Item>
+        <Form.Item name="allowAutoProvision">
+          <div class="flex items-center gap-3">
+            <Switch v-model:checked="formState.allowAutoProvision" />
+            <span class="font-medium">
+              {{
+                $t('plugin.linapro-oidc-discord.settings.autoProvisionLabel')
+              }}
+            </span>
+          </div>
+          <p class="text-muted-foreground mt-1 text-xs">
+            {{ $t('plugin.linapro-oidc-discord.settings.autoProvisionHint') }}
+          </p>
         </Form.Item>
         <Form.Item name="enableBackendRedirect">
           <div class="flex items-center gap-3">
