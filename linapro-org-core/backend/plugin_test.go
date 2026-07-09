@@ -102,6 +102,10 @@ func (fakeUsers) Create(context.Context, usercap.CreateInput) (usercap.UserID, e
 	return "", nil
 }
 
+func (fakeUsers) ProvisionExternal(context.Context, usercap.ProvisionExternalInput) (usercap.UserID, error) {
+	return "", nil
+}
+
 // Update is unused by construction-only tests.
 func (fakeUsers) Update(context.Context, usercap.UpdateInput) error {
 	return nil

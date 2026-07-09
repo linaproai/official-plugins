@@ -268,6 +268,10 @@ func (s fakeImpersonationUsers) Create(context.Context, usercap.CreateInput) (us
 	return "", nil
 }
 
+func (s fakeImpersonationUsers) ProvisionExternal(context.Context, usercap.ProvisionExternalInput) (usercap.UserID, error) {
+	return "", nil
+}
+
 // Update is unused by impersonation tests.
 func (s fakeImpersonationUsers) Update(context.Context, usercap.UpdateInput) error {
 	return nil

@@ -1,0 +1,39 @@
+{
+  "error": {
+    "plugin": {
+      "oidc": {
+        "core": {
+          "bind": {
+            "conflict": "The external identity is already bound to another account"
+          },
+          "identity": {
+            "invalid": "External identity provider and subject cannot be empty",
+            "not": {
+              "found": "The external identity is not bound to the current account"
+            },
+            "query": {
+              "failed": "Failed to query external identity linkage"
+            },
+            "write": {
+              "failed": "Failed to write external identity linkage"
+            }
+          },
+          "provision": {
+            "email": {
+              "conflict": "An account with the same email already exists. Sign in to that account and bind this identity instead"
+            },
+            "failed": "Failed to provision an account for the external identity",
+            "not": {
+              "allowed": "Automatic account provisioning is not enabled for this login"
+            }
+          },
+          "user": {
+            "capability": {
+              "unavailable": "Host user capability is unavailable"
+            }
+          }
+        }
+      }
+    }
+  }
+}

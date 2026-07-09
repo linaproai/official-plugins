@@ -1,0 +1,62 @@
+# Plugin identifier, unique across the host and source plugin directories; use `kebab-case`.
+# 插件唯一标识，必须在宿主和源码插件目录中保持唯一，并使用 `kebab-case` 命名风格。
+id: linapro-oidc-core
+
+# Plugin display name used in plugin management pages, developer docs, and presentation.
+# 插件显示名称，用于插件管理页面、开发文档和展示。
+name: External Identity Core
+
+# Plugin semantic version; examples in this repo use the `v` prefix.
+# 插件语义化版本号，当前示例统一使用带 `v` 前缀的写法。
+version: v0.1.0
+
+# Plugin type enum. Allowed values: `source` is compiled with the host; `dynamic` is loaded as a runtime plugin artifact.
+# 插件类型枚举。可选值：`source` 表示随宿主源码编译交付；`dynamic` 表示作为运行时动态插件产物加载。
+type: source
+
+# Plugin distribution governance enum. `builtin` marks this registered source plugin as a project
+# component that host startup installs, enables, and safely upgrades; ordinary plugin-management
+# write actions are rejected.
+# 插件分发治理枚举。`builtin`表示该已注册源码插件是项目组件，由宿主启动自动安装、启用和安全升级；
+# 常规插件管理写操作会被拒绝。
+distribution: builtin
+
+# Multi-tenant scope enum. Allowed values: `platform_only` is platform-context only; `tenant_aware` is governed by tenant context.
+# 多租户作用域枚举。可选值：`platform_only` 表示仅平台上下文可见和治理；`tenant_aware` 表示按租户上下文治理。
+scope_nature: platform_only
+
+# Multi-tenant support flag. `true` means the plugin supports tenant-level installation and provisioning governance.
+# 多租户支持标记。`true` 表示插件支持租户级安装与开通治理。
+supports_multi_tenant: false
+
+# Default install mode enum. Allowed values: `global` enables one shared installation; `tenant_scoped` enables or disables per tenant.
+# 默认安装模式枚举。可选值：`global` 表示全局统一安装启用；`tenant_scoped` 表示按租户独立启用或禁用。
+default_install_mode: global
+
+# Plugin description summarizing the capability boundary.
+# 插件说明，概述插件的能力边界。
+description: External identity core plugin that owns the (provider, subject) linkage storage and the resolve/provision/bind engine behind the host external-login seam. OAuth protocol plugins such as linapro-oidc-google and linapro-oidc-discord depend on it.
+
+# Plugin author or owning team.
+# 插件作者或归属团队。
+author: linapro
+
+# Plugin homepage or documentation URL for extra project, design, or external references.
+# 插件主页或文档地址，用于补充项目介绍、设计文档或外部说明链接。
+homepage: https://example.com/lina/plugins/linapro-oidc-core
+
+# Plugin license identifier.
+# 插件许可证标识。
+license: Apache-2.0
+
+# Plugin internationalization config. This follows the host i18n config shape;
+# enabled plugins must ship manifest/i18n resources for the listed locales.
+# 插件国际化配置。该配置与宿主 i18n 配置结构保持一致；启用后需提供对应语言资源。
+i18n:
+  enabled: true
+  default: en-US
+  locales:
+    - locale: en-US
+      nativeName: English
+    - locale: zh-CN
+      nativeName: 简体中文

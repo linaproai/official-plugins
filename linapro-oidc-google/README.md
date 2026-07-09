@@ -38,7 +38,7 @@ linapro-oidc-google/
 
 ## New External-Identity Seam Integration
 
-The host owns provisioning, tenant candidate resolution, and token minting. The plugin only submits the verified identity DTO and forwards the outcome to the SPA login page.
+The host owns tenant candidate resolution and token minting, and delegates `(provider, subject)` linkage resolution plus provisioning policy to `linapro-oidc-core`, which this plugin declares as a dependency in `plugin.yaml`. When `linapro-oidc-core` is not installed or enabled, external login is fail-closed. This plugin only submits the verified identity DTO and forwards the outcome to the SPA login page.
 
 | Step | Actor | Action |
 | --- | --- | --- |
@@ -77,6 +77,6 @@ The Vue slot component lives at `frontend/slots/auth.login.after/google-login-en
 
 - provider ownership is declared through `ProvideExternalIdentity`
 - login routes stay on the plugin-owned portal path group, outside the `/x` API namespace
-- provisioning, tenant resolution, and token minting stay host-owned
+- tenant resolution and token minting stay host-owned; linkage storage and provisioning policy stay in `linapro-oidc-core`
 - OAuth stub is documented and easy to replace
 - Vue slot component is only rendered when the plugin is installed and enabled
