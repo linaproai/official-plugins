@@ -18,9 +18,14 @@ import {
   uninstallPlugin,
 } from '@host-tests/support/api/job';
 import { waitForRouteReady } from '@host-tests/support/ui';
+import {
+  captureDemoDynamicDependencyStates,
+  ensureDemoDynamicDependenciesInstalled,
+  restoreDemoDynamicDependencyStates,
+  type DependencyPluginState,
+} from "../../support/plugin-dependencies";
 
 const pluginID = "linapro-demo-dynamic";
-const sourcePluginID = "linapro-demo-source";
 const pluginMenuNamePattern = /Dynamic Plugin Demo|动态插件示例/u;
 const repoRoot = path.resolve(process.cwd(), "../..");
 const legacyRuntimeArtifactPath = path.join(
@@ -40,8 +45,7 @@ type DictDataItem = {
 let adminApi: APIRequestContext;
 let originalInstalled = 0;
 let originalEnabled = 0;
-let originalSourceInstalled = 0;
-let originalSourceEnabled = 0;
+let originalDependencyStates: DependencyPluginState[] = [];
 
 function ensureRuntimePluginArtifact() {
   execFileSync("make", ["wasm", `p=${pluginID}`, "out=../../temp/output"], {
@@ -51,51 +55,13 @@ function ensureRuntimePluginArtifact() {
   rmSync(legacyRuntimeArtifactPath, { force: true });
 }
 
-async function ensureSourcePluginInstalledAndEnabled() {
-  let sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-  if (sourcePlugin.installed !== 1) {
-    await installPlugin(adminApi, sourcePluginID, { installMode: "global" });
-    sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-  }
-  if (sourcePlugin.enabled !== 1) {
-    await enablePlugin(adminApi, sourcePluginID);
-  }
-}
-
-async function restoreSourcePluginState() {
-  let sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-
-  if (originalSourceInstalled !== 1) {
-    if (sourcePlugin.enabled === 1) {
-      await disablePlugin(adminApi, sourcePluginID);
-      sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-    }
-    if (sourcePlugin.installed === 1) {
-      await uninstallPlugin(adminApi, sourcePluginID);
-    }
-    return;
-  }
-
-  if (sourcePlugin.installed !== 1) {
-    await installPlugin(adminApi, sourcePluginID, { installMode: "global" });
-    sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-  }
-  if (originalSourceEnabled === 1 && sourcePlugin.enabled !== 1) {
-    await enablePlugin(adminApi, sourcePluginID);
-  } else if (originalSourceEnabled !== 1 && sourcePlugin.enabled === 1) {
-    await disablePlugin(adminApi, sourcePluginID);
-  }
-}
-
 test.describe("TC002 运行时国际化切换", () => {
   test.beforeAll(async () => {
     ensureRuntimePluginArtifact();
     adminApi = await createAdminApiContext();
     await syncPlugins(adminApi);
-    const sourcePlugin = await getPlugin(adminApi, sourcePluginID);
+    originalDependencyStates = await captureDemoDynamicDependencyStates(adminApi);
     const plugin = await getPlugin(adminApi, pluginID);
-    originalSourceInstalled = sourcePlugin.installed;
-    originalSourceEnabled = sourcePlugin.enabled;
     originalInstalled = plugin.installed;
     originalEnabled = plugin.enabled;
   });
@@ -110,7 +76,7 @@ test.describe("TC002 运行时国际化切换", () => {
       if (originalInstalled !== 1 && plugin.installed === 1) {
         await uninstallPlugin(adminApi, pluginID);
       }
-      await restoreSourcePluginState();
+      await restoreDemoDynamicDependencyStates(adminApi, originalDependencyStates);
     } finally {
       await adminApi.dispose();
     }
@@ -184,7 +150,7 @@ test.describe("TC002 运行时国际化切换", () => {
 
     // Reinstall the current artifact so the active dynamic release and its
     // runtime i18n bundles match the just-built test fixture.
-    await ensureSourcePluginInstalledAndEnabled();
+    await ensureDemoDynamicDependenciesInstalled(adminApi, { enable: true });
     await installPlugin(adminApi, pluginID, { installMode: "global" });
     const plugin = await getPlugin(adminApi, pluginID);
     if (plugin.enabled !== 1) {

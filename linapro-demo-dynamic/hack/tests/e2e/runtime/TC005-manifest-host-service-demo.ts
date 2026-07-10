@@ -7,19 +7,20 @@ import path from "node:path";
 import { test, expect } from "@host-tests/fixtures/auth";
 import {
   createAdminApiContext,
-  disablePlugin,
-  enablePlugin,
   expectSuccess,
   getPlugin,
-  installPlugin,
   syncPlugins,
-  uninstallPlugin,
 } from "@host-tests/support/api/job";
 import { waitForRouteReady } from "@host-tests/support/ui";
 import { DemoDynamicPage } from "../../pages/DemoDynamicPage";
+import {
+  captureDemoDynamicDependencyStates,
+  ensureDemoDynamicDependenciesInstalled,
+  restoreDemoDynamicDependencyStates,
+  type DependencyPluginState,
+} from "../../support/plugin-dependencies";
 
 const pluginID = "linapro-demo-dynamic";
-const sourcePluginID = "linapro-demo-source";
 const pluginMenuNamePattern = /Dynamic Plugin Demo|动态插件示例/u;
 const repoRoot = path.resolve(process.cwd(), "../..");
 const pluginDir = path.join(repoRoot, "apps", "lina-plugins", pluginID);
@@ -76,8 +77,7 @@ const dynamicHostServiceAuthorization = {
 let adminApi: APIRequestContext;
 let originalInstalled = 0;
 let originalEnabled = 0;
-let originalSourceInstalled = 0;
-let originalSourceEnabled = 0;
+let originalDependencyStates: DependencyPluginState[] = [];
 let createdManifestConfigFixture = false;
 
 function ensureRuntimePluginArtifact() {
@@ -134,20 +134,12 @@ async function enableDynamicPluginWithAuthorization() {
 
 async function ensurePluginInstalledAndEnabled() {
   await syncPlugins(adminApi);
-  let sourcePlugin = await getPlugin(adminApi, sourcePluginID);
+  originalDependencyStates = await captureDemoDynamicDependencyStates(adminApi);
   let plugin = await getPlugin(adminApi, pluginID);
-  originalSourceInstalled = sourcePlugin.installed;
-  originalSourceEnabled = sourcePlugin.enabled;
   originalInstalled = plugin.installed;
   originalEnabled = plugin.enabled;
 
-  if (sourcePlugin.installed !== 1) {
-    await installPlugin(adminApi, sourcePluginID, { installMode: "global" });
-    sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-  }
-  if (sourcePlugin.enabled !== 1) {
-    await enablePlugin(adminApi, sourcePluginID);
-  }
+  await ensureDemoDynamicDependenciesInstalled(adminApi, { enable: true });
 
   if (plugin.installed === 1) {
     await forceUninstallPlugin(pluginID, false);
@@ -168,7 +160,10 @@ async function restorePluginState() {
     if (plugin.installed === 1) {
       await forceUninstallPlugin(pluginID, true);
     }
-    await restoreSourcePluginState();
+    await restoreDemoDynamicDependencyStates(
+      adminApi,
+      originalDependencyStates,
+    );
     return;
   }
 
@@ -178,6 +173,7 @@ async function restorePluginState() {
     plugin = await getPlugin(adminApi, pluginID);
   }
   if (plugin.installed !== 1) {
+    await ensureDemoDynamicDependenciesInstalled(adminApi, { enable: true });
     await installDynamicPluginWithAuthorization();
     plugin = await getPlugin(adminApi, pluginID);
   }
@@ -185,7 +181,7 @@ async function restorePluginState() {
     await enableDynamicPluginWithAuthorization();
   }
 
-  await restoreSourcePluginState();
+  await restoreDemoDynamicDependencyStates(adminApi, originalDependencyStates);
 }
 
 async function forceUninstallPlugin(pluginId: string, purgeStorageData: boolean) {
@@ -197,29 +193,6 @@ async function forceUninstallPlugin(pluginId: string, purgeStorageData: boolean)
       },
     }),
   );
-}
-
-async function restoreSourcePluginState() {
-  let sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-  if (originalSourceInstalled !== 1) {
-    if (sourcePlugin.enabled === 1) {
-      await disablePlugin(adminApi, sourcePluginID);
-      sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-    }
-    if (sourcePlugin.installed === 1) {
-      await uninstallPlugin(adminApi, sourcePluginID);
-    }
-    return;
-  }
-  if (sourcePlugin.installed !== 1) {
-    await installPlugin(adminApi, sourcePluginID, { installMode: "global" });
-    sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-  }
-  if (originalSourceEnabled === 1 && sourcePlugin.enabled !== 1) {
-    await enablePlugin(adminApi, sourcePluginID);
-  } else if (originalSourceEnabled !== 1 && sourcePlugin.enabled === 1) {
-    await disablePlugin(adminApi, sourcePluginID);
-  }
 }
 
 test.describe("TC-5 Manifest host service demo", () => {
