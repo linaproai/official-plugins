@@ -15,8 +15,8 @@ import (
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-core/pkg/plugin/capability/capregistry"
 	"lina-core/pkg/plugin/pluginbridge/protocol"
-	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitypes"
 	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitext"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitypes"
 	"lina-plugin-linapro-ai-core/backend/cap/aicap/spi"
 )
 

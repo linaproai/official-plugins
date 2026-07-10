@@ -10,12 +10,12 @@ import (
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/plugin/capability/capmodel"
 	"lina-plugin-linapro-ai-core/backend/cap/aicap/aiaudio"
-	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitypes"
 	"lina-plugin-linapro-ai-core/backend/cap/aicap/aidocument"
 	"lina-plugin-linapro-ai-core/backend/cap/aicap/aiembedding"
 	"lina-plugin-linapro-ai-core/backend/cap/aicap/aiimage"
 	"lina-plugin-linapro-ai-core/backend/cap/aicap/aisafety"
 	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitext"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitypes"
 	"lina-plugin-linapro-ai-core/backend/cap/aicap/aivideo"
 	"lina-plugin-linapro-ai-core/backend/cap/aicap/aivision"
 )

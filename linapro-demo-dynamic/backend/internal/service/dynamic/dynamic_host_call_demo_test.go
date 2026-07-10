@@ -25,8 +25,8 @@ import (
 	"lina-core/pkg/plugin/capability/storagecap"
 	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-plugin-linapro-ai-core/backend/cap/aicap"
-	"lina-plugin-linapro-ai-core/backend/cap/aicap/aicommon"
 	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitext"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitypes"
 	"lina-plugin-linapro-ai-core/backend/cap/aicap/spi"
 )
 
@@ -1007,11 +1007,11 @@ func TestRunHostCallDemoAIReadsOwnerMethodStatus(t *testing.T) {
 	if payload.Owner != spi.OwnerPluginID || payload.Service != spi.ServiceAI || payload.Version != spi.VersionV1 {
 		t.Fatalf("unexpected owner identity payload: %#v", payload)
 	}
-	if payload.CapabilityType != string(aicommon.CapabilityTypeText) ||
-		payload.CapabilityMethod != string(aicommon.CapabilityMethodTextGenerate) {
+	if payload.CapabilityType != string(aitypes.CapabilityTypeText) ||
+		payload.CapabilityMethod != string(aitypes.CapabilityMethodTextGenerate) {
 		t.Fatalf("unexpected AI method payload: %#v", payload)
 	}
-	if payload.Available || payload.CapabilityID != aitext.CapabilityAITextV1 || payload.Reason == "" {
+	if payload.Available || payload.CapabilityID != aitext.CapabilityTextV1 || payload.Reason == "" {
 		t.Fatalf("unexpected AI method status payload: %#v", payload)
 	}
 }

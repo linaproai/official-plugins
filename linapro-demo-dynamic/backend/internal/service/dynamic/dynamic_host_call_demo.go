@@ -21,7 +21,7 @@ import (
 	"lina-core/pkg/plugin/capability/storagecap"
 	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/pluginbridge/protocol"
-	"lina-plugin-linapro-ai-core/backend/cap/aicap/aicommon"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitypes"
 	"lina-plugin-linapro-ai-core/backend/cap/aicap/spi"
 )
 
@@ -780,7 +780,7 @@ func (s *serviceImpl) runHostCallDemoAI(ctx context.Context) (*hostCallDemoAIPay
 	if s.aiSvc == nil {
 		return nil, gerror.New("linapro-ai-core owner AI service is unavailable")
 	}
-	status := s.aiSvc.Text().MethodStatus(ctx, aicommon.CapabilityMethodTextGenerate)
+	status := s.aiSvc.Text().MethodStatus(ctx, aitypes.CapabilityMethodTextGenerate)
 	return &hostCallDemoAIPayload{
 		Owner:            spi.OwnerPluginID,
 		Service:          spi.ServiceAI,
