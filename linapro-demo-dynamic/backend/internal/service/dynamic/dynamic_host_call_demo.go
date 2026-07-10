@@ -21,6 +21,8 @@ import (
 	"lina-core/pkg/plugin/capability/storagecap"
 	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/pluginbridge/protocol"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/aicommon"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/spi"
 )
 
 // Host-call demo constants define the governed keys, paths, and sample values
@@ -35,7 +37,7 @@ const (
 	hostCallDemoDataTable           = demoRecordTable
 	hostCallDemoRecordTitlePrefix   = "Host call demo"
 	hostCallDemoAnonymousUser       = "anonymous"
-	hostCallDemoSummaryMessage      = "Host service demo executed through runtime, storage, network, data, plugins.config.get, manifest batch/list, hostConfig, bizctx, cache, lock, org, and tenant services."
+	hostCallDemoSummaryMessage      = "Host service demo executed through runtime, storage, network, data, plugins.config.get, manifest batch/list, hostConfig, bizctx, cache, lock, org, tenant, and linapro-ai-core owner AI services."
 	hostCallDemoNetworkPreview      = 120
 	hostCallDemoPluginGreetingKey   = "demo.greeting"
 	hostCallDemoPluginFeatureKey    = "demo.featureEnabled"
@@ -119,6 +121,10 @@ func (s *serviceImpl) BuildHostCallDemoPayload(ctx context.Context, input *HostC
 	if err != nil {
 		return nil, err
 	}
+	aiSummary, err := s.runHostCallDemoAI(ctx)
+	if err != nil {
+		return nil, err
+	}
 	networkSummary := s.runHostCallDemoNetwork(input, uuidValue)
 
 	return &hostCallDemoPayload{
@@ -139,6 +145,7 @@ func (s *serviceImpl) BuildHostCallDemoPayload(ctx context.Context, input *HostC
 		Lock:     *lockSummary,
 		Org:      *orgSummary,
 		Tenant:   *tenantSummary,
+		AI:       *aiSummary,
 		Message:  hostCallDemoSummaryMessage,
 	}, nil
 }
@@ -765,6 +772,26 @@ func (s *serviceImpl) runHostCallDemoTenant(ctx context.Context, input *HostCall
 	}
 	payload.UserTenantCount = len(tenants)
 	return payload, nil
+}
+
+// runHostCallDemoAI demonstrates owner-aware linapro-ai-core bridge access by
+// reading text generation method status without executing provider generation.
+func (s *serviceImpl) runHostCallDemoAI(ctx context.Context) (*hostCallDemoAIPayload, error) {
+	if s.aiSvc == nil {
+		return nil, gerror.New("linapro-ai-core owner AI service is unavailable")
+	}
+	status := s.aiSvc.Text().MethodStatus(ctx, aicommon.CapabilityMethodTextGenerate)
+	return &hostCallDemoAIPayload{
+		Owner:            spi.OwnerPluginID,
+		Service:          spi.ServiceAI,
+		Version:          spi.VersionV1,
+		CapabilityType:   string(status.CapabilityType),
+		CapabilityMethod: string(status.CapabilityMethod),
+		Available:        status.Available,
+		CapabilityID:     status.CapabilityStatus.CapabilityID,
+		ActiveProvider:   status.CapabilityStatus.ActiveProvider,
+		Reason:           status.Reason,
+	}, nil
 }
 
 // hostCallDemoPluginID returns the normalized plugin identifier from the input.

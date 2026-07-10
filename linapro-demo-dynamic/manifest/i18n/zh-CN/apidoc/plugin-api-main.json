@@ -231,12 +231,12 @@
                 }
               },
               "meta": {
-                "dc": "演示动态插件通过统一宿主服务模型调用运行时、存储、网络、数据、插件配置、打包 manifest 资源、宿主公开配置、业务上下文、缓存、锁、组织和租户能力。该接口会写入运行时日志，读写隔离插件存储并验证批量元数据、游标列表和批量删除，访问受治理的上游地址，对授权数据表执行结构化 CRUD，读取插件自有配置键，读取显式授权的 manifest.get、manifest.get_many 和 manifest.list 路径，读取白名单宿主公开配置键，读取当前请求业务上下文，演示插件作用域缓存和锁原语，并读取当前组织和租户投影。传入 skipNetwork=1 可跳过外部网络请求，便于离线验证。",
+                "dc": "演示动态插件通过统一宿主服务模型调用运行时、存储、网络、数据、插件配置、打包 manifest 资源、宿主公开配置、业务上下文、缓存、锁、组织、租户和 linapro-ai-core owner AI 能力。该接口会写入运行时日志，读写隔离插件存储并验证批量元数据、游标列表和批量删除，访问受治理的上游地址，对授权数据表执行结构化 CRUD，读取插件自有配置键，读取显式授权的 manifest.get、manifest.get_many 和 manifest.list 路径，读取白名单宿主公开配置键，读取当前请求业务上下文，演示插件作用域缓存和锁原语，读取当前组织和租户投影，并通过 owner-aware AI host service 读取文本方法状态但不执行 provider 生成。传入 skipNetwork=1 可跳过外部网络请求，便于离线验证。",
                 "summary": "宿主调用能力演示",
                 "tags": "动态插件示例"
               },
               "schema": {
-                "dc": "演示动态插件通过统一宿主服务模型调用运行时、存储、网络、数据、插件配置、打包 manifest 资源、宿主公开配置、业务上下文、缓存、锁、组织和租户能力。该接口会写入运行时日志，读写隔离插件存储并验证批量元数据、游标列表和批量删除，访问受治理的上游地址，对授权数据表执行结构化 CRUD，读取插件自有配置键，读取显式授权的 manifest.get、manifest.get_many 和 manifest.list 路径，读取白名单宿主公开配置键，读取当前请求业务上下文，演示插件作用域缓存和锁原语，并读取当前组织和租户投影。传入 skipNetwork=1 可跳过外部网络请求，便于离线验证。"
+                "dc": "演示动态插件通过统一宿主服务模型调用运行时、存储、网络、数据、插件配置、打包 manifest 资源、宿主公开配置、业务上下文、缓存、锁、组织、租户和 linapro-ai-core owner AI 能力。该接口会写入运行时日志，读写隔离插件存储并验证批量元数据、游标列表和批量删除，访问受治理的上游地址，对授权数据表执行结构化 CRUD，读取插件自有配置键，读取显式授权的 manifest.get、manifest.get_many 和 manifest.list 路径，读取白名单宿主公开配置键，读取当前请求业务上下文，演示插件作用域缓存和锁原语，读取当前组织和租户投影，并通过 owner-aware AI host service 读取文本方法状态但不执行 provider 生成。传入 skipNetwork=1 可跳过外部网络请求，便于离线验证。"
               }
             },
             "HostCallDemoConfigRes": {
@@ -251,6 +251,9 @@
             },
             "HostCallDemoRes": {
               "fields": {
+                "ai": {
+                  "dc": "linapro-ai-core owner-aware AI 宿主服务读取摘要"
+                },
                 "bizctx": {
                   "dc": "业务上下文宿主服务读取摘要"
                 },
@@ -292,6 +295,37 @@
                 },
                 "manifest": {
                   "dc": "显式授权 manifest.get、manifest.get_many 和 manifest.list 路径的打包 manifest 资源读取摘要"
+                }
+              }
+            },
+            "HostCallDemoAIRes": {
+              "fields": {
+                "activeProvider": {
+                  "dc": "当前激活的 AI provider 插件标识；不可用时为空"
+                },
+                "available": {
+                  "dc": "owner AI 文本生成方法当前是否存在激活 provider"
+                },
+                "capabilityId": {
+                  "dc": "owner AI 方法状态返回的框架能力标识"
+                },
+                "capabilityMethod": {
+                  "dc": "本次演示检查的 AI 能力方法"
+                },
+                "capabilityType": {
+                  "dc": "本次演示检查的 AI 能力族"
+                },
+                "owner": {
+                  "dc": "发布 AI 能力契约的 owner 插件标识"
+                },
+                "reason": {
+                  "dc": "owner AI 方法不可用时返回的诊断原因"
+                },
+                "service": {
+                  "dc": "动态插件声明的 owner-aware 宿主服务键"
+                },
+                "version": {
+                  "dc": "动态插件声明的 owner AI 能力协议版本"
                 }
               }
             },
@@ -708,7 +742,7 @@
               },
               "host_call_demo": {
                 "meta": {
-                  "dc": "演示动态插件通过统一宿主服务模型调用运行时、存储、网络、数据、插件配置、打包 manifest 资源、宿主公开配置、组织和租户能力。该接口会写入运行时日志、读写隔离插件存储、访问受治理的上游地址，对授权数据表执行结构化 CRUD，读取插件自有配置键，读取显式授权的 manifest.get 路径，读取白名单宿主公开配置键，并读取当前组织和租户投影。传入 skipNetwork=1 可跳过外部网络请求，便于离线验证。",
+                  "dc": "演示动态插件通过统一宿主服务模型调用运行时、存储、网络、数据、插件配置、打包 manifest 资源、宿主公开配置、组织、租户和 linapro-ai-core owner AI 能力。该接口会写入运行时日志、读写隔离插件存储、访问受治理的上游地址，对授权数据表执行结构化 CRUD，读取插件自有配置键，读取显式授权的 manifest.get 路径，读取白名单宿主公开配置键，读取当前组织和租户投影，并通过 owner-aware AI host service 读取文本方法状态但不执行 provider 生成。传入 skipNetwork=1 可跳过外部网络请求，便于离线验证。",
                   "summary": "宿主调用能力演示",
                   "tags": "动态插件示例"
                 },

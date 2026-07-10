@@ -12,6 +12,54 @@
       "description": "Official source plugin for AI providers, models, capability tiers, and request logs",
       "capability": {
         "method": "Capability Method",
+        "methods": {
+          "ai": {
+            "methods": {
+              "status": {
+                "batch_get": "Get AI Method Statuses"
+              }
+            }
+          },
+          "audio": {
+            "synthesize": "Synthesize Audio",
+            "transcribe": "Transcribe Audio"
+          },
+          "document": {
+            "analyze": "Analyze Document",
+            "cite": "Analyze Document with Citations"
+          },
+          "embedding": {
+            "create": "Create Embedding"
+          },
+          "image": {
+            "edit": "Edit Image",
+            "generate": "Generate Image"
+          },
+          "safety": {
+            "moderate": "Moderate Content Safety"
+          },
+          "text": {
+            "generate": "Generate Text",
+            "method_status": {
+              "get": "Get Text Method Status"
+            }
+          },
+          "video": {
+            "edit": "Edit Video",
+            "extend": "Extend Video",
+            "generate": "Generate Video",
+            "operation": {
+              "cancel": "Cancel Video Operation",
+              "get": "Get Video Operation"
+            }
+          },
+          "vision": {
+            "analyze": "Analyze Vision Input"
+          }
+        },
+        "services": {
+          "ai": "AI"
+        },
         "types": {
           "audio": "Audio",
           "document": "Document",
@@ -21,6 +69,9 @@
           "text": "Text",
           "video": "Video",
           "vision": "Vision"
+        },
+        "versions": {
+          "v1": "AI capability v1"
         }
       },
       "endpoint": {

@@ -6,7 +6,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // HostCallDemoReq is the request for invoking the host call demo endpoint.
 type HostCallDemoReq struct {
-	g.Meta      `path:"/host-call-demo" method:"post" tags:"Dynamic Plugin Demo" summary:"Host calling capability demonstration" dc:"Demonstrate dynamic plugin calls to runtime, storage, network, data, plugin config, packaged manifest resources, public host config, business context, cache, lock, organization, and tenant capabilities through the unified host service model. The endpoint writes runtime logs, reads and writes isolated plugin storage including batch metadata, cursor listing, and batch deletion, accesses governed upstreams, performs structured CRUD on authorized data tables, reads plugin-owned config keys, reads explicitly authorized manifest.get, manifest.get_many, and manifest.list resources, reads whitelisted public host config keys, reads current request business context, exercises plugin-scoped cache and lock primitives, and reads current organization and tenant projections. Passing skipNetwork=1 skips external network requests for offline verification." access:"login" permission:"linapro-demo-dynamic:backend:view" operLog:"other"`
+	g.Meta      `path:"/host-call-demo" method:"post" tags:"Dynamic Plugin Demo" summary:"Host calling capability demonstration" dc:"Demonstrate dynamic plugin calls to runtime, storage, network, data, plugin config, packaged manifest resources, public host config, business context, cache, lock, organization, tenant, and linapro-ai-core owner AI capabilities through the unified host service model. The endpoint writes runtime logs, reads and writes isolated plugin storage including batch metadata, cursor listing, and batch deletion, accesses governed upstreams, performs structured CRUD on authorized data tables, reads plugin-owned config keys, reads explicitly authorized manifest.get, manifest.get_many, and manifest.list resources, reads whitelisted public host config keys, reads current request business context, exercises plugin-scoped cache and lock primitives, reads current organization and tenant projections, and reads owner-aware AI text method status without executing provider generation. Passing skipNetwork=1 skips external network requests for offline verification." access:"login" permission:"linapro-demo-dynamic:backend:view" operLog:"other"`
 	SkipNetwork bool `json:"skipNetwork" dc:"Whether to skip external network requests: true=skip false=normal access, default is false when omitted" eg:"false"`
 }
 
@@ -25,7 +25,8 @@ type HostCallDemoRes struct {
 	Lock       *HostCallDemoLockRes     `json:"lock" dc:"Plugin-scoped lock host service summary covering acquire, renew, and release methods" eg:"{\"name\":\"host-call-demo-lock\",\"acquired\":true,\"renewed\":true,\"released\":true,\"ticketIssued\":true}"`
 	Org        *HostCallDemoOrgRes      `json:"org" dc:"Organization capability host service read summary" eg:"{\"available\":true,\"capabilityId\":\"framework.org.v1\",\"activeProvider\":\"linapro-org-core\",\"assignmentCount\":1,\"currentUserDeptCount\":1,\"currentUserPostCount\":2}"`
 	Tenant     *HostCallDemoTenantRes   `json:"tenant" dc:"Tenant capability host service read summary" eg:"{\"available\":true,\"capabilityId\":\"framework.tenant.v1\",\"activeProvider\":\"linapro-tenant-core\",\"currentTenantId\":1,\"platformBypass\":false,\"userTenantCount\":1,\"visible\":true}"`
-	Message    string                   `json:"message" dc:"Host call demonstration information" eg:"Host service demo executed through runtime, storage, network, data, plugins.config.get, manifest batch/list, hostConfig, bizctx, cache, lock, org, and tenant services."`
+	AI         *HostCallDemoAIRes       `json:"ai" dc:"linapro-ai-core owner-aware AI host service read summary" eg:"{\"owner\":\"linapro-ai-core\",\"service\":\"ai\",\"version\":\"v1\",\"capabilityType\":\"text\",\"capabilityMethod\":\"generate\",\"available\":false,\"capabilityId\":\"framework.ai.text.v1\",\"reason\":\"no_provider\"}"`
+	Message    string                   `json:"message" dc:"Host call demonstration information" eg:"Host service demo executed through runtime, storage, network, data, plugins.config.get, manifest batch/list, hostConfig, bizctx, cache, lock, org, tenant, and linapro-ai-core owner AI services."`
 }
 
 // HostCallDemoRuntimeRes describes runtime service results.
@@ -161,4 +162,17 @@ type HostCallDemoTenantRes struct {
 	PlatformBypass  bool   `json:"platformBypass" dc:"Whether the current request may bypass tenant filtering" eg:"false"`
 	UserTenantCount int    `json:"userTenantCount" dc:"Number of active tenants visible to the current user" eg:"1"`
 	Visible         bool   `json:"visible" dc:"Whether the current tenant passed the tenant visibility check" eg:"true"`
+}
+
+// HostCallDemoAIRes describes owner-aware linapro-ai-core AI method status results.
+type HostCallDemoAIRes struct {
+	Owner            string `json:"owner" dc:"The owner plugin identifier that publishes the AI capability contract" eg:"linapro-ai-core"`
+	Service          string `json:"service" dc:"The owner-aware host service key declared by the dynamic plugin" eg:"ai"`
+	Version          string `json:"version" dc:"The owner AI capability protocol version declared by the dynamic plugin" eg:"v1"`
+	CapabilityType   string `json:"capabilityType" dc:"The AI capability family checked by this demo" eg:"text"`
+	CapabilityMethod string `json:"capabilityMethod" dc:"The AI capability method checked by this demo" eg:"generate"`
+	Available        bool   `json:"available" dc:"Whether the owner AI text generation method currently has an active provider" eg:"false"`
+	CapabilityID     string `json:"capabilityId" dc:"The framework capability identifier reported by the owner AI method status" eg:"framework.ai.text.v1"`
+	ActiveProvider   string `json:"activeProvider" dc:"The active AI provider plugin identifier, empty when unavailable" eg:"linapro-ai-core"`
+	Reason           string `json:"reason" dc:"Diagnostic reason returned by the owner AI method status when unavailable" eg:"no_provider"`
 }

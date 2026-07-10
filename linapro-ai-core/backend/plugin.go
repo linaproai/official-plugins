@@ -11,12 +11,14 @@ import (
 
 	"github.com/gogf/gf/v2/errors/gerror"
 
-	"lina-core/pkg/plugin/capability/aicap/aitext"
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/cachecap"
 	"lina-core/pkg/plugin/capability/hostconfigcap"
 	"lina-core/pkg/plugin/pluginhost"
 	aicore "lina-plugin-linapro-ai-core"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitext"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/spi"
 	invocationcontroller "lina-plugin-linapro-ai-core/backend/internal/controller/invocation"
 	modelcontroller "lina-plugin-linapro-ai-core/backend/internal/controller/model"
 	providercontroller "lina-plugin-linapro-ai-core/backend/internal/controller/provider"
@@ -26,7 +28,7 @@ import (
 
 const (
 	// pluginID is the immutable identifier published by the embedded source plugin.
-	pluginID = aitext.ProviderPluginID
+	pluginID = spi.OwnerPluginID
 	// logRetentionDaysKey is the host protected runtime parameter shared by log cleanup jobs.
 	logRetentionDaysKey = "sys.log.retentionDays"
 	// invocationLogCleanupJobName identifies the AI invocation-log cleanup job declaration.
@@ -47,7 +49,11 @@ var (
 func init() {
 	plugin := pluginhost.NewDeclarations(pluginID)
 	plugin.Assets().UseEmbeddedFiles(aicore.EmbeddedFiles)
-	if err := plugin.Providers().ProvideAIText(provideAIText); err != nil {
+	descriptor, err := aicap.ProviderDescriptor(provideAIText)
+	if err == nil {
+		err = plugin.Providers().ProvideCapability(descriptor)
+	}
+	if err != nil {
 		panic(err)
 	}
 	if err := plugin.HTTP().RegisterRoutes(

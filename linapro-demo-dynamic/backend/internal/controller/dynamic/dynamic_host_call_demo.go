@@ -136,6 +136,17 @@ func (c *Controller) HostCallDemo(
 			UserTenantCount: payload.Tenant.UserTenantCount,
 			Visible:         payload.Tenant.Visible,
 		},
+		AI: &v1.HostCallDemoAIRes{
+			Owner:            payload.AI.Owner,
+			Service:          payload.AI.Service,
+			Version:          payload.AI.Version,
+			CapabilityType:   payload.AI.CapabilityType,
+			CapabilityMethod: payload.AI.CapabilityMethod,
+			Available:        payload.AI.Available,
+			CapabilityID:     payload.AI.CapabilityID,
+			ActiveProvider:   payload.AI.ActiveProvider,
+			Reason:           payload.AI.Reason,
+		},
 		Message: payload.Message,
 	}, nil
 }

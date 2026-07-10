@@ -21,7 +21,7 @@ type ProviderOperationItem struct {
 	NextPollAfterMs  int64  `json:"nextPollAfterMs" dc:"Suggested next provider poll delay in milliseconds" eg:"3000"`
 	ExpiresAt        int64  `json:"expiresAt" dc:"Operation expiration time, Unix timestamp in milliseconds" eg:"1717203600000"`
 	AssetSummaryJson string `json:"assetSummaryJson" dc:"Asset reference summary JSON without file content, provider URLs, or secrets" eg:"{}"`
-	ErrorCode        string `json:"errorCode" dc:"Stable error code for failed operations" eg:"AI_CORE_PROVIDER_UNAVAILABLE"`
+	ErrorCode        string `json:"errorCode" dc:"Stable error code for failed operations" eg:"AI_PROVIDER_UNAVAILABLE"`
 	ErrorSummary     string `json:"errorSummary" dc:"Masked error summary. Provider responses and secrets are never returned." eg:"Provider operation failed"`
 	CreatedAt        int64  `json:"createdAt" dc:"Creation time, Unix timestamp in milliseconds" eg:"1717200000000"`
 	UpdatedAt        int64  `json:"updatedAt" dc:"Update time, Unix timestamp in milliseconds" eg:"1717200000000"`

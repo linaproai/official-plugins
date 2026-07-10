@@ -4,11 +4,14 @@ package backend
 
 import (
 	"context"
-	"lina-core/pkg/plugin/capability/hostconfigcap"
-	aisvc "lina-plugin-linapro-ai-core/backend/internal/service/ai"
 	"testing"
 
 	"github.com/gogf/gf/v2/container/gvar"
+
+	"lina-core/pkg/plugin/capability/hostconfigcap"
+	"lina-core/pkg/plugin/pluginhost"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/spi"
+	aisvc "lina-plugin-linapro-ai-core/backend/internal/service/ai"
 )
 
 // invocationCleanupHostConfigStub returns a deterministic retention value.
@@ -47,6 +50,50 @@ func TestCleanupExpiredInvocationsSkipsNonPrimaryNode(t *testing.T) {
 	}
 	if cleaner.called {
 		t.Fatal("expected non-primary node to skip invocation-log cleanup")
+	}
+}
+
+func TestSourcePluginRegistersOwnerAIDescriptor(t *testing.T) {
+	definition, ok := pluginhost.GetSourcePlugin(pluginID)
+	if !ok {
+		t.Fatalf("expected source plugin %s to be registered", pluginID)
+	}
+	descriptors := definition.GetCapabilityDescriptors()
+	if len(descriptors) != 1 {
+		t.Fatalf("expected one AI owner descriptor, got %#v", descriptors)
+	}
+	descriptor := descriptors[0]
+	if descriptor.OwnerPluginID != spi.OwnerPluginID ||
+		descriptor.Service != spi.ServiceAI ||
+		descriptor.Version != spi.VersionV1 ||
+		descriptor.SourceContract != spi.SourceContract ||
+		descriptor.DynamicContract != spi.DynamicContract {
+		t.Fatalf("unexpected AI owner descriptor: %#v", descriptor)
+	}
+	if descriptor.Invoker == nil {
+		t.Fatal("registered AI owner descriptor must retain runtime invoker")
+	}
+
+	methods := make(map[string]struct{}, len(descriptor.Methods))
+	for _, method := range descriptor.Methods {
+		methods[method.Method] = struct{}{}
+	}
+	for _, method := range []string{
+		spi.MethodTextGenerate,
+		spi.MethodTextStatusGet,
+		spi.MethodStatusesBatchGet,
+	} {
+		if _, ok := methods[method]; !ok {
+			t.Fatalf("expected registered AI descriptor to publish %s", method)
+		}
+	}
+	for _, method := range []string{
+		spi.MethodImageGenerate,
+		spi.MethodVideoOperationCancel,
+	} {
+		if _, ok := methods[method]; ok {
+			t.Fatalf("unpublished multimodal method %s must not be registered yet", method)
+		}
 	}
 }
 

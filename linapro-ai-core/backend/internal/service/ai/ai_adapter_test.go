@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"lina-core/pkg/bizerr"
-	"lina-core/pkg/plugin/capability/aicap/aitext"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitext"
 	"lina-plugin-linapro-ai-core/backend/internal/model/entity"
 )
 
@@ -281,27 +281,55 @@ func TestAnthropicAdapterDoesNotDuplicateVersionSuffix(t *testing.T) {
 
 // TestAdapterErrorsAreRedacted verifies provider errors never expose secret markers.
 func TestAdapterErrorsAreRedacted(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		http.Error(w, "bad authorization sk-secret-token with full prompt body", http.StatusUnauthorized)
-	}))
-	defer server.Close()
+	tests := []struct {
+		name string
+		call func(svc *serviceImpl, baseURL string) error
+	}{
+		{
+			name: "openai",
+			call: func(svc *serviceImpl, baseURL string) error {
+				_, err := svc.callOpenAI(context.Background(), &resolvedTierBinding{
+					ModelName:         "unit-openai",
+					EndpointBaseUrl:   baseURL,
+					EndpointSecretRef: "sk-secret-token",
+				}, []aitext.Message{{Role: aitext.MessageRoleUser, Content: "hello"}}, 32, nil, "")
+				return err
+			},
+		},
+		{
+			name: "anthropic",
+			call: func(svc *serviceImpl, baseURL string) error {
+				_, err := svc.callAnthropic(context.Background(), &resolvedTierBinding{
+					ModelName:         "unit-anthropic",
+					EndpointBaseUrl:   baseURL,
+					EndpointSecretRef: "sk-secret-token",
+				}, []aitext.Message{{Role: aitext.MessageRoleUser, Content: "hello"}}, 32, nil, "")
+				return err
+			},
+		},
+	}
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				http.Error(w, "bad authorization sk-secret-token with full prompt body", http.StatusUnauthorized)
+			}))
+			defer server.Close()
 
-	svc := New(nil, nil, server.Client()).(*serviceImpl)
-	_, err := svc.callOpenAI(context.Background(), &resolvedTierBinding{
-		ModelName:         "unit-openai",
-		EndpointBaseUrl:   server.URL,
-		EndpointSecretRef: "sk-secret-token",
-	}, []aitext.Message{{Role: aitext.MessageRoleUser, Content: "hello"}}, 32, nil, "")
-	if !bizerr.Is(err, CodeProviderHTTPError) {
-		t.Fatalf("expected structured provider HTTP error, got %v", err)
-	}
-	for _, forbidden := range []string{"sk-secret-token", "full prompt body"} {
-		if strings.Contains(err.Error(), forbidden) {
-			t.Fatalf("expected redacted provider error, got %v", err)
-		}
-	}
-	if err == nil {
-		t.Fatalf("expected redacted provider error, got %v", err)
+			svc := New(nil, nil, server.Client()).(*serviceImpl)
+			err := tc.call(svc, server.URL)
+			if !bizerr.Is(err, CodeProviderHTTPError) {
+				t.Fatalf("expected structured provider HTTP error, got %v", err)
+			}
+			for _, forbidden := range []string{"sk-secret-token", "full prompt body"} {
+				if strings.Contains(err.Error(), forbidden) {
+					t.Fatalf("expected redacted provider error, got %v", err)
+				}
+			}
+			if err == nil {
+				t.Fatalf("expected redacted provider error, got %v", err)
+			}
+		})
 	}
 }
 

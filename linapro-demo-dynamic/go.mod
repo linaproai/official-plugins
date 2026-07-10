@@ -4,7 +4,9 @@ go 1.25.0
 
 require (
 	github.com/gogf/gf/v2 v2.10.1
+	gopkg.in/yaml.v3 v3.0.1
 	lina-core v0.0.0
+	lina-plugin-linapro-ai-core v0.0.0
 )
 
 require (
@@ -15,11 +17,9 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/gogf/gf/contrib/drivers/pgsql/v2 v2.10.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grokify/html-strip-tags-go v0.1.0 // indirect
-	github.com/lib/pq v1.10.9 // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -37,7 +37,8 @@ require (
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 replace lina-core => ../../lina-core
+
+replace lina-plugin-linapro-ai-core => ../linapro-ai-core

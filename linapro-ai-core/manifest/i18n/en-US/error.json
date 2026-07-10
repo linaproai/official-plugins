@@ -1,6 +1,11 @@
 {
   "error": {
     "ai": {
+      "asset": {
+        "ref": {
+          "required": "AI asset reference is required"
+        }
+      },
       "core": {
         "invocation": {
           "not": {
@@ -61,6 +66,59 @@
             "unsupported": "The selected model does not support this thinking effort"
           }
         }
+      },
+      "method": {
+        "unsupported": "AI method {method} is not supported by the typed multimodal capability boundary"
+      },
+      "operation": {
+        "ref": {
+          "required": "AI provider operation reference is required"
+        }
+      },
+      "provider": {
+        "unavailable": "AI provider is unavailable for {capabilityType}.{capabilityMethod}"
+      },
+      "purpose": {
+        "required": "AI purpose is required"
+      },
+      "text": {
+        "max": {
+          "output": {
+            "tokens": {
+              "invalid": "Text AI max output tokens must be greater than or equal to zero"
+            }
+          }
+        },
+        "message": {
+          "role": {
+            "invalid": "Text AI message role {role} is not supported"
+          }
+        },
+        "messages": {
+          "required": "Text AI generation requires at least one message"
+        },
+        "metadata": {
+          "too": {
+            "large": "Text AI metadata exceeds the allowed size"
+          }
+        },
+        "provider": {
+          "unavailable": "Text AI provider is unavailable"
+        },
+        "purpose": {
+          "required": "Text AI purpose is required"
+        },
+        "thinking": {
+          "effort": {
+            "invalid": "Text AI thinking effort {effort} is not supported"
+          }
+        },
+        "tier": {
+          "invalid": "Text AI tier {tier} is not supported"
+        }
+      },
+      "tier": {
+        "invalid": "AI tier {tier} is not supported"
       }
     }
   }

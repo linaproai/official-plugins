@@ -17,6 +17,7 @@ import (
 	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/pluginbridge"
 	"lina-core/pkg/plugin/pluginbridge/recordstore"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap"
 )
 
 // Service defines the dynamic service contract.
@@ -68,6 +69,7 @@ type serviceImpl struct {
 	jobsSvc        jobcap.Service
 	orgSvc         orgcap.Service
 	tenantSvc      tenantcap.Service
+	aiSvc          aicap.Service
 	recordStoreSvc *recordstore.DB
 }
 
@@ -86,6 +88,7 @@ func New() Service {
 		jobsSvc:        newJobsHostService(),
 		orgSvc:         newOrgHostService(),
 		tenantSvc:      newTenantHostService(),
+		aiSvc:          newAIHostService(),
 		recordStoreSvc: newRecordStoreService(),
 	}
 }
