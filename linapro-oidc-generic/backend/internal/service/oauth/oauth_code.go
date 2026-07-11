@@ -11,7 +11,7 @@ import (
 var (
 	CodeConfigMissing = bizerr.MustDefine(
 		"PLUGIN_OIDC_GENERIC_CONFIG_MISSING",
-		"Generic OIDC client configuration is missing",
+		"OIDC login is not configured yet. Enter Issuer, Client ID, and Client Secret in the plugin settings first",
 		gcode.CodeInvalidConfiguration,
 	)
 	CodeStateGenerateFailed = bizerr.MustDefine(
@@ -46,7 +46,7 @@ var (
 	)
 	CodeDiscoveryFailed = bizerr.MustDefine(
 		"PLUGIN_OIDC_GENERIC_DISCOVERY_FAILED",
-		"OIDC discovery document fetch failed",
+		"Could not reach the identity provider. Check that the Issuer URL is correct and reachable from the application server",
 		gcode.CodeInternalError,
 	)
 )

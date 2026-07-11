@@ -4,7 +4,7 @@
       "oidc": {
         "generic": {
           "config": {
-            "missing": "Generic OIDC client configuration is missing"
+            "missing": "OIDC login is not configured yet. Enter Issuer, Client ID, and Client Secret in the plugin settings first"
           },
           "state": {
             "generate": {
@@ -25,7 +25,7 @@
             }
           },
           "discovery": {
-            "failed": "OIDC discovery document fetch failed"
+            "failed": "Could not reach the identity provider. Check that the Issuer URL is correct and reachable from the application server"
           },
           "external": {
             "login": {

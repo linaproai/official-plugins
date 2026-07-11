@@ -4,7 +4,7 @@
       "oidc": {
         "generic": {
           "config": {
-            "missing": "通用 OIDC 客户端配置缺失"
+            "missing": "OIDC 登录尚未完成配置，请先在插件设置中填写 Issuer、Client ID 与 Client Secret"
           },
           "state": {
             "generate": {
@@ -25,7 +25,7 @@
             }
           },
           "discovery": {
-            "failed": "获取 OIDC Discovery 文档失败"
+            "failed": "无法连接身份认证服务。请检查 Issuer 地址是否正确，以及应用服务器能否访问该地址"
           },
           "external": {
             "login": {

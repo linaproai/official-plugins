@@ -12,8 +12,8 @@ func TestEmbeddedMenuJSONLocalizesSettingsTitle(t *testing.T) {
 		path  string
 		title string
 	}{
-		{path: "manifest/i18n/en-US/menu.json", title: "LDAP Settings"},
-		{path: "manifest/i18n/zh-CN/menu.json", title: "LDAP 设置"},
+		{path: "manifest/i18n/en-US/menu.json", title: "LDAP"},
+		{path: "manifest/i18n/zh-CN/menu.json", title: "LDAP"},
 	}
 	for _, tc := range cases {
 		tc := tc

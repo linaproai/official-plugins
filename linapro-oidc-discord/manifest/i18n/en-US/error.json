@@ -34,6 +34,20 @@
               "unavailable": "External-login service is unavailable",
               "failed": "Discord external login failed"
             }
+          },
+          "settings": {
+            "storage": {
+              "unavailable": "Settings storage service is unavailable"
+            },
+            "read": {
+              "failed": "Failed to read Discord OIDC settings"
+            },
+            "save": {
+              "failed": "Failed to save Discord OIDC settings"
+            },
+            "rules": {
+              "invalid": "Backend redirect rules must be a JSON object mapping state keys to receiver URLs"
+            }
           }
         }
       }
