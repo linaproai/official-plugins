@@ -1,1 +1,110 @@
-{}
+{
+  "plugins": {
+    "linapro_auth_ldap": {
+      "api": {
+        "login": {
+          "v1": {
+            "LoginReq": {
+              "meta": {
+                "dc": "校验目录凭据并返回一次性 handoff 码，供 SPA 交换会话。密码永不存储。",
+                "summary": "LDAP 目录登录",
+                "tags": "LDAP 登录"
+              },
+              "schema": {
+                "dc": "校验目录凭据并返回一次性 handoff 码，供 SPA 交换会话。密码永不存储。"
+              },
+              "fields": {
+                "username": {
+                  "dc": "目录用户名"
+                },
+                "password": {
+                  "dc": "目录密码；永不记录或存储"
+                }
+              }
+            },
+            "LoginRes": {
+              "fields": {
+                "handoff": {
+                  "dc": "一次性 handoff 码；通过 linapro-extlogin-core 兑换会话"
+                }
+              }
+            }
+          }
+        },
+        "settings": {
+          "v1": {
+            "GetSettingsReq": {
+              "meta": {
+                "dc": "返回已掩码的 LDAP 目录设置。",
+                "summary": "查询 LDAP 设置",
+                "tags": "LDAP 登录"
+              },
+              "schema": {
+                "dc": "返回已掩码的 LDAP 目录设置。"
+              }
+            },
+            "SaveSettingsReq": {
+              "meta": {
+                "dc": "持久化 LDAP 目录设置。空或掩码形式的绑定密码保留原值。自动开通默认关闭。",
+                "summary": "保存 LDAP 设置",
+                "tags": "LDAP 登录"
+              },
+              "schema": {
+                "dc": "持久化 LDAP 目录设置。空或掩码形式的绑定密码保留原值。自动开通默认关闭。"
+              }
+            },
+            "SettingsItem": {
+              "fields": {
+                "connectionKey": {
+                  "dc": "固定连接键"
+                },
+                "displayName": {
+                  "dc": "登录入口显示名称"
+                },
+                "host": {
+                  "dc": "LDAP 主机"
+                },
+                "port": {
+                  "dc": "LDAP 端口"
+                },
+                "tlsMode": {
+                  "dc": "ldaps、starttls 或 plain（仅限 localhost）"
+                },
+                "bindDn": {
+                  "dc": "可选服务绑定 DN"
+                },
+                "bindPasswordMasked": {
+                  "dc": "掩码后的绑定密码"
+                },
+                "bindPasswordConfigured": {
+                  "dc": "是否已存储绑定密码"
+                },
+                "baseDn": {
+                  "dc": "搜索基 DN"
+                },
+                "userFilter": {
+                  "dc": "含 {username} 的搜索过滤器"
+                },
+                "userDnTemplate": {
+                  "dc": "含 {username} 的 DN 模板"
+                },
+                "subjectAttr": {
+                  "dc": "稳定主体属性"
+                },
+                "emailAttr": {
+                  "dc": "邮箱属性"
+                },
+                "displayNameAttr": {
+                  "dc": "显示名称属性"
+                },
+                "allowAutoProvision": {
+                  "dc": "即时开通；默认关闭"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

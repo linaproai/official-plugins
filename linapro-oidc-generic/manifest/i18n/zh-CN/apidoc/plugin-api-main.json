@@ -1,1 +1,106 @@
-{}
+{
+  "plugins": {
+    "linapro_oidc_generic": {
+      "api": {
+        "settings": {
+          "v1": {
+            "GetSettingsReq": {
+              "meta": {
+                "dc": "返回已持久化的 linapro-oidc-generic 设置。客户端密钥始终掩码返回。",
+                "summary": "查询通用 OIDC 设置",
+                "tags": "通用 OIDC 登录"
+              },
+              "schema": {
+                "dc": "返回已持久化的 linapro-oidc-generic 设置。客户端密钥始终掩码返回。"
+              }
+            },
+            "GetSettingsRes": {
+              "fields": {
+                "settings": {
+                  "dc": "已持久化设置，客户端密钥已掩码"
+                }
+              }
+            },
+            "SaveSettingsReq": {
+              "meta": {
+                "dc": "将 linapro-oidc-generic 设置持久化。空或掩码形式的客户端密钥保留原值。自动开通默认关闭。",
+                "summary": "保存通用 OIDC 设置",
+                "tags": "通用 OIDC 登录"
+              },
+              "schema": {
+                "dc": "将 linapro-oidc-generic 设置持久化。空或掩码形式的客户端密钥保留原值。自动开通默认关闭。"
+              },
+              "fields": {
+                "displayName": {
+                  "dc": "登录按钮显示名称"
+                },
+                "issuer": {
+                  "dc": "OIDC issuer URL"
+                },
+                "clientId": {
+                  "dc": "OAuth 2.0 客户端 ID"
+                },
+                "clientSecret": {
+                  "dc": "客户端密钥；空或掩码保留原值"
+                },
+                "redirectUrl": {
+                  "dc": "可选回调 URL 覆盖"
+                },
+                "scopes": {
+                  "dc": "空格分隔的 scopes"
+                },
+                "allowAutoProvision": {
+                  "dc": "允许自动开通；默认关闭"
+                },
+                "defaultBackendRedirect": {
+                  "dc": "SPA 落地路径"
+                }
+              }
+            },
+            "SaveSettingsRes": {
+              "fields": {
+                "settings": {
+                  "dc": "保存后最新的掩码投影"
+                }
+              }
+            },
+            "SettingsItem": {
+              "fields": {
+                "connectionKey": {
+                  "dc": "provider 编码使用的稳定连接键；v1 固定为 default"
+                },
+                "displayName": {
+                  "dc": "登录按钮显示名称"
+                },
+                "issuer": {
+                  "dc": "OIDC issuer URL"
+                },
+                "clientId": {
+                  "dc": "OAuth 2.0 客户端 ID"
+                },
+                "clientSecretMasked": {
+                  "dc": "掩码后的客户端密钥指示符"
+                },
+                "clientSecretConfigured": {
+                  "dc": "是否已存储客户端密钥"
+                },
+                "redirectUrl": {
+                  "dc": "可选回调 URL 覆盖；为空时从请求主机推导"
+                },
+                "scopes": {
+                  "dc": "空格分隔的 OIDC scopes；openid 始终必需"
+                },
+                "allowAutoProvision": {
+                  "dc": "允许宿主为未绑定的已验证身份自动开通；默认关闭"
+                },
+                "defaultBackendRedirect": {
+                  "dc": "登录后的 SPA 落地路径"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

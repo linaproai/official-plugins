@@ -174,36 +174,6 @@ func buildSuccessRedirect(returnPath string, callback *oauthsvc.CallbackOutput, 
 	return appendQuery(returnPath, query)
 }
 
-// encodeTenantCandidates serializes the tenant candidates into the compact
-// JSON array the SPA login page parses to render the two-stage tenant
-// selection after an external login. Encoding failures degrade to an empty
-// string so the redirect never breaks over an optional enrichment.
-func encodeTenantCandidates(callback *oauthsvc.CallbackOutput) string {
-	if callback == nil || len(callback.TenantCandidates) == 0 {
-		return ""
-	}
-	type tenantProjection struct {
-		Id     int    `json:"id"`
-		Code   string `json:"code"`
-		Name   string `json:"name"`
-		Status string `json:"status"`
-	}
-	items := make([]tenantProjection, 0, len(callback.TenantCandidates))
-	for _, tenant := range callback.TenantCandidates {
-		items = append(items, tenantProjection{
-			Id:     tenant.ID,
-			Code:   tenant.Code,
-			Name:   tenant.Name,
-			Status: tenant.Status,
-		})
-	}
-	encoded, err := json.Marshal(items)
-	if err != nil {
-		return ""
-	}
-	return string(encoded)
-}
-
 // appendQuery attaches encoded query parameters to the given return path
 // while preserving any query the path itself already carries.
 func appendQuery(returnPath string, query url.Values) string {
