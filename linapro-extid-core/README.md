@@ -8,7 +8,7 @@ English | [简体中文](README.zh-CN.md)
 
 This plugin owns:
 
-- the `user_external_identity` linkage table (`(provider, subject)` key, with subject_kind / app_context / phone snapshots)
+- the `plugin_linapro_extid_core_user_external_identity` linkage table (`(provider, subject)` key, with subject_kind / app_context / phone snapshots)
 - the host `extidspi.Provider` engine: Resolve / Provision / Bind / Unbind / List
 - the plugin-owned `backend/cap/extidcap` contract: wide `Service` entry with `Ticket` / `Login` / `Linkage` / `Providers` sub surfaces, plus process-bound catalog and handoff facades
 - current-user bind APIs that accept **verified tickets only** (no bare client-supplied subject)

@@ -9,4 +9,4 @@
 -- 刻意不级联删除：账号生命周期归宿主所有，遗留的最小权限账号仍可通过宿主用户管理治理。
 -- ------------------------------------------------------------
 
-DROP TABLE IF EXISTS user_external_identity;
+DROP TABLE IF EXISTS plugin_linapro_extid_core_user_external_identity;

@@ -8,7 +8,7 @@
 
 本插件拥有：
 
-- `user_external_identity` 链接表（`(provider, subject)` 权威键，支持 subject_kind / app_context / 手机号等扩展快照）
+- `plugin_linapro_extid_core_user_external_identity` 链接表（`(provider, subject)` 权威键，支持 subject_kind / app_context / 手机号等扩展快照）
 - 宿主 `extidspi.Provider` 引擎：Resolve / Provision / Bind / Unbind / List
 - plugin-owned 领域契约 `backend/cap/extidcap`：宽入口 `Service`，聚合 `Ticket` / `Login` / `Linkage` / `Providers` 子面，以及进程内 catalog / handoff 门面
 - 当前用户绑定 API：仅接受**已验证 ticket**（禁止客户端自报裸 subject）

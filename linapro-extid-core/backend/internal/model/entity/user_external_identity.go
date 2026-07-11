@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// UserExternalIdentity is the golang structure for table user_external_identity.
+// UserExternalIdentity is the golang structure for table plugin_linapro_extid_core_user_external_identity.
 type UserExternalIdentity struct {
 	Id                  int64      `json:"id"                  orm:"id"                    description:"External identity linkage ID"`
 	UserId              int        `json:"userId"              orm:"user_id"               description:"Linked local user ID"`

@@ -8,14 +8,14 @@ import (
 	"lina-plugin-linapro-extid-core/backend/internal/dao/internal"
 )
 
-// userExternalIdentityDao is the data access object for the table user_external_identity.
+// userExternalIdentityDao is the data access object for the table plugin_linapro_extid_core_user_external_identity.
 // You can define custom methods on it to extend its functionality as needed.
 type userExternalIdentityDao struct {
 	*internal.UserExternalIdentityDao
 }
 
 var (
-	// UserExternalIdentity is a globally accessible object for table user_external_identity operations.
+	// UserExternalIdentity is a globally accessible object for table plugin_linapro_extid_core_user_external_identity operations.
 	UserExternalIdentity = userExternalIdentityDao{internal.NewUserExternalIdentityDao()}
 )
 

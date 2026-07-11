@@ -11,7 +11,7 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 )
 
-// UserExternalIdentityDao is the data access object for the table user_external_identity.
+// UserExternalIdentityDao is the data access object for the table plugin_linapro_extid_core_user_external_identity.
 type UserExternalIdentityDao struct {
 	table    string                      // table is the underlying table name of the DAO.
 	group    string                      // group is the database configuration group name of the current DAO.
@@ -19,7 +19,7 @@ type UserExternalIdentityDao struct {
 	handlers []gdb.ModelHandler          // handlers for customized model modification.
 }
 
-// UserExternalIdentityColumns defines and stores column names for the table user_external_identity.
+// UserExternalIdentityColumns defines and stores column names for the table plugin_linapro_extid_core_user_external_identity.
 type UserExternalIdentityColumns struct {
 	Id                  string // External identity linkage ID
 	UserId              string // Linked local user ID
@@ -37,7 +37,7 @@ type UserExternalIdentityColumns struct {
 	DeletedAt           string // Soft delete time; live rows keep NULL
 }
 
-// userExternalIdentityColumns holds the columns for the table user_external_identity.
+// userExternalIdentityColumns holds the columns for the table plugin_linapro_extid_core_user_external_identity.
 var userExternalIdentityColumns = UserExternalIdentityColumns{
 	Id:                  "id",
 	UserId:              "user_id",
@@ -59,7 +59,7 @@ var userExternalIdentityColumns = UserExternalIdentityColumns{
 func NewUserExternalIdentityDao(handlers ...gdb.ModelHandler) *UserExternalIdentityDao {
 	return &UserExternalIdentityDao{
 		group:    "default",
-		table:    "user_external_identity",
+		table:    "plugin_linapro_extid_core_user_external_identity",
 		columns:  userExternalIdentityColumns,
 		handlers: handlers,
 	}

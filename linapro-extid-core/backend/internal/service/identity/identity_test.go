@@ -97,7 +97,7 @@ func configureIdentityTestDB(t *testing.T, ctx context.Context) {
 	}
 	db := g.DB()
 	if _, err := db.Exec(ctx, `
-CREATE TABLE IF NOT EXISTS user_external_identity (
+CREATE TABLE IF NOT EXISTS plugin_linapro_extid_core_user_external_identity (
     "id"                    BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     "user_id"               INT NOT NULL,
     "provider"              VARCHAR(64) NOT NULL,
@@ -113,10 +113,10 @@ CREATE TABLE IF NOT EXISTS user_external_identity (
     "updated_at"            TIMESTAMPTZ,
     "deleted_at"            TIMESTAMPTZ
 );
-CREATE UNIQUE INDEX IF NOT EXISTS uk_user_external_identity_provider_subject
-    ON user_external_identity ("provider", "subject") WHERE "deleted_at" IS NULL;
-CREATE INDEX IF NOT EXISTS idx_user_external_identity_user
-    ON user_external_identity ("user_id");
+CREATE UNIQUE INDEX IF NOT EXISTS uk_plugin_linapro_extid_core_identity_provider_subject
+    ON plugin_linapro_extid_core_user_external_identity ("provider", "subject") WHERE "deleted_at" IS NULL;
+CREATE INDEX IF NOT EXISTS idx_plugin_linapro_extid_core_identity_user
+    ON plugin_linapro_extid_core_user_external_identity ("user_id");
 `); err != nil {
 		t.Fatalf("ensure identity test table failed: %v", err)
 	}

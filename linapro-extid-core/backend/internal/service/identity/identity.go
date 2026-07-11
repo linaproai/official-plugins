@@ -49,7 +49,7 @@ const usernameAnchorHashLength = 16
 
 // Service implements the extidspi.Provider contract and the plugin-owned
 // extidcap.Service domain surface (Ticket / Login / Linkage / Providers) on top
-// of the user_external_identity table and the host user capability.
+// of the plugin_linapro_extid_core_user_external_identity table and the host user capability.
 type Service struct {
 	users   usercap.Service
 	tickets *ticketStore

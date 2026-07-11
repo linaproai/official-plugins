@@ -10,9 +10,9 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 )
 
-// UserExternalIdentity is the golang structure of table user_external_identity for DAO operations like Where/Data.
+// UserExternalIdentity is the golang structure of table plugin_linapro_extid_core_user_external_identity for DAO operations like Where/Data.
 type UserExternalIdentity struct {
-	g.Meta              `orm:"table:user_external_identity, do:true"`
+	g.Meta              `orm:"table:plugin_linapro_extid_core_user_external_identity, do:true"`
 	Id                  any        // External identity linkage ID
 	UserId              any        // Linked local user ID
 	Provider            any        // Stable external provider ID owned by the calling plugin, e.g. google, discord
