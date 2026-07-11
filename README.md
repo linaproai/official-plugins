@@ -197,6 +197,13 @@ Use plugin-local `api_contract_test.go` and Go package tests for backend contrac
 
 The workflow checks out the host monorepo with sparse `apps/lina-core`, overlays this repository at `apps/lina-plugins`, generates a temporary `go.work`, and runs `go test ./...` per plugin.
 
+**Host ref resolution** (push / pull_request):
+
+1. If `.github/ci-host-ref` exists, use its single-line branch/tag/sha (for host+plugin co-development PRs).
+2. Otherwise default to `main`.
+
+`workflow_dispatch` always uses the form input (`host_ref`, default `main`) and ignores the pin file. Remove `.github/ci-host-ref` before merging to this repository's `main` once the host APIs are available on `linaproai/linapro@main`.
+
 Auth integration starts two in-repo mock services (no Docker required in CI):
 
 1. **LDAP mock** (`hack/ci/ldap-mock`) with seed user `cn=alice,ou=users,dc=example,dc=com` / `alice-secret`
@@ -226,6 +233,12 @@ Manual re-run against another host ref:
 
 ```text
 Actions → Official Plugins CI → Run workflow → host_ref=<branch|tag|sha>
+```
+
+Feature-branch pin (push/PR CI only):
+
+```text
+echo 'review/pr-54-plugin-auth' > .github/ci-host-ref
 ```
 
 ## Version Upgrades

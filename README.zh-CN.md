@@ -212,6 +212,19 @@ go test ./linapro-oidc-generic/backend/internal/service/oauth/ -tags=integration
 Actions → Official Plugins CI → Run workflow → host_ref=<branch|tag|sha>
 ```
 
+**宿主 ref 解析**（push / pull_request）：
+
+1. 若存在 `.github/ci-host-ref`，使用其中单行 branch/tag/sha（用于宿主与插件协同 PR）。
+2. 否则默认 `main`。
+
+`workflow_dispatch` 始终使用表单输入 `host_ref`（默认 `main`），忽略针定文件。当 `linaproai/linapro@main` 已具备所需宿主 API 后，合并到本仓库 `main` 前应删除 `.github/ci-host-ref`。
+
+特性分支针定（仅 push/PR CI）：
+
+```text
+echo 'review/pr-54-plugin-auth' > .github/ci-host-ref
+```
+
 
 ## 版本升级
 
