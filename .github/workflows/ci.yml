@@ -345,7 +345,12 @@ jobs:
             > "${RUNNER_TEMP}/ldap-mock.log" 2>&1 &
           echo $! > "${RUNNER_TEMP}/ldap-mock.pid"
           for i in $(seq 1 60); do
-            if (echo > /dev/tcp/127.0.0.1/1389) >/dev/null 2>&1; then
+            # Prefer log-based readiness: bare TCP writes (echo >/dev/tcp) panic the
+            # LDAP BER parser ("Expecting 0x30 as first byte, but got 0xa").
+            # 优先用日志判断就绪：向端口写字节（echo >/dev/tcp）会让 LDAP BER 解析器
+            # panic：Expecting 0x30 as first byte, but got 0xa。
+            if grep -q "ldap-mock listening" "${RUNNER_TEMP}/ldap-mock.log" 2>/dev/null \
+              && kill -0 "$(cat "${RUNNER_TEMP}/ldap-mock.pid")" 2>/dev/null; then
               echo "ldap-mock is ready"
               exit 0
             fi
