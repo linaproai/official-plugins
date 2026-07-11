@@ -1,6 +1,6 @@
 # linapro-oidc-discord
 
-`linapro-oidc-discord` is a reference source plugin for `LinaPro` that demonstrates how to plug a third-party OIDC provider (Discord) into the new host external-identity seam.
+`linapro-oidc-discord` is the official source plugin that adds Discord sign-in to the `LinaPro` login page. It ships OAuth settings, optional auto-provisioning, and depends on `linapro-extid-core` for identity linking and account provisioning.
 
 English | [简体中文](README.zh-CN.md)
 

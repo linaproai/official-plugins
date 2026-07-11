@@ -1,6 +1,6 @@
 # linapro-oidc-google
 
-`linapro-oidc-google` 是 `LinaPro` 提供的参考源码插件，用于演示如何把第三方 OIDC（Google）接入到宿主新版外部身份接缝上。
+`linapro-oidc-google` 是 `LinaPro` 官方源码插件，用于在登录页接入 Google 账号登录，提供 OAuth 配置、可选自动注册与 One Tap 嵌入，并依赖 `linapro-extid-core` 完成身份绑定与账号开通。
 
 [English](README.md) | 简体中文
 

@@ -32,7 +32,7 @@ default_install_mode: global
 
 # Plugin description summarizing the capability boundary.
 # 插件说明，概述插件的能力边界。
-description: Reference source plugin that demonstrates Discord OIDC third-party login on the framework external-identity seam.
+description: Official source plugin that adds Discord sign-in to the login page, with OAuth settings and optional auto-provisioning. Depends on External Identity Core.
 
 # Plugin author or owning team.
 # 插件作者或归属团队。

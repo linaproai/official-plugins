@@ -1,6 +1,6 @@
 # linapro-oidc-google
 
-`linapro-oidc-google` is a reference source plugin for `LinaPro` that demonstrates how to plug a third-party OIDC provider (Google) into the new host external-identity seam.
+`linapro-oidc-google` is the official source plugin that adds Google sign-in to the `LinaPro` login page. It ships OAuth settings, optional auto-provisioning, One Tap embed support, and depends on `linapro-extid-core` for identity linking and account provisioning.
 
 English | [简体中文](README.zh-CN.md)
 
