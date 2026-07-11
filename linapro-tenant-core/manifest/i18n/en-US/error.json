@@ -2,15 +2,80 @@
   "error": {
     "multi": {
       "tenant": {
+        "tenant": {
+          "not": {
+            "found": "Tenant does not exist"
+          },
+          "code": {
+            "exists": "Tenant code already exists",
+            "invalid": "Tenant code must use lowercase letters, numbers, and hyphens with length 2 to 32",
+            "reserved": "Tenant code is reserved by a deleted tenant"
+          },
+          "forbidden": "User is not allowed to access the tenant",
+          "required": "Tenant selection is required",
+          "unavailable": "Tenant is not available",
+          "override": {
+            "invalid": "Tenant override header must be a valid tenant ID"
+          },
+          "status": {
+            "transition": {
+              "invalid": "Tenant status transition is invalid"
+            }
+          }
+        },
+        "invalid": {
+          "tenant": {
+            "status": "Tenant status is invalid"
+          }
+        },
         "delete": {
           "precondition": {
             "vetoed": "Tenant deletion was blocked by a lifecycle precondition"
           }
-        }
-      },
-      "platform": {
-        "permission": {
-          "required": "Platform context permission is required"
+        },
+        "membership": {
+          "not": {
+            "found": "Tenant membership does not exist"
+          },
+          "exists": "User is already a member of the tenant"
+        },
+        "platform": {
+          "membership": {
+            "forbidden": "Platform users cannot be added to tenant memberships"
+          },
+          "permission": {
+            "required": "Platform administrator permission is required"
+          }
+        },
+        "single": {
+          "cardinality": {
+            "violation": "User already belongs to another tenant"
+          }
+        },
+        "plugin": {
+          "tenant": {
+            "required": "Tenant plugin governance requires a tenant context"
+          },
+          "not": {
+            "found": "Tenant plugin does not exist or is not tenant scoped"
+          },
+          "runtime": {
+            "revision": {
+              "unavailable": "Plugin runtime cache revision is unavailable"
+            }
+          }
+        },
+        "impersonation": {
+          "permission": {
+            "denied": "Only platform administrators can start tenant impersonation"
+          },
+          "tenant": {
+            "unavailable": "Target tenant cannot be impersonated"
+          },
+          "token": {
+            "invalid": "Impersonation token is invalid",
+            "unavailable": "Impersonation token signing is not available"
+          }
         }
       }
     }

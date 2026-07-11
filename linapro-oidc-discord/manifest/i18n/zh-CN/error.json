@@ -34,6 +34,20 @@
               "unavailable": "外部登录服务不可用",
               "failed": "Discord 外部登录失败"
             }
+          },
+          "settings": {
+            "storage": {
+              "unavailable": "设置存储服务不可用"
+            },
+            "read": {
+              "failed": "读取 Discord OIDC 设置失败"
+            },
+            "save": {
+              "failed": "保存 Discord OIDC 设置失败"
+            },
+            "rules": {
+              "invalid": "后端跳转规则必须是 state 键到接收 URL 的 JSON 对象"
+            }
           }
         }
       }

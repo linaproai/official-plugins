@@ -2,15 +2,80 @@
   "error": {
     "multi": {
       "tenant": {
+        "tenant": {
+          "not": {
+            "found": "租户不存在"
+          },
+          "code": {
+            "exists": "租户编码已存在",
+            "invalid": "租户编码须为 2–32 位小写字母、数字或连字符",
+            "reserved": "租户编码已被已删除租户占用"
+          },
+          "forbidden": "当前用户无权访问该租户",
+          "required": "必须选择租户",
+          "unavailable": "租户不可用",
+          "override": {
+            "invalid": "租户覆盖请求头必须是有效的租户 ID"
+          },
+          "status": {
+            "transition": {
+              "invalid": "租户状态变更不合法"
+            }
+          }
+        },
+        "invalid": {
+          "tenant": {
+            "status": "租户状态无效"
+          }
+        },
         "delete": {
           "precondition": {
             "vetoed": "租户删除被生命周期前置条件阻断"
           }
-        }
-      },
-      "platform": {
-        "permission": {
-          "required": "需要平台上下文权限"
+        },
+        "membership": {
+          "not": {
+            "found": "租户成员关系不存在"
+          },
+          "exists": "用户已是该租户成员"
+        },
+        "platform": {
+          "membership": {
+            "forbidden": "平台用户不能加入租户成员关系"
+          },
+          "permission": {
+            "required": "需要平台管理员权限"
+          }
+        },
+        "single": {
+          "cardinality": {
+            "violation": "用户已属于其他租户"
+          }
+        },
+        "plugin": {
+          "tenant": {
+            "required": "租户插件治理需要租户上下文"
+          },
+          "not": {
+            "found": "租户插件不存在或非租户范围"
+          },
+          "runtime": {
+            "revision": {
+              "unavailable": "插件运行时缓存版本不可用"
+            }
+          }
+        },
+        "impersonation": {
+          "permission": {
+            "denied": "仅平台管理员可发起租户模拟登录"
+          },
+          "tenant": {
+            "unavailable": "目标租户不可被模拟"
+          },
+          "token": {
+            "invalid": "模拟登录令牌无效",
+            "unavailable": "模拟登录令牌签名不可用"
+          }
         }
       }
     }

@@ -43,11 +43,11 @@
           },
           "protocol": {
             "required": "渠道缺少所选协议的启用端点"
-          }
-        },
-        "providerOperation": {
-          "not": {
-            "found": "AI渠道 Operation 不存在"
+          },
+          "operation": {
+            "not": {
+              "found": "AI 渠道 Operation 不存在"
+            }
           }
         },
         "request": {
