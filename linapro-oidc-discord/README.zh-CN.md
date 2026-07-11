@@ -1,6 +1,6 @@
 # linapro-oidc-discord
 
-`linapro-oidc-discord` 是 `LinaPro` 官方源码插件，用于在登录页接入 Discord 账号登录，提供 OAuth 配置与可选自动注册，并依赖 `linapro-extlogin-core` 完成身份绑定与账号开通。
+`linapro-oidc-discord` 是 `LinaPro` 官方源码插件，提供**基于 Discord 账号的通用第三方登录能力**。它提供 OAuth 配置与可选自动注册，并依赖 `linapro-extlogin-core` 完成身份绑定与账号开通；同一能力可用于登录入口、账号绑定与其他业务接入场景。
 
 [English](README.md) | 简体中文
 

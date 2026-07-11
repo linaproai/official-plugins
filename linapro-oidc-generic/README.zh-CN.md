@@ -1,6 +1,6 @@
 # linapro-oidc-generic
 
-`linapro-oidc-generic` 是 LinaPro 官方 **managed** 源码插件，用于在登录页接入可配置的企业 OIDC 登录，并依赖 `linapro-extlogin-core` 完成身份链接、开户策略与 SPA handoff。
+`linapro-oidc-generic` 是 LinaPro 官方 **managed** 源码插件，提供**可配置的企业 OIDC 通用第三方登录能力**（如 Keycloak、Okta、Azure AD）。它依赖 `linapro-extlogin-core` 完成身份链接、开户策略与 SPA handoff；同一能力可用于登录入口、SSO 投递与其他业务接入场景。
 
 [English](README.md) | 简体中文
 

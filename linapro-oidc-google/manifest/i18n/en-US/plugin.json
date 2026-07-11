@@ -1,7 +1,7 @@
 {
   "plugin": {
     "linapro-oidc-google": {
-      "description": "Add Google sign-in on the login page, with OAuth settings, optional auto-provisioning, and One Tap embed support. Requires Third-party Login - Core.",
+      "description": "Provides general-purpose Google third-party login (OAuth settings, optional auto-provisioning, identity linking, and One Tap embed) for login entries, account binding, and other product flows. Requires Third-party Login - Core.",
       "name": "Third-party Login - Google",
       "login": {
         "button": "Continue with Google",
@@ -12,7 +12,7 @@
       },
       "settings": {
         "title": "Google Login Settings",
-        "description": "Configure the Google OAuth 2.0 client used by the login button. The redirect URL must match the callback URL registered in Google Cloud Console.",
+        "description": "Configure the Google OAuth 2.0 client used for third-party login. The redirect URL must match the callback URL registered in Google Cloud Console.",
         "clientIdLabel": "Client ID",
         "clientIdHelp": "The client ID from the OAuth client you created in Google Cloud Console. Think of it as the app’s account name.",
         "clientIdPlaceholder": "Enter the Google OAuth 2.0 client ID",

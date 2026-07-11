@@ -1,6 +1,6 @@
 # linapro-oidc-google
 
-`linapro-oidc-google` is the official source plugin that adds Google sign-in to the `LinaPro` login page. It ships OAuth settings, optional auto-provisioning, One Tap embed support, and depends on `linapro-extlogin-core` for identity linking and account provisioning.
+`linapro-oidc-google` is the official source plugin that provides **general-purpose Google third-party login** for `LinaPro`. It ships OAuth settings, optional auto-provisioning, One Tap embed support, and depends on `linapro-extlogin-core` for identity linking and account provisioning. The same capability can power login entries, account binding, and other product flows.
 
 English | [简体中文](README.zh-CN.md)
 

@@ -1,6 +1,6 @@
 # linapro-oidc-discord
 
-`linapro-oidc-discord` is the official source plugin that adds Discord sign-in to the `LinaPro` login page. It ships OAuth settings, optional auto-provisioning, and depends on `linapro-extlogin-core` for identity linking and account provisioning.
+`linapro-oidc-discord` is the official source plugin that provides **general-purpose Discord third-party login** for `LinaPro`. It ships OAuth settings, optional auto-provisioning, and depends on `linapro-extlogin-core` for identity linking and account provisioning. The same capability can power login entries, account binding, and other product flows.
 
 English | [简体中文](README.zh-CN.md)
 

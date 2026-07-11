@@ -1,8 +1,10 @@
 # linapro-oidc-generic
 
-`linapro-oidc-generic` is an official LinaPro **managed** source plugin that adds
-configurable enterprise OIDC sign-in to the login page. It depends on
-`linapro-extlogin-core` for identity linkage, provisioning policy, and SPA handoff.
+`linapro-oidc-generic` is an official LinaPro **managed** source plugin that
+provides **general-purpose enterprise OIDC third-party login** (for example
+Keycloak, Okta, Azure AD). It depends on `linapro-extlogin-core` for identity
+linkage, provisioning policy, and SPA handoff. The same capability can power
+login entries, SSO delivery, and other product flows.
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 

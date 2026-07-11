@@ -1,7 +1,7 @@
 {
   "plugin": {
     "linapro-auth-ldap": {
-      "description": "通过登录页表单接入企业 LDAP 或 Active Directory 目录账号登录。需要先安装并启用「第三方登录-基础框架」。",
+      "description": "提供企业 LDAP / Active Directory 目录账号的通用第三方登录能力，支持目录绑定认证与可选自动注册，可用于登录入口与其他业务接入场景。需要先安装并启用「第三方登录-基础框架」。",
       "name": "第三方登录-LDAP",
       "login": {
         "button": "使用 LDAP 登录",

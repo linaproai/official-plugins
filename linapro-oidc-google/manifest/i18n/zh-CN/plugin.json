@@ -1,7 +1,7 @@
 {
   "plugin": {
     "linapro-oidc-google": {
-      "description": "在登录页接入 Google 账号登录，支持 OAuth 配置、可选自动注册与 One Tap 嵌入。需要先安装并启用「第三方登录-基础框架」。",
+      "description": "提供基于 Google 账号的通用第三方登录能力，支持 OAuth 配置、可选自动注册、身份绑定与 One Tap 嵌入，可用于登录入口、账号绑定与其他业务接入场景。需要先安装并启用「第三方登录-基础框架」。",
       "name": "第三方登录-Google",
       "login": {
         "button": "使用 Google 账号登录",
@@ -12,7 +12,7 @@
       },
       "settings": {
         "title": "Google 登录设置",
-        "description": "配置登录按钮使用的 Google OAuth 2.0 客户端。回调 URL 必须与 Google Cloud Console 中注册的回调地址一致。",
+        "description": "配置 Google 第三方登录使用的 OAuth 2.0 客户端。回调 URL 必须与 Google Cloud Console 中注册的回调地址一致。",
         "clientIdLabel": "客户端 ID",
         "clientIdHelp": "在 Google Cloud Console 创建 OAuth 客户端后得到的客户端编号，相当于应用的“账号”。",
         "clientIdPlaceholder": "请输入 Google OAuth 2.0 客户端 ID",

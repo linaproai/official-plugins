@@ -1,7 +1,7 @@
 {
   "plugin": {
     "linapro-oidc-discord": {
-      "description": "Add Discord sign-in on the login page, with OAuth settings and optional auto-provisioning. Requires Third-party Login - Core.",
+      "description": "Provides general-purpose Discord third-party login (OAuth settings, optional auto-provisioning, and identity linking) for login entries, account binding, and other product flows. Requires Third-party Login - Core.",
       "name": "Third-party Login - Discord",
       "login": {
         "button": "Continue with Discord",
@@ -12,7 +12,7 @@
       },
       "settings": {
         "title": "Discord Login Settings",
-        "description": "Configure the Discord OAuth 2.0 client used by the login button. The redirect URL must match the callback URL registered in the Discord Developer Portal.",
+        "description": "Configure the Discord OAuth 2.0 client used for third-party login. The redirect URL must match the callback URL registered in the Discord Developer Portal.",
         "clientIdLabel": "Client ID",
         "clientIdHelp": "The client ID from the OAuth application you created in the Discord Developer Portal. Think of it as the app’s account name.",
         "clientIdPlaceholder": "Enter the Discord OAuth 2.0 client ID",

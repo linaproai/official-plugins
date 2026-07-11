@@ -32,7 +32,7 @@ default_install_mode: global
 
 # Plugin description summarizing the capability boundary.
 # 插件说明，概述插件的能力边界。
-description: Sign in with enterprise LDAP or Active Directory accounts via a form on the login page. Requires Third-party Login - Core.
+description: Provides general-purpose enterprise LDAP / Active Directory directory login (directory bind authentication and optional auto-provisioning) for login entries and other product flows. Requires Third-party Login - Core.
 
 # Plugin author or owning team.
 # 插件作者或归属团队。

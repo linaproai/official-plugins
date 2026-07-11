@@ -1,7 +1,7 @@
 {
   "plugin": {
     "linapro-auth-ldap": {
-      "description": "Sign in with enterprise LDAP or Active Directory accounts via a form on the login page. Requires Third-party Login - Core.",
+      "description": "Provides general-purpose enterprise LDAP / Active Directory directory login (directory bind authentication and optional auto-provisioning) for login entries and other product flows. Requires Third-party Login - Core.",
       "name": "Third-party Login - LDAP",
       "login": {
         "button": "Continue with LDAP",

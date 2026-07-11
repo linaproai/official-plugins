@@ -1,7 +1,6 @@
 # linapro-auth-ldap
 
-Managed source plugin for LDAP/Active Directory sign-in via a login-page form.
-Depends on `linapro-extlogin-core`.
+Managed source plugin that provides **general-purpose enterprise LDAP / Active Directory directory login**. Depends on `linapro-extlogin-core`. The same capability can power login entries and other product flows.
 
 **Provider:** `ldap:default` · **Auto-provision:** default off · **TLS:** LDAPS/StartTLS (plain only on localhost)
 
@@ -10,7 +9,7 @@ Depends on `linapro-extlogin-core`.
 1. Enable `linapro-extlogin-core`
 2. Enable `linapro-auth-ldap`
 3. Configure host/TLS/search or DN template
-4. Use **Continue with LDAP** on the login page
+4. Use the LDAP login entry (for example **Continue with LDAP** on the host login page)
 
 ## Security
 

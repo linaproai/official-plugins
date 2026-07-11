@@ -1,7 +1,7 @@
 {
   "plugin": {
     "linapro-oidc-generic": {
-      "description": "Add configurable enterprise OIDC single sign-on on the login page for providers such as Keycloak, Okta, and Azure AD. Requires Third-party Login - Core.",
+      "description": "Provides configurable enterprise OIDC third-party login for providers such as Keycloak, Okta, and Azure AD—including SSO, identity linking, and optional auto-provisioning for login entries and other product flows. Requires Third-party Login - Core.",
       "name": "Third-party Login - OIDC",
       "login": {
         "button": "Continue with OIDC",
