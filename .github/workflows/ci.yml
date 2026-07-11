@@ -202,6 +202,23 @@ jobs:
         plugin: ${{ fromJson(needs.discover-plugins.outputs.plugins) }}
     env:
       HOST_REF: ${{ needs.resolve-host.outputs.host_ref }}
+    # Plugin DB-backed unit tests hardcode local PostgreSQL (same link as host monorepo).
+    # 插件依赖数据库的单测硬编码本地 PostgreSQL（连接串与宿主 monorepo 一致）。
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: linapro
+          TZ: Asia/Shanghai
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d linapro"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       # Local composite actions require the workflow repository to be checked out first.
       # 本地 composite action 要求先检出工作流所在仓库。
@@ -237,6 +254,23 @@ jobs:
         plugin: ${{ fromJson(needs.discover-plugins.outputs.auth_plugins) }}
     env:
       HOST_REF: ${{ needs.resolve-host.outputs.host_ref }}
+    # linapro-extlogin-core identity tests require PostgreSQL unique-index semantics.
+    # linapro-extlogin-core 身份测试依赖 PostgreSQL 唯一索引语义。
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: linapro
+          TZ: Asia/Shanghai
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d linapro"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       # Local composite actions require the workflow repository to be checked out first.
       # 本地 composite action 要求先检出工作流所在仓库。

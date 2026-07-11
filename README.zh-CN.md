@@ -179,7 +179,7 @@ pnpm -C hack/tests test:module -- plugin:<plugin-id>
 | Auth Go unit tests | 针对`linapro-extlogin-core`、`linapro-auth-ldap`、`linapro-oidc-*`的显式门禁 |
 | Auth integration (LDAP + OIDC) | 真实 OpenLDAP 绑定登录 + 真实 OIDC code/PKCE/id_token 登录（`hack/ci`） |
 
-工作流会稀疏检出宿主 monorepo 的`apps/lina-core`，将本仓库覆盖到`apps/lina-plugins`，生成临时`go.work`，并对每个插件执行`go test ./...`。
+工作流会稀疏检出宿主 monorepo 的`apps/lina-core`，将本仓库覆盖到`apps/lina-plugins`，生成临时`go.work`，并对每个插件执行`go test ./...`。Go 单测任务会启动`postgres:14-alpine`服务（`postgres`/`postgres`@`linapro`，`127.0.0.1:5432`），供依赖数据库的插件测试使用。
 
 认证集成会启动两个仓库内 mock 服务（CI 不依赖 Docker）：
 

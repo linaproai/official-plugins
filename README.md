@@ -195,7 +195,7 @@ Use plugin-local `api_contract_test.go` and Go package tests for backend contrac
 | Auth Go unit tests | Explicit gate for `linapro-extlogin-core`, `linapro-auth-ldap`, `linapro-oidc-*` |
 | Auth integration (LDAP + OIDC) | Live OpenLDAP bind login + live OIDC code/PKCE/id_token login via `hack/ci` |
 
-The workflow checks out the host monorepo with sparse `apps/lina-core`, overlays this repository at `apps/lina-plugins`, generates a temporary `go.work`, and runs `go test ./...` per plugin.
+The workflow checks out the host monorepo with sparse `apps/lina-core`, overlays this repository at `apps/lina-plugins`, generates a temporary `go.work`, and runs `go test ./...` per plugin. Go unit-test jobs start a `postgres:14-alpine` service (`postgres`/`postgres`@`linapro` on `127.0.0.1:5432`) for DB-backed plugin tests.
 
 **Host ref resolution** (push / pull_request):
 
