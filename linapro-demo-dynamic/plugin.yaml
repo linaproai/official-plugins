@@ -4,7 +4,7 @@ id: linapro-demo-dynamic
 
 # Plugin display name used in plugin management pages, developer docs, and presentation.
 # 插件显示名称，用于插件管理页面、开发文档和展示。
-name: 动态插件示例
+name: 示例插件-动态插件
 
 # Plugin semantic version; examples in this repo use the `v` prefix.
 # 插件语义化版本号，当前示例统一使用带 `v` 前缀的写法。
@@ -341,7 +341,7 @@ menus:
     parent_key: extension
     # Menu display name.
     # 菜单显示名称。
-    name: 动态插件示例
+    name: 示例插件-动态插件
     # Hosted static asset entry path for the dynamic plugin.
     # 动态插件静态资源托管入口路径。
     path: /x-assets/linapro-demo-dynamic/v0.1.0/mount.js

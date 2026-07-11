@@ -1,8 +1,8 @@
 {
   "plugin": {
     "linapro-oidc-generic": {
-      "description": "官方源码插件：在登录页接入可配置的企业 OIDC 登录，依赖外部身份核心。",
-      "name": "通用 OIDC 登录",
+      "description": "在登录页接入可配置的企业 OIDC 单点登录，可用于对接 Keycloak、Okta、Azure AD 等身份提供商。需要先安装并启用「第三方登录-基础框架」。",
+      "name": "第三方登录-OIDC",
       "login": {
         "button": "使用 OIDC 登录",
         "callback": {

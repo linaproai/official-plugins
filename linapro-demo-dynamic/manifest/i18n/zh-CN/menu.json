@@ -1,7 +1,7 @@
 {
   "menu": {
     "plugin:linapro-demo-dynamic:main-entry": {
-      "title": "动态插件示例"
+      "title": "示例插件-动态插件"
     }
   }
 }

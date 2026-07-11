@@ -2,7 +2,7 @@
   "plugin": {
     "linapro-demo-dynamic": {
       "description": "Dynamic wasm sample that demonstrates a host-embedded menu page, plugin-owned SQL CRUD, and a hosted standalone page.",
-      "name": "Dynamic Plugin Demo",
+      "name": "Sample Plugin - Dynamic",
       "page": {
         "action": {
           "addRecord": "Add Record",

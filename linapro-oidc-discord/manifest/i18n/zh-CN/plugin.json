@@ -1,8 +1,8 @@
 {
   "plugin": {
     "linapro-oidc-discord": {
-      "description": "在登录页接入 Discord 账号登录的官方源码插件，支持 OAuth 配置与可选自动注册。依赖第三方登录框架。",
-      "name": "Discord 登录",
+      "description": "在登录页接入 Discord 账号登录，支持 OAuth 配置与可选自动注册。需要先安装并启用「第三方登录-基础框架」。",
+      "name": "第三方登录-Discord",
       "login": {
         "button": "使用 Discord 账号登录",
         "callback": {

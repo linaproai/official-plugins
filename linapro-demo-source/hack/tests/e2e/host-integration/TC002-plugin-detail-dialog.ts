@@ -2,7 +2,7 @@ import { test, expect } from '@host-tests/fixtures/auth';
 import { DemoSourcePage } from '../../pages/DemoSourcePage';
 
 const pluginID = "linapro-demo-source";
-const pluginName = "源码插件示例";
+const pluginName = "示例插件-源码插件";
 const pluginVersion = "v0.1.0";
 const pluginDescription = "提供左侧菜单页面与公开/受保护路由示例的源码插件";
 

@@ -1,8 +1,8 @@
 {
   "plugin": {
     "linapro-auth-ldap": {
-      "description": "官方源码插件：通过登录页表单接入 LDAP/AD 目录登录，依赖外部身份核心。",
-      "name": "LDAP 登录",
+      "description": "通过登录页表单接入企业 LDAP 或 Active Directory 目录账号登录。需要先安装并启用「第三方登录-基础框架」。",
+      "name": "第三方登录-LDAP",
       "login": {
         "button": "使用 LDAP 登录",
         "modalTitle": "LDAP 账号登录",

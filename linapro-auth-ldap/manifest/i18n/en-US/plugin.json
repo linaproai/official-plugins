@@ -1,8 +1,8 @@
 {
   "plugin": {
     "linapro-auth-ldap": {
-      "description": "Official source plugin that adds directory (LDAP/AD) sign-in via a login-page form. Depends on External Identity Core.",
-      "name": "LDAP Login",
+      "description": "Sign in with enterprise LDAP or Active Directory accounts via a form on the login page. Requires Third-party Login - Core.",
+      "name": "Third-party Login - LDAP",
       "login": {
         "button": "Continue with LDAP",
         "modalTitle": "LDAP login",

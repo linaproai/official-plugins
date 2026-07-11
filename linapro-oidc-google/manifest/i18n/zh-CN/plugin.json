@@ -1,8 +1,8 @@
 {
   "plugin": {
     "linapro-oidc-google": {
-      "description": "在登录页接入 Google 账号登录的官方源码插件，支持 OAuth 配置、可选自动注册与 One Tap 嵌入。依赖第三方登录框架。",
-      "name": "Google 登录",
+      "description": "在登录页接入 Google 账号登录，支持 OAuth 配置、可选自动注册与 One Tap 嵌入。需要先安装并启用「第三方登录-基础框架」。",
+      "name": "第三方登录-Google",
       "login": {
         "button": "使用 Google 账号登录",
         "callback": {

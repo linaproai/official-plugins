@@ -207,12 +207,12 @@ test.describe("TC006 英文布局回归", () => {
     await ensureSourcePluginEnabled(adminPage, "linapro-demo-source");
     await mainLayout.switchLanguage("English");
 
-    const dynamicDemoMenu = mainLayout.sidebarMenuItem("Dynamic Plugin Demo");
+    const dynamicDemoMenu = mainLayout.sidebarMenuItem("Sample Plugin - Dynamic");
     const pluginMenuLabel = (await dynamicDemoMenu
       .isVisible({ timeout: 1500 })
       .catch(() => false))
-      ? "Dynamic Plugin Demo"
-      : "Source Plugin Demo";
+      ? "Sample Plugin - Dynamic"
+      : "Sample Plugin - Source";
     const pluginMenu = await mainLayout.expectSidebarMenuVisible(pluginMenuLabel);
     await pluginMenu.scrollIntoViewIfNeeded();
     await expectNoHorizontalClip(pluginMenu, "Plugin demo sidebar item");

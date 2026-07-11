@@ -1,8 +1,8 @@
 {
   "plugin": {
     "linapro-oidc-discord": {
-      "description": "Official source plugin that adds Discord sign-in to the login page, with OAuth settings and optional auto-provisioning. Depends on External Identity Core.",
-      "name": "Discord Login",
+      "description": "Add Discord sign-in on the login page, with OAuth settings and optional auto-provisioning. Requires Third-party Login - Core.",
+      "name": "Third-party Login - Discord",
       "login": {
         "button": "Continue with Discord",
         "callback": {
