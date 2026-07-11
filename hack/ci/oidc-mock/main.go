@@ -8,6 +8,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -86,7 +87,7 @@ func main() {
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	ln, err := net.Listen("tcp", *listen)
+	ln, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", *listen)
 	if err != nil {
 		log.Fatalf("listen %s: %v", *listen, err)
 	}
