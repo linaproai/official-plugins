@@ -86,8 +86,14 @@ export class LdapAuthPage {
     return this.loginModal.getByRole('button', { name: /取\s*消/ });
   }
 
-  get credentialsRequiredMessages() {
-    return this.loginModal.getByText('请输入用户名和密码', { exact: true });
+  /** Host formRules.required copy for the username field (zh-CN). */
+  get usernameRequiredMessage() {
+    return this.loginModal.getByText('请输入用户名', { exact: true });
+  }
+
+  /** Host formRules.required copy for the password field (zh-CN). */
+  get passwordRequiredMessage() {
+    return this.loginModal.getByText('请输入密码', { exact: true });
   }
 
   async openLoginModal() {

@@ -8,7 +8,6 @@
         "modalTitle": "LDAP login",
         "usernameLabel": "Username",
         "passwordLabel": "Password",
-        "credentialsRequired": "Username and password are required",
         "failed": "Directory login failed."
       },
       "settings": {

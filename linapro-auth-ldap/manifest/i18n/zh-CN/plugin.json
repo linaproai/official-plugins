@@ -8,7 +8,6 @@
         "modalTitle": "LDAP 账号登录",
         "usernameLabel": "用户名",
         "passwordLabel": "密码",
-        "credentialsRequired": "请输入用户名和密码",
         "failed": "目录登录失败。"
       },
       "settings": {

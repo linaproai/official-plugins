@@ -24,37 +24,39 @@ import { useAuthStore } from '#/store';
 
 const authStore = useAuthStore();
 
-const formSchema = computed((): VbenFormSchema[] => [
-  {
-    component: 'VbenInput',
-    componentProps: {
-      autocomplete: 'username',
-      'data-testid': 'linapro-auth-ldap-username',
-      placeholder: $t('plugin.linapro-auth-ldap.login.usernameLabel'),
-    },
-    fieldName: 'username',
-    label: $t('plugin.linapro-auth-ldap.login.usernameLabel'),
-    rules: z
-      .string()
-      .trim()
-      .min(1, {
-        message: $t('plugin.linapro-auth-ldap.login.credentialsRequired'),
+const formSchema = computed((): VbenFormSchema[] => {
+  const usernameLabel = $t('plugin.linapro-auth-ldap.login.usernameLabel');
+  const passwordLabel = $t('plugin.linapro-auth-ldap.login.passwordLabel');
+  return [
+    {
+      component: 'VbenInput',
+      componentProps: {
+        autocomplete: 'username',
+        'data-testid': 'linapro-auth-ldap-username',
+        placeholder: usernameLabel,
+      },
+      fieldName: 'username',
+      label: usernameLabel,
+      // Host-standard per-field required copy (not a shared credentials blurb).
+      rules: z.string().trim().min(1, {
+        message: $t('ui.formRules.required', [usernameLabel]),
       }),
-  },
-  {
-    component: 'VbenInputPassword',
-    componentProps: {
-      autocomplete: 'current-password',
-      'data-testid': 'linapro-auth-ldap-password',
-      placeholder: $t('plugin.linapro-auth-ldap.login.passwordLabel'),
     },
-    fieldName: 'password',
-    label: $t('plugin.linapro-auth-ldap.login.passwordLabel'),
-    rules: z.string().min(1, {
-      message: $t('plugin.linapro-auth-ldap.login.credentialsRequired'),
-    }),
-  },
-]);
+    {
+      component: 'VbenInputPassword',
+      componentProps: {
+        autocomplete: 'current-password',
+        'data-testid': 'linapro-auth-ldap-password',
+        placeholder: passwordLabel,
+      },
+      fieldName: 'password',
+      label: passwordLabel,
+      rules: z.string().min(1, {
+        message: $t('ui.formRules.required', [passwordLabel]),
+      }),
+    },
+  ];
+});
 
 const [LoginForm, formApi] = useVbenForm(
   reactive({

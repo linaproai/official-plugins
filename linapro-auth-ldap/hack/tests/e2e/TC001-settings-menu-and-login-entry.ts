@@ -139,10 +139,20 @@ test.describe('TC-1 linapro-auth-ldap 设置菜单与登录入口', () => {
       modalLayout.viewportWidth - 32,
     );
 
+    // Empty submit: username and password must show distinct required tips.
     await ldap.confirmButton.click();
-    await expect(ldap.credentialsRequiredMessages.first()).toBeVisible();
+    await expect(ldap.usernameRequiredMessage).toBeVisible();
+    await expect(ldap.passwordRequiredMessage).toBeVisible();
+    await expect(
+      ldap.loginModal.getByText('请输入用户名和密码', { exact: true }),
+    ).toHaveCount(0);
 
+    // Username only: password tip remains; username tip clears.
     await ldap.usernameInput.fill('directory-user');
+    await ldap.confirmButton.click();
+    await expect(ldap.usernameRequiredMessage).toHaveCount(0);
+    await expect(ldap.passwordRequiredMessage).toBeVisible();
+
     await ldap.passwordInput.fill('not-submitted');
     await ldap.cancelButton.click();
     await expect(ldap.loginModal).toBeHidden();
