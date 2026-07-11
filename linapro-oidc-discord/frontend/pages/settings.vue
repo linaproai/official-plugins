@@ -4,13 +4,14 @@
 // can resolve and mount it.
 export const pluginPageMeta = {
   routePath: 'linapro-oidc-discord-settings',
-  title: 'Discord OIDC Settings',
+  title: 'Discord Login Settings',
 };
 </script>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 
+import { IconifyIcon } from '@vben/icons';
 import {
   Button,
   Card,
@@ -19,6 +20,7 @@ import {
   InputPassword,
   message,
   Switch,
+  Tooltip,
 } from 'ant-design-vue';
 
 import { pluginApiPath, requestClient } from '#/api/request';
@@ -206,6 +208,7 @@ onMounted(loadSettings);
       <Form :model="formState" layout="vertical">
         <Form.Item
           :label="$t('plugin.linapro-oidc-discord.settings.clientIdLabel')"
+          :tooltip="$t('plugin.linapro-oidc-discord.settings.clientIdHelp')"
           name="clientId"
         >
           <Input
@@ -218,6 +221,7 @@ onMounted(loadSettings);
         </Form.Item>
         <Form.Item
           :label="$t('plugin.linapro-oidc-discord.settings.clientSecretLabel')"
+          :tooltip="$t('plugin.linapro-oidc-discord.settings.clientSecretHelp')"
           name="clientSecret"
         >
           <InputPassword
@@ -235,6 +239,7 @@ onMounted(loadSettings);
         </Form.Item>
         <Form.Item
           :label="$t('plugin.linapro-oidc-discord.settings.redirectUrlLabel')"
+          :tooltip="$t('plugin.linapro-oidc-discord.settings.redirectUrlHelp')"
           name="redirectUrl"
         >
           <div class="flex items-center gap-2">
@@ -251,6 +256,9 @@ onMounted(loadSettings);
           :label="
             $t('plugin.linapro-oidc-discord.settings.defaultRedirectLabel')
           "
+          :tooltip="
+            $t('plugin.linapro-oidc-discord.settings.defaultRedirectHelp')
+          "
           name="defaultBackendRedirect"
         >
           <Input
@@ -266,34 +274,46 @@ onMounted(loadSettings);
             {{ $t('plugin.linapro-oidc-discord.settings.defaultRedirectHint') }}
           </p>
         </Form.Item>
-        <Form.Item name="allowAutoProvision">
+        <Form.Item
+          :label="
+            $t('plugin.linapro-oidc-discord.settings.autoProvisionLabel')
+          "
+          :tooltip="
+            $t('plugin.linapro-oidc-discord.settings.autoProvisionHelp')
+          "
+          name="allowAutoProvision"
+        >
           <div class="flex items-center gap-3">
             <Switch v-model:checked="formState.allowAutoProvision" />
-            <span class="font-medium">
-              {{
-                $t('plugin.linapro-oidc-discord.settings.autoProvisionLabel')
-              }}
+            <span class="text-muted-foreground text-sm">
+              {{ $t('plugin.linapro-oidc-discord.settings.autoProvisionHint') }}
             </span>
           </div>
-          <p class="text-muted-foreground mt-1 text-xs">
-            {{ $t('plugin.linapro-oidc-discord.settings.autoProvisionHint') }}
-          </p>
         </Form.Item>
-        <Form.Item name="enableBackendRedirect">
+        <Form.Item
+          :label="$t('plugin.linapro-oidc-discord.settings.enableSsoLabel')"
+          :tooltip="$t('plugin.linapro-oidc-discord.settings.enableSsoHelp')"
+          name="enableBackendRedirect"
+        >
           <div class="flex items-center gap-3">
             <Switch v-model:checked="formState.enableBackendRedirect" />
-            <span class="font-medium">
-              {{ $t('plugin.linapro-oidc-discord.settings.enableSsoLabel') }}
+            <span class="text-muted-foreground text-sm">
+              {{ $t('plugin.linapro-oidc-discord.settings.enableSsoHint') }}
             </span>
           </div>
-          <p class="text-muted-foreground mt-1 text-xs">
-            {{ $t('plugin.linapro-oidc-discord.settings.enableSsoHint') }}
-          </p>
         </Form.Item>
         <template v-if="formState.enableBackendRedirect">
           <div class="mb-2 flex items-center justify-between">
-            <span class="font-medium">
+            <span class="inline-flex items-center gap-1 font-medium">
               {{ $t('plugin.linapro-oidc-discord.settings.rulesTitle') }}
+              <Tooltip
+                :title="$t('plugin.linapro-oidc-discord.settings.rulesHelp')"
+              >
+                <IconifyIcon
+                  class="text-muted-foreground text-xs"
+                  icon="ant-design:question-circle-outlined"
+                />
+              </Tooltip>
             </span>
             <Button size="small" @click="addRule">
               {{ $t('plugin.linapro-oidc-discord.settings.addRule') }}
@@ -302,25 +322,33 @@ onMounted(loadSettings);
           <div
             v-for="(rule, index) in formState.rules"
             :key="index"
-            class="mb-2 flex w-full items-center gap-2"
+            class="mb-3 grid w-full grid-cols-1 gap-2 md:grid-cols-[10rem_minmax(0,1fr)_auto]"
           >
-            <div class="w-40 shrink-0">
+            <Form.Item
+              class="mb-0"
+              :label="$t('plugin.linapro-oidc-discord.settings.ruleKeyLabel')"
+              :tooltip="$t('plugin.linapro-oidc-discord.settings.ruleKeyHelp')"
+            >
               <Input
                 v-model:value="rule.key"
                 :placeholder="
                   $t('plugin.linapro-oidc-discord.settings.ruleKeyPlaceholder')
                 "
               />
-            </div>
-            <div class="min-w-0 flex-1">
+            </Form.Item>
+            <Form.Item
+              class="mb-0"
+              :label="$t('plugin.linapro-oidc-discord.settings.ruleUrlLabel')"
+              :tooltip="$t('plugin.linapro-oidc-discord.settings.ruleUrlHelp')"
+            >
               <Input
                 v-model:value="rule.url"
                 :placeholder="
                   $t('plugin.linapro-oidc-discord.settings.ruleUrlPlaceholder')
                 "
               />
-            </div>
-            <div class="flex shrink-0 items-center gap-1">
+            </Form.Item>
+            <div class="flex items-end gap-1 pb-1">
               <Button size="small" @click="copyLoginUrl(rule)">
                 {{ $t('plugin.linapro-oidc-discord.settings.copyLoginUrl') }}
               </Button>

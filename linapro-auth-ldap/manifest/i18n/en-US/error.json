@@ -1,0 +1,48 @@
+{
+  "error": {
+    "plugin": {
+      "auth": {
+        "ldap": {
+          "config": {
+            "missing": "LDAP directory configuration is missing"
+          },
+          "auth": {
+            "failed": "Invalid directory username or password"
+          },
+          "directory": {
+            "unavailable": "Directory service is unavailable"
+          },
+          "username": {
+            "required": "Username is required"
+          },
+          "password": {
+            "required": "Password is required"
+          },
+          "external": {
+            "login": {
+              "unavailable": "External-login service is unavailable",
+              "failed": "LDAP external login failed"
+            }
+          },
+          "settings": {
+            "storage": {
+              "unavailable": "Settings storage service is unavailable"
+            },
+            "read": {
+              "failed": "Failed to read LDAP settings"
+            },
+            "save": {
+              "failed": "Failed to save LDAP settings"
+            },
+            "tls": {
+              "invalid": "Plain LDAP is only allowed for localhost; use ldaps or starttls"
+            },
+            "config": {
+              "invalid": "LDAP settings are invalid"
+            }
+          }
+        }
+      }
+    }
+  }
+}

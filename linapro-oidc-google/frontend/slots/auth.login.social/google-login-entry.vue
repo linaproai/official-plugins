@@ -1,13 +1,12 @@
 <script lang="ts">
 import { pluginSlotKeys } from '#/plugins/plugin-slots';
 
-// pluginSlotMeta identifies this component as the Google OIDC entry rendered
-// in the host's Vben-style third-party icon row. The host slot-registry only
-// mounts the button when the linapro-oidc-google plugin is installed and enabled.
+// Platform social icon entry (Google). Host auth.login.social renders a
+// horizontal icon row under “其他登录方式”; not a full-width protocol button.
 export const pluginSlotMeta = {
   order: 10,
   pluginId: 'linapro-oidc-google',
-  slotKey: pluginSlotKeys.authLoginAfter,
+  slotKey: pluginSlotKeys.authLoginSocial,
 };
 </script>
 
@@ -17,9 +16,7 @@ import { SvgGoogleIcon } from '@vben/icons';
 import { Button, Tooltip } from 'ant-design-vue';
 
 // loginStartPath is the plugin's browser-facing route that redirects the
-// user to Google. Because it is a full-page navigation (not an XHR call),
-// window.location.assign is used so cookies set by the plugin route are
-// respected by the browser during the OIDC handshake.
+// user to Google. Full-page navigation keeps the OIDC handshake cookie-safe.
 const loginStartPath = '/portal/linapro-oidc-google/login';
 
 function handleClick() {
@@ -42,10 +39,9 @@ function handleClick() {
       placement="top"
     >
       <Button
-        class="linapro-oidc-google-entry__button mb-3"
+        class="mb-3"
         data-testid="linapro-oidc-google-entry-button"
         shape="circle"
-        size="large"
         type="text"
         @click="handleClick"
       >
@@ -54,15 +50,3 @@ function handleClick() {
     </Tooltip>
   </div>
 </template>
-
-<style scoped>
-/* Match Vben ThirdPartyLogin icon button footprint (rounded, fixed hit area). */
-.linapro-oidc-google-entry__button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  padding: 0;
-}
-</style>

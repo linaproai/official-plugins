@@ -10,7 +10,7 @@ English | [简体中文](README.zh-CN.md)
 - Registers two browser-facing routes on a plugin-owned portal path group:
   - `GET /portal/linapro-oidc-google/login` builds the Google authorize URL, persists an anti-CSRF state cookie, and redirects the browser to Google.
   - `GET /portal/linapro-oidc-google/callback` validates the state, exchanges the OAuth code for a verified identity, calls `Services.Auth().ExternalLogin().LoginByVerifiedIdentity(...)`, and redirects the browser back to the SPA login page with the host outcome encoded in the query string.
-- Ships one Vue frontend slot component under `frontend/slots/auth.login.after/google-login-entry.vue` that the workspace slot registry auto-mounts below the SPA login form when the plugin is installed and enabled.
+- Ships one Vue frontend slot component under `frontend/slots/auth.login.social/google-login-entry.vue` that the workspace slot registry auto-mounts as a platform social icon under “其他登录方式” when the plugin is installed and enabled.
 
 The OAuth code exchange and userinfo fetch are intentionally minimal and clearly stubbed. The reference verifier returns a deterministic verified identity from the incoming authorization code so the surrounding orchestration can be exercised end-to-end without a live Google project. A real deployment must swap `oauthsvc.NewStubIdentityVerifier()` for an HTTP-backed implementation before this plugin can go to production.
 
@@ -28,7 +28,7 @@ linapro-oidc-google/
       controller/login/           login-start + callback handlers
       service/oauth/              authorize URL construction, state, verifier, callback
   frontend/
-    slots/auth.login.after/       "Continue with Google" button component
+    slots/auth.login.social/      Google social icon entry (tooltip button)
   manifest/
     i18n/en-US/                   English i18n resources
     i18n/zh-CN/                   Simplified Chinese i18n resources
@@ -71,7 +71,7 @@ For a production reference wiring, replace the stub verifier with an HTTP-backed
 
 ## Frontend Slot
 
-The Vue slot component lives at `frontend/slots/auth.login.after/google-login-entry.vue`. The workspace slot registry auto-discovers it at build time; the runtime registry hides the button when the plugin is not installed or is disabled. The button triggers a full-page navigation to the login-start route so the browser cookie set by the plugin controller is respected during the OIDC handshake.
+The Vue slot component lives at `frontend/slots/auth.login.social/google-login-entry.vue`. The workspace slot registry auto-discovers it at build time; the runtime registry hides the icon when the plugin is not installed or is disabled. Clicking the icon triggers a full-page navigation to the login-start route so the browser cookie set by the plugin controller is respected during the OIDC handshake. Protocol / directory logins (generic OIDC, LDAP) use the separate `auth.login.after` full-width button stack instead.
 
 ## Review Checklist
 

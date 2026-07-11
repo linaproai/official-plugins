@@ -99,9 +99,9 @@ test.describe("TC001 linapro-oidc-google 设置菜单与登录入口", () => {
         (node) =>
           node.path === "linapro-oidc-google-settings" ||
           node.perms === "linapro-oidc-google:settings:view" ||
-          /Google OIDC/i.test(String(node.name ?? "")),
+          /Google 登录|Google Login/i.test(String(node.name ?? "")),
       );
-      expect(google, "Google OIDC 设置应挂在授权登录下").toBeTruthy();
+      expect(google, "Google 登录应挂在授权登录下").toBeTruthy();
     } finally {
       await api.dispose();
     }
@@ -115,7 +115,7 @@ test.describe("TC001 linapro-oidc-google 设置菜单与登录入口", () => {
     await waitForRouteReady(adminPage);
     await layout.expandSidebarGroup(/授权登录|Auth Login/i);
     await expect(
-      layout.sidebarMenuItem(/Google OIDC/i),
+      layout.sidebarMenuItem(/Google 登录|Google Login/i),
     ).toBeVisible();
   });
 
@@ -126,15 +126,39 @@ test.describe("TC001 linapro-oidc-google 设置菜单与登录入口", () => {
       const enTree = await fetchMenuTree(api, "en-US");
       const enNode = findByPath(enTree, settingsPath);
       expect(enNode, "en-US 应返回 Google 设置菜单").not.toBeNull();
-      expect(enNode?.name).toBe("Google OIDC");
+      expect(enNode?.name).toBe("Google Login");
 
       const zhTree = await fetchMenuTree(api, "zh-CN");
       const zhNode = findByPath(zhTree, settingsPath);
       expect(zhNode, "zh-CN 应返回 Google 设置菜单").not.toBeNull();
-      expect(zhNode?.name).toBe("Google OIDC");
+      expect(zhNode?.name).toBe("Google 登录");
     } finally {
       await api.dispose();
     }
+  });
+
+  test("TC001e: 登录入口为「其他登录方式」下的平台图标", async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await waitForRouteReady(page);
+    if ((await page.locator("html").getAttribute("lang")) !== "zh-CN") {
+      await loginPage.switchLanguage("简体中文");
+    }
+
+    const googlePage = new GoogleOidcPage(page);
+    await expect(googlePage.loginEntry).toBeVisible();
+    // Social region divider + icon-sized control (not full-width protocol button).
+    await expect(
+      page.getByText("其他登录方式", { exact: true }).first(),
+    ).toBeVisible();
+    await expect(loginPage.socialAuthRegion).toBeVisible();
+    await expect(loginPage.socialAuthSlot).toBeVisible();
+
+    const layout = await googlePage.getLoginEntryLayout();
+    expect(layout.isIconSized).toBe(true);
+    // Icon must not stretch to the social region width (full-width protocol buttons do).
+    expect(layout.regionWidth).toBeGreaterThan(200);
+    expect(layout.buttonWidth).toBeLessThan(layout.regionWidth * 0.25);
   });
 
   test("TC001c: 未配置凭证时登录入口 fail-closed 回登录页", async ({

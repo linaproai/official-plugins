@@ -1,0 +1,54 @@
+{
+  "plugin": {
+    "linapro-oidc-generic": {
+      "description": "Official source plugin that adds configurable enterprise OIDC sign-in to the login page. Depends on External Identity Core.",
+      "name": "Generic OIDC Login",
+      "login": {
+        "button": "Continue with OIDC",
+        "callback": {
+          "error": "OIDC login failed. Please try again.",
+          "unlinked": "This OIDC account is not linked to any local user. Please contact the administrator."
+        }
+      },
+      "settings": {
+        "title": "OIDC Settings",
+        "description": "Configure a standard OIDC identity provider (Keycloak, Okta, Azure AD, etc.). Copy the callback URL into the IdP client configuration.",
+        "connectionKeyLabel": "Connection key",
+        "connectionKeyHelp": "An internal name used to tell this login connection apart. It is fixed to default and usually does not need to change.",
+        "displayNameLabel": "Display name",
+        "displayNameHelp": "The name shown on the login-page button so users can recognize it, for example “Company SSO”.",
+        "displayNamePlaceholder": "Company SSO",
+        "issuerLabel": "Issuer URL",
+        "issuerHelp": "The address of your identity service. You can usually find it in the Keycloak, Okta, or similar admin console. It normally starts with https://.",
+        "issuerPlaceholder": "https://keycloak.example.com/realms/demo",
+        "clientIdLabel": "Client ID",
+        "clientIdHelp": "The client ID issued when you register LinaPro as an application in the identity service. Think of it as the app’s account name.",
+        "clientIdPlaceholder": "Enter the OIDC client ID",
+        "clientSecretLabel": "Client Secret",
+        "clientSecretHelp": "The secret paired with the client ID. Think of it as the app’s password. Keep it safe. Leave empty to keep the stored secret unchanged.",
+        "clientSecretPlaceholder": "Enter the OIDC client secret",
+        "clientSecretKeepPlaceholder": "Leave unchanged to keep the stored secret",
+        "redirectUrlLabel": "Callback URL",
+        "redirectUrlHelp": "After users finish signing in at the identity service, they return to this address on LinaPro. It is generated automatically—copy it into the identity service’s authorized redirect URI list.",
+        "redirectUrlHint": "Fixed by the plugin. Copy this URL into the IdP authorized redirect URIs.",
+        "copyCallbackUrl": "Copy",
+        "scopesLabel": "Scopes",
+        "scopesHelp": "Which user information to request from the identity service. Keeping openid email profile is enough unless your provider requires something special.",
+        "scopesPlaceholder": "openid email profile",
+        "save": "Save",
+        "saveSuccess": "OIDC settings saved.",
+        "saveFailed": "Failed to save OIDC settings.",
+        "loadFailed": "Failed to load OIDC settings.",
+        "defaultRedirectLabel": "Workspace Landing Path",
+        "defaultRedirectHelp": "The page opened after a successful login into the workspace, for example /dashboard/analytics. Leave empty to use the system default home page. This is not the callback URL above.",
+        "defaultRedirectPlaceholder": "/dashboard/analytics",
+        "defaultRedirectHint": "Default page after successful OIDC login. Leave empty for system default home. Does not change the Callback URL.",
+        "autoProvisionLabel": "Auto-provision new users",
+        "autoProvisionHelp": "When on: a first-time external login that is not linked to a local account creates a least-privilege platform user. When off: unlinked external accounts cannot sign in until an admin handles them.",
+        "autoProvisionHint": "Off by default. When enabled, a verified OIDC identity without a linked local account gets a least-privilege platform account. Same-email accounts are never silently taken over.",
+        "copied": "Copied.",
+        "copyFailed": "Failed to copy."
+      }
+    }
+  }
+}

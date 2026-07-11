@@ -13,7 +13,7 @@ This plugin owns:
 - the plugin-owned `backend/cap/extidcap` contract: wide `Service` entry with `Ticket` / `Login` / `Linkage` / `Providers` sub surfaces, plus process-bound catalog and handoff facades
 - current-user bind APIs that accept **verified tickets only** (no bare client-supplied subject)
 
-Protocol plugins such as `linapro-oidc-google` and `linapro-oidc-discord` **must** declare a dependency on this plugin. They verify IdPs and call host `extlogin` plus this domain; this plugin never calls `LoginByVerifiedIdentity` and declares no provider-ID ownership.
+Protocol plugins such as `linapro-oidc-google`, `linapro-oidc-discord`, `linapro-oidc-generic`, and `linapro-auth-ldap` **must** declare a dependency on this plugin. They verify IdPs and call host `extlogin` plus this domain; this plugin never calls `LoginByVerifiedIdentity` and declares no provider-ID ownership.
 
 ## Distribution and degradation
 

@@ -4,13 +4,14 @@
 // can resolve and mount it.
 export const pluginPageMeta = {
   routePath: 'linapro-oidc-google-settings',
-  title: 'Google OIDC Settings',
+  title: 'Google Login Settings',
 };
 </script>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 
+import { IconifyIcon } from '@vben/icons';
 import {
   Button,
   Card,
@@ -19,6 +20,7 @@ import {
   InputPassword,
   message,
   Switch,
+  Tooltip,
 } from 'ant-design-vue';
 
 import { pluginApiPath, requestClient } from '#/api/request';
@@ -243,6 +245,7 @@ onMounted(loadSettings);
       <Form :model="formState" layout="vertical">
         <Form.Item
           :label="$t('plugin.linapro-oidc-google.settings.clientIdLabel')"
+          :tooltip="$t('plugin.linapro-oidc-google.settings.clientIdHelp')"
           name="clientId"
         >
           <Input
@@ -255,6 +258,7 @@ onMounted(loadSettings);
         </Form.Item>
         <Form.Item
           :label="$t('plugin.linapro-oidc-google.settings.clientSecretLabel')"
+          :tooltip="$t('plugin.linapro-oidc-google.settings.clientSecretHelp')"
           name="clientSecret"
         >
           <InputPassword
@@ -272,6 +276,7 @@ onMounted(loadSettings);
         </Form.Item>
         <Form.Item
           :label="$t('plugin.linapro-oidc-google.settings.redirectUrlLabel')"
+          :tooltip="$t('plugin.linapro-oidc-google.settings.redirectUrlHelp')"
           name="redirectUrl"
         >
           <div class="flex items-center gap-2">
@@ -288,6 +293,9 @@ onMounted(loadSettings);
           :label="
             $t('plugin.linapro-oidc-google.settings.defaultRedirectLabel')
           "
+          :tooltip="
+            $t('plugin.linapro-oidc-google.settings.defaultRedirectHelp')
+          "
           name="defaultBackendRedirect"
         >
           <Input
@@ -303,34 +311,42 @@ onMounted(loadSettings);
             {{ $t('plugin.linapro-oidc-google.settings.defaultRedirectHint') }}
           </p>
         </Form.Item>
-        <Form.Item name="allowAutoProvision">
+        <Form.Item
+          :label="$t('plugin.linapro-oidc-google.settings.autoProvisionLabel')"
+          :tooltip="$t('plugin.linapro-oidc-google.settings.autoProvisionHelp')"
+          name="allowAutoProvision"
+        >
           <div class="flex items-center gap-3">
             <Switch v-model:checked="formState.allowAutoProvision" />
-            <span class="font-medium">
-              {{
-                $t('plugin.linapro-oidc-google.settings.autoProvisionLabel')
-              }}
+            <span class="text-muted-foreground text-sm">
+              {{ $t('plugin.linapro-oidc-google.settings.autoProvisionHint') }}
             </span>
           </div>
-          <p class="text-muted-foreground mt-1 text-xs">
-            {{ $t('plugin.linapro-oidc-google.settings.autoProvisionHint') }}
-          </p>
         </Form.Item>
-        <Form.Item name="enableBackendRedirect">
+        <Form.Item
+          :label="$t('plugin.linapro-oidc-google.settings.enableSsoLabel')"
+          :tooltip="$t('plugin.linapro-oidc-google.settings.enableSsoHelp')"
+          name="enableBackendRedirect"
+        >
           <div class="flex items-center gap-3">
             <Switch v-model:checked="formState.enableBackendRedirect" />
-            <span class="font-medium">
-              {{ $t('plugin.linapro-oidc-google.settings.enableSsoLabel') }}
+            <span class="text-muted-foreground text-sm">
+              {{ $t('plugin.linapro-oidc-google.settings.enableSsoHint') }}
             </span>
           </div>
-          <p class="text-muted-foreground mt-1 text-xs">
-            {{ $t('plugin.linapro-oidc-google.settings.enableSsoHint') }}
-          </p>
         </Form.Item>
         <template v-if="formState.enableBackendRedirect">
           <div class="mb-2 flex items-center justify-between">
-            <span class="font-medium">
+            <span class="inline-flex items-center gap-1 font-medium">
               {{ $t('plugin.linapro-oidc-google.settings.rulesTitle') }}
+              <Tooltip
+                :title="$t('plugin.linapro-oidc-google.settings.rulesHelp')"
+              >
+                <IconifyIcon
+                  class="text-muted-foreground text-xs"
+                  icon="ant-design:question-circle-outlined"
+                />
+              </Tooltip>
             </span>
             <Button size="small" @click="addRule">
               {{ $t('plugin.linapro-oidc-google.settings.addRule') }}
@@ -339,25 +355,33 @@ onMounted(loadSettings);
           <div
             v-for="(rule, index) in formState.rules"
             :key="index"
-            class="mb-2 flex w-full items-center gap-2"
+            class="mb-3 grid w-full grid-cols-1 gap-2 md:grid-cols-[10rem_minmax(0,1fr)_auto]"
           >
-            <div class="w-40 shrink-0">
+            <Form.Item
+              class="mb-0"
+              :label="$t('plugin.linapro-oidc-google.settings.ruleKeyLabel')"
+              :tooltip="$t('plugin.linapro-oidc-google.settings.ruleKeyHelp')"
+            >
               <Input
                 v-model:value="rule.key"
                 :placeholder="
                   $t('plugin.linapro-oidc-google.settings.ruleKeyPlaceholder')
                 "
               />
-            </div>
-            <div class="min-w-0 flex-1">
+            </Form.Item>
+            <Form.Item
+              class="mb-0"
+              :label="$t('plugin.linapro-oidc-google.settings.ruleUrlLabel')"
+              :tooltip="$t('plugin.linapro-oidc-google.settings.ruleUrlHelp')"
+            >
               <Input
                 v-model:value="rule.url"
                 :placeholder="
                   $t('plugin.linapro-oidc-google.settings.ruleUrlPlaceholder')
                 "
               />
-            </div>
-            <div class="flex shrink-0 items-center gap-1">
+            </Form.Item>
+            <div class="flex items-end gap-1 pb-1">
               <Button size="small" @click="copyLoginUrl(rule)">
                 {{ $t('plugin.linapro-oidc-google.settings.copyLoginUrl') }}
               </Button>
@@ -367,42 +391,53 @@ onMounted(loadSettings);
             </div>
           </div>
         </template>
-        <Form.Item name="enableOneTap">
+        <Form.Item
+          :label="$t('plugin.linapro-oidc-google.settings.oneTapLabel')"
+          :tooltip="$t('plugin.linapro-oidc-google.settings.oneTapHelp')"
+          name="enableOneTap"
+        >
           <div class="flex items-center gap-3">
             <Switch v-model:checked="formState.enableOneTap" />
-            <span class="font-medium">
-              {{ $t('plugin.linapro-oidc-google.settings.oneTapLabel') }}
+            <span class="text-muted-foreground text-sm">
+              {{ $t('plugin.linapro-oidc-google.settings.oneTapHint') }}
             </span>
           </div>
-          <p class="text-muted-foreground mt-1 text-xs">
-            {{ $t('plugin.linapro-oidc-google.settings.oneTapHint') }}
-          </p>
         </Form.Item>
         <template v-if="formState.enableOneTap">
-          <div class="mb-2 flex items-center justify-between">
-            <span class="font-medium">
-              {{ $t('plugin.linapro-oidc-google.settings.oneTapEmbedTitle') }}
-            </span>
-            <div class="flex items-center gap-2">
-              <Input
-                v-model:value="oneTapStateKey"
-                :placeholder="
-                  $t('plugin.linapro-oidc-google.settings.oneTapStateKeyPlaceholder')
-                "
-                class="w-40"
-                size="small"
-              />
+          <Form.Item
+            :label="
+              $t('plugin.linapro-oidc-google.settings.oneTapStateKeyLabel')
+            "
+            :tooltip="
+              $t('plugin.linapro-oidc-google.settings.oneTapStateKeyHelp')
+            "
+          >
+            <Input
+              v-model:value="oneTapStateKey"
+              :placeholder="
+                $t(
+                  'plugin.linapro-oidc-google.settings.oneTapStateKeyPlaceholder',
+                )
+              "
+              allow-clear
+            />
+          </Form.Item>
+          <Form.Item
+            :label="$t('plugin.linapro-oidc-google.settings.oneTapEmbedTitle')"
+            :tooltip="$t('plugin.linapro-oidc-google.settings.oneTapEmbedHelp')"
+          >
+            <div class="mb-2 flex justify-end">
               <Button size="small" @click="copyOneTapEmbed">
                 {{ $t('plugin.linapro-oidc-google.settings.copyEmbed') }}
               </Button>
             </div>
-          </div>
-          <pre
-            class="bg-muted mb-2 overflow-x-auto rounded p-3 text-xs"
-          ><code>{{ oneTapEmbedCode }}</code></pre>
-          <p class="text-muted-foreground mb-4 text-xs">
-            {{ $t('plugin.linapro-oidc-google.settings.oneTapEmbedHint') }}
-          </p>
+            <pre
+              class="bg-muted mb-2 overflow-x-auto rounded p-3 text-xs"
+            ><code>{{ oneTapEmbedCode }}</code></pre>
+            <p class="text-muted-foreground text-xs">
+              {{ $t('plugin.linapro-oidc-google.settings.oneTapEmbedHint') }}
+            </p>
+          </Form.Item>
         </template>
         <Form.Item class="mt-4">
           <Button :loading="saving" type="primary" @click="saveSettings">

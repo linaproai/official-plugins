@@ -1,14 +1,13 @@
 <script lang="ts">
 import { pluginSlotKeys } from '#/plugins/plugin-slots';
 
-// pluginSlotMeta identifies this component as the Discord OIDC entry rendered
-// in the host's Vben-style third-party icon row. The host slot-registry only
-// mounts the button when the linapro-oidc-discord plugin is installed and enabled.
-// The order is greater than the Google entry (10) so Google renders first.
+// Platform social icon entry (Discord). Host auth.login.social renders a
+// horizontal icon row under “其他登录方式”; not a full-width protocol button.
+// Order is greater than the Google entry (10) so Google renders first.
 export const pluginSlotMeta = {
   order: 20,
   pluginId: 'linapro-oidc-discord',
-  slotKey: pluginSlotKeys.authLoginAfter,
+  slotKey: pluginSlotKeys.authLoginSocial,
 };
 </script>
 
@@ -18,9 +17,7 @@ import { IconifyIcon } from '@vben/icons';
 import { Button, Tooltip } from 'ant-design-vue';
 
 // loginStartPath is the plugin's browser-facing route that redirects the
-// user to Discord. Because it is a full-page navigation (not an XHR call),
-// window.location.assign is used so cookies set by the plugin route are
-// respected by the browser during the OIDC handshake.
+// user to Discord. Full-page navigation keeps the OIDC handshake cookie-safe.
 const loginStartPath = '/portal/linapro-oidc-discord/login';
 
 function handleClick() {
@@ -43,10 +40,9 @@ function handleClick() {
       placement="top"
     >
       <Button
-        class="linapro-oidc-discord-entry__button mb-3"
+        class="mb-3"
         data-testid="linapro-oidc-discord-entry-button"
         shape="circle"
-        size="large"
         type="text"
         @click="handleClick"
       >
@@ -58,15 +54,3 @@ function handleClick() {
     </Tooltip>
   </div>
 </template>
-
-<style scoped>
-/* Match Vben ThirdPartyLogin icon button footprint (rounded, fixed hit area). */
-.linapro-oidc-discord-entry__button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  padding: 0;
-}
-</style>

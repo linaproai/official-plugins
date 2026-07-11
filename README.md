@@ -21,6 +21,8 @@ The workspace currently contains source plugins compiled into the host, plus one
 | `linapro-extid-core` | `source` | `platform_only` | `global` | External identity linkage storage, resolve/provision engine behind the host external-login seam, and current-user identity bind/unbind/list |
 | `linapro-oidc-google` | `source` | `platform_only` | `global` | Official Google sign-in on the login page (OAuth settings, optional auto-provisioning, One Tap); depends on `linapro-extid-core` |
 | `linapro-oidc-discord` | `source` | `platform_only` | `global` | Official Discord sign-in on the login page (OAuth settings, optional auto-provisioning); depends on `linapro-extid-core` |
+| `linapro-oidc-generic` | `source` | `platform_only` | `global` | Configurable enterprise OIDC sign-in on the login page (Discovery/PKCE, auto-provision default off); depends on `linapro-extid-core` |
+| `linapro-auth-ldap` | `source` | `platform_only` | `global` | Directory (LDAP/AD) sign-in on the login page (form bind, auto-provision default off); depends on `linapro-extid-core` |
 | `linapro-demo-source` | `source` | `tenant_aware` | `tenant_scoped` | Source plugin example for menu pages, public routes, and protected routes |
 | `linapro-demo-dynamic` | `dynamic` | `tenant_aware` | `tenant_scoped` | Dynamic `WASM` plugin example for embedded menu pages, plugin-owned `SQL` table `CRUD`, and standalone static pages |
 

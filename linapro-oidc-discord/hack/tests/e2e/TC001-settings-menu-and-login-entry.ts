@@ -99,9 +99,9 @@ test.describe("TC001 linapro-oidc-discord 设置菜单与登录入口", () => {
         (node) =>
           node.path === "linapro-oidc-discord-settings" ||
           node.perms === "linapro-oidc-discord:settings:view" ||
-          /Discord OIDC/i.test(String(node.name ?? "")),
+          /Discord 登录|Discord Login/i.test(String(node.name ?? "")),
       );
-      expect(discord, "Discord OIDC 设置应挂在授权登录下").toBeTruthy();
+      expect(discord, "Discord 登录应挂在授权登录下").toBeTruthy();
     } finally {
       await api.dispose();
     }
@@ -115,7 +115,7 @@ test.describe("TC001 linapro-oidc-discord 设置菜单与登录入口", () => {
     await waitForRouteReady(adminPage);
     await layout.expandSidebarGroup(/授权登录|Auth Login/i);
     await expect(
-      layout.sidebarMenuItem(/Discord OIDC/i),
+      layout.sidebarMenuItem(/Discord 登录|Discord Login/i),
     ).toBeVisible();
   });
 
@@ -126,15 +126,39 @@ test.describe("TC001 linapro-oidc-discord 设置菜单与登录入口", () => {
       const enTree = await fetchMenuTree(api, "en-US");
       const enNode = findByPath(enTree, settingsPath);
       expect(enNode, "en-US 应返回 Discord 设置菜单").not.toBeNull();
-      expect(enNode?.name).toBe("Discord OIDC");
+      expect(enNode?.name).toBe("Discord Login");
 
       const zhTree = await fetchMenuTree(api, "zh-CN");
       const zhNode = findByPath(zhTree, settingsPath);
       expect(zhNode, "zh-CN 应返回 Discord 设置菜单").not.toBeNull();
-      expect(zhNode?.name).toBe("Discord OIDC");
+      expect(zhNode?.name).toBe("Discord 登录");
     } finally {
       await api.dispose();
     }
+  });
+
+  test("TC001e: 登录入口为「其他登录方式」下的平台图标", async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await waitForRouteReady(page);
+    if ((await page.locator("html").getAttribute("lang")) !== "zh-CN") {
+      await loginPage.switchLanguage("简体中文");
+    }
+
+    const discordPage = new DiscordOidcPage(page);
+    await expect(discordPage.loginEntry).toBeVisible();
+    // Social region divider + icon-sized control (not full-width protocol button).
+    await expect(
+      page.getByText("其他登录方式", { exact: true }).first(),
+    ).toBeVisible();
+    await expect(loginPage.socialAuthRegion).toBeVisible();
+    await expect(loginPage.socialAuthSlot).toBeVisible();
+
+    const layout = await discordPage.getLoginEntryLayout();
+    expect(layout.isIconSized).toBe(true);
+    // Icon must not stretch to the social region width (full-width protocol buttons do).
+    expect(layout.regionWidth).toBeGreaterThan(200);
+    expect(layout.buttonWidth).toBeLessThan(layout.regionWidth * 0.25);
   });
 
   test("TC001c: 未配置凭证时登录入口 fail-closed 回登录页", async ({

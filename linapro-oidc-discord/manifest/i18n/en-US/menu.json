@@ -1,7 +1,7 @@
 {
   "menu": {
     "plugin:linapro-oidc-discord:settings": {
-      "title": "Discord OIDC"
+      "title": "Discord Login"
     },
     "plugin:linapro-oidc-discord:settings-update": {
       "title": "Save Settings"

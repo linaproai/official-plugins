@@ -19,11 +19,11 @@ func TestEmbeddedMenuJSONLocalizesSettingsTitle(t *testing.T) {
 	}{
 		{
 			path:  "manifest/i18n/en-US/menu.json",
-			title: "Google OIDC",
+			title: "Google Login",
 		},
 		{
 			path:  "manifest/i18n/zh-CN/menu.json",
-			title: "Google OIDC",
+			title: "Google 登录",
 		},
 	}
 

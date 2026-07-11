@@ -1,0 +1,48 @@
+{
+  "error": {
+    "plugin": {
+      "auth": {
+        "ldap": {
+          "config": {
+            "missing": "LDAP 目录配置缺失"
+          },
+          "auth": {
+            "failed": "目录用户名或密码错误"
+          },
+          "directory": {
+            "unavailable": "目录服务不可用"
+          },
+          "username": {
+            "required": "用户名必填"
+          },
+          "password": {
+            "required": "密码必填"
+          },
+          "external": {
+            "login": {
+              "unavailable": "外部登录服务不可用",
+              "failed": "LDAP 外部登录失败"
+            }
+          },
+          "settings": {
+            "storage": {
+              "unavailable": "设置存储服务不可用"
+            },
+            "read": {
+              "failed": "读取 LDAP 设置失败"
+            },
+            "save": {
+              "failed": "保存 LDAP 设置失败"
+            },
+            "tls": {
+              "invalid": "明文 LDAP 仅允许 localhost；请使用 ldaps 或 starttls"
+            },
+            "config": {
+              "invalid": "LDAP 设置无效"
+            }
+          }
+        }
+      }
+    }
+  }
+}

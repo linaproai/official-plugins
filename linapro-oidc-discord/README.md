@@ -10,7 +10,7 @@ English | [简体中文](README.zh-CN.md)
 - Registers two browser-facing routes on a plugin-owned portal path group:
   - `GET /portal/linapro-oidc-discord/login` builds the Discord authorize URL, persists an anti-CSRF state cookie, and redirects the browser to Discord.
   - `GET /portal/linapro-oidc-discord/callback` validates the state, exchanges the OAuth code for a verified identity, calls `Services.Auth().ExternalLogin().LoginByVerifiedIdentity(...)`, and redirects the browser back to the SPA login page with the host outcome encoded in the query string.
-- Ships one Vue frontend slot component under `frontend/slots/auth.login.after/discord-login-entry.vue` that the workspace slot registry auto-mounts below the SPA login form when the plugin is installed and enabled.
+- Ships one Vue frontend slot component under `frontend/slots/auth.login.social/discord-login-entry.vue` that the workspace slot registry auto-mounts as a platform social icon under “其他登录方式” when the plugin is installed and enabled.
 
 The OAuth code exchange and userinfo fetch are intentionally minimal and clearly stubbed. The reference verifier returns a deterministic verified identity from the incoming authorization code so the surrounding orchestration can be exercised end-to-end without a live Discord application. A real deployment must swap `oauthsvc.NewStubIdentityVerifier()` for an HTTP-backed implementation before this plugin can go to production.
 
@@ -28,7 +28,7 @@ linapro-oidc-discord/
       controller/login/           login-start + callback handlers
       service/oauth/              authorize URL construction, state, verifier, callback
   frontend/
-    slots/auth.login.after/       "Continue with Discord" button component
+    slots/auth.login.social/      Discord social icon entry (tooltip button)
   manifest/
     i18n/en-US/                   English i18n resources
     i18n/zh-CN/                   Simplified Chinese i18n resources
@@ -70,7 +70,7 @@ For a production reference wiring, replace the stub verifier with an HTTP-backed
 
 ## Frontend Slot
 
-The Vue slot component lives at `frontend/slots/auth.login.after/discord-login-entry.vue`. The workspace slot registry auto-discovers it at build time; the runtime registry hides the button when the plugin is not installed or is disabled. The button triggers a full-page navigation to the login-start route so the browser cookie set by the plugin controller is respected during the OIDC handshake.
+The Vue slot component lives at `frontend/slots/auth.login.social/discord-login-entry.vue`. The workspace slot registry auto-discovers it at build time; the runtime registry hides the icon when the plugin is not installed or is disabled. Clicking the icon triggers a full-page navigation to the login-start route so the browser cookie set by the plugin controller is respected during the OIDC handshake. Protocol / directory logins (generic OIDC, LDAP) use the separate `auth.login.after` full-width button stack instead.
 
 Its `pluginSlotMeta.order` is `20`, so when both `linapro-oidc-google` (order `10`) and this plugin are enabled, Google renders first and Discord renders below it.
 

@@ -1,0 +1,10 @@
+{
+  "menu": {
+    "plugin:linapro-auth-ldap:settings": {
+      "title": "LDAP Settings"
+    },
+    "plugin:linapro-auth-ldap:settings-update": {
+      "title": "Save Settings"
+    }
+  }
+}

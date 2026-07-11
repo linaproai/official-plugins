@@ -1,0 +1,10 @@
+{
+  "menu": {
+    "plugin:linapro-auth-ldap:settings": {
+      "title": "LDAP 设置"
+    },
+    "plugin:linapro-auth-ldap:settings-update": {
+      "title": "保存设置"
+    }
+  }
+}

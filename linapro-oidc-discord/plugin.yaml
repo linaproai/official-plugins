@@ -4,7 +4,7 @@ id: linapro-oidc-discord
 
 # Plugin display name used in plugin management pages, developer docs, and presentation.
 # 插件显示名称，用于插件管理页面、开发文档和展示。
-name: Discord OIDC Login
+name: Discord Login
 
 # Plugin semantic version; examples in this repo use the `v` prefix.
 # 插件语义化版本号，当前示例统一使用带 `v` 前缀的写法。
@@ -86,7 +86,7 @@ menus:
     parent_key: plugin:linapro-extid-core:auth-login
     # Menu display name.
     # 菜单显示名称。
-    name: Discord OIDC
+    name: Discord Login
     # Source plugin host route segment mounted into the governed dynamic route tree.
     # 源码插件宿主内路由片段，会挂到插件治理后的动态路由树中。
     path: linapro-oidc-discord-settings
@@ -107,16 +107,16 @@ menus:
     sort: 11
     # Menu remark stored in host menu governance data.
     # 菜单备注，写入宿主菜单治理数据。
-    remark: Discord OIDC 登录设置页
-  # Unique button key mounted under the Discord OIDC settings menu.
-  # 按钮唯一键，挂载在 Discord OIDC 设置菜单下。
+    remark: Discord login settings page
+  # Unique button key mounted under the Discord login settings menu.
+  # 按钮唯一键，挂载在 Discord 登录设置菜单下。
   - key: plugin:linapro-oidc-discord:settings-update
-    # Parent menu key pointing to the Discord OIDC settings menu.
-    # 父级菜单键，指向 Discord OIDC 设置菜单。
+    # Parent menu key pointing to the Discord login settings menu.
+    # 父级菜单键，指向 Discord 登录设置菜单。
     parent_key: plugin:linapro-oidc-discord:settings
     # Button display name.
     # 按钮显示名称。
-    name: Discord OIDC 设置保存
+    name: Save Discord Login Settings
     # Button permission code.
     # 按钮权限标识。
     perms: linapro-oidc-discord:settings:update
@@ -128,4 +128,4 @@ menus:
     sort: 1
     # Button remark stored in host menu governance data.
     # 按钮备注，写入宿主菜单治理数据。
-    remark: Discord OIDC 设置保存权限
+    remark: Save Discord login settings permission

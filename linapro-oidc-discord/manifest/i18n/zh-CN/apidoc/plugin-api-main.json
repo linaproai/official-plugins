@@ -7,8 +7,8 @@
             "GetSettingsReq": {
               "meta": {
                 "dc": "返回持久化的 linapro-oidc-discord 设置供管理设置页使用。客户端密钥始终以掩码指示符返回；明文密钥不会发送给客户端。",
-                "summary": "查询 Discord OIDC 设置",
-                "tags": "Discord OIDC 登录"
+                "summary": "查询 Discord 登录设置",
+                "tags": "Discord 登录"
               },
               "schema": {
                 "dc": "返回持久化的 linapro-oidc-discord 设置供管理设置页使用。客户端密钥始终以掩码指示符返回；明文密钥不会发送给客户端。"
@@ -24,8 +24,8 @@
             "SaveSettingsReq": {
               "meta": {
                 "dc": "将 linapro-oidc-discord 设置持久化到 sys_config。空或掩码形式的客户端密钥保留原值；非空非掩码值将替换原值。",
-                "summary": "保存 Discord OIDC 设置",
-                "tags": "Discord OIDC 登录"
+                "summary": "保存 Discord 登录设置",
+                "tags": "Discord 登录"
               },
               "schema": {
                 "dc": "将 linapro-oidc-discord 设置持久化到 sys_config。空或掩码形式的客户端密钥保留原值；非空非掩码值将替换原值。"

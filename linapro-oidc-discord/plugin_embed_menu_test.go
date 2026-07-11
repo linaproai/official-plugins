@@ -19,11 +19,11 @@ func TestEmbeddedMenuJSONLocalizesSettingsTitle(t *testing.T) {
 	}{
 		{
 			path:  "manifest/i18n/en-US/menu.json",
-			title: "Discord OIDC",
+			title: "Discord Login",
 		},
 		{
 			path:  "manifest/i18n/zh-CN/menu.json",
-			title: "Discord OIDC",
+			title: "Discord 登录",
 		},
 	}
 

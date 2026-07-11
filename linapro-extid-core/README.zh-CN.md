@@ -13,7 +13,7 @@
 - plugin-owned 领域契约 `backend/cap/extidcap`：宽入口 `Service`，聚合 `Ticket` / `Login` / `Linkage` / `Providers` 子面，以及进程内 catalog / handoff 门面
 - 当前用户绑定 API：仅接受**已验证 ticket**（禁止客户端自报裸 subject）
 
-`linapro-oidc-google`、`linapro-oidc-discord` 及未来微信/QQ/抖音等协议插件**必须**在 `dependencies.plugins` 中声明依赖本插件。协议插件只做 IdP 验签，调用宿主 `extlogin` + 本插件 ticket/目录；本插件从不调用 `LoginByVerifiedIdentity`，也不声明任何 provider ID 归属。
+`linapro-oidc-google`、`linapro-oidc-discord`、`linapro-oidc-generic`、`linapro-auth-ldap` 及未来微信/QQ/抖音等协议插件**必须**在 `dependencies.plugins` 中声明依赖本插件。协议插件只做 IdP 验签，调用宿主 `extlogin` + 本插件 ticket/目录；本插件从不调用 `LoginByVerifiedIdentity`，也不声明任何 provider ID 归属。
 
 ## 分发与降级
 

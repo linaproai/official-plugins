@@ -1,4 +1,8 @@
 import type { Page } from "@playwright/test";
+import { expect } from "@host-tests/fixtures/auth";
+import { MainLayout } from "@host-tests/pages/MainLayout";
+import { waitForRouteReady } from "@host-tests/support/ui";
+import { workspacePath } from "@host-tests/fixtures/config";
 
 /**
  * Discord OIDC plugin page object. Host LoginPage must not hard-code this plugin.
@@ -12,5 +16,69 @@ export class DiscordOidcPage {
 
   get loginEntryButton() {
     return this.page.getByTestId("linapro-oidc-discord-entry-button");
+  }
+
+  /**
+   * Layout metrics for the platform social icon entry (not full-width button).
+   * Compares icon size against the host social region / form width.
+   */
+  async getLoginEntryLayout() {
+    return this.loginEntry.evaluate((entry) => {
+      const button = entry.querySelector(
+        '[data-testid="linapro-oidc-discord-entry-button"]',
+      ) as HTMLElement | null;
+      if (!button) {
+        throw new Error("Discord social login entry button is missing");
+      }
+      const region =
+        entry.closest('[data-testid="login-social-auth-region"]') ??
+        entry.closest("form")?.parentElement ??
+        entry.parentElement;
+      const regionBox = region?.getBoundingClientRect();
+      const buttonBox = button.getBoundingClientRect();
+      return {
+        buttonHeight: buttonBox.height,
+        buttonWidth: buttonBox.width,
+        regionWidth: regionBox?.width ?? 0,
+        isIconSized: buttonBox.width < 72 && buttonBox.height < 72,
+      };
+    });
+  }
+
+  get settingsCardTitle() {
+    return this.page
+      .getByText(/Discord 登录设置|Discord Login Settings/i)
+      .first();
+  }
+
+  get fieldHelpIcons() {
+    return this.page.locator(".ant-form-item-tooltip");
+  }
+
+  async openSettingsPage() {
+    const layout = new MainLayout(this.page);
+    await this.page.goto(workspacePath("/dashboard/workspace"));
+    await waitForRouteReady(this.page);
+    await layout.expandSidebarGroup(/授权登录|Auth Login/i);
+    await layout.sidebarMenuItem(/Discord 登录|Discord Login/i).click();
+    await waitForRouteReady(this.page);
+    await expect(this.settingsCardTitle).toBeVisible({ timeout: 15000 });
+  }
+
+  async expectFieldHelpTooltip(helpText: string | RegExp) {
+    const icons = this.fieldHelpIcons;
+    await expect(icons.first()).toBeVisible();
+    expect(await icons.count()).toBeGreaterThan(0);
+
+    const preferred = this.page
+      .locator(".ant-form-item")
+      .filter({ hasText: /客户端 ID|Client ID/i })
+      .locator(".ant-form-item-tooltip")
+      .first();
+    const target = (await preferred.count()) > 0 ? preferred : icons.first();
+    await target.hover();
+    const tooltip = this.page.locator(".ant-tooltip:visible").last();
+    await expect(tooltip).toBeVisible({ timeout: 5000 });
+    await expect(tooltip).toContainText(helpText);
   }
 }

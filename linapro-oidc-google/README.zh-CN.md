@@ -10,7 +10,7 @@
 - 在插件私有 portal 路径组下注册两个面向浏览器的公开路由：
   - `GET /portal/linapro-oidc-google/login`：构造 Google authorize URL，写入 anti-CSRF 状态 Cookie，并 302 跳转到 Google。
   - `GET /portal/linapro-oidc-google/callback`：校验 state、用授权码换取一个验证过的身份、调用 `Services.Auth().ExternalLogin().LoginByVerifiedIdentity(...)`，最后把宿主返回的 token 或 pre-token 通过 query 参数带回 SPA 登录页。
-- 在 `frontend/slots/auth.login.after/google-login-entry.vue` 提供一个 Vue 插槽组件，前端 slot registry 会在插件安装并启用时自动挂载到登录表单下方。
+- 在 `frontend/slots/auth.login.social/google-login-entry.vue` 提供一个 Vue 插槽组件，前端 slot registry 会在插件安装并启用时自动以「其他登录方式」下的平台图标挂载。
 
 OAuth 的 code 兑换和 userinfo 获取是刻意保留的极简 stub 实现：默认的 verifier 直接根据传入的授权码生成一个稳定的身份 DTO，方便在没有真实 Google 项目的情况下把整个流程串起来演练。真实部署必须将 `oauthsvc.NewStubIdentityVerifier()` 替换为基于 HTTP 的 Google OIDC 实现。
 
@@ -28,7 +28,7 @@ linapro-oidc-google/
       controller/login/           login-start + callback handlers
       service/oauth/              authorize URL 构造、state、verifier、callback
   frontend/
-    slots/auth.login.after/       "使用 Google 账号登录" 按钮组件
+    slots/auth.login.social/      Google 平台图标入口（Tooltip 圆形按钮）
   manifest/
     i18n/en-US/                   英文语言包
     i18n/zh-CN/                   简体中文语言包
@@ -71,7 +71,7 @@ cfg.RedirectURL = "https://your-host/portal/linapro-oidc-google/callback"
 
 ## 前端插槽
 
-Vue 插槽组件位于 `frontend/slots/auth.login.after/google-login-entry.vue`。构建期由 slot registry 自动发现；运行期会在插件未安装或已禁用时隐藏按钮。按钮点击时执行整页跳转，以便浏览器保留插件写入的 Cookie。
+Vue 插槽组件位于 `frontend/slots/auth.login.social/google-login-entry.vue`。构建期由 slot registry 自动发现；运行期会在插件未安装或已禁用时隐藏图标。点击图标时执行整页跳转，以便浏览器保留插件写入的 Cookie。通用 OIDC / LDAP 等协议登录使用独立的 `auth.login.after` 全宽按钮区域。
 
 ## 审查清单
 
