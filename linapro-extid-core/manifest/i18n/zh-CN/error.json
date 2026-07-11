@@ -1,0 +1,56 @@
+{
+  "error": {
+    "plugin": {
+      "extid": {
+        "core": {
+          "bind": {
+            "conflict": "该外部身份已绑定到其他账号"
+          },
+          "identity": {
+            "invalid": "外部身份 provider 和 subject 不能为空",
+            "not": {
+              "found": "该外部身份未绑定到当前账号"
+            },
+            "query": {
+              "failed": "查询外部身份链接失败"
+            },
+            "write": {
+              "failed": "写入外部身份链接失败"
+            }
+          },
+          "provision": {
+            "email": {
+              "conflict": "已存在使用相同邮箱的账号，请登录该账号后再绑定此外部身份"
+            },
+            "failed": "为外部身份开通账号失败",
+            "not": {
+              "allowed": "本次登录未启用自动开户"
+            }
+          },
+          "user": {
+            "capability": {
+              "unavailable": "宿主用户能力不可用"
+            }
+          },
+          "ticket": {
+            "invalid": "外部身份验证票据无效或已过期",
+            "unavailable": "外部身份票据服务暂时不可用"
+          },
+          "login": {
+            "handoff": {
+              "invalid": "外部登录交接码无效或已过期"
+            }
+          },
+          "not": {
+            "supported": "该外部身份操作暂未支持"
+          },
+          "provider": {
+            "not": {
+              "found": "外部身份 Provider 未注册"
+            }
+          }
+        }
+      }
+    }
+  }
+}

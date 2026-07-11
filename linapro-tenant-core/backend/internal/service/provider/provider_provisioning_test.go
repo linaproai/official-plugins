@@ -111,6 +111,10 @@ func (providerProvisioningUsers) Create(context.Context, usercap.CreateInput) (u
 	return "", nil
 }
 
+func (providerProvisioningUsers) CreateFromExternal(context.Context, usercap.CreateFromExternalInput) (usercap.UserID, error) {
+	return "", nil
+}
+
 // Update is unused by startup provisioning tests.
 func (providerProvisioningUsers) Update(context.Context, usercap.UpdateInput) error {
 	return nil

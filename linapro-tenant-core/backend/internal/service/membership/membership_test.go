@@ -132,6 +132,10 @@ func (membershipTestUsers) Create(context.Context, usercap.CreateInput) (usercap
 	return "", nil
 }
 
+func (membershipTestUsers) CreateFromExternal(context.Context, usercap.CreateFromExternalInput) (usercap.UserID, error) {
+	return "", nil
+}
+
 // Update is unused by membership tests.
 func (membershipTestUsers) Update(context.Context, usercap.UpdateInput) error {
 	return nil

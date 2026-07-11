@@ -1,0 +1,56 @@
+{
+  "error": {
+    "plugin": {
+      "extid": {
+        "core": {
+          "bind": {
+            "conflict": "The external identity is already bound to another account"
+          },
+          "identity": {
+            "invalid": "External identity provider and subject cannot be empty",
+            "not": {
+              "found": "The external identity is not bound to the current account"
+            },
+            "query": {
+              "failed": "Failed to query external identity linkage"
+            },
+            "write": {
+              "failed": "Failed to write external identity linkage"
+            }
+          },
+          "provision": {
+            "email": {
+              "conflict": "An account with the same email already exists. Sign in to that account and bind this identity instead"
+            },
+            "failed": "Failed to provision an account for the external identity",
+            "not": {
+              "allowed": "Automatic account provisioning is not enabled for this login"
+            }
+          },
+          "user": {
+            "capability": {
+              "unavailable": "Host user capability is unavailable"
+            }
+          },
+          "ticket": {
+            "invalid": "Verified identity ticket is invalid or expired",
+            "unavailable": "Verified identity ticket service is temporarily unavailable"
+          },
+          "login": {
+            "handoff": {
+              "invalid": "External login handoff is invalid or expired"
+            }
+          },
+          "not": {
+            "supported": "This external identity operation is not supported yet"
+          },
+          "provider": {
+            "not": {
+              "found": "External identity provider is not registered"
+            }
+          }
+        }
+      }
+    }
+  }
+}

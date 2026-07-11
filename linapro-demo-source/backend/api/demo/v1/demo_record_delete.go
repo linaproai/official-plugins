@@ -7,7 +7,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // DeleteRecordReq is the request for deleting one linapro-demo-source record.
 type DeleteRecordReq struct {
-	g.Meta `path:"/plugins/linapro-demo-source/records/{id}" method:"delete" tags:"Source Plugin Demo" summary:"Delete source plugin sample record" dc:"Delete a linapro-demo-source sample record and clean up its plugin-owned attachment file." permission:"linapro-demo-source:example:delete"`
+	g.Meta `path:"/records/{id}" method:"delete" tags:"Source Plugin Demo" summary:"Delete source plugin sample record" dc:"Delete a linapro-demo-source sample record and clean up its plugin-owned attachment file." permission:"linapro-demo-source:example:delete"`
 	Id     int64 `json:"id" v:"required|min:1" dc:"Record ID" eg:"1"`
 }
 

@@ -18,6 +18,9 @@ The workspace currently contains source plugins compiled into the host, plus one
 | `linapro-monitor-operlog` | `source` | `tenant_aware` | `tenant_scoped` | Operation log persistence and governance pages |
 | `linapro-monitor-loginlog` | `source` | `tenant_aware` | `tenant_scoped` | Login log persistence and governance pages |
 | `linapro-ops-demo-guard` | `source` | `tenant_aware` | `global` | Demo-environment read-only protection and global write-operation interception |
+| `linapro-extid-core` | `source` | `platform_only` | `global` | External identity linkage storage, resolve/provision engine behind the host external-login seam, and current-user identity bind/unbind/list |
+| `linapro-oidc-google` | `source` | `platform_only` | `global` | Google OIDC third-party login reference on the host external-identity seam; depends on `linapro-extid-core` |
+| `linapro-oidc-discord` | `source` | `platform_only` | `global` | Discord OIDC third-party login reference on the host external-identity seam; depends on `linapro-extid-core` |
 | `linapro-demo-source` | `source` | `tenant_aware` | `tenant_scoped` | Source plugin example for menu pages, public routes, and protected routes |
 | `linapro-demo-dynamic` | `dynamic` | `tenant_aware` | `tenant_scoped` | Dynamic `WASM` plugin example for embedded menu pages, plugin-owned `SQL` table `CRUD`, and standalone static pages |
 

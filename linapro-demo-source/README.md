@@ -50,6 +50,7 @@ The sample declares `distribution: managed`, so it remains an ordinary plugin th
 - keep service logic under `backend/internal/service/`
 - keep plugin-local ORM codegen output under `backend/internal/dao` and `backend/internal/model/{do,entity}` when the plugin accesses database tables
 - register plugin APIs under `registrar.Routes().APIPrefix()`, which resolves to `/x/linapro-demo-source`; the sample appends `/api/v1` as its own route convention
+- define `g.Meta path` as plugin-local business paths only (for example `/ping`, `/summary`, `/records`); do not re-embed `/plugins/linapro-demo-source/` because the host prefix already scopes the plugin
 - keep public pages, portals, static routes, or plugin-owned fallback handlers on non-reserved paths instead of putting them under `/x`
 - register install, upgrade, disable, uninstall, tenant, and install-mode lifecycle callbacks through the source-plugin registration entry used by the host build
 - inject `Storage()` explicitly from `registrar.Services()` and use it for attachment save, download, replacement, deletion, and optional uninstall purge

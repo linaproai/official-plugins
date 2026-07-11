@@ -1,0 +1,97 @@
+{
+  "plugins": {
+    "linapro_oidc_discord": {
+      "api": {
+        "settings": {
+          "v1": {
+            "GetSettingsReq": {
+              "meta": {
+                "dc": "返回持久化的 linapro-oidc-discord 设置供管理设置页使用。客户端密钥始终以掩码指示符返回；明文密钥不会发送给客户端。",
+                "summary": "查询 Discord OIDC 设置",
+                "tags": "Discord OIDC 登录"
+              },
+              "schema": {
+                "dc": "返回持久化的 linapro-oidc-discord 设置供管理设置页使用。客户端密钥始终以掩码指示符返回；明文密钥不会发送给客户端。"
+              }
+            },
+            "GetSettingsRes": {
+              "fields": {
+                "settings": {
+                  "dc": "从 sys_config 读取的设置投影，客户端密钥已掩码"
+                }
+              }
+            },
+            "SaveSettingsReq": {
+              "meta": {
+                "dc": "将 linapro-oidc-discord 设置持久化到 sys_config。空或掩码形式的客户端密钥保留原值；非空非掩码值将替换原值。",
+                "summary": "保存 Discord OIDC 设置",
+                "tags": "Discord OIDC 登录"
+              },
+              "schema": {
+                "dc": "将 linapro-oidc-discord 设置持久化到 sys_config。空或掩码形式的客户端密钥保留原值；非空非掩码值将替换原值。"
+              },
+              "fields": {
+                "clientId": {
+                  "dc": "Discord OAuth 2.0 客户端 ID；空字符串清除已存值"
+                },
+                "clientSecret": {
+                  "dc": "Discord OAuth 2.0 客户端密钥；空字符串或掩码指示符保留原值，其他值替换原值"
+                },
+                "redirectUrl": {
+                  "dc": "在 Discord 注册的完整回调 URL；空字符串清除已存值"
+                },
+                "enableBackendRedirect": {
+                  "dc": "启用按 state key 匹配的第三方 SSO 令牌投递"
+                },
+                "defaultBackendRedirect": {
+                  "dc": "普通外部登录后的工作台落地页；空字符串保持宿主默认"
+                },
+                "backendRedirects": {
+                  "dc": "业务 state key 到第三方 SSO 接收地址的 JSON 对象；空字符串清除所有规则"
+                },
+                "allowAutoProvision": {
+                  "dc": "允许宿主为未绑定的已验证 Discord 身份自动创建最小权限平台账号"
+                }
+              }
+            },
+            "SaveSettingsRes": {
+              "fields": {
+                "settings": {
+                  "dc": "保存生效后的最新设置投影，客户端密钥已掩码"
+                }
+              }
+            },
+            "SettingsItem": {
+              "fields": {
+                "clientId": {
+                  "dc": "Discord Developer Portal 签发的 Discord OAuth 2.0 客户端 ID"
+                },
+                "clientSecretMasked": {
+                  "dc": "客户端密钥掩码指示符；已存密钥返回固定掩码，未存返回空字符串。明文密钥永不返回。"
+                },
+                "clientSecretConfigured": {
+                  "dc": "当前是否已存储客户端密钥；UI 用它区分掩码值与未设置"
+                },
+                "redirectUrl": {
+                  "dc": "在 Discord 注册的完整回调 URL；必须解析到插件回调路由"
+                },
+                "enableBackendRedirect": {
+                  "dc": "是否已启用第三方 SSO 令牌投递"
+                },
+                "defaultBackendRedirect": {
+                  "dc": "普通外部登录后的工作台落地页"
+                },
+                "backendRedirects": {
+                  "dc": "业务 state key 到第三方 SSO 接收地址的 JSON 对象"
+                },
+                "allowAutoProvision": {
+                  "dc": "当前是否允许自动注册未绑定的已验证 Discord 身份"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

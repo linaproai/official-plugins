@@ -1,0 +1,10 @@
+{
+  "menu": {
+    "plugin:linapro-oidc-discord:settings": {
+      "title": "Discord OIDC"
+    },
+    "plugin:linapro-oidc-discord:settings-update": {
+      "title": "Save Settings"
+    }
+  }
+}

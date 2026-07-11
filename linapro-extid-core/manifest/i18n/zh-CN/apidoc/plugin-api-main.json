@@ -1,0 +1,86 @@
+{
+  "plugins": {
+    "linapro_oidc_core": {
+      "api": {
+        "identity": {
+          "v1": {
+            "BindIdentityReq": {
+              "fields": {
+                "email": {
+                  "dc": "可选的已验证邮箱，仅作为审计快照记录，绝不作为解析键使用"
+                },
+                "provider": {
+                  "dc": "由验签 OAuth 插件拥有的稳定外部 provider 标识"
+                },
+                "subject": {
+                  "dc": "来自已验证身份的、由 provider 签发的不可变 subject 标识"
+                }
+              },
+              "meta": {
+                "dc": "将一个已验证的外部身份（provider + subject）绑定到当前会话用户。调用方必须已通过对应 OAuth 插件完成身份验证；本接口不执行任何 OAuth 交换。绑定仅作用于当前会话用户，(provider, subject) 已被其他账号占用时返回冲突错误；重复绑定当前用户已拥有的身份幂等成功。",
+                "summary": "绑定外部身份",
+                "tags": "外部身份"
+              },
+              "schema": {
+                "dc": "将一个已验证的外部身份（provider + subject）绑定到当前会话用户。调用方必须已通过对应 OAuth 插件完成身份验证；本接口不执行任何 OAuth 交换。绑定仅作用于当前会话用户，(provider, subject) 已被其他账号占用时返回冲突错误；重复绑定当前用户已拥有的身份幂等成功。"
+              }
+            },
+            "BindIdentityRes": {},
+            "BoundIdentityItem": {
+              "fields": {
+                "email": {
+                  "dc": "绑定时记录的邮箱快照，仅用于展示；无邮箱 provider 可能为空"
+                },
+                "provider": {
+                  "dc": "稳定的外部 provider 标识，例如 google 或 discord"
+                },
+                "subject": {
+                  "dc": "由 provider 签发的不可变 subject 标识"
+                }
+              },
+              "schema": {
+                "dc": "一条已绑定的外部身份投影"
+              }
+            },
+            "ListIdentitiesReq": {
+              "meta": {
+                "dc": "返回当前会话用户已绑定的外部身份。结果严格自隔离：绝不暴露其他账号的绑定关系，因此除登录认证外无需额外权限节点。",
+                "summary": "列出已绑定的外部身份",
+                "tags": "外部身份"
+              },
+              "schema": {
+                "dc": "返回当前会话用户已绑定的外部身份。结果严格自隔离：绝不暴露其他账号的绑定关系，因此除登录认证外无需额外权限节点。"
+              }
+            },
+            "ListIdentitiesRes": {
+              "fields": {
+                "items": {
+                  "dc": "当前会话用户已绑定的外部身份列表"
+                }
+              }
+            },
+            "UnbindIdentityReq": {
+              "fields": {
+                "provider": {
+                  "dc": "要解绑链接的稳定外部 provider 标识"
+                },
+                "subject": {
+                  "dc": "要解绑链接的、由 provider 签发的不可变 subject 标识"
+                }
+              },
+              "meta": {
+                "dc": "从当前会话用户移除一条外部身份链接。解绑仅作用于当前会话用户自己的链接；不属于当前用户的链接按不存在处理，不泄露其他账号的链接存在性。解绑会释放 (provider, subject) 键以便未来重新绑定。",
+                "summary": "解绑外部身份",
+                "tags": "外部身份"
+              },
+              "schema": {
+                "dc": "从当前会话用户移除一条外部身份链接。解绑仅作用于当前会话用户自己的链接；不属于当前用户的链接按不存在处理，不泄露其他账号的链接存在性。解绑会释放 (provider, subject) 键以便未来重新绑定。"
+              }
+            },
+            "UnbindIdentityRes": {}
+          }
+        }
+      }
+    }
+  }
+}

@@ -165,7 +165,7 @@ async function fetchCurrentUserRoutes(
 }
 
 async function fetchPluginSummary(adminApi: APIRequestContext) {
-  return await adminApi.get(pluginApiPath(pluginID, `plugins/${pluginID}/summary`));
+  return await adminApi.get(pluginApiPath(pluginID, `summary`));
 }
 
 async function waitForPluginSummaryReady(adminApi: APIRequestContext) {
@@ -186,12 +186,12 @@ async function waitForPluginSummaryReady(adminApi: APIRequestContext) {
 }
 
 async function fetchPluginPing(apiContext: APIRequestContext) {
-  return await apiContext.get(pluginApiPath(pluginID, `plugins/${pluginID}/ping`));
+  return await apiContext.get(pluginApiPath(pluginID, `ping`));
 }
 
 async function listDemoRecords(adminApi: APIRequestContext) {
   const response = await adminApi.get(
-    pluginApiPath(pluginID, `plugins/${pluginID}/records`),
+    pluginApiPath(pluginID, `records`),
   );
   assertOk(response, "查询源码插件示例记录失败");
   const payload = unwrapApiData(await response.json());
@@ -216,7 +216,7 @@ async function createDemoRecord(
     };
   }
   const response = await adminApi.post(
-    pluginApiPath(pluginID, `plugins/${pluginID}/records`),
+    pluginApiPath(pluginID, `records`),
     {
       multipart,
     },
@@ -347,7 +347,7 @@ async function downloadPluginDemoSourceAttachmentByTitle(
   ).toBe(true);
 
   const response = await adminApi.get(
-    pluginApiPath(pluginID, `plugins/${pluginID}/records/${record!.id}/attachment`),
+    pluginApiPath(pluginID, `records/${record!.id}/attachment`),
   );
   assertOk(response, `下载源码插件记录附件失败: ${title}`);
   return await response.text();

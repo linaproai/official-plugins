@@ -29,7 +29,7 @@ test.describe('TC-2 源码插件路由边界', () => {
     });
     try {
       const response = await publicApi.get(
-        '/x/linapro-demo-source/api/v1/plugins/linapro-demo-source/ping',
+        '/x/linapro-demo-source/api/v1/ping',
       );
       expect(response.status()).toBe(200);
       const payload = await response.json();

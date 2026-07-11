@@ -7,7 +7,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // GetRecordReq is the request for querying one linapro-demo-source record detail.
 type GetRecordReq struct {
-	g.Meta `path:"/plugins/linapro-demo-source/records/{id}" method:"get" tags:"Source Plugin Demo" summary:"Get source plugin sample record details" dc:"Get linapro-demo-source sample record details for edit dialog backfill." permission:"linapro-demo-source:example:view"`
+	g.Meta `path:"/records/{id}" method:"get" tags:"Source Plugin Demo" summary:"Get source plugin sample record details" dc:"Get linapro-demo-source sample record details for edit dialog backfill." permission:"linapro-demo-source:example:view"`
 	Id     int64 `json:"id" v:"required|min:1" dc:"Record ID" eg:"1"`
 }
 

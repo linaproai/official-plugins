@@ -1,0 +1,47 @@
+{
+  "plugin": {
+    "linapro-oidc-discord": {
+      "description": "Reference source plugin that demonstrates Discord OIDC third-party login on the framework external-identity seam.",
+      "name": "Discord OIDC Login",
+      "login": {
+        "button": "Continue with Discord",
+        "callback": {
+          "error": "Discord login failed. Please try again.",
+          "unlinked": "This Discord account is not linked to any local user. Please contact the administrator."
+        }
+      },
+      "settings": {
+        "title": "Discord OIDC Settings",
+        "description": "Configure the Discord OAuth 2.0 client used by the login button. The redirect URL must match the callback URL registered in the Discord Developer Portal.",
+        "clientIdLabel": "Client ID",
+        "clientIdPlaceholder": "Enter the Discord OAuth 2.0 client ID",
+        "clientSecretLabel": "Client Secret",
+        "clientSecretPlaceholder": "Enter the Discord OAuth 2.0 client secret",
+        "clientSecretKeepPlaceholder": "Leave unchanged to keep the stored secret",
+        "redirectUrlLabel": "Callback URL",
+        "redirectUrlPlaceholder": "https://your-host/portal/linapro-oidc-discord/callback",
+        "redirectUrlHint": "Fixed by the plugin. Copy this URL into the Redirects of your Discord application OAuth2 settings.",
+        "copyCallbackUrl": "Copy",
+        "save": "Save",
+        "saveSuccess": "Discord OIDC settings saved.",
+        "saveFailed": "Failed to save Discord OIDC settings.",
+        "loadFailed": "Failed to load Discord OIDC settings.",
+        "defaultRedirectLabel": "Workspace Landing Path",
+        "defaultRedirectPlaceholder": "/dashboard/analytics",
+        "defaultRedirectHint": "Default page path after a successful third-party login into the workspace. Leave empty to use the system default home page. Does not change the Callback URL above; ignored when SSO delivery matches a rule.",
+        "enableSsoLabel": "Enable SSO token delivery",
+        "enableSsoHint": "When enabled, logins started with a matching state key deliver the tokens straight to the configured third-party receiver URL instead of the workspace.",
+        "rulesTitle": "SSO Delivery Rules",
+        "addRule": "Add Rule",
+        "ruleKeyPlaceholder": "State key",
+        "ruleUrlPlaceholder": "https://third-party.example.com/sso/receive",
+        "copyLoginUrl": "Copy Login URL",
+        "copied": "Login URL copied.",
+        "copyFailed": "Failed to copy the login URL.",
+        "deleteRule": "Delete",
+        "autoProvisionLabel": "Auto-provision new users",
+        "autoProvisionHint": "When enabled, a verified Discord identity without a linked local account gets a least-privilege platform account automatically. If the email already belongs to an existing account, login is rejected until the identity is linked from that account."
+      }
+    }
+  }
+}

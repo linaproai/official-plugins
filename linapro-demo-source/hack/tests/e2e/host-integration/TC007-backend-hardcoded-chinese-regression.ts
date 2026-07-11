@@ -80,7 +80,7 @@ test.describe("TC-3 Backend hardcoded Chinese regression", () => {
 
     const summary = await expectSuccess<{ message: string }>(
       await adminApi.get(
-        pluginApiPath(demoSourcePluginID, "plugins/linapro-demo-source/summary"),
+        pluginApiPath(demoSourcePluginID, "summary"),
         {
           headers: { "Accept-Language": "en-US" },
         },

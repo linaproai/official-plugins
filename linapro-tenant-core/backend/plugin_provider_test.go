@@ -94,6 +94,10 @@ func (fakeTenantProviderUsers) Create(context.Context, usercap.CreateInput) (use
 	return "", nil
 }
 
+func (fakeTenantProviderUsers) CreateFromExternal(context.Context, usercap.CreateFromExternalInput) (usercap.UserID, error) {
+	return "", nil
+}
+
 // Update is unused by provider construction tests.
 func (fakeTenantProviderUsers) Update(context.Context, usercap.UpdateInput) error {
 	return nil
