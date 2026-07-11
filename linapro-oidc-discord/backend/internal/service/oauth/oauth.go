@@ -93,9 +93,9 @@ var _ Service = (*serviceImpl)(nil)
 // admin edits from the settings page take effect without a restart.
 type serviceImpl struct {
 	externalLoginSvc extlogin.Service // externalLoginSvc completes host session issuance for verified identities.
-	configResolver   *ConfigResolver       // configResolver layers persisted settings over static defaults per request.
-	verifier         IdentityVerifier      // verifier exchanges an OAuth code for a verified identity.
-	stateCodec       StateCodec            // stateCodec signs and validates self-contained state tokens.
+	configResolver   *ConfigResolver  // configResolver layers persisted settings over static defaults per request.
+	verifier         IdentityVerifier // verifier exchanges an OAuth code for a verified identity.
+	stateCodec       StateCodec       // stateCodec signs and validates self-contained state tokens.
 }
 
 // New creates and returns a new Discord OIDC login service instance. Each

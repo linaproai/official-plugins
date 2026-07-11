@@ -11,12 +11,12 @@ import (
 
 	"lina-core/pkg/logger"
 	"lina-core/pkg/plugin/pluginhost"
+	"lina-plugin-linapro-extlogin-core/backend/cap/extidcap"
 	pluginoidcgoogle "lina-plugin-linapro-oidc-google"
 	loginctrl "lina-plugin-linapro-oidc-google/backend/internal/controller/login"
 	settingsctrl "lina-plugin-linapro-oidc-google/backend/internal/controller/settings"
 	oauthsvc "lina-plugin-linapro-oidc-google/backend/internal/service/oauth"
 	settingssvc "lina-plugin-linapro-oidc-google/backend/internal/service/settings"
-	"lina-plugin-linapro-extlogin-core/backend/cap/extidcap"
 )
 
 // pluginID is the immutable identifier declared by the embedded plugin.yaml.
