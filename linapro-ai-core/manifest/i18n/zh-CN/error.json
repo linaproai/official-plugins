@@ -1,6 +1,11 @@
 {
   "error": {
     "ai": {
+      "asset": {
+        "ref": {
+          "required": "AI资产引用不能为空"
+        }
+      },
       "core": {
         "invocation": {
           "not": {
@@ -61,6 +66,59 @@
             "unsupported": "所选模型不支持该thinking effort"
           }
         }
+      },
+      "method": {
+        "unsupported": "AI方法 {method} 不在当前类型化多模态能力边界内"
+      },
+      "operation": {
+        "ref": {
+          "required": "AI渠道 Operation 引用不能为空"
+        }
+      },
+      "provider": {
+        "unavailable": "AI渠道在 {capabilityType}.{capabilityMethod} 下不可用"
+      },
+      "purpose": {
+        "required": "AI用途不能为空"
+      },
+      "text": {
+        "max": {
+          "output": {
+            "tokens": {
+              "invalid": "文本AI最大输出 tokens 必须大于或等于 0"
+            }
+          }
+        },
+        "message": {
+          "role": {
+            "invalid": "文本AI消息角色 {role} 不受支持"
+          }
+        },
+        "messages": {
+          "required": "文本AI生成至少需要一条消息"
+        },
+        "metadata": {
+          "too": {
+            "large": "文本AI元数据超过允许大小"
+          }
+        },
+        "provider": {
+          "unavailable": "文本AI渠道不可用"
+        },
+        "purpose": {
+          "required": "文本AI用途不能为空"
+        },
+        "thinking": {
+          "effort": {
+            "invalid": "文本AI thinking effort {effort} 不受支持"
+          }
+        },
+        "tier": {
+          "invalid": "文本AI档位 {tier} 不受支持"
+        }
+      },
+      "tier": {
+        "invalid": "AI档位 {tier} 不受支持"
       }
     }
   }

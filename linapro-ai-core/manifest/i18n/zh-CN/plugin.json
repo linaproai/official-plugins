@@ -12,6 +12,54 @@
       "description": "提供渠道、模型、AI能力档位和调用日志治理的官方源码插件",
       "capability": {
         "method": "能力方法",
+        "methods": {
+          "ai": {
+            "methods": {
+              "status": {
+                "batch_get": "批量获取AI方法状态"
+              }
+            }
+          },
+          "audio": {
+            "synthesize": "音频合成",
+            "transcribe": "音频转写"
+          },
+          "document": {
+            "analyze": "文档分析",
+            "cite": "带引用的文档分析"
+          },
+          "embedding": {
+            "create": "创建向量"
+          },
+          "image": {
+            "edit": "图像编辑",
+            "generate": "图像生成"
+          },
+          "safety": {
+            "moderate": "内容安全审核"
+          },
+          "text": {
+            "generate": "文本生成",
+            "method_status": {
+              "get": "获取文本方法状态"
+            }
+          },
+          "video": {
+            "edit": "视频编辑",
+            "extend": "视频延展",
+            "generate": "视频生成",
+            "operation": {
+              "cancel": "取消视频 Operation",
+              "get": "获取视频 Operation"
+            }
+          },
+          "vision": {
+            "analyze": "视觉输入分析"
+          }
+        },
+        "services": {
+          "ai": "AI"
+        },
         "types": {
           "audio": "音频",
           "document": "文档理解",
@@ -21,6 +69,9 @@
           "text": "文本",
           "video": "视频",
           "vision": "视觉理解"
+        },
+        "versions": {
+          "v1": "AI能力 v1"
         }
       },
       "endpoint": {

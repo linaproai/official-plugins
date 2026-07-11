@@ -32,6 +32,7 @@ import {
   queryPgScalar,
 } from "@host-tests/support/postgres";
 import { waitForUploadReady } from "@host-tests/support/ui";
+import { ensureDemoDynamicDependenciesInstalled } from "../../support/plugin-dependencies";
 
 const apiBaseURL = config.apiBaseURL;
 const publicBaseURL = config.publicBaseURL;
@@ -47,7 +48,6 @@ const iframeMenuName = "运行时 iframe 示例";
 const embeddedMenuName = "运行时内嵌示例";
 const newWindowMenuName = "运行时新标签页示例";
 const bundledRuntimePluginID = "linapro-demo-dynamic";
-const bundledRuntimeDependencyPluginID = "linapro-demo-source";
 const bundledRuntimeRecordTable = "plugin_linapro_demo_dynamic_record";
 const bundledRuntimeAttachmentPath = "demo-record-files/";
 const bundledRuntimeLegacyArtifactPath = path.join(
@@ -826,24 +826,9 @@ async function setPluginEnabled(
 async function ensureBundledRuntimeDependencyInstalled(
   adminApi: APIRequestContext,
 ) {
-  const dependency = await findPlugin(
-    adminApi,
-    bundledRuntimeDependencyPluginID,
-  );
-  if (dependency?.installed === 1) {
-    return;
-  }
-  await installPlugin(adminApi, bundledRuntimeDependencyPluginID);
-  await expect
-    .poll(
-      async () =>
-        (await findPlugin(adminApi, bundledRuntimeDependencyPluginID))
-          ?.installed ?? 0,
-      {
-        message: `${bundledRuntimeDependencyPluginID} should be installed before ${bundledRuntimePluginID}`,
-      },
-    )
-    .toBe(1);
+  // linapro-demo-dynamic hard-depends on linapro-ai-core and linapro-demo-source.
+  // Host dependency checks never auto-install declared plugins.
+  await ensureDemoDynamicDependenciesInstalled(adminApi);
 }
 
 async function installPlugin(adminApi: APIRequestContext, id = pluginID) {

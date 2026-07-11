@@ -24,6 +24,10 @@ import (
 	"lina-core/pkg/plugin/capability/plugincap"
 	"lina-core/pkg/plugin/capability/storagecap"
 	"lina-core/pkg/plugin/capability/tenantcap"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitext"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitypes"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/spi"
 )
 
 // fakePluginHostService exposes plugin-domain capabilities used by host-call demo tests.
@@ -986,6 +990,29 @@ func TestRunHostCallDemoOrgTenantReadsCapabilityServices(t *testing.T) {
 		tenantPayload.UserTenantCount != 1 ||
 		!tenantPayload.Visible {
 		t.Fatalf("unexpected tenant projection payload: %#v", tenantPayload)
+	}
+}
+
+// TestRunHostCallDemoAIReadsOwnerMethodStatus verifies the dynamic demo uses
+// the linapro-ai-core owner contract for AI method status reads.
+func TestRunHostCallDemoAIReadsOwnerMethodStatus(t *testing.T) {
+	service := &serviceImpl{
+		aiSvc: aicap.New(aitext.NewUnavailable()),
+	}
+
+	payload, err := service.runHostCallDemoAI(context.Background())
+	if err != nil {
+		t.Fatalf("expected AI demo to succeed, got error: %v", err)
+	}
+	if payload.Owner != spi.OwnerPluginID || payload.Service != spi.ServiceAI || payload.Version != spi.VersionV1 {
+		t.Fatalf("unexpected owner identity payload: %#v", payload)
+	}
+	if payload.CapabilityType != string(aitypes.CapabilityTypeText) ||
+		payload.CapabilityMethod != string(aitypes.CapabilityMethodTextGenerate) {
+		t.Fatalf("unexpected AI method payload: %#v", payload)
+	}
+	if payload.Available || payload.CapabilityID != aitext.CapabilityTextV1 || payload.Reason == "" {
+		t.Fatalf("unexpected AI method status payload: %#v", payload)
 	}
 }
 

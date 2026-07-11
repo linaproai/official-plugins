@@ -78,6 +78,12 @@ dependencies:
   plugins:
     # Dependency plugin ID.
     # 依赖插件 ID。
+    - id: linapro-ai-core
+      # Dependency plugin semantic-version range.
+      # 依赖插件语义化版本范围。
+      version: ">=0.1.0"
+    # Dependency plugin ID.
+    # 依赖插件 ID。
     - id: linapro-demo-source
       # Dependency plugin semantic-version range.
       # 依赖插件语义化版本范围。
@@ -314,6 +320,16 @@ hostServices:
       - tenant.context.platform_bypass
       - tenant.directory.visible.ensure_many
       - tenant.membership.list_by_user
+  # Owner plugin service enum. `ai` is provided by linapro-ai-core and must be
+  # declared with owner and version for plugin-owned capability governance.
+  # Owner 插件服务枚举。`ai`由 linapro-ai-core 提供，必须通过 owner 与 version
+  # 声明进入 plugin-owned 能力治理。
+  - service: ai
+    owner: linapro-ai-core
+    version: v1
+    methods:
+      - text.generate
+      - text.method_status.get
 # Plugin menu declaration list; the host syncs menus, button permissions, and route entries from it.
 # 插件菜单声明列表，宿主按该列表同步菜单、按钮权限和路由入口。
 menus:

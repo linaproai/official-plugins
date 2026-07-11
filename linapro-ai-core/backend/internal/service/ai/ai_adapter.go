@@ -16,7 +16,7 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 
 	"lina-core/pkg/bizerr"
-	"lina-core/pkg/plugin/capability/aicap/aitext"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitext"
 	"lina-plugin-linapro-ai-core/backend/internal/model/entity"
 )
 

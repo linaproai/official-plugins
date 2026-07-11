@@ -10,9 +10,9 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 
 	"lina-core/pkg/bizerr"
-	"lina-core/pkg/plugin/capability/aicap/aitext"
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/cachecap"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitext"
 	"lina-plugin-linapro-ai-core/backend/internal/dao"
 	"lina-plugin-linapro-ai-core/backend/internal/model/do"
 	"lina-plugin-linapro-ai-core/backend/internal/model/entity"

@@ -108,6 +108,7 @@ type hostCallDemoPayload struct {
 	Lock       hostCallDemoLockPayload     `json:"lock"`
 	Org        hostCallDemoOrgPayload      `json:"org"`
 	Tenant     hostCallDemoTenantPayload   `json:"tenant"`
+	AI         hostCallDemoAIPayload       `json:"ai"`
 	Message    string                      `json:"message"`
 }
 
@@ -260,6 +261,19 @@ type hostCallDemoTenantPayload struct {
 	PlatformBypass  bool   `json:"platformBypass"`
 	UserTenantCount int    `json:"userTenantCount"`
 	Visible         bool   `json:"visible"`
+}
+
+// hostCallDemoAIPayload summarizes owner-aware linapro-ai-core bridge reads.
+type hostCallDemoAIPayload struct {
+	Owner            string `json:"owner"`
+	Service          string `json:"service"`
+	Version          string `json:"version"`
+	CapabilityType   string `json:"capabilityType"`
+	CapabilityMethod string `json:"capabilityMethod"`
+	Available        bool   `json:"available"`
+	CapabilityID     string `json:"capabilityId"`
+	ActiveProvider   string `json:"activeProvider"`
+	Reason           string `json:"reason"`
 }
 
 // boolPointer allocates one boolean pointer for optional JSON response fields.

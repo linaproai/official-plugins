@@ -17,6 +17,8 @@ import (
 	"lina-core/pkg/plugin/capability/tenantcap"
 	"lina-core/pkg/plugin/pluginbridge"
 	"lina-core/pkg/plugin/pluginbridge/recordstore"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap"
+	aibridge "lina-plugin-linapro-ai-core/backend/cap/aicap/bridge"
 )
 
 var guestServices = pluginbridge.Default()
@@ -86,4 +88,10 @@ func newOrgHostService() orgcap.Service {
 // newTenantHostService returns the guest-side tenant capability client.
 func newTenantHostService() tenantcap.Service {
 	return guestServices.Tenant()
+}
+
+// newAIHostService returns the owner-aware AI bridge client published by
+// linapro-ai-core.
+func newAIHostService() aicap.Service {
+	return aibridge.New()
 }

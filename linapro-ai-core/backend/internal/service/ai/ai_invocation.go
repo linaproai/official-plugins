@@ -6,8 +6,8 @@ import (
 	"context"
 	"time"
 
-	"lina-core/pkg/plugin/capability/aicap/aitext"
 	"lina-core/pkg/plugin/capability/bizctxcap"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitext"
 	"lina-plugin-linapro-ai-core/backend/internal/dao"
 	"lina-plugin-linapro-ai-core/backend/internal/model/do"
 	"lina-plugin-linapro-ai-core/backend/internal/model/entity"

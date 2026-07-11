@@ -23,9 +23,14 @@ import {
   pgIdentifier,
 } from '@host-tests/support/postgres';
 import { waitForRouteReady } from '@host-tests/support/ui';
+import {
+  captureDemoDynamicDependencyStates,
+  ensureDemoDynamicDependenciesInstalled,
+  restoreDemoDynamicDependencyStates,
+  type DependencyPluginState,
+} from "../../support/plugin-dependencies";
 
 const pluginID = "linapro-demo-dynamic";
-const sourcePluginID = "linapro-demo-source";
 const pluginMenuNamePattern = /Dynamic Plugin Demo|动态插件示例/u;
 const recordTable = "plugin_linapro_demo_dynamic_record";
 const publicBaseURL = config.publicBaseURL;
@@ -42,8 +47,7 @@ const legacyRuntimeArtifactPath = path.join(
 let adminApi: APIRequestContext;
 let originalInstalled = 0;
 let originalEnabled = 0;
-let originalSourceInstalled = 0;
-let originalSourceEnabled = 0;
+let originalDependencyStates: DependencyPluginState[] = [];
 
 type DemoRecordListPayload = {
   list?: Array<{ title?: string }>;
@@ -86,19 +90,8 @@ function cleanupRuntimePluginRows() {
   ]);
 }
 
-async function ensureSourcePluginInstalledAndEnabled() {
-  let sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-  if (sourcePlugin.installed !== 1) {
-    await installPlugin(adminApi, sourcePluginID, { installMode: "global" });
-    sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-  }
-  if (sourcePlugin.enabled !== 1) {
-    await enablePlugin(adminApi, sourcePluginID);
-  }
-}
-
 async function ensurePluginInstalledAndEnabled() {
-  await ensureSourcePluginInstalledAndEnabled();
+  await ensureDemoDynamicDependenciesInstalled(adminApi, { enable: true });
   const plugin = await getPlugin(adminApi, pluginID);
   if (plugin.installed !== 1) {
     await installPlugin(adminApi, pluginID, { installMode: "global" });
@@ -179,6 +172,7 @@ async function restorePluginState() {
     } catch (error) {
       cleanupRuntimePluginRows();
       await syncPlugins(adminApi);
+      await ensureDemoDynamicDependenciesInstalled(adminApi, { enable: true });
       await installPlugin(adminApi, pluginID, { installMode: "global" });
     }
   }
@@ -200,40 +194,13 @@ async function removePluginForCleanState() {
   }
 }
 
-async function restoreSourcePluginState() {
-  let sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-
-  if (originalSourceInstalled !== 1) {
-    if (sourcePlugin.enabled === 1) {
-      await disablePlugin(adminApi, sourcePluginID);
-      sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-    }
-    if (sourcePlugin.installed === 1) {
-      await uninstallPlugin(adminApi, sourcePluginID);
-    }
-    return;
-  }
-
-  if (sourcePlugin.installed !== 1) {
-    await installPlugin(adminApi, sourcePluginID, { installMode: "global" });
-    sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-  }
-  if (originalSourceEnabled === 1 && sourcePlugin.enabled !== 1) {
-    await enablePlugin(adminApi, sourcePluginID);
-  } else if (originalSourceEnabled !== 1 && sourcePlugin.enabled === 1) {
-    await disablePlugin(adminApi, sourcePluginID);
-  }
-}
-
 test.describe("TC003 英文运行时页面巡检", () => {
   test.beforeAll(async () => {
     ensureRuntimePluginArtifact();
     adminApi = await createAdminApiContext();
     await syncPlugins(adminApi);
-    const sourcePlugin = await getPlugin(adminApi, sourcePluginID);
+    originalDependencyStates = await captureDemoDynamicDependencyStates(adminApi);
     const plugin = await getPlugin(adminApi, pluginID);
-    originalSourceInstalled = sourcePlugin.installed;
-    originalSourceEnabled = sourcePlugin.enabled;
     originalInstalled = plugin.installed;
     originalEnabled = plugin.enabled;
   });
@@ -246,7 +213,10 @@ test.describe("TC003 英文运行时页面巡检", () => {
   test.afterAll(async () => {
     try {
       await restorePluginState();
-      await restoreSourcePluginState();
+      await restoreDemoDynamicDependencyStates(
+        adminApi,
+        originalDependencyStates,
+      );
     } finally {
       if (originalInstalled !== 1) {
         cleanupRuntimePluginData();

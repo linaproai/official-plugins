@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"lina-core/pkg/plugin/capability/aicap/aitext"
 	"lina-core/pkg/plugin/capability/bizctxcap"
 	"lina-core/pkg/plugin/capability/cachecap"
+	"lina-plugin-linapro-ai-core/backend/cap/aicap/aitext"
 )
 
 const (

@@ -8,14 +8,18 @@ import { test, expect } from '@host-tests/fixtures/auth';
 import { MenuPage } from '@host-tests/pages/MenuPage';
 import {
   createAdminApiContext,
-  disablePlugin,
   enablePlugin,
   expectSuccess,
   getPlugin,
   installPlugin,
   syncPlugins,
-  uninstallPlugin,
 } from '@host-tests/support/api/job';
+import {
+  captureDemoDynamicDependencyStates,
+  ensureDemoDynamicDependenciesInstalled,
+  restoreDemoDynamicDependencyStates,
+  type DependencyPluginState,
+} from '../../support/plugin-dependencies';
 
 const pluginID = 'linapro-demo-dynamic';
 const sourcePluginID = 'linapro-demo-source';
@@ -53,8 +57,7 @@ type FlatMenuNode = {
 let adminApi: APIRequestContext;
 let originalInstalled = 0;
 let originalEnabled = 0;
-let originalSourceInstalled = 0;
-let originalSourceEnabled = 0;
+let originalDependencyStates: DependencyPluginState[] = [];
 
 function ensureRuntimePluginArtifact() {
   execFileSync('make', ['wasm', `p=${pluginID}`, 'out=../../temp/output'], {
@@ -73,10 +76,8 @@ function flattenMenus(nodes: MenuNode[], ancestors: MenuNode[] = []): FlatMenuNo
 
 async function ensurePluginInstalledAndEnabled() {
   await syncPlugins(adminApi);
-  let sourcePlugin = await getPlugin(adminApi, sourcePluginID);
+  originalDependencyStates = await captureDemoDynamicDependencyStates(adminApi);
   let plugin = await getPlugin(adminApi, pluginID);
-  originalSourceInstalled = sourcePlugin.installed;
-  originalSourceEnabled = sourcePlugin.enabled;
   originalInstalled = plugin.installed;
   originalEnabled = plugin.enabled;
 
@@ -84,26 +85,10 @@ async function ensurePluginInstalledAndEnabled() {
     await forceUninstallPlugin(pluginID, false);
   }
 
-  sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-  if (sourcePlugin.enabled === 1) {
-    await disablePlugin(adminApi, sourcePluginID);
-    sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-  }
-  if (sourcePlugin.installed === 1) {
-    await uninstallPlugin(adminApi, sourcePluginID);
-  }
-
   await syncPlugins(adminApi);
-  sourcePlugin = await getPlugin(adminApi, sourcePluginID);
+  // Reinstall hard dependencies after a clean sync so install is not blocked.
+  await ensureDemoDynamicDependenciesInstalled(adminApi, { enable: true });
   plugin = await getPlugin(adminApi, pluginID);
-
-  if (sourcePlugin.installed !== 1) {
-    await installPlugin(adminApi, sourcePluginID, { installMode: 'global' });
-    sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-  }
-  if (sourcePlugin.enabled !== 1) {
-    await enablePlugin(adminApi, sourcePluginID);
-  }
 
   if (plugin.installed !== 1) {
     await installPlugin(adminApi, pluginID, { installMode: 'global' });
@@ -128,6 +113,7 @@ async function restorePluginState() {
       plugin = await getPlugin(adminApi, pluginID);
     }
     if (plugin.installed !== 1) {
+      await ensureDemoDynamicDependenciesInstalled(adminApi, { enable: true });
       await installPlugin(adminApi, pluginID, { installMode: 'global' });
       plugin = await getPlugin(adminApi, pluginID);
     }
@@ -136,26 +122,7 @@ async function restorePluginState() {
     }
   }
 
-  let sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-  if (originalSourceInstalled !== 1) {
-    if (sourcePlugin.enabled === 1) {
-      await disablePlugin(adminApi, sourcePluginID);
-      sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-    }
-    if (sourcePlugin.installed === 1) {
-      await uninstallPlugin(adminApi, sourcePluginID);
-    }
-  } else {
-    if (sourcePlugin.installed !== 1) {
-      await installPlugin(adminApi, sourcePluginID, { installMode: 'global' });
-      sourcePlugin = await getPlugin(adminApi, sourcePluginID);
-    }
-    if (originalSourceEnabled === 1 && sourcePlugin.enabled !== 1) {
-      await enablePlugin(adminApi, sourcePluginID);
-    } else if (originalSourceEnabled !== 1 && sourcePlugin.enabled === 1) {
-      await disablePlugin(adminApi, sourcePluginID);
-    }
-  }
+  await restoreDemoDynamicDependencyStates(adminApi, originalDependencyStates);
 }
 
 async function forceUninstallPlugin(pluginId: string, purgeStorageData: boolean) {
