@@ -1,6 +1,8 @@
 /**
- * TC002 linapro-oidc-generic 设置页字段帮助提示
+ * TC002 linapro-oidc-generic 设置页字段帮助与表单布局
  *
+ * - 页面不展示与菜单重复的 Card 标题
+ * - 表单为左右布局，核心字段带必填红星
  * - 难懂字段标题右侧展示问号图标
  * - 悬停后展示通俗易懂的帮助文案（非原始 i18n key）
  */
@@ -17,14 +19,47 @@ test.describe('TC-2 linapro-oidc-generic 设置页字段帮助', () => {
     await prepareSourcePluginsBaseline([ownerPluginID, pluginID]);
   });
 
-  test('TC-2a: 难懂字段标题旁有问号，悬停显示帮助文案', async ({
-    adminPage,
-  }) => {
+  test('TC-2a: 水平表单、必填红星与字段帮助', async ({ adminPage }) => {
     const page = new GenericOidcPage(adminPage);
     await page.openSettingsPage();
 
-    // Form card title: "OIDC 设置" (no "通用" prefix).
-    await expect(page.settingsCardTitle).toHaveText('OIDC 设置');
+    // Menu already identifies the page; the form card must not repeat the title.
+    await expect(adminPage.locator('.ant-card-head-title')).toHaveCount(0);
+
+    await expect(page.settingsIntroAlert).toBeVisible();
+    await expect(
+      page.settingsIntroAlert.locator('.ant-alert-icon'),
+    ).toBeVisible();
+    await expect(page.settingsIntroAlert).not.toContainText(
+      'plugin.linapro-oidc-generic',
+    );
+
+    await expect(page.settingsForm).toBeVisible();
+    expect(await page.requiredFieldLabels.count()).toBeGreaterThanOrEqual(2);
+    await expect(
+      page.settingsForm
+        .locator('.ant-form-item-required')
+        .filter({ hasText: /Issuer|Client ID/i })
+        .first(),
+    ).toBeVisible();
+
+    const sampleLabel = page.settingsForm
+      .locator('.ant-form-item-label > label')
+      .filter({ hasText: /Issuer|Client ID/i })
+      .first();
+    await expect(sampleLabel).toBeVisible();
+    await expect(sampleLabel).toHaveClass(/ant-form-item-no-colon/);
+    const fontWeight = await sampleLabel.evaluate(
+      (el) => Number.parseInt(getComputedStyle(el).fontWeight, 10) || 0,
+    );
+    expect(fontWeight).toBeGreaterThanOrEqual(500);
+    const allLabelText = await page.settingsForm
+      .locator('.ant-form-item-label > label')
+      .allTextContents();
+    for (const text of allLabelText) {
+      expect(text.trim().endsWith(':')).toBe(false);
+      expect(text).not.toMatch(/（可选）|\(optional\)/i);
+    }
 
     await expect(page.fieldHelpIcons.first()).toBeVisible();
     expect(await page.fieldHelpIcons.count()).toBeGreaterThanOrEqual(5);

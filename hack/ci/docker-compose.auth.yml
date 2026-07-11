@@ -1,0 +1,25 @@
+# Optional real OpenLDAP backend for local experiments.
+# CI uses the in-repo Go ldap-mock by default (no Docker required).
+# 可选的真实 OpenLDAP 后端，用于本地试验。
+# CI 默认使用仓库内 Go ldap-mock（不依赖 Docker）。
+services:
+  openldap:
+    image: bitnami/openldap:2.6.8
+    ports:
+      - "1389:1389"
+    environment:
+      LDAP_ADMIN_USERNAME: admin
+      LDAP_ADMIN_PASSWORD: adminpassword
+      LDAP_USERS: alice
+      LDAP_PASSWORDS: alice-secret
+      LDAP_ROOT: dc=example,dc=com
+      LDAP_USER_DC: users
+      LDAP_GROUP_DC: groups
+      LDAP_PORT_NUMBER: "1389"
+      LDAP_ENABLE_TLS: "no"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/1389'"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 10s

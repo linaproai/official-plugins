@@ -184,6 +184,50 @@ pnpm -C hack/tests test:module -- plugin:<plugin-id>
 
 Use plugin-local `api_contract_test.go` and Go package tests for backend contract checks where applicable.
 
+### Continuous Integration (this repository)
+
+`official-plugins` runs its own GitHub Actions workflow (`.github/workflows/ci.yml`) so plugin PRs get feedback without waiting for a host monorepo submodule pin update:
+
+| Check | Scope |
+|-------|--------|
+| Plugin manifest check | Every `*/plugin.yaml` package contract (`id` matches directory, `version`/`type`, `go.mod`, embed/main entry) |
+| Go unit tests | Every plugin module against `linaproai/linapro` `apps/lina-core` (default host ref `main`) |
+| Auth Go unit tests | Explicit gate for `linapro-extid-core`, `linapro-auth-ldap`, `linapro-oidc-*` |
+| Auth integration (LDAP + OIDC) | Live OpenLDAP bind login + live OIDC code/PKCE/id_token login via `hack/ci` |
+
+The workflow checks out the host monorepo with sparse `apps/lina-core`, overlays this repository at `apps/lina-plugins`, generates a temporary `go.work`, and runs `go test ./...` per plugin.
+
+Auth integration starts two in-repo mock services (no Docker required in CI):
+
+1. **LDAP mock** (`hack/ci/ldap-mock`) with seed user `cn=alice,ou=users,dc=example,dc=com` / `alice-secret`
+2. **OIDC mock** (`hack/ci/oidc-mock`) with PKCE S256 + RS256 `id_token`
+
+Then runs:
+
+```bash
+go test ./backend/internal/service/ldapauth/ -tags=integration -count=1 -v
+go test ./backend/internal/service/oauth/ -tags=integration -count=1 -v
+```
+
+Those tests auto-configure plugin settings, perform real directory bind / OIDC authorize+token exchange, and assert the plugin login path returns a handoff. Host session minting uses a test stub; protocol and directory I/O are real. Browser E2E and full host session integration remain on the main `linapro` repository.
+
+Local auth integration (optional):
+
+```bash
+export GOWORK=off
+go run ./hack/ci/ldap-mock -listen 127.0.0.1:1389 &
+go run ./hack/ci/oidc-mock -listen 127.0.0.1:18080 &
+# in monorepo layout with lina-core available:
+go test ./linapro-auth-ldap/backend/internal/service/ldapauth/ -tags=integration -count=1 -v
+go test ./linapro-oidc-generic/backend/internal/service/oauth/ -tags=integration -count=1 -v
+```
+
+Manual re-run against another host ref:
+
+```text
+Actions → Official Plugins CI → Run workflow → host_ref=<branch|tag|sha>
+```
+
 ## Version Upgrades
 
 When an installed source plugin bumps `plugin.yaml` `version`, discovery does not silently replace the effective host version.

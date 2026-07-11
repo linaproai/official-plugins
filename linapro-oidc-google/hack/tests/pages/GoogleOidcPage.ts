@@ -45,14 +45,22 @@ export class GoogleOidcPage {
     });
   }
 
-  get settingsCardTitle() {
-    return this.page
-      .getByText(/Google 登录设置|Google Login Settings/i)
-      .first();
+  /** Settings form uses host horizontal layout (label left / control right). */
+  get settingsForm() {
+    return this.page.locator("form.ant-form-horizontal").first();
+  }
+
+  /** Page intro tip uses host-standard info Alert above the form. */
+  get settingsIntroAlert() {
+    return this.page.locator(".ant-alert-info").first();
   }
 
   get fieldHelpIcons() {
     return this.page.locator(".ant-form-item-tooltip");
+  }
+
+  get requiredFieldLabels() {
+    return this.settingsForm.locator(".ant-form-item-required");
   }
 
   async openSettingsPage() {
@@ -62,7 +70,7 @@ export class GoogleOidcPage {
     await layout.expandSidebarGroup(/授权登录|Auth Login/i);
     await layout.sidebarMenuItem(/Google 登录|Google Login/i).click();
     await waitForRouteReady(this.page);
-    await expect(this.settingsCardTitle).toBeVisible({ timeout: 15000 });
+    await expect(this.settingsForm).toBeVisible({ timeout: 15000 });
   }
 
   async expectFieldHelpTooltip(helpText: string | RegExp) {

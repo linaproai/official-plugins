@@ -318,7 +318,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
 .tier-current-test-result {
   align-items: center;
   border: 1px solid hsl(var(--border));
-  border-radius: 6px;
+  border-radius: calc(var(--radius) + 4px);
   color: hsl(var(--muted-foreground));
   display: inline-flex;
   font-size: 12px;

@@ -9,9 +9,12 @@ export const pluginPageMeta = {
 </script>
 
 <script setup lang="ts">
+import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+
 import { onMounted, reactive, ref } from 'vue';
 
 import {
+  Alert,
   Button,
   Card,
   Form,
@@ -26,9 +29,17 @@ import { pluginApiPath, requestClient } from '#/api/request';
 import { $t } from '#/locales';
 
 const pluginID = 'linapro-auth-ldap';
+const formRef = ref<FormInstance>();
+const labelCol = { style: { width: '180px' } };
+const wrapperCol = { style: { maxWidth: '720px' } };
 const loading = ref(false);
 const saving = ref(false);
 const secretConfigured = ref(false);
+
+/** requiredRule builds the host-standard required message with a red-star label. */
+function requiredRule(label: string): Rule[] {
+  return [{ required: true, message: $t('ui.formRules.required', [label]) }];
+}
 
 const formState = reactive({
   connectionKey: 'default',
@@ -87,6 +98,11 @@ async function loadSettings() {
 }
 
 async function saveSettings() {
+  try {
+    await formRef.value?.validate();
+  } catch {
+    return;
+  }
   saving.value = true;
   try {
     await requestClient.put(settingsApi(), { ...formState });
@@ -104,14 +120,27 @@ onMounted(loadSettings);
 
 <template>
   <div class="p-4">
-    <Card
-      :loading="loading"
-      :title="$t('plugin.linapro-auth-ldap.settings.title')"
-    >
-      <p class="text-muted-foreground mb-4 text-sm">
-        {{ $t('plugin.linapro-auth-ldap.settings.description') }}
-      </p>
-      <Form :model="formState" layout="vertical">
+    <!-- Menu already names the page; omit Card title to avoid duplicate heading. -->
+    <Card :loading="loading">
+      <!--
+        Wrap Alert + Form with gap so intro tip never collides with the first
+        field. Ant Design Alert resets its own margin, so mb-* on Alert is ignored.
+      -->
+      <div class="flex flex-col gap-4">
+        <Alert
+          show-icon
+          type="info"
+          :message="$t('plugin.linapro-auth-ldap.settings.description')"
+        />
+        <Form
+          ref="formRef"
+          :colon="false"
+          :label-col="labelCol"
+          :model="formState"
+          :wrapper-col="wrapperCol"
+          class="auth-settings-form"
+          layout="horizontal"
+        >
         <Form.Item
           :label="$t('plugin.linapro-auth-ldap.settings.displayNameLabel')"
           :tooltip="$t('plugin.linapro-auth-ldap.settings.displayNameHelp')"
@@ -121,8 +150,12 @@ onMounted(loadSettings);
         </Form.Item>
         <Form.Item
           :label="$t('plugin.linapro-auth-ldap.settings.hostLabel')"
+          :rules="
+            requiredRule($t('plugin.linapro-auth-ldap.settings.hostLabel'))
+          "
           :tooltip="$t('plugin.linapro-auth-ldap.settings.hostHelp')"
           name="host"
+          required
         >
           <Input
             v-model:value="formState.host"
@@ -139,8 +172,12 @@ onMounted(loadSettings);
         </Form.Item>
         <Form.Item
           :label="$t('plugin.linapro-auth-ldap.settings.tlsModeLabel')"
+          :rules="
+            requiredRule($t('plugin.linapro-auth-ldap.settings.tlsModeLabel'))
+          "
           :tooltip="$t('plugin.linapro-auth-ldap.settings.tlsModeHelp')"
           name="tlsMode"
+          required
         >
           <Select v-model:value="formState.tlsMode" :options="tlsOptions" />
         </Form.Item>
@@ -206,8 +243,14 @@ onMounted(loadSettings);
         </Form.Item>
         <Form.Item
           :label="$t('plugin.linapro-auth-ldap.settings.subjectAttrLabel')"
+          :rules="
+            requiredRule(
+              $t('plugin.linapro-auth-ldap.settings.subjectAttrLabel'),
+            )
+          "
           :tooltip="$t('plugin.linapro-auth-ldap.settings.subjectAttrHelp')"
           name="subjectAttr"
+          required
         >
           <Input
             v-model:value="formState.subjectAttr"
@@ -241,12 +284,23 @@ onMounted(loadSettings);
             </span>
           </div>
         </Form.Item>
-        <Form.Item class="mt-4">
+        <Form.Item class="mt-4" label=" ">
           <Button :loading="saving" type="primary" @click="saveSettings">
             {{ $t('plugin.linapro-auth-ldap.settings.save') }}
           </Button>
         </Form.Item>
-      </Form>
+        </Form>
+      </div>
     </Card>
   </div>
 </template>
+
+<style scoped>
+/*
+ * Align raw ant-design Form labels with host useVbenForm conventions:
+ * medium (semi-bold) weight and no trailing colon (handled via :colon="false").
+ */
+.auth-settings-form :deep(.ant-form-item-label > label) {
+  font-weight: 500;
+}
+</style>

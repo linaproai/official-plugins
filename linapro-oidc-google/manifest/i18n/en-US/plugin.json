@@ -55,11 +55,11 @@
         "oneTapLabel": "Enable One Tap embed",
         "oneTapHelp": "Allow other web pages to embed Google One Tap. After the user picks a Google account, the result is posted to LinaPro for sign-in.",
         "oneTapHint": "Accept Google One Tap ID Token sign-ins posted by the embeddable snippet below. Third-party pages hosting the snippet must be registered as Authorized JavaScript origins in Google Cloud Console, and the onetap URL as an Authorized redirect URI.",
-        "oneTapStateKeyLabel": "One Tap scenario key (optional)",
-        "oneTapStateKeyHelp": "Optional. When set, a successful One Tap sign-in follows the matching SSO delivery rule; when empty, the user lands on the workspace login handoff.",
+        "oneTapStateKeyLabel": "One Tap scenario key",
+        "oneTapStateKeyHelp": "When set, a successful One Tap sign-in follows the matching SSO delivery rule; when empty, the user lands on the workspace login handoff.",
         "oneTapEmbedTitle": "Embeddable Snippet",
         "oneTapEmbedHelp": "Paste this snippet into any page that should offer Google One Tap. Register the page origin and callback URL in Google Cloud Console first.",
-        "oneTapStateKeyPlaceholder": "SSO scenario key (optional)",
+        "oneTapStateKeyPlaceholder": "SSO scenario key",
         "copyEmbed": "Copy Snippet",
         "oneTapEmbedHint": "Paste this snippet into any page. After a successful sign-in the outcome follows the SSO delivery rules: a matching state key redirects to the configured receiver URL with the tokens; otherwise the browser lands on the workspace login handoff."
       }

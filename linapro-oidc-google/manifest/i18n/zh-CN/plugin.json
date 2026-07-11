@@ -55,11 +55,11 @@
         "oneTapLabel": "启用 One Tap 嵌入",
         "oneTapHelp": "允许在其他网页上嵌入 Google 一键登录。用户点选 Google 账号后，会把登录结果提交到本系统处理。",
         "oneTapHint": "接受下方嵌入片段提交的 Google One Tap ID Token 登录。承载片段的第三方页面域名需在 Google Cloud Console 注册为「已获授权的 JavaScript 来源」，onetap 地址需注册为「已获授权的重定向 URI」。",
-        "oneTapStateKeyLabel": "One Tap 场景标识（可选）",
-        "oneTapStateKeyHelp": "可选。填写后，One Tap 登录成功会按对应的 SSO 投递规则处理；不填则进入工作台登录交接。",
+        "oneTapStateKeyLabel": "One Tap 场景标识",
+        "oneTapStateKeyHelp": "填写后，One Tap 登录成功会按对应的 SSO 投递规则处理；不填则进入工作台登录交接。",
         "oneTapEmbedTitle": "嵌入代码",
         "oneTapEmbedHelp": "把这段代码粘贴到任意需要 Google 一键登录的页面即可。请先在 Google 控制台登记好页面来源与回调地址。",
-        "oneTapStateKeyPlaceholder": "SSO 场景标识（可选）",
+        "oneTapStateKeyPlaceholder": "SSO 场景标识",
         "copyEmbed": "复制代码",
         "oneTapEmbedHint": "把这段代码粘贴到任意页面即可。登录成功后按 SSO 投递规则处理：state key 命中规则时携带令牌跳转到配置的接收地址，否则进入工作台登录交接页。"
       }

@@ -152,8 +152,10 @@ async function reloadModels() {
 .ai-model-page {
   height: 100%;
   min-height: 0;
+  /* Keep layout constraints without a full-bleed sharp white panel that
+     cancels the VxeGrid rounded-xl card corners. */
   overflow: hidden;
-  background: hsl(var(--background));
+  background: transparent;
 }
 
 :deep(.ai-model-endpoint-column .vxe-cell) {

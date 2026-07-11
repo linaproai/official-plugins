@@ -1,0 +1,335 @@
+# Official Plugins CI — runs inside linaproai/official-plugins (submodule repo).
+# Validates plugin manifests and Go unit tests against a pinned linapro host.
+# Official Plugins CI — 在 linaproai/official-plugins（子模块仓库）内运行。
+# 对照固定版本的 linapro 宿主校验插件清单与 Go 单元测试。
+name: Official Plugins CI
+
+on:
+  # Validate every push on the official-plugins repository.
+  # 校验 official-plugins 仓库上的每次 push。
+  push:
+    branches:
+      - "**"
+  # Gate pull requests before merge into any target branch.
+  # 在合并到任意目标分支前对 pull request 做门禁。
+  pull_request:
+    branches:
+      - "**"
+  # Allow maintainers to re-run against a chosen host ref.
+  # 允许维护者指定宿主 ref 手动重跑。
+  workflow_dispatch:
+    inputs:
+      host_ref:
+        description: linapro host git ref (branch, tag, or SHA)
+        required: false
+        default: main
+        type: string
+
+# Cancel superseded runs for the same branch or PR.
+# 取消同一分支或 PR 上已被取代的运行。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  TZ: Asia/Shanghai
+  # Default host monorepo providing apps/lina-core for replace/go.work resolution.
+  # 默认提供 apps/lina-core 的宿主 monorepo，供 replace/go.work 解析。
+  HOST_REPOSITORY: linaproai/linapro
+  HOST_REF: ${{ github.event.inputs.host_ref || 'main' }}
+  GO_VERSION: "1.25.x"
+
+jobs:
+  # Fail fast when plugin directories miss required package contracts.
+  # 插件目录缺少必要契约时快速失败。
+  plugin-manifest:
+    name: Plugin manifest check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Official Plugins
+        uses: actions/checkout@v5
+
+      - name: Validate Plugin Package Contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=0
+          failures=0
+          while IFS= read -r manifest; do
+            plugin_dir="$(dirname "${manifest}")"
+            plugin_id="$(basename "${plugin_dir}")"
+            count=$((count + 1))
+            echo "::group::${plugin_id}"
+            ok=1
+            if [[ ! -f "${plugin_dir}/go.mod" ]]; then
+              echo "::error file=${plugin_dir}/go.mod::missing go.mod"
+              ok=0
+            fi
+            if [[ ! -f "${plugin_dir}/plugin_embed.go" && ! -f "${plugin_dir}/main.go" ]]; then
+              # Source plugins ship plugin_embed.go; dynamic WASM plugins use main.go.
+              # 源码插件提供 plugin_embed.go；动态 WASM 插件使用 main.go。
+              echo "::error::${plugin_id}: expected plugin_embed.go (source) or main.go (dynamic)"
+              ok=0
+            fi
+            if ! grep -qE '^id:[[:space:]]*' "${manifest}"; then
+              echo "::error file=${manifest}::plugin.yaml missing id field"
+              ok=0
+            fi
+            if ! grep -qE '^version:[[:space:]]*' "${manifest}"; then
+              echo "::error file=${manifest}::plugin.yaml missing version field"
+              ok=0
+            fi
+            if ! grep -qE '^type:[[:space:]]*' "${manifest}"; then
+              echo "::error file=${manifest}::plugin.yaml missing type field"
+              ok=0
+            fi
+            declared_id="$(sed -n 's/^id:[[:space:]]*//p' "${manifest}" | head -n1 | tr -d '"' | tr -d "'")"
+            if [[ -n "${declared_id}" && "${declared_id}" != "${plugin_id}" ]]; then
+              echo "::error file=${manifest}::plugin.yaml id=${declared_id} does not match directory ${plugin_id}"
+              ok=0
+            fi
+            if [[ "${ok}" -eq 1 ]]; then
+              echo "ok"
+            else
+              failures=$((failures + 1))
+            fi
+            echo "::endgroup::"
+          done < <(find . -mindepth 2 -maxdepth 2 -type f -name plugin.yaml | sort)
+
+          if [[ "${count}" -eq 0 ]]; then
+            echo "::error::no plugin.yaml found under */plugin.yaml"
+            exit 1
+          fi
+          echo "Checked ${count} plugin manifest(s)."
+          if [[ "${failures}" -ne 0 ]]; then
+            echo "::error::${failures} plugin package contract check(s) failed"
+            exit 1
+          fi
+
+  # Discover plugin module directories for the Go unit-test matrix.
+  # 发现插件模块目录，供 Go 单元测试矩阵使用。
+  discover-plugins:
+    name: Discover plugins
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      plugins: ${{ steps.list.outputs.plugins }}
+      auth_plugins: ${{ steps.list.outputs.auth_plugins }}
+    steps:
+      - name: Checkout Official Plugins
+        uses: actions/checkout@v5
+
+      - name: List Plugin Modules
+        id: list
+        shell: bash
+        run: |
+          set -euo pipefail
+          plugins_json="$(
+            find . -mindepth 2 -maxdepth 2 -type f -name go.mod \
+              | sed 's|^\./||; s|/go.mod$||' \
+              | sort \
+              | jq -R -s -c 'split("\n") | map(select(length>0))'
+          )"
+          # Auth family always includes the external-identity engine dependency.
+          # 认证族始终包含外部身份引擎依赖。
+          auth_json="$(
+            printf '%s\n' \
+              linapro-extid-core \
+              linapro-auth-ldap \
+              linapro-oidc-discord \
+              linapro-oidc-generic \
+              linapro-oidc-google \
+              | jq -R -s -c 'split("\n") | map(select(length>0))'
+          )"
+          echo "plugins=${plugins_json}" >> "${GITHUB_OUTPUT}"
+          echo "auth_plugins=${auth_json}" >> "${GITHUB_OUTPUT}"
+          echo "All plugins: ${plugins_json}"
+          echo "Auth plugins: ${auth_json}"
+
+  # Go unit tests for every official plugin module against the host core.
+  # 对照宿主 core 对每个官方插件模块运行 Go 单元测试。
+  go-unit-tests:
+    name: Go unit tests (${{ matrix.plugin }})
+    needs: discover-plugins
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: ${{ fromJson(needs.discover-plugins.outputs.plugins) }}
+    steps:
+      # Local composite actions require the workflow repository to be checked out first.
+      # 本地 composite action 要求先检出工作流所在仓库。
+      - name: Checkout Official Plugins
+        uses: actions/checkout@v5
+
+      - name: Setup Plugin Workspace
+        uses: ./.github/actions/setup-plugin-workspace
+        with:
+          host-repository: ${{ env.HOST_REPOSITORY }}
+          host-ref: ${{ env.HOST_REF }}
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Run Plugin Go Unit Tests
+        working-directory: monorepo/apps/lina-plugins/${{ matrix.plugin }}
+        env:
+          GOWORK: ${{ github.workspace }}/monorepo/go.work.plugins.ci
+        run: |
+          set -euo pipefail
+          echo "Testing ${{ matrix.plugin }} with GOWORK=${GOWORK} host=${HOST_REPOSITORY}@${HOST_REF}"
+          go test ./... -count=1
+
+  # Explicit auth-family gate so OIDC/LDAP regressions are visible as a single check.
+  # 独立的认证族门禁，便于把 OIDC/LDAP 回归收敛为单一检查项。
+  auth-go-unit-tests:
+    name: Auth Go unit tests (${{ matrix.plugin }})
+    needs: discover-plugins
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: ${{ fromJson(needs.discover-plugins.outputs.auth_plugins) }}
+    steps:
+      # Local composite actions require the workflow repository to be checked out first.
+      # 本地 composite action 要求先检出工作流所在仓库。
+      - name: Checkout Official Plugins
+        uses: actions/checkout@v5
+
+      - name: Setup Plugin Workspace
+        uses: ./.github/actions/setup-plugin-workspace
+        with:
+          host-repository: ${{ env.HOST_REPOSITORY }}
+          host-ref: ${{ env.HOST_REF }}
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Verify Auth Plugin Present
+        run: |
+          set -euo pipefail
+          test -f "monorepo/apps/lina-plugins/${{ matrix.plugin }}/plugin.yaml"
+          test -f "monorepo/apps/lina-plugins/${{ matrix.plugin }}/go.mod"
+
+      - name: Run Auth Plugin Go Unit Tests
+        working-directory: monorepo/apps/lina-plugins/${{ matrix.plugin }}
+        env:
+          GOWORK: ${{ github.workspace }}/monorepo/go.work.plugins.ci
+        run: |
+          set -euo pipefail
+          echo "Auth gate: ${{ matrix.plugin }} against ${HOST_REPOSITORY}@${HOST_REF}"
+          go test ./... -count=1
+
+  # Real LDAP + OIDC login path against lightweight in-repo mock services.
+  # Host session minting is stubbed; directory bind and OIDC code/PKCE/id_token are real.
+  # 对照仓库内轻量 mock 服务验证 LDAP + OIDC 登录路径。
+  # 宿主会话签发使用桩；目录绑定与 OIDC code/PKCE/id_token 为真实协议交互。
+  auth-integration:
+    name: Auth integration (LDAP + OIDC)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      LINA_CI_LDAP_HOST: 127.0.0.1
+      LINA_CI_LDAP_PORT: "1389"
+      LINA_CI_LDAP_USER: alice
+      LINA_CI_LDAP_PASSWORD: alice-secret
+      LINA_CI_OIDC_ISSUER: http://127.0.0.1:18080
+      LINA_CI_OIDC_CLIENT_ID: linapro-ci
+      LINA_CI_OIDC_CLIENT_SECRET: linapro-ci-secret
+      LINA_CI_OIDC_REDIRECT_URL: http://127.0.0.1:9999/portal/linapro-oidc-generic/callback
+    steps:
+      - name: Checkout Official Plugins
+        uses: actions/checkout@v5
+
+      - name: Setup Plugin Workspace
+        uses: ./.github/actions/setup-plugin-workspace
+        with:
+          host-repository: ${{ env.HOST_REPOSITORY }}
+          host-ref: ${{ env.HOST_REF }}
+          go-version: ${{ env.GO_VERSION }}
+
+      # Start in-repo LDAP mock for real network bind authentication.
+      # 启动仓库内 LDAP mock，进行真实网络 bind 认证。
+      - name: Start LDAP Mock Directory
+        working-directory: monorepo/apps/lina-plugins/hack/ci/ldap-mock
+        env:
+          GOWORK: "off"
+        run: |
+          set -euo pipefail
+          go build -o "${RUNNER_TEMP}/ldap-mock" .
+          "${RUNNER_TEMP}/ldap-mock" \
+            -listen 127.0.0.1:1389 \
+            -user-dn "cn=alice,ou=users,dc=example,dc=com" \
+            -password "${LINA_CI_LDAP_PASSWORD}" \
+            > "${RUNNER_TEMP}/ldap-mock.log" 2>&1 &
+          echo $! > "${RUNNER_TEMP}/ldap-mock.pid"
+          for i in $(seq 1 60); do
+            if (echo > /dev/tcp/127.0.0.1/1389) >/dev/null 2>&1; then
+              echo "ldap-mock is ready"
+              exit 0
+            fi
+            sleep 0.5
+          done
+          echo "ldap-mock failed to become ready" >&2
+          cat "${RUNNER_TEMP}/ldap-mock.log" >&2 || true
+          exit 1
+
+      # Start in-repo OIDC mock so plugin tests talk HTTP OIDC for real.
+      # 启动仓库内 OIDC mock，让插件测试进行真实 HTTP OIDC 交互。
+      - name: Start OIDC Mock Provider
+        working-directory: monorepo/apps/lina-plugins/hack/ci/oidc-mock
+        env:
+          GOWORK: "off"
+        run: |
+          set -euo pipefail
+          go build -o "${RUNNER_TEMP}/oidc-mock" .
+          "${RUNNER_TEMP}/oidc-mock" \
+            -listen 127.0.0.1:18080 \
+            -issuer "${LINA_CI_OIDC_ISSUER}" \
+            -client-id "${LINA_CI_OIDC_CLIENT_ID}" \
+            -client-secret "${LINA_CI_OIDC_CLIENT_SECRET}" \
+            > "${RUNNER_TEMP}/oidc-mock.log" 2>&1 &
+          echo $! > "${RUNNER_TEMP}/oidc-mock.pid"
+          for i in $(seq 1 60); do
+            if curl -fsS "${LINA_CI_OIDC_ISSUER}/healthz" >/dev/null; then
+              echo "oidc-mock is ready"
+              exit 0
+            fi
+            sleep 0.5
+          done
+          echo "oidc-mock failed to become ready" >&2
+          cat "${RUNNER_TEMP}/oidc-mock.log" >&2 || true
+          exit 1
+
+      - name: Run LDAP Integration Tests
+        working-directory: monorepo/apps/lina-plugins/linapro-auth-ldap
+        env:
+          GOWORK: ${{ github.workspace }}/monorepo/go.work.plugins.ci
+        run: |
+          set -euo pipefail
+          go test ./backend/internal/service/ldapauth/ -tags=integration -count=1 -v
+
+      - name: Run OIDC Integration Tests
+        working-directory: monorepo/apps/lina-plugins/linapro-oidc-generic
+        env:
+          GOWORK: ${{ github.workspace }}/monorepo/go.work.plugins.ci
+        run: |
+          set -euo pipefail
+          go test ./backend/internal/service/oauth/ -tags=integration -count=1 -v
+
+      - name: Stop Auth Mock Providers
+        if: always()
+        run: |
+          set -euo pipefail
+          for name in ldap-mock oidc-mock; do
+            if [[ -f "${RUNNER_TEMP}/${name}.pid" ]]; then
+              kill "$(cat "${RUNNER_TEMP}/${name}.pid")" 2>/dev/null || true
+            fi
+            if [[ -f "${RUNNER_TEMP}/${name}.log" ]]; then
+              echo "::group::${name} log"
+              cat "${RUNNER_TEMP}/${name}.log" || true
+              echo "::endgroup::"
+            fi
+          done

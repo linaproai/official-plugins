@@ -337,7 +337,7 @@ const diskColumns = [
                 </dl>
 
                 <div class="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div class="rounded-lg border border-border p-4">
+                  <div class="rounded-xl border border-border p-4">
                     <h6 class="mb-3 text-sm font-medium text-foreground/70">
                       {{ $t('plugin.linapro-monitor-server.sections.processCpu') }}
                     </h6>
@@ -382,7 +382,7 @@ const diskColumns = [
                     </div>
                   </div>
 
-                  <div class="rounded-lg border border-border p-4">
+                  <div class="rounded-xl border border-border p-4">
                     <h6 class="mb-3 text-sm font-medium text-foreground/70">
                       {{ $t('plugin.linapro-monitor-server.sections.processMemory') }}
                     </h6>
@@ -509,7 +509,7 @@ const diskColumns = [
               </div>
 
               <div class="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div class="rounded-lg border border-border p-4">
+                <div class="rounded-xl border border-border p-4">
                   <h6 class="mb-3 text-sm font-medium text-foreground/70">
                     {{ $t('plugin.linapro-monitor-server.sections.systemCpu') }}
                   </h6>
@@ -545,7 +545,7 @@ const diskColumns = [
                   </div>
                 </div>
 
-                <div class="rounded-lg border border-border p-4">
+                <div class="rounded-xl border border-border p-4">
                   <h6 class="mb-3 text-sm font-medium text-foreground/70">
                     {{ $t('plugin.linapro-monitor-server.sections.systemMemory') }}
                   </h6>

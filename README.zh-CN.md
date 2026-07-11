@@ -168,6 +168,51 @@ pnpm -C hack/tests test:module -- plugin:<plugin-id>
 
 适用时使用插件本地`api_contract_test.go`和`Go package`测试完成后端契约检查。
 
+### 持续集成（本仓库）
+
+`official-plugins`自带 GitHub Actions 工作流（`.github/workflows/ci.yml`），插件 PR 无需等待宿主 monorepo 更新 submodule 指针即可获得反馈：
+
+| 检查项 | 范围 |
+|--------|------|
+| Plugin manifest check | 每个`*/plugin.yaml`包契约（`id`与目录一致、`version`/`type`、`go.mod`、embed/main 入口） |
+| Go unit tests | 每个插件模块对照`linaproai/linapro`的`apps/lina-core`（默认宿主 ref 为`main`） |
+| Auth Go unit tests | 针对`linapro-extid-core`、`linapro-auth-ldap`、`linapro-oidc-*`的显式门禁 |
+| Auth integration (LDAP + OIDC) | 真实 OpenLDAP 绑定登录 + 真实 OIDC code/PKCE/id_token 登录（`hack/ci`） |
+
+工作流会稀疏检出宿主 monorepo 的`apps/lina-core`，将本仓库覆盖到`apps/lina-plugins`，生成临时`go.work`，并对每个插件执行`go test ./...`。
+
+认证集成会启动两个仓库内 mock 服务（CI 不依赖 Docker）：
+
+1. **LDAP mock**（`hack/ci/ldap-mock`），种子用户`cn=alice,ou=users,dc=example,dc=com` / `alice-secret`
+2. **OIDC mock**（`hack/ci/oidc-mock`），支持 PKCE S256 与 RS256`id_token`
+
+然后执行：
+
+```bash
+go test ./backend/internal/service/ldapauth/ -tags=integration -count=1 -v
+go test ./backend/internal/service/oauth/ -tags=integration -count=1 -v
+```
+
+这些测试会自动配置插件设置，执行真实目录绑定 / OIDC authorize+token 交换，并断言插件登录路径返回 handoff。宿主会话签发使用测试桩；协议与目录 I/O 为真实交互。浏览器 E2E 与完整宿主会话集成仍由主仓库`linapro`承担。
+
+本地可选联调：
+
+```bash
+export GOWORK=off
+go run ./hack/ci/ldap-mock -listen 127.0.0.1:1389 &
+go run ./hack/ci/oidc-mock -listen 127.0.0.1:18080 &
+# 在具备 lina-core 的 monorepo 布局下：
+go test ./linapro-auth-ldap/backend/internal/service/ldapauth/ -tags=integration -count=1 -v
+go test ./linapro-oidc-generic/backend/internal/service/oauth/ -tags=integration -count=1 -v
+```
+
+手动指定宿主 ref 重跑：
+
+```text
+Actions → Official Plugins CI → Run workflow → host_ref=<branch|tag|sha>
+```
+
+
 ## 版本升级
 
 当已安装源码插件提升`plugin.yaml`的`version`后，发现流程不会静默替换宿主当前生效版本。

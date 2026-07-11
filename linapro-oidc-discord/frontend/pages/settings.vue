@@ -9,10 +9,13 @@ export const pluginPageMeta = {
 </script>
 
 <script setup lang="ts">
+import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import { IconifyIcon } from '@vben/icons';
 import {
+  Alert,
   Button,
   Card,
   Form,
@@ -27,6 +30,14 @@ import { pluginApiPath, requestClient } from '#/api/request';
 import { $t } from '#/locales';
 
 const pluginID = 'linapro-oidc-discord';
+const formRef = ref<FormInstance>();
+const labelCol = { style: { width: '180px' } };
+const wrapperCol = { style: { maxWidth: '720px' } };
+
+/** requiredRule builds the host-standard required message with a red-star label. */
+function requiredRule(label: string): Rule[] {
+  return [{ required: true, message: $t('ui.formRules.required', [label]) }];
+}
 
 interface SettingsItem {
   clientId: string;
@@ -168,6 +179,11 @@ async function loadSettings() {
 }
 
 async function saveSettings() {
+  try {
+    await formRef.value?.validate();
+  } catch {
+    return;
+  }
   saving.value = true;
   try {
     const res = await requestClient.put<{ settings: SettingsItem }>(
@@ -198,18 +214,37 @@ onMounted(loadSettings);
 
 <template>
   <div class="p-4">
-    <Card
-      :loading="loading"
-      :title="$t('plugin.linapro-oidc-discord.settings.title')"
-    >
-      <p class="text-muted-foreground mb-4 text-sm">
-        {{ $t('plugin.linapro-oidc-discord.settings.description') }}
-      </p>
-      <Form :model="formState" layout="vertical">
+    <!-- Menu already names the page; omit Card title to avoid duplicate heading. -->
+    <Card :loading="loading">
+      <!--
+        Wrap Alert + Form with gap so intro tip never collides with the first
+        field. Ant Design Alert resets its own margin, so mb-* on Alert is ignored.
+      -->
+      <div class="flex flex-col gap-4">
+        <Alert
+          show-icon
+          type="info"
+          :message="$t('plugin.linapro-oidc-discord.settings.description')"
+        />
+        <Form
+          ref="formRef"
+          :colon="false"
+          :label-col="labelCol"
+          :model="formState"
+          :wrapper-col="wrapperCol"
+          class="auth-settings-form"
+          layout="horizontal"
+        >
         <Form.Item
           :label="$t('plugin.linapro-oidc-discord.settings.clientIdLabel')"
+          :rules="
+            requiredRule(
+              $t('plugin.linapro-oidc-discord.settings.clientIdLabel'),
+            )
+          "
           :tooltip="$t('plugin.linapro-oidc-discord.settings.clientIdHelp')"
           name="clientId"
+          required
         >
           <Input
             v-model:value="formState.clientId"
@@ -221,6 +256,14 @@ onMounted(loadSettings);
         </Form.Item>
         <Form.Item
           :label="$t('plugin.linapro-oidc-discord.settings.clientSecretLabel')"
+          :required="!secretConfigured"
+          :rules="
+            secretConfigured
+              ? []
+              : requiredRule(
+                  $t('plugin.linapro-oidc-discord.settings.clientSecretLabel'),
+                )
+          "
           :tooltip="$t('plugin.linapro-oidc-discord.settings.clientSecretHelp')"
           name="clientSecret"
         >
@@ -303,7 +346,10 @@ onMounted(loadSettings);
           </div>
         </Form.Item>
         <template v-if="formState.enableBackendRedirect">
-          <div class="mb-2 flex items-center justify-between">
+          <div
+            class="mb-3 flex items-center justify-between"
+            :style="{ marginLeft: '180px', maxWidth: '720px' }"
+          >
             <span class="inline-flex items-center gap-1 font-medium">
               {{ $t('plugin.linapro-oidc-discord.settings.rulesTitle') }}
               <Tooltip
@@ -322,10 +368,9 @@ onMounted(loadSettings);
           <div
             v-for="(rule, index) in formState.rules"
             :key="index"
-            class="mb-3 grid w-full grid-cols-1 gap-2 md:grid-cols-[10rem_minmax(0,1fr)_auto]"
+            class="mb-2"
           >
             <Form.Item
-              class="mb-0"
               :label="$t('plugin.linapro-oidc-discord.settings.ruleKeyLabel')"
               :tooltip="$t('plugin.linapro-oidc-discord.settings.ruleKeyHelp')"
             >
@@ -337,33 +382,46 @@ onMounted(loadSettings);
               />
             </Form.Item>
             <Form.Item
-              class="mb-0"
               :label="$t('plugin.linapro-oidc-discord.settings.ruleUrlLabel')"
               :tooltip="$t('plugin.linapro-oidc-discord.settings.ruleUrlHelp')"
             >
-              <Input
-                v-model:value="rule.url"
-                :placeholder="
-                  $t('plugin.linapro-oidc-discord.settings.ruleUrlPlaceholder')
-                "
-              />
+              <div class="flex flex-wrap items-center gap-2">
+                <Input
+                  v-model:value="rule.url"
+                  class="min-w-0 flex-1"
+                  :placeholder="
+                    $t(
+                      'plugin.linapro-oidc-discord.settings.ruleUrlPlaceholder',
+                    )
+                  "
+                />
+                <Button size="small" @click="copyLoginUrl(rule)">
+                  {{ $t('plugin.linapro-oidc-discord.settings.copyLoginUrl') }}
+                </Button>
+                <Button danger size="small" @click="removeRule(index)">
+                  {{ $t('plugin.linapro-oidc-discord.settings.deleteRule') }}
+                </Button>
+              </div>
             </Form.Item>
-            <div class="flex items-end gap-1 pb-1">
-              <Button size="small" @click="copyLoginUrl(rule)">
-                {{ $t('plugin.linapro-oidc-discord.settings.copyLoginUrl') }}
-              </Button>
-              <Button danger size="small" @click="removeRule(index)">
-                {{ $t('plugin.linapro-oidc-discord.settings.deleteRule') }}
-              </Button>
-            </div>
           </div>
         </template>
-        <Form.Item class="mt-4">
+        <Form.Item class="mt-4" label=" ">
           <Button :loading="saving" type="primary" @click="saveSettings">
             {{ $t('plugin.linapro-oidc-discord.settings.save') }}
           </Button>
         </Form.Item>
-      </Form>
+        </Form>
+      </div>
     </Card>
   </div>
 </template>
+
+<style scoped>
+/*
+ * Align raw ant-design Form labels with host useVbenForm conventions:
+ * medium (semi-bold) weight and no trailing colon (handled via :colon="false").
+ */
+.auth-settings-form :deep(.ant-form-item-label > label) {
+  font-weight: 500;
+}
+</style>

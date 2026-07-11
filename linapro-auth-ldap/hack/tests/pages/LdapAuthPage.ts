@@ -15,16 +15,22 @@ export class LdapAuthPage {
     return this.page.getByTestId('linapro-auth-ldap-entry-button');
   }
 
-  get settingsCardTitle() {
-    // Card title may equal menu title ("LDAP 设置"); scope to form card head.
-    return this.page
-      .locator('.ant-card-head-title')
-      .filter({ hasText: /LDAP 设置|LDAP Settings/i })
-      .first();
+  /** Settings form uses host horizontal layout (label left / control right). */
+  get settingsForm() {
+    return this.page.locator('form.ant-form-horizontal').first();
+  }
+
+  /** Page intro tip uses host-standard info Alert above the form. */
+  get settingsIntroAlert() {
+    return this.page.locator('.ant-alert-info').first();
   }
 
   get fieldHelpIcons() {
     return this.page.locator('.ant-form-item-tooltip');
+  }
+
+  get requiredFieldLabels() {
+    return this.settingsForm.locator('.ant-form-item-required');
   }
 
   async openSettingsPage() {
@@ -34,7 +40,7 @@ export class LdapAuthPage {
     await layout.expandSidebarGroup(/授权登录|Auth Login/i);
     await layout.sidebarMenuItem(/LDAP 设置|LDAP Settings|LDAP/i).click();
     await waitForRouteReady(this.page);
-    await expect(this.settingsCardTitle).toBeVisible({ timeout: 15000 });
+    await expect(this.settingsForm).toBeVisible({ timeout: 15000 });
   }
 
   async expectFieldHelpTooltip(helpText: string | RegExp) {

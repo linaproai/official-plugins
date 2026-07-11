@@ -18,16 +18,22 @@ export class GenericOidcPage {
     return this.page.getByTestId('linapro-oidc-generic-entry-button');
   }
 
-  get settingsCardTitle() {
-    // Card title may equal menu title ("OIDC 设置"); scope to form card head.
-    return this.page
-      .locator('.ant-card-head-title')
-      .filter({ hasText: /OIDC 设置|OIDC Settings/i })
-      .first();
+  /** Settings form uses host horizontal layout (label left / control right). */
+  get settingsForm() {
+    return this.page.locator('form.ant-form-horizontal').first();
+  }
+
+  /** Page intro tip uses host-standard info Alert above the form. */
+  get settingsIntroAlert() {
+    return this.page.locator('.ant-alert-info').first();
   }
 
   get fieldHelpIcons() {
     return this.page.locator('.ant-form-item-tooltip');
+  }
+
+  get requiredFieldLabels() {
+    return this.settingsForm.locator('.ant-form-item-required');
   }
 
   async openSettingsPage() {
@@ -39,7 +45,7 @@ export class GenericOidcPage {
       .sidebarMenuItem(/OIDC 设置|OIDC Settings/i)
       .click();
     await waitForRouteReady(this.page);
-    await expect(this.settingsCardTitle).toBeVisible({ timeout: 15000 });
+    await expect(this.settingsForm).toBeVisible({ timeout: 15000 });
   }
 
   async expectFieldHelpTooltip(helpText: string | RegExp) {

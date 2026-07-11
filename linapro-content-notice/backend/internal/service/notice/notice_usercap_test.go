@@ -179,6 +179,14 @@ func (s *fakeNoticeUserService) Create(context.Context, usercap.CreateInput) (us
 	return "", nil
 }
 
+// CreateFromExternal is unused by notice tests but required by usercap.Service.
+func (s *fakeNoticeUserService) CreateFromExternal(
+	context.Context,
+	usercap.CreateFromExternalInput,
+) (usercap.UserID, error) {
+	return "", nil
+}
+
 func (s *fakeNoticeUserService) Update(context.Context, usercap.UpdateInput) error {
 	return nil
 }

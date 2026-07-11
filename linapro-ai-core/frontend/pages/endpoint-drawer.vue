@@ -134,7 +134,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
 <template>
   <Drawer :title="title" class="w-[760px] max-w-[calc(100vw-32px)]">
     <div class="flex flex-col gap-4">
-      <div class="rounded border border-border">
+      <div class="rounded-xl border border-border">
         <div
           v-for="endpoint in endpoints"
           :key="endpoint.id"
