@@ -11,7 +11,7 @@ import { prepareSourcePluginsBaseline } from '@host-tests/fixtures/plugin';
 
 import { LdapAuthPage } from '../pages/LdapAuthPage';
 
-const ownerPluginID = 'linapro-extid-core';
+const ownerPluginID = 'linapro-extlogin-core';
 const pluginID = 'linapro-auth-ldap';
 
 test.describe('TC-2 linapro-auth-ldap 设置页字段帮助', () => {

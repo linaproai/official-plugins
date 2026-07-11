@@ -1,0 +1,8 @@
+{
+  "plugin": {
+    "linapro-extlogin-core": {
+      "description": "Official source plugin for third-party login identity linking and account provisioning. OAuth login plugins such as Google and Discord depend on it.",
+      "name": "External Login Core"
+    }
+  }
+}

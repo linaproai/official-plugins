@@ -11,7 +11,7 @@ import { prepareSourcePluginsBaseline } from '@host-tests/fixtures/plugin';
 
 import { GenericOidcPage } from '../pages/GenericOidcPage';
 
-const ownerPluginID = 'linapro-extid-core';
+const ownerPluginID = 'linapro-extlogin-core';
 const pluginID = 'linapro-oidc-generic';
 
 test.describe('TC-2 linapro-oidc-generic 设置页字段帮助', () => {

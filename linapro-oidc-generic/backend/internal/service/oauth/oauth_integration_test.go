@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"lina-core/pkg/plugin/capability/authcap/extlogin"
-	"lina-plugin-linapro-extid-core/backend/cap/extidcap"
+	"lina-plugin-linapro-extlogin-core/backend/cap/extidcap"
 )
 
 type integrationExtLogin struct {

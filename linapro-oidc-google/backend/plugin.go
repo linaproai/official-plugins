@@ -16,7 +16,7 @@ import (
 	settingsctrl "lina-plugin-linapro-oidc-google/backend/internal/controller/settings"
 	oauthsvc "lina-plugin-linapro-oidc-google/backend/internal/service/oauth"
 	settingssvc "lina-plugin-linapro-oidc-google/backend/internal/service/settings"
-	"lina-plugin-linapro-extid-core/backend/cap/extidcap"
+	"lina-plugin-linapro-extlogin-core/backend/cap/extidcap"
 )
 
 // pluginID is the immutable identifier declared by the embedded plugin.yaml.
@@ -38,7 +38,7 @@ func init() {
 	if err := plugin.Providers().ProvideExternalIdentity(oauthsvc.Provider); err != nil {
 		panic(err)
 	}
-	// Register this protocol provider into the linapro-extid-core catalog so
+	// Register this protocol provider into the linapro-extlogin-core catalog so
 	// login/personal-center UIs can discover it when the domain plugin is enabled.
 	extidcap.RegisterProviderDescriptor(extidcap.ProviderDescriptor{
 		ID:          oauthsvc.Provider,

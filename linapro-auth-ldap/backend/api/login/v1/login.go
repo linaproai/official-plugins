@@ -13,5 +13,5 @@ type LoginReq struct {
 
 // LoginRes carries the handoff for SPA exchange.
 type LoginRes struct {
-	Handoff string `json:"handoff" dc:"One-time handoff code; exchange via linapro-extid-core" eg:"handoff-code"`
+	Handoff string `json:"handoff" dc:"One-time handoff code; exchange via linapro-extlogin-core" eg:"handoff-code"`
 }

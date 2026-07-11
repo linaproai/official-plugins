@@ -1,0 +1,7 @@
+{
+  "menu": {
+    "plugin:linapro-extlogin-core:auth-login": {
+      "title": "授权登录"
+    }
+  }
+}

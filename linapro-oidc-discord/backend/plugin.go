@@ -11,7 +11,7 @@ import (
 
 	"lina-core/pkg/logger"
 	"lina-core/pkg/plugin/pluginhost"
-	"lina-plugin-linapro-extid-core/backend/cap/extidcap"
+	"lina-plugin-linapro-extlogin-core/backend/cap/extidcap"
 	pluginoidcdiscord "lina-plugin-linapro-oidc-discord"
 	loginctrl "lina-plugin-linapro-oidc-discord/backend/internal/controller/login"
 	settingsctrl "lina-plugin-linapro-oidc-discord/backend/internal/controller/settings"

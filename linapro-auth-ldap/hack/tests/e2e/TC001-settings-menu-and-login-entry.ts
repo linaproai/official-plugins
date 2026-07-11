@@ -11,7 +11,7 @@ import { LoginPage } from '@host-tests/pages/LoginPage';
 import { waitForRouteReady } from '@host-tests/support/ui';
 import { LdapAuthPage } from '../pages/LdapAuthPage';
 
-const ownerPluginID = 'linapro-extid-core';
+const ownerPluginID = 'linapro-extlogin-core';
 const pluginID = 'linapro-auth-ldap';
 
 type MenuNode = { children?: MenuNode[]; name?: string; path?: string };

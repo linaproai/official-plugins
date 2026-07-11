@@ -11,7 +11,7 @@ import { prepareSourcePluginsBaseline } from "@host-tests/fixtures/plugin";
 
 import { GoogleOidcPage } from "../pages/GoogleOidcPage";
 
-const ownerPluginID = "linapro-extid-core";
+const ownerPluginID = "linapro-extlogin-core";
 const pluginID = "linapro-oidc-google";
 
 test.describe("TC-2 linapro-oidc-google 设置页字段帮助", () => {

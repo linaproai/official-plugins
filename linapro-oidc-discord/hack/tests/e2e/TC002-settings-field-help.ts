@@ -11,7 +11,7 @@ import { prepareSourcePluginsBaseline } from "@host-tests/fixtures/plugin";
 
 import { DiscordOidcPage } from "../pages/DiscordOidcPage";
 
-const ownerPluginID = "linapro-extid-core";
+const ownerPluginID = "linapro-extlogin-core";
 const pluginID = "linapro-oidc-discord";
 
 test.describe("TC-2 linapro-oidc-discord 设置页字段帮助", () => {

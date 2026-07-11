@@ -15,7 +15,7 @@ import (
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/logger"
 	"lina-core/pkg/plugin/capability/authcap/extlogin"
-	"lina-plugin-linapro-extid-core/backend/cap/extidcap"
+	"lina-plugin-linapro-extlogin-core/backend/cap/extidcap"
 )
 
 func (s *serviceImpl) resolveAllowAutoProvision(ctx context.Context) bool {

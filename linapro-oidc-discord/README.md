@@ -1,6 +1,6 @@
 # linapro-oidc-discord
 
-`linapro-oidc-discord` is the official source plugin that adds Discord sign-in to the `LinaPro` login page. It ships OAuth settings, optional auto-provisioning, and depends on `linapro-extid-core` for identity linking and account provisioning.
+`linapro-oidc-discord` is the official source plugin that adds Discord sign-in to the `LinaPro` login page. It ships OAuth settings, optional auto-provisioning, and depends on `linapro-extlogin-core` for identity linking and account provisioning.
 
 English | [简体中文](README.zh-CN.md)
 
@@ -38,7 +38,7 @@ linapro-oidc-discord/
 
 ## New External-Identity Seam Integration
 
-The host owns tenant candidate resolution and token minting, and delegates `(provider, subject)` linkage resolution plus provisioning policy to `linapro-extid-core`, which this plugin declares as a dependency in `plugin.yaml`. When `linapro-extid-core` is not installed or enabled, external login is fail-closed. This plugin only submits the verified identity DTO and forwards the outcome to the SPA login page.
+The host owns tenant candidate resolution and token minting, and delegates `(provider, subject)` linkage resolution plus provisioning policy to `linapro-extlogin-core`, which this plugin declares as a dependency in `plugin.yaml`. When `linapro-extlogin-core` is not installed or enabled, external login is fail-closed. This plugin only submits the verified identity DTO and forwards the outcome to the SPA login page.
 
 | Step | Actor | Action |
 | --- | --- | --- |
@@ -78,11 +78,11 @@ Its `pluginSlotMeta.order` is `20`, so when both `linapro-oidc-google` (order `1
 
 - provider ownership is declared through `ProvideExternalIdentity`
 - login routes stay on the plugin-owned portal path group, outside the `/x` API namespace
-- tenant resolution and token minting stay host-owned; linkage storage and provisioning policy stay in `linapro-extid-core`
+- tenant resolution and token minting stay host-owned; linkage storage and provisioning policy stay in `linapro-extlogin-core`
 - OAuth stub is documented and easy to replace
 - Vue slot component is only rendered when the plugin is installed and enabled
 
 ## Dependency and handoff
 
-- Depends on managed `linapro-extid-core` (install and enable first).
-- Successful login redirects carry only a one-time `handoff`; the SPA exchanges it via managed plugin `linapro-extid-core` handoff API.
+- Depends on managed `linapro-extlogin-core` (install and enable first).
+- Successful login redirects carry only a one-time `handoff`; the SPA exchanges it via managed plugin `linapro-extlogin-core` handoff API.

@@ -71,15 +71,15 @@ i18n:
 # Plugin dependency declaration. `plugins` lists plugin-to-plugin dependencies.
 # 插件依赖声明。`plugins` 声明插件间依赖。
 dependencies:
-  # Other plugins required by this plugin. linapro-extid-core owns the external
+  # Other plugins required by this plugin. linapro-extlogin-core owns the external
   # identity linkage storage and the resolve/provision engine behind the host
   # external-login seam; without it enabled, directory login is fail-closed.
-  # 当前插件依赖的其他插件。linapro-extid-core 拥有外部身份链接存储和宿主外部登录
+  # 当前插件依赖的其他插件。linapro-extlogin-core 拥有外部身份链接存储和宿主外部登录
   # seam 背后的解析/开户引擎；未启用时目录登录 fail-closed。
   plugins:
     # Dependency plugin ID.
     # 依赖插件 ID。
-    - id: linapro-extid-core
+    - id: linapro-extlogin-core
       # Dependency plugin semantic-version range.
       # 依赖插件语义化版本范围。
       version: ">=0.1.0"
@@ -90,10 +90,10 @@ menus:
   # Unique menu key; it must use the `plugin:<plugin-id>:<menu-key>` format.
   # 菜单唯一键，必须使用 `plugin:<plugin-id>:<menu-key>` 格式。
   - key: plugin:linapro-auth-ldap:settings
-    # Parent menu key pointing to the linapro-extid-core Auth Login catalog.
-    # That directory is created when linapro-extid-core is installed.
-    # 父级菜单键，指向 linapro-extid-core 安装时创建的「授权登录」目录。
-    parent_key: plugin:linapro-extid-core:auth-login
+    # Parent menu key pointing to the linapro-extlogin-core Auth Login catalog.
+    # That directory is created when linapro-extlogin-core is installed.
+    # 父级菜单键，指向 linapro-extlogin-core 安装时创建的「授权登录」目录。
+    parent_key: plugin:linapro-extlogin-core:auth-login
     # Menu display name.
     # 菜单显示名称。
     name: LDAP Settings

@@ -10,7 +10,7 @@ import (
 
 	"lina-core/pkg/logger"
 	"lina-core/pkg/plugin/pluginhost"
-	"lina-plugin-linapro-extid-core/backend/cap/extidcap"
+	"lina-plugin-linapro-extlogin-core/backend/cap/extidcap"
 	pluginoidcgeneric "lina-plugin-linapro-oidc-generic"
 	loginctrl "lina-plugin-linapro-oidc-generic/backend/internal/controller/login"
 	settingsctrl "lina-plugin-linapro-oidc-generic/backend/internal/controller/settings"

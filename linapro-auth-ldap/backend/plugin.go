@@ -13,7 +13,7 @@ import (
 	settingsctrl "lina-plugin-linapro-auth-ldap/backend/internal/controller/settings"
 	ldapauthsvc "lina-plugin-linapro-auth-ldap/backend/internal/service/ldapauth"
 	settingssvc "lina-plugin-linapro-auth-ldap/backend/internal/service/settings"
-	"lina-plugin-linapro-extid-core/backend/cap/extidcap"
+	"lina-plugin-linapro-extlogin-core/backend/cap/extidcap"
 )
 
 const pluginID = "linapro-auth-ldap"

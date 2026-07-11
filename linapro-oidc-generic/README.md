@@ -2,7 +2,7 @@
 
 `linapro-oidc-generic` is an official LinaPro **managed** source plugin that adds
 configurable enterprise OIDC sign-in to the login page. It depends on
-`linapro-extid-core` for identity linkage, provisioning policy, and SPA handoff.
+`linapro-extlogin-core` for identity linkage, provisioning policy, and SPA handoff.
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
@@ -10,7 +10,7 @@ configurable enterprise OIDC sign-in to the login page. It depends on
 
 | Owns | Does not own |
 | --- | --- |
-| OIDC Authorization Code + PKCE, Discovery, JWKS id_token verify | Linkage table / provision engine (`linapro-extid-core`) |
+| OIDC Authorization Code + PKCE, Discovery, JWKS id_token verify | Linkage table / provision engine (`linapro-extlogin-core`) |
 | Admin settings (issuer, client, scopes, JIT flag) | Host JWT / session minting |
 | Login portal routes + `auth.login.after` entry | Multi-connection UI (v1.1), LDAP, tenant-scoped IdP |
 
@@ -18,7 +18,7 @@ configurable enterprise OIDC sign-in to the login page. It depends on
 
 ## Install order
 
-1. Install and enable `linapro-extid-core`
+1. Install and enable `linapro-extlogin-core`
 2. Install and enable `linapro-oidc-generic`
 3. Configure issuer / client credentials on the settings page
 4. Register the callback URL at the IdP
@@ -29,7 +29,7 @@ configurable enterprise OIDC sign-in to the login page. It depends on
 2. Plugin runs Discovery, builds authorize URL with PKCE + state + nonce
 3. IdP callback → code exchange → verify `id_token`
 4. `LoginByVerifiedIdentity(provider=oidc:default, ...)`
-5. SPA receives **handoff only** (no JWT in URL) via `linapro-extid-core` exchange
+5. SPA receives **handoff only** (no JWT in URL) via `linapro-extlogin-core` exchange
 
 ## Settings
 
@@ -53,7 +53,7 @@ Persisted through host `sys_config` (created on first save; no mandatory SQL see
 
 ## Review checklist
 
-- Depends on `linapro-extid-core` in `plugin.yaml`
+- Depends on `linapro-extlogin-core` in `plugin.yaml`
 - `ProvideExternalIdentity("oidc:default")`
 - No linkage table in this plugin
 - Managed distribution; not builtin

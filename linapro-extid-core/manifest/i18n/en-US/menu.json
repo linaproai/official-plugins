@@ -1,7 +1,0 @@
-{
-  "menu": {
-    "plugin:linapro-extid-core:auth-login": {
-      "title": "Auth Login"
-    }
-  }
-}

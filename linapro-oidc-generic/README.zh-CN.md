@@ -1,6 +1,6 @@
 # linapro-oidc-generic
 
-`linapro-oidc-generic` 是 LinaPro 官方 **managed** 源码插件，用于在登录页接入可配置的企业 OIDC 登录，并依赖 `linapro-extid-core` 完成身份链接、开户策略与 SPA handoff。
+`linapro-oidc-generic` 是 LinaPro 官方 **managed** 源码插件，用于在登录页接入可配置的企业 OIDC 登录，并依赖 `linapro-extlogin-core` 完成身份链接、开户策略与 SPA handoff。
 
 [English](README.md) | 简体中文
 
@@ -8,7 +8,7 @@
 
 | 本插件拥有 | 不拥有 |
 | --- | --- |
-| OIDC 授权码 + PKCE、Discovery、JWKS 验 id_token | 链接表 / 开户引擎（`linapro-extid-core`） |
+| OIDC 授权码 + PKCE、Discovery、JWKS 验 id_token | 链接表 / 开户引擎（`linapro-extlogin-core`） |
 | 管理设置（issuer、client、scopes、JIT） | 宿主 JWT / 会话铸造 |
 | portal 登录路由 + `auth.login.after` 入口 | 多连接 UI（v1.1）、LDAP、租户级 IdP |
 
@@ -16,7 +16,7 @@
 
 ## 安装顺序
 
-1. 安装并启用 `linapro-extid-core`
+1. 安装并启用 `linapro-extlogin-core`
 2. 安装并启用 `linapro-oidc-generic`
 3. 在设置页配置 issuer / 客户端凭证
 4. 在 IdP 登记回调 URL
@@ -27,7 +27,7 @@
 2. Discovery → 构造 authorize（PKCE + state + nonce）
 3. 回调 → 换票 → 验 `id_token`
 4. `LoginByVerifiedIdentity(provider=oidc:default, ...)`
-5. SPA 仅带 **handoff**（JWT 不进 URL），由 `linapro-extid-core` 兑换会话
+5. SPA 仅带 **handoff**（JWT 不进 URL），由 `linapro-extlogin-core` 兑换会话
 
 ## 配置
 
@@ -51,7 +51,7 @@
 
 ## 审查清单
 
-- `plugin.yaml` 依赖 `linapro-extid-core`
+- `plugin.yaml` 依赖 `linapro-extlogin-core`
 - `ProvideExternalIdentity("oidc:default")`
 - 本插件无链接表
 - `distribution: managed`，非 builtin

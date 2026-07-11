@@ -18,11 +18,11 @@ The workspace currently contains source plugins compiled into the host, plus one
 | `linapro-monitor-operlog` | `source` | `tenant_aware` | `tenant_scoped` | Operation log persistence and governance pages |
 | `linapro-monitor-loginlog` | `source` | `tenant_aware` | `tenant_scoped` | Login log persistence and governance pages |
 | `linapro-ops-demo-guard` | `source` | `tenant_aware` | `global` | Demo-environment read-only protection and global write-operation interception |
-| `linapro-extid-core` | `source` | `platform_only` | `global` | External identity linkage storage, resolve/provision engine behind the host external-login seam, and current-user identity bind/unbind/list |
-| `linapro-oidc-google` | `source` | `platform_only` | `global` | Official Google sign-in on the login page (OAuth settings, optional auto-provisioning, One Tap); depends on `linapro-extid-core` |
-| `linapro-oidc-discord` | `source` | `platform_only` | `global` | Official Discord sign-in on the login page (OAuth settings, optional auto-provisioning); depends on `linapro-extid-core` |
-| `linapro-oidc-generic` | `source` | `platform_only` | `global` | Configurable enterprise OIDC sign-in on the login page (Discovery/PKCE, auto-provision default off); depends on `linapro-extid-core` |
-| `linapro-auth-ldap` | `source` | `platform_only` | `global` | Directory (LDAP/AD) sign-in on the login page (form bind, auto-provision default off); depends on `linapro-extid-core` |
+| `linapro-extlogin-core` | `source` | `platform_only` | `global` | External identity linkage storage, resolve/provision engine behind the host external-login seam, and current-user identity bind/unbind/list |
+| `linapro-oidc-google` | `source` | `platform_only` | `global` | Official Google sign-in on the login page (OAuth settings, optional auto-provisioning, One Tap); depends on `linapro-extlogin-core` |
+| `linapro-oidc-discord` | `source` | `platform_only` | `global` | Official Discord sign-in on the login page (OAuth settings, optional auto-provisioning); depends on `linapro-extlogin-core` |
+| `linapro-oidc-generic` | `source` | `platform_only` | `global` | Configurable enterprise OIDC sign-in on the login page (Discovery/PKCE, auto-provision default off); depends on `linapro-extlogin-core` |
+| `linapro-auth-ldap` | `source` | `platform_only` | `global` | Directory (LDAP/AD) sign-in on the login page (form bind, auto-provision default off); depends on `linapro-extlogin-core` |
 | `linapro-demo-source` | `source` | `tenant_aware` | `tenant_scoped` | Source plugin example for menu pages, public routes, and protected routes |
 | `linapro-demo-dynamic` | `dynamic` | `tenant_aware` | `tenant_scoped` | Dynamic `WASM` plugin example for embedded menu pages, plugin-owned `SQL` table `CRUD`, and standalone static pages |
 
@@ -192,7 +192,7 @@ Use plugin-local `api_contract_test.go` and Go package tests for backend contrac
 |-------|--------|
 | Plugin manifest check | Every `*/plugin.yaml` package contract (`id` matches directory, `version`/`type`, `go.mod`, embed/main entry) |
 | Go unit tests | Every plugin module against `linaproai/linapro` `apps/lina-core` (default host ref `main`) |
-| Auth Go unit tests | Explicit gate for `linapro-extid-core`, `linapro-auth-ldap`, `linapro-oidc-*` |
+| Auth Go unit tests | Explicit gate for `linapro-extlogin-core`, `linapro-auth-ldap`, `linapro-oidc-*` |
 | Auth integration (LDAP + OIDC) | Live OpenLDAP bind login + live OIDC code/PKCE/id_token login via `hack/ci` |
 
 The workflow checks out the host monorepo with sparse `apps/lina-core`, overlays this repository at `apps/lina-plugins`, generates a temporary `go.work`, and runs `go test ./...` per plugin.

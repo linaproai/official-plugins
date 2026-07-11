@@ -1,6 +1,6 @@
 # linapro-oidc-google
 
-`linapro-oidc-google` 是 `LinaPro` 官方源码插件，用于在登录页接入 Google 账号登录，提供 OAuth 配置、可选自动注册与 One Tap 嵌入，并依赖 `linapro-extid-core` 完成身份绑定与账号开通。
+`linapro-oidc-google` 是 `LinaPro` 官方源码插件，用于在登录页接入 Google 账号登录，提供 OAuth 配置、可选自动注册与 One Tap 嵌入，并依赖 `linapro-extlogin-core` 完成身份绑定与账号开通。
 
 [English](README.md) | 简体中文
 
@@ -38,7 +38,7 @@ linapro-oidc-google/
 
 ## 与新版外部身份接缝的集成
 
-宿主负责租户候选与 Token 发放，并把`(provider, subject)`链接解析与开户策略委托给`linapro-extid-core`（本插件已在`plugin.yaml`中声明对它的依赖）。`linapro-extid-core`未安装或未启用时，外部登录 fail-closed。本插件只提交“已验证”的身份 DTO，并把宿主返回结果带回 SPA。
+宿主负责租户候选与 Token 发放，并把`(provider, subject)`链接解析与开户策略委托给`linapro-extlogin-core`（本插件已在`plugin.yaml`中声明对它的依赖）。`linapro-extlogin-core`未安装或未启用时，外部登录 fail-closed。本插件只提交“已验证”的身份 DTO，并把宿主返回结果带回 SPA。
 
 | 步骤 | 参与方 | 动作 |
 | --- | --- | --- |
@@ -77,11 +77,11 @@ Vue 插槽组件位于 `frontend/slots/auth.login.social/google-login-entry.vue`
 
 - 已通过 `ProvideExternalIdentity` 声明 provider 归属
 - 登录路由挂在插件私有 portal 路径组，未占用 `/x` API 命名空间
-- 租户解析与 Token 发放保持宿主拥有；链接存储与开户策略归`linapro-extid-core`
+- 租户解析与 Token 发放保持宿主拥有；链接存储与开户策略归`linapro-extlogin-core`
 - OAuth stub 有清晰的替换指引
 - Vue 插槽组件仅在插件安装并启用时才被挂载
 
 ## 依赖与回跳
 
-- 依赖 `linapro-extid-core`（managed）：请先安装并启用领域插件。
-- 登录成功后 SPA 回跳仅携带一次性 `handoff`，由 `linapro-extid-core` 公开 API `/x/linapro-extid-core/api/v1/handoff/exchange` 兑换会话。
+- 依赖 `linapro-extlogin-core`（managed）：请先安装并启用领域插件。
+- 登录成功后 SPA 回跳仅携带一次性 `handoff`，由 `linapro-extlogin-core` 公开 API `/x/linapro-extlogin-core/api/v1/handoff/exchange` 兑换会话。

@@ -138,7 +138,7 @@ jobs:
           # 认证族始终包含外部身份引擎依赖。
           auth_json="$(
             printf '%s\n' \
-              linapro-extid-core \
+              linapro-extlogin-core \
               linapro-auth-ldap \
               linapro-oidc-discord \
               linapro-oidc-generic \

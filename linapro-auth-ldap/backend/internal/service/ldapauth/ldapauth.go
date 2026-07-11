@@ -11,7 +11,7 @@ import (
 	"lina-core/pkg/logger"
 	"lina-core/pkg/plugin/capability/authcap/extlogin"
 	settingssvc "lina-plugin-linapro-auth-ldap/backend/internal/service/settings"
-	"lina-plugin-linapro-extid-core/backend/cap/extidcap"
+	"lina-plugin-linapro-extlogin-core/backend/cap/extidcap"
 )
 
 // Provider is the stable external-identity provider ID owned by this plugin.

@@ -1,7 +1,7 @@
 /**
  * TC001 linapro-oidc-discord 菜单挂载与登录入口
  *
- * - 依赖 linapro-extid-core 的授权登录目录
+ * - 依赖 linapro-extlogin-core 的授权登录目录
  * - 设置菜单挂在该目录下
  * - 未配置 Client 凭证时登录入口 fail-closed 回登录页
  */
@@ -23,7 +23,7 @@ import { waitForRouteReady } from "@host-tests/support/ui";
 
 import { DiscordOidcPage } from "../pages/DiscordOidcPage";
 
-const ownerPluginID = "linapro-extid-core";
+const ownerPluginID = "linapro-extlogin-core";
 const pluginID = "linapro-oidc-discord";
 
 type MenuNode = {

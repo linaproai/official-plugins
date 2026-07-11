@@ -6,7 +6,7 @@ require (
 	github.com/go-ldap/ldap/v3 v3.4.11
 	github.com/gogf/gf/v2 v2.10.1
 	lina-core v0.0.0
-	lina-plugin-linapro-extid-core v0.0.0
+	lina-plugin-linapro-extlogin-core v0.0.0
 )
 
 require (
@@ -44,4 +44,4 @@ require (
 
 replace lina-core => ../../lina-core
 
-replace lina-plugin-linapro-extid-core => ../linapro-extid-core
+replace lina-plugin-linapro-extlogin-core => ../linapro-extlogin-core
