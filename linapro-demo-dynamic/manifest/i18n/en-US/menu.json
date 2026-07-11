@@ -1,7 +1,7 @@
 {
   "menu": {
     "plugin:linapro-demo-dynamic:main-entry": {
-      "title": "Dynamic Plugin Demo"
+      "title": "Sample Plugin - Dynamic"
     }
   }
 }

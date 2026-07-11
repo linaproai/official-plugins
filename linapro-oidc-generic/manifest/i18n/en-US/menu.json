@@ -1,0 +1,10 @@
+{
+  "menu": {
+    "plugin:linapro-oidc-generic:settings": {
+      "title": "OIDC Settings"
+    },
+    "plugin:linapro-oidc-generic:settings-update": {
+      "title": "Save Settings"
+    }
+  }
+}

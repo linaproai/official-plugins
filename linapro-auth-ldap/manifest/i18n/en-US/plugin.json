@@ -1,0 +1,54 @@
+{
+  "plugin": {
+    "linapro-auth-ldap": {
+      "description": "Sign in with enterprise LDAP or Active Directory accounts via a form on the login page. Requires Third-party Login - Core.",
+      "name": "Third-party Login - LDAP",
+      "login": {
+        "button": "Continue with LDAP",
+        "modalTitle": "LDAP login",
+        "usernameLabel": "Username",
+        "passwordLabel": "Password",
+        "credentialsRequired": "Username and password are required",
+        "failed": "Directory login failed."
+      },
+      "settings": {
+        "title": "LDAP Settings",
+        "description": "Configure a single LDAP/Active Directory connection. Prefer LDAPS or StartTLS. Use a stable subject attribute (entryUUID / objectGUID).",
+        "displayNameLabel": "Display name",
+        "displayNameHelp": "The name shown on the login entry so users can recognize it, for example “Company directory login”.",
+        "hostLabel": "Host",
+        "hostHelp": "The directory server address. Use a hostname or IP, for example ldap.example.com.",
+        "portLabel": "Port",
+        "portHelp": "Connection port. Common values: 636 for LDAPS, 389 for StartTLS or plain connections.",
+        "tlsModeLabel": "TLS mode",
+        "tlsModeHelp": "How the connection is encrypted. Prefer LDAPS or StartTLS in production. Plain is only for localhost debugging; non-local plain hosts are rejected.",
+        "bindDnLabel": "Service bind DN",
+        "bindDnHelp": "The full path of a service account used to look up users in the directory. Leave empty if users bind with their own accounts.",
+        "bindPasswordLabel": "Service bind password",
+        "bindPasswordHelp": "Password for the service account above. Leave empty to keep the stored password unchanged.",
+        "bindPasswordPlaceholder": "Service account password",
+        "bindPasswordKeepPlaceholder": "Leave empty to keep stored password",
+        "baseDnLabel": "Search base DN",
+        "baseDnHelp": "Where in the directory to start looking for users, for example ou=people,dc=example,dc=com. A narrower base is faster and safer.",
+        "userFilterLabel": "User filter",
+        "userFilterHelp": "How to find a user by login name. {username} is replaced with what the user typed, for example (uid={username}) or (sAMAccountName={username}).",
+        "userDnTemplateLabel": "User DN template",
+        "userDnTemplateHelp": "If user paths follow a fixed pattern, build the user location directly, for example uid={username},ou=people,dc=example,dc=com. When set, search by filter can be skipped.",
+        "userDnTemplatePlaceholder": "uid={username},ou=people,dc=example,dc=com",
+        "subjectAttrLabel": "Subject attribute",
+        "subjectAttrHelp": "The attribute used as the stable unique identity for a directory user. Prefer values that do not change, such as entryUUID or objectGUID, not renameable fields.",
+        "emailAttrLabel": "Email attribute",
+        "emailAttrHelp": "Directory attribute used for email. Common value: mail.",
+        "displayNameAttrLabel": "Display name attribute",
+        "displayNameAttrHelp": "Directory attribute used for the display name. Common values: cn or displayName.",
+        "autoProvisionLabel": "Auto-provision new users",
+        "autoProvisionHelp": "When on: a first-time directory login that is not linked to a local account creates a least-privilege platform user. When off: unlinked directory accounts cannot sign in.",
+        "autoProvisionHint": "Off by default. When enabled, verified directory identities without a linked account get a least-privilege platform user.",
+        "save": "Save",
+        "saveSuccess": "LDAP settings saved.",
+        "saveFailed": "Failed to save LDAP settings.",
+        "loadFailed": "Failed to load LDAP settings."
+      }
+    }
+  }
+}

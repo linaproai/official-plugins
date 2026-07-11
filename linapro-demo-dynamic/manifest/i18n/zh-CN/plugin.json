@@ -2,7 +2,7 @@
   "plugin": {
     "linapro-demo-dynamic": {
       "description": "提供独立的 dynamic wasm 插件样例，演示左侧菜单内嵌页面、插件自有 SQL 表 CRUD 与独立静态页面跳转",
-      "name": "动态插件示例",
+      "name": "示例插件-动态插件",
       "page": {
         "action": {
           "addRecord": "新增记录",

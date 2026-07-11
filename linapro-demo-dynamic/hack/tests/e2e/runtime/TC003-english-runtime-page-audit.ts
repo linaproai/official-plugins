@@ -31,7 +31,7 @@ import {
 } from "../../support/plugin-dependencies";
 
 const pluginID = "linapro-demo-dynamic";
-const pluginMenuNamePattern = /Dynamic Plugin Demo|动态插件示例/u;
+const pluginMenuNamePattern = /Sample Plugin - Dynamic|示例插件-动态插件/u;
 const recordTable = "plugin_linapro_demo_dynamic_record";
 const publicBaseURL = config.publicBaseURL;
 const repoRoot = path.resolve(process.cwd(), "../..");
@@ -239,13 +239,13 @@ test.describe("TC003 英文运行时页面巡检", () => {
     await pluginPage.searchByPluginId(pluginID);
 
     await expect(pluginPage.pluginRow(pluginID)).toContainText(
-      "Dynamic Plugin Demo",
+      "Sample Plugin - Dynamic",
     );
     await expect(pluginPage.pluginDescriptionCell(pluginID)).toContainText(
       "Dynamic wasm sample that demonstrates a host-embedded menu page, plugin-owned SQL CRUD, and a hosted standalone page.",
     );
     const rowText = await pluginPage.pluginRow(pluginID).innerText();
-    expect(rowText).not.toContain("动态插件示例");
+    expect(rowText).not.toContain("示例插件-动态插件");
     expect(rowText).not.toContain("提供独立的 dynamic wasm 插件样例");
   });
 
@@ -261,7 +261,7 @@ test.describe("TC003 英文运行时页面巡检", () => {
     const apiPlugin = apiList.list.find((item) => item.id === pluginID);
     expect(apiPlugin).toBeTruthy();
     expect(apiPlugin?.installed).toBe(0);
-    expect(apiPlugin?.name).toBe("Dynamic Plugin Demo");
+    expect(apiPlugin?.name).toBe("Sample Plugin - Dynamic");
     expect(apiPlugin?.description).toBe(
       "Dynamic wasm sample that demonstrates a host-embedded menu page, plugin-owned SQL CRUD, and a hosted standalone page.",
     );
@@ -271,13 +271,13 @@ test.describe("TC003 英文运行时页面巡检", () => {
     await pluginPage.searchByPluginId(pluginID);
 
     await expect(pluginPage.pluginRow(pluginID)).toContainText(
-      "Dynamic Plugin Demo",
+      "Sample Plugin - Dynamic",
     );
     await expect(pluginPage.pluginDescriptionCell(pluginID)).toContainText(
       "Dynamic wasm sample that demonstrates a host-embedded menu page, plugin-owned SQL CRUD, and a hosted standalone page.",
     );
     const rowText = await pluginPage.pluginRow(pluginID).innerText();
-    expect(rowText).not.toContain("动态插件示例");
+    expect(rowText).not.toContain("示例插件-动态插件");
     expect(rowText).not.toContain("提供独立的 dynamic wasm 插件样例");
   });
 

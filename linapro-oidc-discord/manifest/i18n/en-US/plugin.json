@@ -1,0 +1,58 @@
+{
+  "plugin": {
+    "linapro-oidc-discord": {
+      "description": "Add Discord sign-in on the login page, with OAuth settings and optional auto-provisioning. Requires Third-party Login - Core.",
+      "name": "Third-party Login - Discord",
+      "login": {
+        "button": "Continue with Discord",
+        "callback": {
+          "error": "Discord login failed. Please try again.",
+          "unlinked": "This Discord account is not linked to any local user. Please contact the administrator."
+        }
+      },
+      "settings": {
+        "title": "Discord Login Settings",
+        "description": "Configure the Discord OAuth 2.0 client used by the login button. The redirect URL must match the callback URL registered in the Discord Developer Portal.",
+        "clientIdLabel": "Client ID",
+        "clientIdHelp": "The client ID from the OAuth application you created in the Discord Developer Portal. Think of it as the app’s account name.",
+        "clientIdPlaceholder": "Enter the Discord OAuth 2.0 client ID",
+        "clientSecretLabel": "Client Secret",
+        "clientSecretHelp": "The secret paired with the client ID. Think of it as the app’s password. Keep it safe. Leave empty to keep the stored secret unchanged.",
+        "clientSecretPlaceholder": "Enter the Discord OAuth 2.0 client secret",
+        "clientSecretKeepPlaceholder": "Leave unchanged to keep the stored secret",
+        "redirectUrlLabel": "Callback URL",
+        "redirectUrlHelp": "After users finish signing in with Discord, they return to this LinaPro address. It is generated automatically—copy it into the Redirects of your Discord application OAuth2 settings.",
+        "redirectUrlPlaceholder": "https://your-host/portal/linapro-oidc-discord/callback",
+        "redirectUrlHint": "Fixed by the plugin. Copy this URL into the Redirects of your Discord application OAuth2 settings.",
+        "copyCallbackUrl": "Copy",
+        "save": "Save",
+        "saveSuccess": "Discord login settings saved.",
+        "saveFailed": "Failed to save Discord login settings.",
+        "loadFailed": "Failed to load Discord login settings.",
+        "defaultRedirectLabel": "Workspace Landing Path",
+        "defaultRedirectHelp": "The page opened after a successful login into the workspace. Leave empty to use the system default home page. This is not the callback URL above. Ignored when SSO delivery matches a rule.",
+        "defaultRedirectPlaceholder": "/dashboard/analytics",
+        "defaultRedirectHint": "Default page path after a successful third-party login into the workspace. Leave empty to use the system default home page. Does not change the Callback URL above; ignored when SSO delivery matches a rule.",
+        "enableSsoLabel": "Enable SSO token delivery",
+        "enableSsoHelp": "For other business systems: they start login with an agreed key, and after success the tokens go straight to their receiver URL instead of the LinaPro workspace.",
+        "enableSsoHint": "When enabled, logins started with a matching state key deliver the tokens straight to the configured third-party receiver URL instead of the workspace.",
+        "rulesTitle": "SSO Delivery Rules",
+        "rulesHelp": "Each rule is one business scenario: the left side is the key the other system sends when starting login; the right side is where tokens are delivered after success.",
+        "addRule": "Add Rule",
+        "ruleKeyLabel": "Scenario key",
+        "ruleKeyHelp": "The identifier (state key) the other system includes when starting login. Use it to tell scenarios apart, for example app-a or portal-b.",
+        "ruleKeyPlaceholder": "e.g. app-a",
+        "ruleUrlLabel": "Receiver URL",
+        "ruleUrlHelp": "Where to send the login tokens after success. Use the receive URL provided by the other system.",
+        "ruleUrlPlaceholder": "https://third-party.example.com/sso/receive",
+        "copyLoginUrl": "Copy Login URL",
+        "copied": "Login URL copied.",
+        "copyFailed": "Failed to copy the login URL.",
+        "deleteRule": "Delete",
+        "autoProvisionLabel": "Auto-provision new users",
+        "autoProvisionHelp": "When on: a first-time Discord login that is not linked to a local account creates a least-privilege platform user. If the email already belongs to an existing account, login is rejected until that account links the identity.",
+        "autoProvisionHint": "When enabled, a verified Discord identity without a linked local account gets a least-privilege platform account automatically. If the email already belongs to an existing account, login is rejected until the identity is linked from that account."
+      }
+    }
+  }
+}

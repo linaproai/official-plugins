@@ -2,7 +2,7 @@
   "plugin": {
     "linapro-demo-source": {
       "description": "Source plugin sample with hosted pages and public/protected route examples.",
-      "name": "Source Plugin Demo",
+      "name": "Sample Plugin - Source",
       "page": {
         "attachmentFallback": "linapro-demo-source-attachment",
         "fields": {

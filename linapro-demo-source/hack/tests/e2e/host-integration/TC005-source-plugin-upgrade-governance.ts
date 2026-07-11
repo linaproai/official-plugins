@@ -18,8 +18,8 @@ import {
 } from '@host-tests/support/postgres';
 
 const pluginID = 'linapro-demo-source';
-const originalMenuName = '源码插件示例';
-const upgradedMenuName = '源码插件示例升级版';
+const originalMenuName = '示例插件-源码插件';
+const upgradedMenuName = '示例插件-源码插件升级版';
 const originalMenuKey = 'plugin:linapro-demo-source:sidebar-entry';
 const upgradedMenuKey = 'plugin:linapro-demo-source:sidebar-entry-upgraded';
 const repoRoot = path.resolve(process.cwd(), '../..');

@@ -32,7 +32,13 @@ const [Drawer, drawerApi] = useVbenDrawer({
     :title="$t('plugin.linapro-ai-core.invocation.drawer.detailTitle')"
     class="w-[640px] max-w-[calc(100vw-32px)]"
   >
-    <Descriptions v-if="record" :column="1" bordered size="small">
+    <Descriptions
+      v-if="record"
+      :column="1"
+      bordered
+      class="ai-invocation-detail-descriptions"
+      size="small"
+    >
       <DescriptionsItem :label="$t('plugin.linapro-ai-core.invocation.fields.requestId')">
         {{ record.requestId || '-' }}
       </DescriptionsItem>
@@ -93,3 +99,17 @@ const [Drawer, drawerApi] = useVbenDrawer({
     </Descriptions>
   </Drawer>
 </template>
+
+<style scoped>
+/* Align bordered detail block corners with page-level panels (rounded-xl). */
+.ai-invocation-detail-descriptions :deep(.ant-descriptions-view) {
+  border-radius: calc(var(--radius) + 4px);
+  overflow: hidden;
+}
+
+.ai-invocation-detail-descriptions :deep(pre) {
+  border-radius: var(--radius);
+  background: hsl(var(--accent));
+  padding: 8px 10px;
+}
+</style>

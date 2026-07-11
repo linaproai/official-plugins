@@ -168,7 +168,10 @@ async function handleTest(row: Tier) {
           class="tier-capability-content"
           data-testid="ai-tier-capability-content"
         >
-          <Grid :table-title="$t('plugin.linapro-ai-core.tier.tableTitle')">
+          <Grid
+            class="rounded-none bg-transparent"
+            :table-title="$t('plugin.linapro-ai-core.tier.tableTitle')"
+          >
             <template #action="{ row }">
               <Space>
                 <ghost-button @click.stop="handleEdit(row)">
@@ -195,7 +198,9 @@ async function handleTest(row: Tier) {
 <style scoped>
 .tier-capability-tabs {
   margin-bottom: 12px;
-  background: hsl(var(--background));
+  overflow: hidden;
+  background: hsl(var(--card));
+  border-radius: calc(var(--radius) + 4px);
 }
 
 .tier-capability-tabs :deep(.ant-tabs-nav) {
@@ -211,7 +216,7 @@ async function handleTest(row: Tier) {
 }
 
 .tier-capability-tabs :deep(.ant-tabs-content-holder) {
-  background: hsl(var(--background));
+  background: transparent;
   border: 0;
   padding: 16px 20px 0;
 }
@@ -258,7 +263,7 @@ async function handleTest(row: Tier) {
 }
 
 .tier-capability-content {
-  background: hsl(var(--background));
+  background: transparent;
   min-height: 320px;
 }
 </style>

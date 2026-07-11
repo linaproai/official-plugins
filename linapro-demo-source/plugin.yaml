@@ -4,7 +4,7 @@ id: linapro-demo-source
 
 # Plugin display name used in plugin management pages, developer docs, and presentation.
 # 插件显示名称，用于插件管理页面、开发文档和展示。
-name: 源码插件示例
+name: 示例插件-源码插件
 
 # Plugin semantic version; examples in this repo use the `v` prefix.
 # 插件语义化版本号，当前示例统一使用带 `v` 前缀的写法。
@@ -69,7 +69,7 @@ menus:
     parent_key: extension
     # Menu display name.
     # 菜单显示名称。
-    name: 源码插件示例
+    name: 示例插件-源码插件
     # Source plugin host route segment mounted into the governed dynamic route tree.
     # 源码插件宿主内路由片段，会挂到插件治理后的动态路由树中。
     path: linapro-demo-source-sidebar-entry

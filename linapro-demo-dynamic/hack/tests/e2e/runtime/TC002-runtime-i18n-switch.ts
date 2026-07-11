@@ -26,7 +26,7 @@ import {
 } from "../../support/plugin-dependencies";
 
 const pluginID = "linapro-demo-dynamic";
-const pluginMenuNamePattern = /Dynamic Plugin Demo|动态插件示例/u;
+const pluginMenuNamePattern = /Sample Plugin - Dynamic|示例插件-动态插件/u;
 const repoRoot = path.resolve(process.cwd(), "../..");
 const legacyRuntimeArtifactPath = path.join(
   repoRoot,

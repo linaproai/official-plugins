@@ -1,0 +1,54 @@
+{
+  "error": {
+    "plugin": {
+      "oidc": {
+        "generic": {
+          "config": {
+            "missing": "Generic OIDC client configuration is missing"
+          },
+          "state": {
+            "generate": {
+              "failed": "Failed to generate OIDC state value"
+            }
+          },
+          "callback": {
+            "code": {
+              "required": "Authorization code is required"
+            },
+            "state": {
+              "mismatch": "OIDC state value mismatch"
+            }
+          },
+          "identity": {
+            "verify": {
+              "failed": "Failed to verify OIDC identity"
+            }
+          },
+          "discovery": {
+            "failed": "OIDC discovery document fetch failed"
+          },
+          "external": {
+            "login": {
+              "unavailable": "External-login service is unavailable",
+              "failed": "Generic OIDC external login failed"
+            }
+          },
+          "settings": {
+            "storage": {
+              "unavailable": "Settings storage service is unavailable"
+            },
+            "read": {
+              "failed": "Failed to read Generic OIDC settings"
+            },
+            "save": {
+              "failed": "Failed to save Generic OIDC settings"
+            },
+            "issuer": {
+              "invalid": "Issuer must be an absolute https URL (http allowed only for localhost)"
+            }
+          }
+        }
+      }
+    }
+  }
+}

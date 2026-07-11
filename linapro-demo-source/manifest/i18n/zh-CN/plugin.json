@@ -2,7 +2,7 @@
   "plugin": {
     "linapro-demo-source": {
       "description": "提供左侧菜单页面与公开/受保护路由示例的源码插件",
-      "name": "源码插件示例",
+      "name": "示例插件-源码插件",
       "page": {
         "attachmentFallback": "linapro-demo-source-attachment",
         "fields": {

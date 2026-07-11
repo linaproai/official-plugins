@@ -179,7 +179,10 @@ async function handleDeleteRangeConfirm() {
 
 <template>
   <Page :auto-content-height="true">
-    <Grid :table-title="$t('plugin.linapro-ai-core.invocation.tableTitle')">
+    <Grid
+      data-testid="ai-invocation-logs-panel"
+      :table-title="$t('plugin.linapro-ai-core.invocation.tableTitle')"
+    >
       <template #toolbar-tools>
         <Space>
           <a-button

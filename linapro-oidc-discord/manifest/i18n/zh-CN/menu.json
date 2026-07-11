@@ -1,0 +1,10 @@
+{
+  "menu": {
+    "plugin:linapro-oidc-discord:settings": {
+      "title": "Discord 登录"
+    },
+    "plugin:linapro-oidc-discord:settings-update": {
+      "title": "保存设置"
+    }
+  }
+}

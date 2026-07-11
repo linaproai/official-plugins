@@ -50,6 +50,7 @@ linapro-demo-source/
 - 将业务逻辑保留在 `backend/internal/service/` 下
 - 插件访问数据库时，将本地 ORM 生成工件维护在 `backend/internal/dao` 与 `backend/internal/model/{do,entity}` 下
 - 将插件`API`注册到`registrar.Routes().APIPrefix()`下，该前缀会解析为`/x/linapro-demo-source`；示例插件自行追加`/api/v1`作为自身路由约定
+- `g.Meta path`只声明插件内业务相对路径（例如`/ping`、`/summary`、`/records`），不要再嵌套`/plugins/linapro-demo-source/`，宿主前缀已经表达插件边界
 - 公开页面、门户、静态资源路由或插件自管 fallback handler 应使用非保留路径，不要放在`/x`下
 - 通过宿主构建使用的源码插件注册入口显式接线安装、升级、禁用、卸载、租户和安装模式生命周期回调
 - 从`registrar.Services()`显式注入`Storage()`，并用它完成附件保存、下载、替换、删除和可选卸载清理

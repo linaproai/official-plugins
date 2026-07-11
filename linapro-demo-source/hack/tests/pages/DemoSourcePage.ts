@@ -129,7 +129,7 @@ export class DemoSourcePage extends PluginPage {
   }
 
   async openSidebarExampleFromMenu() {
-    await this.clickSidebarMenuItem("源码插件示例");
+    await this.clickSidebarMenuItem("示例插件-源码插件");
     await expect(this.pluginSidebarIntroTitle()).toHaveCount(0);
     await expect(this.pluginSidebarIntroSummary()).toHaveCount(0);
     await expect(this.pluginSourceRecordGridTitle()).toBeVisible();

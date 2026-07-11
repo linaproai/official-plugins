@@ -42,7 +42,7 @@ export interface DemoRecordSaveInput {
 
 export async function getDemoSummary() {
   return requestClient.get<DemoSummary>(
-    demoSourceApi("plugins/linapro-demo-source/summary"),
+    demoSourceApi("summary"),
   );
 }
 
@@ -50,7 +50,7 @@ export async function listDemoRecords(params?: DemoRecordListParams) {
   const res = await requestClient.get<{
     list: DemoRecordItem[];
     total: number;
-  }>(demoSourceApi("plugins/linapro-demo-source/records"), { params });
+  }>(demoSourceApi("records"), { params });
   return {
     items: res.list,
     total: res.total,
@@ -59,7 +59,7 @@ export async function listDemoRecords(params?: DemoRecordListParams) {
 
 export async function getDemoRecord(id: number) {
   return requestClient.get<DemoRecordDetail>(
-    demoSourceApi(`plugins/linapro-demo-source/records/${id}`),
+    demoSourceApi(`records/${id}`),
   );
 }
 
@@ -68,7 +68,7 @@ export async function createDemoRecord(
   file?: File | null,
 ) {
   return requestClient.post<{ id: number }>(
-    demoSourceApi("plugins/linapro-demo-source/records"),
+    demoSourceApi("records"),
     buildRecordFormData(values, file),
     {
       headers: {
@@ -84,7 +84,7 @@ export async function updateDemoRecord(
   file?: File | null,
 ) {
   return requestClient.put<{ id: number }>(
-    demoSourceApi(`plugins/linapro-demo-source/records/${id}`),
+    demoSourceApi(`records/${id}`),
     buildRecordFormData(values, file),
     {
       headers: {
@@ -96,13 +96,13 @@ export async function updateDemoRecord(
 
 export async function deleteDemoRecord(id: number) {
   return requestClient.delete(
-    demoSourceApi(`plugins/linapro-demo-source/records/${id}`),
+    demoSourceApi(`records/${id}`),
   );
 }
 
 export async function downloadDemoRecordAttachment(id: number) {
   return requestClient.download<Blob>(
-    demoSourceApi(`plugins/linapro-demo-source/records/${id}/attachment`),
+    demoSourceApi(`records/${id}/attachment`),
   );
 }
 

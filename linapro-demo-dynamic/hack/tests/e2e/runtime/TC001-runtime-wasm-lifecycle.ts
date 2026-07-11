@@ -58,7 +58,7 @@ const bundledRuntimeLegacyArtifactPath = path.join(
   "runtime",
   `${bundledRuntimePluginID}.wasm`,
 );
-const bundledRuntimeMenuName = "动态插件示例";
+const bundledRuntimeMenuName = "示例插件-动态插件";
 const bundledRuntimeStandalonePath =
   "/x-assets/linapro-demo-dynamic/v0.1.0/standalone.html";
 const bytesPerMegabyte = 1024 * 1024;

@@ -1,0 +1,10 @@
+{
+  "menu": {
+    "plugin:linapro-oidc-google:settings": {
+      "title": "Google Login"
+    },
+    "plugin:linapro-oidc-google:settings-update": {
+      "title": "Save Settings"
+    }
+  }
+}
