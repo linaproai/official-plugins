@@ -38,7 +38,7 @@ export class LdapAuthPage {
     await this.page.goto(workspacePath('/dashboard/workspace'));
     await waitForRouteReady(this.page);
     await layout.expandSidebarGroup(/授权登录|Auth Login/i);
-    await layout.sidebarMenuItem(/LDAP 设置|LDAP Settings|LDAP/i).click();
+    await layout.sidebarMenuItem(/^LDAP$/i).click();
     await waitForRouteReady(this.page);
     await expect(this.settingsForm).toBeVisible({ timeout: 15000 });
   }

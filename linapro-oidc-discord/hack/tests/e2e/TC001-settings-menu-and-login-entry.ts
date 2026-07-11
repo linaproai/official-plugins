@@ -99,9 +99,9 @@ test.describe("TC001 linapro-oidc-discord 设置菜单与登录入口", () => {
         (node) =>
           node.path === "linapro-oidc-discord-settings" ||
           node.perms === "linapro-oidc-discord:settings:view" ||
-          /Discord 登录|Discord Login/i.test(String(node.name ?? "")),
+          /^Discord$/i.test(String(node.name ?? "").trim()),
       );
-      expect(discord, "Discord 登录应挂在授权登录下").toBeTruthy();
+      expect(discord, "Discord 菜单应挂在授权登录下").toBeTruthy();
     } finally {
       await api.dispose();
     }
@@ -114,9 +114,7 @@ test.describe("TC001 linapro-oidc-discord 设置菜单与登录入口", () => {
     await adminPage.goto(workspacePath("/dashboard/workspace"));
     await waitForRouteReady(adminPage);
     await layout.expandSidebarGroup(/授权登录|Auth Login/i);
-    await expect(
-      layout.sidebarMenuItem(/Discord 登录|Discord Login/i),
-    ).toBeVisible();
+    await expect(layout.sidebarMenuItem(/^Discord$/i)).toBeVisible();
   });
 
   test("TC001d: 菜单标题随 Accept-Language 本地化", async () => {
@@ -125,13 +123,13 @@ test.describe("TC001 linapro-oidc-discord 设置菜单与登录入口", () => {
     try {
       const enTree = await fetchMenuTree(api, "en-US");
       const enNode = findByPath(enTree, settingsPath);
-      expect(enNode, "en-US 应返回 Discord 设置菜单").not.toBeNull();
-      expect(enNode?.name).toBe("Discord Login");
+      expect(enNode, "en-US 应返回 Discord 菜单").not.toBeNull();
+      expect(enNode?.name).toBe("Discord");
 
       const zhTree = await fetchMenuTree(api, "zh-CN");
       const zhNode = findByPath(zhTree, settingsPath);
-      expect(zhNode, "zh-CN 应返回 Discord 设置菜单").not.toBeNull();
-      expect(zhNode?.name).toBe("Discord 登录");
+      expect(zhNode, "zh-CN 应返回 Discord 菜单").not.toBeNull();
+      expect(zhNode?.name).toBe("Discord");
     } finally {
       await api.dispose();
     }

@@ -6,7 +6,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // ListIdentitiesReq lists external identities bound to the current session user.
 type ListIdentitiesReq struct {
-	g.Meta `path:"/identities" method:"get" tags:"External Identity" summary:"List bound external identities" dc:"Returns external identities bound to the current session user only."`
+	g.Meta `path:"/identities" method:"get" tags:"Auth Login / External Identity" summary:"List bound external identities" dc:"Returns external identities bound to the current session user only."`
 }
 
 // IdentityItem is one bound external identity projection.

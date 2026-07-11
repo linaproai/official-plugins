@@ -4,7 +4,7 @@
 // can resolve and mount it.
 export const pluginPageMeta = {
   routePath: 'linapro-auth-ldap-settings',
-  title: 'LDAP Settings',
+  title: 'LDAP',
 };
 </script>
 

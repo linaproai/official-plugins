@@ -8,7 +8,7 @@
               "meta": {
                 "dc": "返回已持久化的 linapro-oidc-generic 设置。客户端密钥始终掩码返回。",
                 "summary": "查询通用 OIDC 设置",
-                "tags": "通用 OIDC 登录"
+                "tags": "授权登录/OIDC"
               },
               "schema": {
                 "dc": "返回已持久化的 linapro-oidc-generic 设置。客户端密钥始终掩码返回。"
@@ -25,7 +25,7 @@
               "meta": {
                 "dc": "将 linapro-oidc-generic 设置持久化。空或掩码形式的客户端密钥保留原值。自动开通默认关闭。",
                 "summary": "保存通用 OIDC 设置",
-                "tags": "通用 OIDC 登录"
+                "tags": "授权登录/OIDC"
               },
               "schema": {
                 "dc": "将 linapro-oidc-generic 设置持久化。空或掩码形式的客户端密钥保留原值。自动开通默认关闭。"

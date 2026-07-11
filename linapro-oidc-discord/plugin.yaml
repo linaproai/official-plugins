@@ -86,7 +86,7 @@ menus:
     parent_key: plugin:linapro-extlogin-core:auth-login
     # Menu display name.
     # 菜单显示名称。
-    name: Discord Login
+    name: Discord
     # Source plugin host route segment mounted into the governed dynamic route tree.
     # 源码插件宿主内路由片段，会挂到插件治理后的动态路由树中。
     path: linapro-oidc-discord-settings

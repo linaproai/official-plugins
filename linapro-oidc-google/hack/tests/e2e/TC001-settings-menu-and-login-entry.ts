@@ -99,9 +99,9 @@ test.describe("TC001 linapro-oidc-google 设置菜单与登录入口", () => {
         (node) =>
           node.path === "linapro-oidc-google-settings" ||
           node.perms === "linapro-oidc-google:settings:view" ||
-          /Google 登录|Google Login/i.test(String(node.name ?? "")),
+          /^Google$/i.test(String(node.name ?? "").trim()),
       );
-      expect(google, "Google 登录应挂在授权登录下").toBeTruthy();
+      expect(google, "Google 菜单应挂在授权登录下").toBeTruthy();
     } finally {
       await api.dispose();
     }
@@ -114,9 +114,7 @@ test.describe("TC001 linapro-oidc-google 设置菜单与登录入口", () => {
     await adminPage.goto(workspacePath("/dashboard/workspace"));
     await waitForRouteReady(adminPage);
     await layout.expandSidebarGroup(/授权登录|Auth Login/i);
-    await expect(
-      layout.sidebarMenuItem(/Google 登录|Google Login/i),
-    ).toBeVisible();
+    await expect(layout.sidebarMenuItem(/^Google$/i)).toBeVisible();
   });
 
   test("TC001d: 菜单标题随 Accept-Language 本地化", async () => {
@@ -125,13 +123,13 @@ test.describe("TC001 linapro-oidc-google 设置菜单与登录入口", () => {
     try {
       const enTree = await fetchMenuTree(api, "en-US");
       const enNode = findByPath(enTree, settingsPath);
-      expect(enNode, "en-US 应返回 Google 设置菜单").not.toBeNull();
-      expect(enNode?.name).toBe("Google Login");
+      expect(enNode, "en-US 应返回 Google 菜单").not.toBeNull();
+      expect(enNode?.name).toBe("Google");
 
       const zhTree = await fetchMenuTree(api, "zh-CN");
       const zhNode = findByPath(zhTree, settingsPath);
-      expect(zhNode, "zh-CN 应返回 Google 设置菜单").not.toBeNull();
-      expect(zhNode?.name).toBe("Google 登录");
+      expect(zhNode, "zh-CN 应返回 Google 菜单").not.toBeNull();
+      expect(zhNode?.name).toBe("Google");
     } finally {
       await api.dispose();
     }

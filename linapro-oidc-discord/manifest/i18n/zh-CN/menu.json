@@ -1,7 +1,7 @@
 {
   "menu": {
     "plugin:linapro-oidc-discord:settings": {
-      "title": "Discord 登录"
+      "title": "Discord"
     },
     "plugin:linapro-oidc-discord:settings-update": {
       "title": "保存设置"

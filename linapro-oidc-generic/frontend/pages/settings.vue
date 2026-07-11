@@ -4,7 +4,7 @@
 // can resolve and mount it.
 export const pluginPageMeta = {
   routePath: 'linapro-oidc-generic-settings',
-  title: 'OIDC Settings',
+  title: 'OIDC',
 };
 </script>
 

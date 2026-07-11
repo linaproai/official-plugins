@@ -1,7 +1,7 @@
 {
   "menu": {
     "plugin:linapro-oidc-generic:settings": {
-      "title": "OIDC Settings"
+      "title": "OIDC"
     },
     "plugin:linapro-oidc-generic:settings-update": {
       "title": "Save Settings"

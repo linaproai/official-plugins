@@ -79,9 +79,9 @@ test.describe('TC-1 linapro-oidc-generic 设置菜单与登录入口', () => {
       const generic = (authLogin?.children ?? []).find(
         (node) =>
           node.path === 'linapro-oidc-generic-settings' ||
-          /OIDC Settings|OIDC 设置/i.test(String(node.name ?? '')),
+          /^OIDC$/i.test(String(node.name ?? '').trim()),
       );
-      expect(generic, 'OIDC 设置应挂在授权登录下').toBeTruthy();
+      expect(generic, 'OIDC 菜单应挂在授权登录下').toBeTruthy();
     } finally {
       await api.dispose();
     }
@@ -100,8 +100,8 @@ test.describe('TC-1 linapro-oidc-generic 设置菜单与登录入口', () => {
       const enNode = (enAuth?.children ?? []).find(
         (n) => n.path === 'linapro-oidc-generic-settings',
       );
-      expect(zhNode?.name, 'zh-CN 菜单标题').toBe('OIDC 设置');
-      expect(enNode?.name, 'en-US 菜单标题').toBe('OIDC Settings');
+      expect(zhNode?.name, 'zh-CN 菜单标题').toBe('OIDC');
+      expect(enNode?.name, 'en-US 菜单标题').toBe('OIDC');
     } finally {
       await api.dispose();
     }

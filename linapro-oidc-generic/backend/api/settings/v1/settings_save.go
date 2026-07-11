@@ -6,7 +6,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // SaveSettingsReq is the request for saving generic OIDC settings.
 type SaveSettingsReq struct {
-	g.Meta                 `path:"/settings" method:"put" tags:"Generic OIDC Login" summary:"Save Generic OIDC settings" dc:"Persist linapro-oidc-generic settings. Empty or masked client secret keeps the previous value. Auto-provision defaults off." permission:"linapro-oidc-generic:settings:update"`
+	g.Meta                 `path:"/settings" method:"put" tags:"Auth Login / OIDC" summary:"Save Generic OIDC settings" dc:"Persist linapro-oidc-generic settings. Empty or masked client secret keeps the previous value. Auto-provision defaults off." permission:"linapro-oidc-generic:settings:update"`
 	DisplayName            string `json:"displayName" v:"max-length:128" dc:"Login button display name" eg:"Company SSO"`
 	Issuer                 string `json:"issuer" v:"max-length:512" dc:"OIDC issuer URL" eg:"https://keycloak.example.com/realms/demo"`
 	ClientId               string `json:"clientId" v:"max-length:256" dc:"OAuth 2.0 client ID" eg:"linapro-web"`

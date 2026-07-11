@@ -4,7 +4,7 @@
 // can resolve and mount it.
 export const pluginPageMeta = {
   routePath: 'linapro-oidc-discord-settings',
-  title: 'Discord Login Settings',
+  title: 'Discord',
 };
 </script>
 

@@ -7,7 +7,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // SaveSettingsReq is the request for saving the linapro-oidc-google settings.
 type SaveSettingsReq struct {
-	g.Meta       `path:"/settings" method:"put" tags:"Google OIDC Login" summary:"Save Google OIDC settings" dc:"Persist the linapro-oidc-google settings to sys_config. An empty or masked client secret keeps the previously stored value; a non-empty non-masked value replaces it." permission:"linapro-oidc-google:settings:update"`
+	g.Meta       `path:"/settings" method:"put" tags:"Auth Login / Google" summary:"Save Google OIDC settings" dc:"Persist the linapro-oidc-google settings to sys_config. An empty or masked client secret keeps the previously stored value; a non-empty non-masked value replaces it." permission:"linapro-oidc-google:settings:update"`
 	ClientId     string `json:"clientId" v:"max-length:256" dc:"Google OAuth 2.0 client ID; empty string clears the stored value" eg:"1234567890-abc.apps.googleusercontent.com"`
 	ClientSecret string `json:"clientSecret" v:"max-length:512" dc:"Google OAuth 2.0 client secret; empty string or the masked indicator keeps the previously stored value, any other value replaces it" eg:"GOCSPX-secret-value"`
 	RedirectUrl  string `json:"redirectUrl" v:"max-length:512" dc:"Fully-qualified callback URL registered with Google; empty string clears the stored value" eg:"https://your-host/portal/linapro-oidc-google/callback"`

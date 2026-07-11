@@ -7,7 +7,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // ExchangeLoginHandoffReq consumes a single-use login handoff code.
 type ExchangeLoginHandoffReq struct {
-	g.Meta  `path:"/handoff/exchange" method:"post" tags:"External Identity" summary:"Exchange external login handoff" dc:"Consumes a single-use handoff code created after a third-party identity login. Returns a token pair or a pre-login token plus tenant candidates. Invalid, expired, or already-used codes are rejected. This endpoint is public (no session required) and is the SPA delivery surface for external login; JWTs must never appear in OAuth redirect URLs."`
+	g.Meta  `path:"/handoff/exchange" method:"post" tags:"Auth Login / External Identity" summary:"Exchange external login handoff" dc:"Consumes a single-use handoff code created after a third-party identity login. Returns a token pair or a pre-login token plus tenant candidates. Invalid, expired, or already-used codes are rejected. This endpoint is public (no session required) and is the SPA delivery surface for external login; JWTs must never appear in OAuth redirect URLs."`
 	Handoff string `json:"handoff" v:"required|length:1,128" dc:"Single-use handoff code from the protocol plugin SPA redirect" eg:"elh_8f4f..."`
 }
 

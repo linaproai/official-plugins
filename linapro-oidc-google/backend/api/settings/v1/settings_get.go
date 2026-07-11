@@ -7,7 +7,7 @@ import "github.com/gogf/gf/v2/frame/g"
 
 // GetSettingsReq is the request for querying the linapro-oidc-google settings.
 type GetSettingsReq struct {
-	g.Meta `path:"/settings" method:"get" tags:"Google OIDC Login" summary:"Query Google OIDC settings" dc:"Return the persisted linapro-oidc-google settings for the admin settings page. The client secret is always returned as a masked indicator; plaintext secrets are never sent to the client." permission:"linapro-oidc-google:settings:view"`
+	g.Meta `path:"/settings" method:"get" tags:"Auth Login / Google" summary:"Query Google OIDC settings" dc:"Return the persisted linapro-oidc-google settings for the admin settings page. The client secret is always returned as a masked indicator; plaintext secrets are never sent to the client." permission:"linapro-oidc-google:settings:view"`
 }
 
 // GetSettingsRes is the response for querying the linapro-oidc-google settings.

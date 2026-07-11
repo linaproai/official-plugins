@@ -8,7 +8,7 @@
               "meta": {
                 "dc": "校验目录凭据并返回一次性 handoff 码，供 SPA 交换会话。密码永不存储。",
                 "summary": "LDAP 目录登录",
-                "tags": "LDAP 登录"
+                "tags": "授权登录/LDAP"
               },
               "schema": {
                 "dc": "校验目录凭据并返回一次性 handoff 码，供 SPA 交换会话。密码永不存储。"
@@ -37,7 +37,7 @@
               "meta": {
                 "dc": "返回已掩码的 LDAP 目录设置。",
                 "summary": "查询 LDAP 设置",
-                "tags": "LDAP 登录"
+                "tags": "授权登录/LDAP"
               },
               "schema": {
                 "dc": "返回已掩码的 LDAP 目录设置。"
@@ -47,7 +47,7 @@
               "meta": {
                 "dc": "持久化 LDAP 目录设置。空或掩码形式的绑定密码保留原值。自动开通默认关闭。",
                 "summary": "保存 LDAP 设置",
-                "tags": "LDAP 登录"
+                "tags": "授权登录/LDAP"
               },
               "schema": {
                 "dc": "持久化 LDAP 目录设置。空或掩码形式的绑定密码保留原值。自动开通默认关闭。"

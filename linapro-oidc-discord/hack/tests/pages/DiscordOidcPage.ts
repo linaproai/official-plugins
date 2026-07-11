@@ -68,7 +68,7 @@ export class DiscordOidcPage {
     await this.page.goto(workspacePath("/dashboard/workspace"));
     await waitForRouteReady(this.page);
     await layout.expandSidebarGroup(/授权登录|Auth Login/i);
-    await layout.sidebarMenuItem(/Discord 登录|Discord Login/i).click();
+    await layout.sidebarMenuItem(/^Discord$/i).click();
     await waitForRouteReady(this.page);
     await expect(this.settingsForm).toBeVisible({ timeout: 15000 });
   }

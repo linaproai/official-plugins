@@ -8,7 +8,7 @@
               "meta": {
                 "dc": "返回持久化的 linapro-oidc-google 设置供管理设置页使用。客户端密钥始终以掩码指示符返回；明文密钥不会发送给客户端。",
                 "summary": "查询 Google 登录设置",
-                "tags": "Google 登录"
+                "tags": "授权登录/Google"
               },
               "schema": {
                 "dc": "返回持久化的 linapro-oidc-google 设置供管理设置页使用。客户端密钥始终以掩码指示符返回；明文密钥不会发送给客户端。"
@@ -25,7 +25,7 @@
               "meta": {
                 "dc": "将 linapro-oidc-google 设置持久化到 sys_config。空或掩码形式的客户端密钥保留原值；非空非掩码值将替换原值。",
                 "summary": "保存 Google 登录设置",
-                "tags": "Google 登录"
+                "tags": "授权登录/Google"
               },
               "schema": {
                 "dc": "将 linapro-oidc-google 设置持久化到 sys_config。空或掩码形式的客户端密钥保留原值；非空非掩码值将替换原值。"

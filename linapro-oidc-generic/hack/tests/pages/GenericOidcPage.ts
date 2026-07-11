@@ -42,7 +42,7 @@ export class GenericOidcPage {
     await waitForRouteReady(this.page);
     await layout.expandSidebarGroup(/授权登录|Auth Login/i);
     await layout
-      .sidebarMenuItem(/OIDC 设置|OIDC Settings/i)
+      .sidebarMenuItem(/^OIDC$/i)
       .click();
     await waitForRouteReady(this.page);
     await expect(this.settingsForm).toBeVisible({ timeout: 15000 });

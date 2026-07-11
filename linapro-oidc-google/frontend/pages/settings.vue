@@ -4,7 +4,7 @@
 // can resolve and mount it.
 export const pluginPageMeta = {
   routePath: 'linapro-oidc-google-settings',
-  title: 'Google Login Settings',
+  title: 'Google',
 };
 </script>
 

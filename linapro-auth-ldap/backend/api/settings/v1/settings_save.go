@@ -3,7 +3,7 @@ package v1
 import "github.com/gogf/gf/v2/frame/g"
 
 type SaveSettingsReq struct {
-	g.Meta             `path:"/settings" method:"put" tags:"LDAP Login" summary:"Save LDAP settings" dc:"Persist LDAP directory settings. Empty/masked bind password keeps previous. Auto-provision defaults off." permission:"linapro-auth-ldap:settings:update"`
+	g.Meta             `path:"/settings" method:"put" tags:"Auth Login / LDAP" summary:"Save LDAP settings" dc:"Persist LDAP directory settings. Empty/masked bind password keeps previous. Auto-provision defaults off." permission:"linapro-auth-ldap:settings:update"`
 	DisplayName        string `json:"displayName" v:"max-length:128"`
 	Host               string `json:"host" v:"max-length:256"`
 	Port               string `json:"port" v:"max-length:16"`

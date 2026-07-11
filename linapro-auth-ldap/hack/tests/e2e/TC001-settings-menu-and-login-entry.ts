@@ -61,9 +61,9 @@ test.describe('TC-1 linapro-auth-ldap 设置菜单与登录入口', () => {
       const ldap = (authLogin?.children ?? []).find(
         (n) =>
           n.path === 'linapro-auth-ldap-settings' ||
-          /LDAP Settings|LDAP 设置/i.test(String(n.name ?? '')),
+          /^LDAP$/i.test(String(n.name ?? '').trim()),
       );
-      expect(ldap, 'LDAP 设置应挂在授权登录下').toBeTruthy();
+      expect(ldap, 'LDAP 菜单应挂在授权登录下').toBeTruthy();
     } finally {
       await api.dispose();
     }
@@ -82,8 +82,8 @@ test.describe('TC-1 linapro-auth-ldap 设置菜单与登录入口', () => {
       const enNode = (enAuth?.children ?? []).find(
         (n) => n.path === 'linapro-auth-ldap-settings',
       );
-      expect(zhNode?.name, 'zh-CN 菜单标题').toBe('LDAP 设置');
-      expect(enNode?.name, 'en-US 菜单标题').toBe('LDAP Settings');
+      expect(zhNode?.name, 'zh-CN 菜单标题').toBe('LDAP');
+      expect(enNode?.name, 'en-US 菜单标题').toBe('LDAP');
     } finally {
       await api.dispose();
     }
