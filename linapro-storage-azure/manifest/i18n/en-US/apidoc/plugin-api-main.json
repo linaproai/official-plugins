@@ -1,7 +1,1 @@
-{
-  "openapi": {
-    "tags": {
-      "Storage / Azure Blob": "Azure Blob"
-    }
-  }
-}
+{}
