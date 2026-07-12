@@ -1,0 +1,92 @@
+# Plugin identifier, unique across the host and source plugin directories; use `kebab-case`.
+# 插件唯一标识，必须在宿主和源码插件目录中保持唯一，并使用 `kebab-case` 命名风格。
+id: linapro-storage-qiniu
+
+# Plugin display name used in plugin management pages, developer docs, and presentation.
+# 插件显示名称，用于插件管理页面、开发文档和展示。
+name: Object Storage - Qiniu Kodo
+
+# Plugin semantic version; examples in this repo use the `v` prefix.
+# 插件语义版本号，当前示例统一使用带 `v` 前缀的写法。
+version: v0.1.0
+
+# Plugin type enum. Allowed values: `source` is compiled with the host; `dynamic` is loaded as a runtime plugin artifact.
+# 插件类型枚举。可选值：`source` 表示随宿主源码编译交付；`dynamic` 表示作为运行时动态插件产物加载。
+type: source
+
+# Plugin distribution governance enum.
+# 插件分发治理枚举。
+distribution: managed
+
+# Multi-tenant scope enum.
+# 多租户作用域枚举。
+scope_nature: platform_only
+
+# Multi-tenant support flag.
+# 多租户支持标记。
+supports_multi_tenant: false
+
+# Default install mode enum.
+# 默认安装模式枚举。
+default_install_mode: global
+
+# Plugin description summarizing the capability boundary.
+# 插件说明，概述能力边界。
+description: Provides a Qiniu Kodo backend for the host Storage domain capability.
+
+# Plugin author or owning team.
+# 插件作者或归属团队。
+author: linapro
+
+# Plugin homepage or documentation URL.
+# 插件主页或文档地址。
+homepage: https://example.com/lina/plugins/linapro-storage-qiniu
+
+# Plugin license identifier.
+# 插件许可证标识。
+license: Apache-2.0
+
+# Plugin internationalization config.
+# 插件国际化配置。
+i18n:
+  enabled: true
+  default: en-US
+  locales:
+    - locale: en-US
+      nativeName: English
+    - locale: zh-CN
+      nativeName: 简体中文
+
+# Plugin menu declaration list.
+# 插件菜单声明列表。
+menus:
+  - key: plugin:linapro-storage-qiniu:settings
+    # Parent is the host stable Storage catalog (menu_key=storage).
+    # 父级为宿主稳定「存储管理」目录。
+    parent_key: storage
+    name: Qiniu Kodo
+    path: linapro-storage-qiniu-settings
+    component: system/plugin/dynamic-page
+    perms: linapro-storage-qiniu:settings:view
+    # Plugin-owned monochrome brand mark (frontend/icons/mark.svg → svg:linapro-storage-qiniu-mark).
+    # simple-icons has no qiniu glyph; keep SVG closed-loop in the plugin.
+    # 插件自持单色品牌图标（frontend/icons/mark.svg → svg:linapro-storage-qiniu-mark）。
+    # simple-icons 无 qiniu 图元，SVG 闭环在插件内维护。
+    icon: svg:linapro-storage-qiniu-mark
+    type: M
+    sort: 35
+    remark: Qiniu Kodo storage provider settings
+  - key: plugin:linapro-storage-qiniu:settings-update
+    parent_key: plugin:linapro-storage-qiniu:settings
+    name: Save Settings
+    perms: linapro-storage-qiniu:settings:update
+    type: B
+    sort: 1
+    remark: Save Qiniu Kodo settings permission
+  - key: plugin:linapro-storage-qiniu:settings-test
+    parent_key: plugin:linapro-storage-qiniu:settings
+    name: Test Connection
+    perms: linapro-storage-qiniu:settings:view
+    type: B
+    sort: 2
+    remark: Test Qiniu Kodo connectivity permission

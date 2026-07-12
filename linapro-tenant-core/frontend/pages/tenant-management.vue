@@ -22,6 +22,7 @@ import {
   Tooltip,
   message,
 } from 'ant-design-vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useVbenVxeGrid, vxeCheckboxChecked } from '#/adapter/vxe-table';
@@ -38,6 +39,23 @@ import {
 
 const tenantStore = useTenantStore();
 const router = useRouter();
+
+/** Tenant IDs currently submitting a status switch request. */
+const statusChangingIds = ref<Record<number, boolean>>({});
+
+function isStatusChanging(row: PlatformTenant) {
+  return statusChangingIds.value[row.id] === true;
+}
+
+function setStatusChanging(id: number, changing: boolean) {
+  const next = { ...statusChangingIds.value };
+  if (changing) {
+    next[id] = true;
+  } else {
+    delete next[id];
+  }
+  statusChangingIds.value = next;
+}
 
 const [TenantModalRef, tenantModalApi] = useVbenModal({
   connectedComponent: TenantModal,
@@ -155,23 +173,35 @@ function openEdit(row: PlatformTenant) {
   tenantModalApi.open();
 }
 
-async function changeStatus(row: PlatformTenant, status: TenantStatus) {
-  await platformTenantChangeStatus(row.id, status);
-  message.success($t('pages.multiTenant.messages.statusUpdated'));
-  await gridApi.query();
-  tenantStore.setTenantContext({
-    tenants: tenantStore.tenants.map((tenant) =>
-      tenant.id === row.id ? { ...tenant, name: row.name } : tenant,
-    ),
-  });
-}
-
 async function handleSwitchStatus(
   checked: SwitchProps['checked'],
   row: PlatformTenant,
 ) {
-  const nextStatus = checked ? 'active' : 'suspended';
-  await changeStatus(row, nextStatus);
+  if (row.status === 'deleted' || isStatusChanging(row)) {
+    return;
+  }
+  const previous = row.status;
+  const nextStatus: TenantStatus = checked ? 'active' : 'suspended';
+  if (previous === nextStatus) {
+    return;
+  }
+  setStatusChanging(row.id, true);
+  row.status = nextStatus;
+  try {
+    await platformTenantChangeStatus(row.id, nextStatus);
+    message.success($t('pages.multiTenant.messages.statusUpdated'));
+    await gridApi.query();
+    tenantStore.setTenantContext({
+      tenants: tenantStore.tenants.map((tenant) =>
+        tenant.id === row.id ? { ...tenant, name: row.name } : tenant,
+      ),
+    });
+  } catch {
+    row.status = previous;
+    await gridApi.query();
+  } finally {
+    setStatusChanging(row.id, false);
+  }
 }
 
 async function handleDelete(row: PlatformTenant) {
@@ -236,7 +266,8 @@ async function impersonate(row: PlatformTenant) {
                 ? `tenant-suspend-${row.id}`
                 : `tenant-resume-${row.id}`
             "
-            :disabled="row.status === 'deleted'"
+            :loading="isStatusChanging(row)"
+            :disabled="row.status === 'deleted' || isStatusChanging(row)"
             :checked-children="$t('pages.multiTenant.status.active')"
             :un-checked-children="$t('pages.multiTenant.status.suspended')"
             @change="(checked) => handleSwitchStatus(checked, row)"

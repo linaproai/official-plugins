@@ -1,0 +1,42 @@
+{
+  "plugin": {
+    "linapro-storage-cos": {
+      "name": "对象存储-腾讯云 COS",
+      "description": "为宿主 Storage 领域能力提供腾讯云 COS 对象存储后端。",
+      "settings": {
+        "description": "在此填写腾讯云 COS 的访问密钥和存储桶。同一时间请只启用一个云存储插件。配置不完整时，对象读写不会自动改用本地磁盘，相关操作会直接失败。",
+        "accessKeyIdLabel": "SecretId",
+        "accessKeyIdHelp": "提供给云厂商 SDK 使用的访问密钥 ID。",
+        "accessKeyIdPlaceholder": "请输入访问密钥 ID",
+        "secretAccessKeyLabel": "SecretKey",
+        "secretAccessKeyHelp": "访问密钥 Secret。留空表示不修改已保存的值。",
+        "secretAccessKeyPlaceholder": "请输入访问密钥 Secret",
+        "secretAccessKeyKeepPlaceholder": "留空则保留已保存密钥",
+        "regionLabel": "地域 Region",
+        "regionHelp": "目标桶所在地域。",
+        "regionPlaceholder": "例如 ap-guangzhou / cn-hangzhou / us-east-1",
+        "bucketLabel": "存储桶 Bucket",
+        "bucketHelp": "目标对象存储桶名称。",
+        "bucketPlaceholder": "bucket-name",
+        "endpointLabel": "Endpoint",
+        "endpointHelp": "可选自定义 API 端点（内网、加速域或 S3 兼容地址）。",
+        "endpointPlaceholder": "可选自定义 endpoint",
+        "pathPrefixLabel": "路径前缀",
+        "pathPrefixHelp": "可选，在宿主作用域 object key 之上再包一层前缀。",
+        "pathPrefixPlaceholder": "可选前缀",
+        "forcePathStyleLabel": "强制 path-style",
+        "forcePathStyleHelp": "使用 path-style 寻址（多数 MinIO / S3 兼容端需要开启）。",
+        "loadFailed": "加载设置失败",
+        "saveSuccess": "设置已保存",
+        "saveFailed": "保存设置失败",
+        "testSuccess": "连接测试成功",
+        "testFailed": "连接测试失败",
+        "copyDetail": "复制详情",
+        "copied": "错误详情已复制",
+        "copyFailed": "复制失败",
+        "testConnection": "测试连接",
+        "save": "保存"
+      }
+    }
+  }
+}

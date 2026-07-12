@@ -23,6 +23,13 @@ The workspace currently contains source plugins compiled into the host, plus one
 | `linapro-oidc-discord` | `source` | `platform_only` | `global` | Official Discord sign-in on the login page (OAuth settings, optional auto-provisioning); depends on `linapro-extlogin-core` |
 | `linapro-oidc-generic` | `source` | `platform_only` | `global` | Configurable enterprise OIDC sign-in on the login page (Discovery/PKCE, auto-provision default off); depends on `linapro-extlogin-core` |
 | `linapro-auth-ldap` | `source` | `platform_only` | `global` | Directory (LDAP/AD) sign-in on the login page (form bind, auto-provision default off); depends on `linapro-extlogin-core` |
+| `linapro-storage-cos` | `source` | `platform_only` | `global` | Tencent COS backend for host `Storage()` (`storagecap.Provider`) with admin settings under host `storage` catalog |
+| `linapro-storage-oss` | `source` | `platform_only` | `global` | Alibaba Cloud OSS backend for host `Storage()` with admin settings under host `storage` catalog |
+| `linapro-storage-obs` | `source` | `platform_only` | `global` | Huawei Cloud OBS backend for host `Storage()` with admin settings under host `storage` catalog |
+| `linapro-storage-qiniu` | `source` | `platform_only` | `global` | Qiniu Kodo backend for host `Storage()` with admin settings under host `storage` catalog |
+| `linapro-storage-aws` | `source` | `platform_only` | `global` | Official AWS S3 backend for host `Storage()` with admin settings under host `storage` catalog |
+| `linapro-storage-azure` | `source` | `platform_only` | `global` | Azure Blob Storage backend for host `Storage()` with admin settings under host `storage` catalog |
+| `linapro-storage-s3` | `source` | `platform_only` | `global` | S3 protocol backend (MinIO/R2/etc.) for host `Storage()` with admin settings under host `storage` catalog |
 | `linapro-demo-source` | `source` | `tenant_aware` | `tenant_scoped` | Source plugin example for menu pages, public routes, and protected routes |
 | `linapro-demo-dynamic` | `dynamic` | `tenant_aware` | `tenant_scoped` | Dynamic `WASM` plugin example for embedded menu pages, plugin-owned `SQL` table `CRUD`, and standalone static pages |
 
@@ -152,7 +159,7 @@ Dynamic plugins must declare `type: dynamic` in `plugin.yaml`, keep `main.go` an
 
 ## Host and Plugin Boundary
 
-The host owns stable framework surfaces and top-level catalogs such as `dashboard`, `platform`, `org`, `content`, `monitor`, `setting`, `scheduler`, `extension`, and `developer`. Plugins choose their own mount points through `plugin.yaml` `parent_key`; the host only resolves declared parents during sync and rejects missing parents to avoid orphaned menu trees.
+The host owns stable framework surfaces and top-level catalogs such as `dashboard`, `platform`, `org`, `content`, `monitor`, `setting`, `scheduler`, `extension`, `storage`, and `developer`. Plugins choose their own mount points through `plugin.yaml` `parent_key`; the host only resolves declared parents during sync and rejects missing parents to avoid orphaned menu trees. Cloud object-storage provider plugins (`linapro-storage-cos`, `linapro-storage-oss`, `linapro-storage-aws`, `linapro-storage-s3`) mount settings pages under `storage`.
 
 Plugin-owned tables, menus, pages, hooks, scheduled jobs, public assets, and lifecycle resources stay in the plugin directory. Host code should depend on stable plugin service seams and published packages rather than hard-coding plugin-specific page structures or menu composition details.
 

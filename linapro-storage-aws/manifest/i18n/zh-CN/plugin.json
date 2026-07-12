@@ -1,0 +1,37 @@
+{
+  "plugin": {
+    "linapro-storage-aws": {
+      "name": "对象存储-AWS S3",
+      "description": "为宿主 Storage 领域能力提供官方 AWS S3 后端。",
+      "settings": {
+        "description": "在此填写官方 AWS S3 的访问密钥、地域和存储桶。同一时间请只启用一个云存储插件。配置不完整时，对象读写不会自动改用本地磁盘，相关操作会直接失败。若使用 MinIO、R2 等 S3 接口服务，请改用「S3 存储」插件。",
+        "accessKeyIdLabel": "Access Key ID",
+        "accessKeyIdHelp": "AWS 访问密钥 ID。",
+        "accessKeyIdPlaceholder": "请输入 AWS Access Key ID",
+        "secretAccessKeyLabel": "Secret Access Key",
+        "secretAccessKeyHelp": "AWS 访问密钥 Secret。留空表示不修改已保存的值。",
+        "secretAccessKeyPlaceholder": "请输入 AWS Secret Access Key",
+        "secretAccessKeyKeepPlaceholder": "留空则保留已保存密钥",
+        "regionLabel": "地域 Region",
+        "regionHelp": "目标桶所在的 AWS 地域（例如 us-east-1）。",
+        "regionPlaceholder": "例如 us-east-1",
+        "bucketLabel": "存储桶 Bucket",
+        "bucketHelp": "目标 AWS S3 桶名称。",
+        "bucketPlaceholder": "bucket-name",
+        "pathPrefixLabel": "路径前缀",
+        "pathPrefixHelp": "可选，在宿主作用域 object key 之上再包一层前缀。",
+        "pathPrefixPlaceholder": "可选前缀",
+        "loadFailed": "加载设置失败",
+        "saveSuccess": "设置已保存",
+        "saveFailed": "保存设置失败",
+        "testSuccess": "连接测试成功",
+        "testFailed": "连接测试失败",
+        "copyDetail": "复制详情",
+        "copied": "错误详情已复制",
+        "copyFailed": "复制失败",
+        "testConnection": "测试连接",
+        "save": "保存"
+      }
+    }
+  }
+}

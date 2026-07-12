@@ -1,0 +1,13 @@
+{
+  "menu": {
+    "plugin:linapro-storage-s3:settings": {
+      "title": "S3 Storage"
+    },
+    "plugin:linapro-storage-s3:settings-update": {
+      "title": "Save Settings"
+    },
+    "plugin:linapro-storage-s3:settings-test": {
+      "title": "Test Connection"
+    }
+  }
+}

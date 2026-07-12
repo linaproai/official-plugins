@@ -1,0 +1,42 @@
+{
+  "plugin": {
+    "linapro-storage-oss": {
+      "name": "Object Storage - Alibaba Cloud OSS",
+      "description": "Provides an Alibaba Cloud OSS backend for the host Storage domain capability.",
+      "settings": {
+        "description": "Enter your Alibaba Cloud OSS access keys and bucket below. Enable only one cloud storage plugin at a time. If the configuration is incomplete, object storage operations will fail—the system will not automatically switch to local disk.",
+        "accessKeyIdLabel": "AccessKey ID",
+        "accessKeyIdHelp": "Cloud access key identity used by the provider SDK.",
+        "accessKeyIdPlaceholder": "Enter access key id",
+        "secretAccessKeyLabel": "AccessKey Secret",
+        "secretAccessKeyHelp": "Cloud secret key. Leave empty to keep the previously saved value.",
+        "secretAccessKeyPlaceholder": "Enter secret key",
+        "secretAccessKeyKeepPlaceholder": "Leave empty to keep the saved secret",
+        "regionLabel": "Region",
+        "regionHelp": "Cloud region for the target bucket.",
+        "regionPlaceholder": "e.g. ap-guangzhou / cn-hangzhou / us-east-1",
+        "bucketLabel": "Bucket",
+        "bucketHelp": "Target object storage bucket name.",
+        "bucketPlaceholder": "bucket-name",
+        "endpointLabel": "Endpoint",
+        "endpointHelp": "Optional custom API endpoint (private network, accelerate, or S3-compatible URL).",
+        "endpointPlaceholder": "Optional custom endpoint",
+        "pathPrefixLabel": "Path prefix",
+        "pathPrefixHelp": "Optional key prefix applied under the host-scoped object key.",
+        "pathPrefixPlaceholder": "Optional prefix",
+        "forcePathStyleLabel": "Force path-style",
+        "forcePathStyleHelp": "Use path-style addressing (required by many MinIO and S3-compatible endpoints).",
+        "loadFailed": "Failed to load settings",
+        "saveSuccess": "Settings saved",
+        "saveFailed": "Failed to save settings",
+        "testSuccess": "Connection test succeeded",
+        "testFailed": "Connection test failed",
+        "copyDetail": "Copy details",
+        "copied": "Error details copied",
+        "copyFailed": "Failed to copy",
+        "testConnection": "Test connection",
+        "save": "Save"
+      }
+    }
+  }
+}

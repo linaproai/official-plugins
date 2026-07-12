@@ -1,0 +1,13 @@
+{
+  "menu": {
+    "plugin:linapro-storage-oss:settings": {
+      "title": "阿里云 OSS"
+    },
+    "plugin:linapro-storage-oss:settings-update": {
+      "title": "保存设置"
+    },
+    "plugin:linapro-storage-oss:settings-test": {
+      "title": "测试连接"
+    }
+  }
+}

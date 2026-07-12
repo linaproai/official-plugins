@@ -1,0 +1,42 @@
+{
+  "plugin": {
+    "linapro-storage-qiniu": {
+      "name": "Object Storage - Qiniu Kodo",
+      "description": "Provides a Qiniu Kodo backend for the host Storage domain capability.",
+      "settings": {
+        "description": "Enter your Qiniu Kodo access keys and bucket below. Enable only one cloud storage plugin at a time. If the configuration is incomplete, object storage operations will fail—the system will not automatically switch to local disk.",
+        "accessKeyIdLabel": "AccessKey",
+        "accessKeyIdHelp": "Qiniu AccessKey used by the provider SDK.",
+        "accessKeyIdPlaceholder": "Enter AccessKey",
+        "secretAccessKeyLabel": "SecretKey",
+        "secretAccessKeyHelp": "Qiniu SecretKey. Leave empty to keep the previously saved value.",
+        "secretAccessKeyPlaceholder": "Enter SecretKey",
+        "secretAccessKeyKeepPlaceholder": "Leave empty to keep the saved secret",
+        "regionLabel": "Region",
+        "regionHelp": "Optional Kodo region ID (z0/z1/z2/cn-east-2/na0/as0). Leave empty to auto-detect from AccessKey and bucket.",
+        "regionPlaceholder": "e.g. z0 / z1 / z2 / cn-east-2",
+        "bucketLabel": "Bucket",
+        "bucketHelp": "Target Kodo bucket name.",
+        "bucketPlaceholder": "bucket-name",
+        "endpointLabel": "Download domain",
+        "endpointHelp": "Optional custom download domain for Get (CDN/custom domain). Management APIs do not require this field.",
+        "endpointPlaceholder": "Optional download domain",
+        "pathPrefixLabel": "Path prefix",
+        "pathPrefixHelp": "Optional key prefix applied under the host-scoped object key.",
+        "pathPrefixPlaceholder": "Optional prefix",
+        "forcePathStyleLabel": "Force path-style",
+        "forcePathStyleHelp": "Not used by Qiniu Kodo.",
+        "loadFailed": "Failed to load settings",
+        "saveSuccess": "Settings saved",
+        "saveFailed": "Failed to save settings",
+        "testSuccess": "Connection test succeeded",
+        "testFailed": "Connection test failed",
+        "copyDetail": "Copy details",
+        "copied": "Error details copied",
+        "copyFailed": "Failed to copy",
+        "testConnection": "Test connection",
+        "save": "Save"
+      }
+    }
+  }
+}

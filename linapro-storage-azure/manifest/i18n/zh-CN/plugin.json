@@ -1,0 +1,37 @@
+{
+  "plugin": {
+    "linapro-storage-azure": {
+      "name": "对象存储-Azure Blob",
+      "description": "为宿主 Storage 领域能力提供 Azure Blob 对象存储后端。",
+      "settings": {
+        "description": "在此填写 Azure 存储账户凭据与容器。同一时间请只启用一个云存储插件。配置不完整时，对象读写不会自动改用本地磁盘，相关操作会直接失败。",
+        "accountNameLabel": "账户名 Account",
+        "accountNameHelp": "用于 Shared Key 鉴权的 Azure 存储账户名。",
+        "accountNamePlaceholder": "mystorageaccount",
+        "accountKeyLabel": "账户密钥 Account Key",
+        "accountKeyHelp": "Azure 存储账户密钥。留空表示不修改已保存的值。",
+        "accountKeyPlaceholder": "请输入账户密钥",
+        "accountKeyKeepPlaceholder": "留空则保留已保存密钥",
+        "containerLabel": "容器 Container",
+        "containerHelp": "目标 Blob 容器名称。",
+        "containerPlaceholder": "container-name",
+        "endpointLabel": "Endpoint",
+        "endpointHelp": "可选自定义服务端点（Azurite、主权云或私有端点）。默认 https://{account}.blob.core.windows.net/。",
+        "endpointPlaceholder": "https://mystorageaccount.blob.core.windows.net/",
+        "pathPrefixLabel": "路径前缀",
+        "pathPrefixHelp": "可选，在宿主作用域 object key 之上再包一层前缀。",
+        "pathPrefixPlaceholder": "可选前缀",
+        "loadFailed": "加载设置失败",
+        "saveSuccess": "设置已保存",
+        "saveFailed": "保存设置失败",
+        "testSuccess": "连接测试成功",
+        "testFailed": "连接测试失败",
+        "copyDetail": "复制详情",
+        "copied": "错误详情已复制",
+        "copyFailed": "复制失败",
+        "testConnection": "测试连接",
+        "save": "保存"
+      }
+    }
+  }
+}

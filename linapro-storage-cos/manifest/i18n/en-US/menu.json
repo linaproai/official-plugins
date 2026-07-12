@@ -1,0 +1,13 @@
+{
+  "menu": {
+    "plugin:linapro-storage-cos:settings": {
+      "title": "Tencent COS"
+    },
+    "plugin:linapro-storage-cos:settings-update": {
+      "title": "Save Settings"
+    },
+    "plugin:linapro-storage-cos:settings-test": {
+      "title": "Test Connection"
+    }
+  }
+}

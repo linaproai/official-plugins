@@ -1,0 +1,25 @@
+{
+  "error": {
+    "plugin": {
+      "oss": {
+        "settings": {
+          "storage": {
+            "unavailable": "设置存储服务不可用"
+          },
+          "read": {
+            "failed": "读取设置失败"
+          },
+          "save": {
+            "failed": "保存设置失败"
+          },
+          "config": {
+            "invalid": "对象存储配置不完整或无效"
+          },
+          "test": {
+            "failed": "对象存储连通性测试失败"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "plugin": {
+    "linapro-storage-qiniu": {
+      "name": "对象存储-七牛云 Kodo",
+      "description": "为宿主 Storage 领域能力提供七牛云 Kodo 对象存储后端。",
+      "settings": {
+        "description": "在此填写七牛云 Kodo 的访问密钥和存储空间。同一时间请只启用一个云存储插件。配置不完整时，对象读写不会自动改用本地磁盘，相关操作会直接失败。",
+        "accessKeyIdLabel": "AccessKey",
+        "accessKeyIdHelp": "提供给七牛 SDK 使用的 AccessKey。",
+        "accessKeyIdPlaceholder": "请输入 AccessKey",
+        "secretAccessKeyLabel": "SecretKey",
+        "secretAccessKeyHelp": "SecretKey。留空表示不修改已保存的值。",
+        "secretAccessKeyPlaceholder": "请输入 SecretKey",
+        "secretAccessKeyKeepPlaceholder": "留空则保留已保存密钥",
+        "regionLabel": "地域 Region",
+        "regionHelp": "可选机房 ID（z0/z1/z2/cn-east-2/na0/as0）。留空时根据 AccessKey 与 Bucket 自动探测。",
+        "regionPlaceholder": "例如 z0 / z1 / z2 / cn-east-2",
+        "bucketLabel": "存储空间 Bucket",
+        "bucketHelp": "目标 Kodo 存储空间名称。",
+        "bucketPlaceholder": "bucket-name",
+        "endpointLabel": "下载域名",
+        "endpointHelp": "可选自定义下载域名（CDN/绑定域名），管理 API 不依赖该字段。",
+        "endpointPlaceholder": "可选下载域名",
+        "pathPrefixLabel": "路径前缀",
+        "pathPrefixHelp": "可选，在宿主作用域 object key 之上再包一层前缀。",
+        "pathPrefixPlaceholder": "可选前缀",
+        "forcePathStyleLabel": "强制 path-style",
+        "forcePathStyleHelp": "七牛 Kodo 不使用该选项。",
+        "loadFailed": "加载设置失败",
+        "saveSuccess": "设置已保存",
+        "saveFailed": "保存设置失败",
+        "testSuccess": "连接测试成功",
+        "testFailed": "连接测试失败",
+        "copyDetail": "复制详情",
+        "copied": "错误详情已复制",
+        "copyFailed": "复制失败",
+        "testConnection": "测试连接",
+        "save": "保存"
+      }
+    }
+  }
+}

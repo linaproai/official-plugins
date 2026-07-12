@@ -1,0 +1,13 @@
+{
+  "menu": {
+    "plugin:linapro-storage-aws:settings": {
+      "title": "AWS S3"
+    },
+    "plugin:linapro-storage-aws:settings-update": {
+      "title": "保存设置"
+    },
+    "plugin:linapro-storage-aws:settings-test": {
+      "title": "测试连接"
+    }
+  }
+}

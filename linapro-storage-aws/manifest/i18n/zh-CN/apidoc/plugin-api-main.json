@@ -1,0 +1,7 @@
+{
+  "openapi": {
+    "tags": {
+      "Storage / AWS": "AWS S3"
+    }
+  }
+}
