@@ -71,7 +71,13 @@ async function fetchPlugin(
   adminApi: APIRequestContext,
   pluginID: string,
 ): Promise<null | PluginListItem> {
-  const response = await adminApi.get("plugins");
+  const response = await adminApi.get("plugins", {
+    params: {
+      pageNum: 1,
+      pageSize: 100,
+      id: pluginID,
+    },
+  });
   assertOk(response, "查询插件列表失败");
   const payload = unwrapApiData(await response.json()) as {
     list?: PluginListItem[];

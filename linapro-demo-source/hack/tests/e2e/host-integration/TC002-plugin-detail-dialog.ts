@@ -23,15 +23,18 @@ test.describe("TC-2 插件详情弹窗", () => {
     await expect(modal).toContainText(pluginID);
     await expect(modal).toContainText("源码插件");
     await expect(modal).toContainText(pluginVersion);
-    await expect(modal).toContainText("安装状态");
-    await expect(modal).toContainText("状态");
+    // Detail collapses installed/enabled/runtime into one status field, and
+    // scopeNature/installMode into one plugin-scope field.
+    await expect(modal).toContainText("插件状态");
+    await expect(modal).not.toContainText("安装状态");
+    await expect(modal).not.toContainText("作用域性质");
+    await expect(modal).not.toContainText("安装模式");
     await expect(modal).toContainText("启动管理");
-    await expect(modal).toContainText("授权状态");
+    await expect(modal).not.toContainText("授权状态");
     await expect(modal).toContainText("示例数据");
     await expect(modal).toContainText("支持多租户");
     await expect(modal).toContainText("新租户启用");
-    await expect(modal).toContainText("作用域性质");
-    await expect(modal).toContainText("安装模式");
+    await expect(modal).toContainText("插件作用域");
     await expect(modal).toContainText("安装时间");
     await expect(modal).toContainText("更新时间");
     await expect(modal).not.toContainText("授权要求");
@@ -42,10 +45,7 @@ test.describe("TC-2 插件详情弹窗", () => {
     await expect(pluginPage.pluginDetailTenantProvisioning()).toContainText(
       "否",
     );
-    await expect(pluginPage.pluginDetailScopeNature()).toContainText(
-      "租户感知",
-    );
-    await expect(pluginPage.pluginDetailInstallMode()).toContainText("租户级");
+    await expect(pluginPage.pluginDetailPluginScope()).toContainText("租户级");
     await expect(pluginPage.pluginDetailDescriptionRow()).toBeVisible();
     await expect(pluginPage.pluginDetailDescriptionRow()).toContainText(
       pluginDescription,

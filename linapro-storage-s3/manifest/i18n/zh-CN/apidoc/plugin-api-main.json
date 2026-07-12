@@ -1,7 +1,117 @@
 {
-  "openapi": {
-    "tags": {
-      "Storage / S3": "S3 存储"
+  "plugins": {
+    "linapro_storage_s3": {
+      "api": {
+        "settings": {
+          "v1": {
+            "SettingsItem": {
+              "fields": {
+                "accessKeyID": {
+                  "dc": "云访问密钥 ID"
+                },
+                "secretAccessKeyMasked": {
+                  "dc": "脱敏密钥指示"
+                },
+                "secretAccessKeyConfigured": {
+                  "dc": "是否已配置密钥"
+                },
+                "region": {
+                  "dc": "可选签名区域；为空时默认 us-east-1"
+                },
+                "bucket": {
+                  "dc": "目标存储桶名称"
+                },
+                "endpoint": {
+                  "dc": "必填 S3 API 端点"
+                },
+                "pathPrefix": {
+                  "dc": "可选对象键前缀"
+                },
+                "forcePathStyle": {
+                  "dc": "使用路径风格寻址"
+                }
+              }
+            },
+            "GetSettingsReq": {
+              "schema": {
+                "dc": "返回管理页使用的脱敏 S3 对象存储设置。"
+              },
+              "meta": {
+                "tags": "对象存储 / S3",
+                "summary": "查询对象存储设置",
+                "dc": "返回管理页使用的脱敏 S3 对象存储设置。"
+              }
+            },
+            "GetSettingsRes": {
+              "fields": {
+                "settings": {
+                  "dc": "脱敏后的设置投影"
+                }
+              }
+            },
+            "SaveSettingsReq": {
+              "schema": {
+                "dc": "持久化 S3 对象存储设置。密钥为空或仍为脱敏值时保留原值。"
+              },
+              "meta": {
+                "tags": "对象存储 / S3",
+                "summary": "保存对象存储设置",
+                "dc": "持久化 S3 对象存储设置。密钥为空或仍为脱敏值时保留原值。"
+              },
+              "fields": {
+                "accessKeyID": {
+                  "dc": "访问密钥 ID"
+                },
+                "secretAccessKey": {
+                  "dc": "密钥；为空时保留原值"
+                },
+                "region": {
+                  "dc": "可选签名区域；为空时默认 us-east-1"
+                },
+                "bucket": {
+                  "dc": "目标存储桶"
+                },
+                "endpoint": {
+                  "dc": "必填 S3 API 端点 URL"
+                },
+                "pathPrefix": {
+                  "dc": "可选对象键前缀"
+                },
+                "forcePathStyle": {
+                  "dc": "使用路径风格寻址"
+                }
+              }
+            },
+            "SaveSettingsRes": {
+              "fields": {
+                "settings": {
+                  "dc": "保存后的脱敏设置投影"
+                }
+              }
+            },
+            "TestConnectionReq": {
+              "schema": {
+                "dc": "使用提交或已保存的凭证探测目标 S3 存储桶连通性，不持久化更改。"
+              },
+              "meta": {
+                "tags": "对象存储 / S3",
+                "summary": "测试对象存储连通性",
+                "dc": "使用提交或已保存的凭证探测目标 S3 存储桶连通性，不持久化更改。"
+              }
+            },
+            "TestConnectionRes": {
+              "fields": {
+                "ok": {
+                  "dc": "连通性探测是否成功"
+                },
+                "message": {
+                  "dc": "可读的探测结果说明"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

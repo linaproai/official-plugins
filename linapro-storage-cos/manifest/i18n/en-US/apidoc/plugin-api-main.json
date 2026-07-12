@@ -1,7 +1,1 @@
-{
-  "openapi": {
-    "tags": {
-      "Storage / Tencent COS": "Tencent COS"
-    }
-  }
-}
+{}

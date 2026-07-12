@@ -1,7 +1,105 @@
 {
-  "openapi": {
-    "tags": {
-      "Storage / Azure Blob": "Azure Blob"
+  "plugins": {
+    "linapro_storage_azure": {
+      "api": {
+        "settings": {
+          "v1": {
+            "SettingsItem": {
+              "fields": {
+                "accountName": {
+                  "dc": "Azure 存储账户名称"
+                },
+                "accountKeyMasked": {
+                  "dc": "脱敏账户密钥指示"
+                },
+                "accountKeyConfigured": {
+                  "dc": "是否已配置账户密钥"
+                },
+                "container": {
+                  "dc": "目标 Blob 容器名称"
+                },
+                "endpoint": {
+                  "dc": "可选自定义服务端点 URL"
+                },
+                "pathPrefix": {
+                  "dc": "可选对象键前缀"
+                }
+              }
+            },
+            "GetSettingsReq": {
+              "schema": {
+                "dc": "返回管理页使用的脱敏 Azure Blob 存储设置。"
+              },
+              "meta": {
+                "tags": "对象存储 / Azure Blob",
+                "summary": "查询对象存储设置",
+                "dc": "返回管理页使用的脱敏 Azure Blob 存储设置。"
+              }
+            },
+            "GetSettingsRes": {
+              "fields": {
+                "settings": {
+                  "dc": "脱敏后的设置投影"
+                }
+              }
+            },
+            "SaveSettingsReq": {
+              "schema": {
+                "dc": "持久化 Azure Blob 存储设置。账户密钥为空或仍为脱敏值时保留原值。"
+              },
+              "meta": {
+                "tags": "对象存储 / Azure Blob",
+                "summary": "保存对象存储设置",
+                "dc": "持久化 Azure Blob 存储设置。账户密钥为空或仍为脱敏值时保留原值。"
+              },
+              "fields": {
+                "accountName": {
+                  "dc": "Azure 存储账户名称"
+                },
+                "accountKey": {
+                  "dc": "Azure 存储账户密钥；为空时保留原值"
+                },
+                "container": {
+                  "dc": "目标 Blob 容器"
+                },
+                "endpoint": {
+                  "dc": "可选自定义服务端点"
+                },
+                "pathPrefix": {
+                  "dc": "可选对象键前缀"
+                }
+              }
+            },
+            "SaveSettingsRes": {
+              "fields": {
+                "settings": {
+                  "dc": "保存后的脱敏设置投影"
+                }
+              }
+            },
+            "TestConnectionReq": {
+              "schema": {
+                "dc": "使用提交或已保存的凭证探测目标容器连通性，不持久化更改。"
+              },
+              "meta": {
+                "tags": "对象存储 / Azure Blob",
+                "summary": "测试对象存储连通性",
+                "dc": "使用提交或已保存的凭证探测目标容器连通性，不持久化更改。"
+              }
+            },
+            "TestConnectionRes": {
+              "fields": {
+                "ok": {
+                  "dc": "连通性探测是否成功"
+                },
+                "message": {
+                  "dc": "可读的探测结果说明"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
