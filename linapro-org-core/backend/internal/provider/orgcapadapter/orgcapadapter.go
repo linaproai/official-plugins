@@ -525,7 +525,7 @@ func (p *Provider) UpdatePost(ctx context.Context, input orgcap.PostUpdateInput)
 
 // DeletePost deletes one post through the plugin-owned post service.
 func (p *Provider) DeletePost(ctx context.Context, postID int) error {
-	return p.postSvc.Delete(ctx, strconv.Itoa(postID))
+	return p.postSvc.Delete(ctx, []int{postID})
 }
 
 // ReplaceUserAssignments rewrites one user's department and post associations.
