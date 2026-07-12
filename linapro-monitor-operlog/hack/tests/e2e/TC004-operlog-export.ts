@@ -62,12 +62,17 @@ test.describe('TC004 操作日志导出', () => {
     const modalContent = await waitForDialogReady(adminPage.locator('.ant-modal-wrap'));
     await expect(modalContent.getByText(/是否导出选中的记录/)).toBeVisible();
 
-    // Set up response listener
+    // Set up response listener.
+    // requestClient uses brackets serializer (ids[]=1), matching GoFrame []int binding.
+    // See: apps/lina-vben/apps/web-antd/src/api/request.ts paramsSerializer: 'brackets'
     const responsePromise = adminPage.waitForResponse((resp) => {
       const url = new URL(resp.url());
+      const hasSelectedIds =
+        url.searchParams.getAll('ids[]').length > 0 ||
+        url.searchParams.getAll('ids').length > 0;
       return (
         url.pathname.includes('/x/linapro-monitor-operlog/api/v1/operlog/export') &&
-        url.searchParams.getAll('ids').length > 0
+        hasSelectedIds
       );
     }, { timeout: 15000 });
 
