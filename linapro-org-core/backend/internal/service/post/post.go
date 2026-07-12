@@ -57,7 +57,7 @@ type Service interface {
 	Update(ctx context.Context, in UpdateInput) error
 	// Delete deletes one or more tenant-visible posts, rejecting rows that still
 	// have user bindings.
-	Delete(ctx context.Context, ids string) error
+	Delete(ctx context.Context, ids []int) error
 	// DeptTree returns the tenant-visible department tree decorated with post counts.
 	DeptTree(ctx context.Context) ([]*DeptTreeNode, error)
 	// OptionSelect returns localized, tenant-visible post options for one department subtree.

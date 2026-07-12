@@ -138,7 +138,7 @@ function handleMultiDelete() {
       count: ids.length,
     }),
     onOk: async () => {
-      await postDelete(ids.join(','));
+      await postDelete(ids);
       checkedRows.value = [];
       await gridApi.query();
       deptTreeRef.value?.refreshTree();

@@ -56,7 +56,9 @@ export function loginLogClean(params?: { beginTime?: string; endTime?: string })
 }
 
 export function loginLogDelete(ids: number[]) {
-  return requestClient.delete(loginLogApi(`loginlog/${ids.join(',')}`));
+  return requestClient.delete(loginLogApi('loginlog'), {
+    params: { ids },
+  });
 }
 
 export function loginLogExport(params?: LoginLogListParams) {

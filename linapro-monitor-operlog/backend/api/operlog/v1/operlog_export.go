@@ -17,7 +17,7 @@ type ExportReq struct {
 	EndTime        string  `json:"endTime" dc:"Filter by operation end time" eg:"2025-12-31"`
 	OrderBy        string  `json:"orderBy" dc:"Sort fields: id,operTime,costTime" eg:"operTime"`
 	OrderDirection string  `json:"orderDirection" d:"desc" dc:"Sort direction: asc or desc" eg:"desc"`
-	Ids            []int   `json:"ids" dc:"Specify the list of record IDs to be exported. If omitted, all records that meet the conditions will be exported." eg:"[1,2,3]"`
+	Ids            []int   `json:"ids" dc:"Optional record ID list as a query array (ids[]=1&ids[]=2). If omitted, all records that meet the conditions will be exported." eg:"[1,2,3]"`
 }
 
 // ExportRes is the operation-log export response.

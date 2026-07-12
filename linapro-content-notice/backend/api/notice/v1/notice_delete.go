@@ -11,8 +11,8 @@ import (
 
 // DeleteReq defines the request for deleting notices.
 type DeleteReq struct {
-	g.Meta `path:"/notice/{ids}" method:"delete" tags:"Notices" summary:"Delete notification or announcement" dc:"Delete one or more notifications or announcements" permission:"system:notice:remove"`
-	Ids    string `json:"ids" v:"required" dc:"Announcement IDs, comma-separated" eg:"1,2,3"`
+	g.Meta `path:"/notice" method:"delete" tags:"Notices" summary:"Delete notification or announcement" dc:"Delete one or more notifications or announcements by query array ids[]" permission:"system:notice:remove"`
+	Ids    []int64 `json:"ids" v:"required|min-length:1" dc:"Announcement ID list as a query array, e.g. ids[]=1&ids[]=2&ids[]=3" eg:"[1,2,3]"`
 }
 
 // DeleteRes Notice delete response

@@ -137,7 +137,7 @@ function handleMultiDelete() {
       count: ids.length,
     }),
     onOk: async () => {
-      await noticeDelete(ids.join(','));
+      await noticeDelete(ids);
       checkedRows.value = [];
       await gridApi.query();
     },

@@ -23,7 +23,11 @@ import { workspacePath } from "@host-tests/fixtures/config";
 import { waitForRouteReady } from "@host-tests/support/ui";
 
 const pluginID = "linapro-extlogin-core";
+// Install one settings child so the Auth Login directory is non-empty.
+// Frontend route menus intentionally hide empty directory shells.
+const catalogChildPluginID = "linapro-auth-ldap";
 const dependentPluginIDs = [
+  catalogChildPluginID,
   "linapro-oidc-google",
   "linapro-oidc-discord",
 ] as const;
@@ -74,16 +78,26 @@ async function uninstallDependentsIfPresent(api: APIRequestContext) {
   }
 }
 
+/** Install catalog owner first, then a child settings page (dependency order). */
+async function ensureAuthLoginCatalogVisible() {
+  // prepareSourcePluginsBaseline sorts IDs alphabetically; keep explicit order
+  // so the parent domain catalog exists before child settings menus attach.
+  await prepareSourcePluginsBaseline([pluginID]);
+  await prepareSourcePluginsBaseline([catalogChildPluginID]);
+}
+
 test.describe("TC001 linapro-extlogin-core 授权登录目录", () => {
   test.beforeAll(async () => {
-    await prepareSourcePluginsBaseline([pluginID]);
+    // Domain catalog plus one child settings page keeps the directory visible
+    // in sidebar route menus (empty directories are filtered out).
+    await ensureAuthLoginCatalogVisible();
   });
 
   test("TC001a: 安装启用后出现授权登录目录且位于扩展中心之前", async () => {
     const api = await createAdminApiContext();
     try {
       await syncPlugins(api);
-      await prepareSourcePluginsBaseline([pluginID]);
+      await ensureAuthLoginCatalogVisible();
 
       const tree = await fetchMenuTree(api);
       const authLogin = findByName(tree, /授权登录|Auth Login/i);
@@ -117,7 +131,7 @@ test.describe("TC001 linapro-extlogin-core 授权登录目录", () => {
   });
 
   test("TC001b: 侧边栏可见授权登录目录", async ({ adminPage }) => {
-    await prepareSourcePluginsBaseline([pluginID]);
+    await ensureAuthLoginCatalogVisible();
     const layout = new MainLayout(adminPage);
     await adminPage.goto(workspacePath("/dashboard/workspace"));
     await waitForRouteReady(adminPage);

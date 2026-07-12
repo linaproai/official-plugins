@@ -1912,10 +1912,10 @@ export async function scenarioTC0241() {
           "JOB_GROUP_NOT_FOUND",
         );
         await expectBusinessErrorCode(
-          await tenantApi.delete(`job-group/${tenantBGroup}`),
+          await tenantApi.delete(`job-group?ids[]=${tenantBGroup}`),
           "JOB_GROUP_NOT_FOUND",
         );
-        await expectSuccess(await tenantApi.delete(`job-group/${created.id}`));
+        await expectSuccess(await tenantApi.delete(`job-group?ids[]=${created.id}`));
         expect(
           scalarNumber(
             `SELECT group_id FROM sys_job WHERE tenant_id = ${tenantA.id} AND name = '${pgEscapeLiteral(`${prefix}_tenant_a_job`)}';`,

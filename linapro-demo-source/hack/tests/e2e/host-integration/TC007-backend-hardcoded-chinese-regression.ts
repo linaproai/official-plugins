@@ -104,7 +104,9 @@ test.describe("TC-3 Backend hardcoded Chinese regression", () => {
     await waitForRouteReady(adminPage, 15_000);
 
     const bodyText = await adminPage.locator("body").innerText();
-    expect(bodyText).toContain("Source Plugin Demo");
+    // Menu / chrome title is projected from plugin menu i18n (en-US), not the
+    // Vue route definePage title which may only appear in document metadata.
+    expect(bodyText).toContain("Sample Plugin - Source");
     expect(bodyText).toContain("Demo Records");
     expect(bodyText).not.toMatch(chineseSystemCopyPattern);
   });

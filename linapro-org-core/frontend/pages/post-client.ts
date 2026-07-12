@@ -53,8 +53,17 @@ export function postUpdate(id: number, data: Partial<Post>) {
   return requestClient.put(orgApi(`post/${id}`), data);
 }
 
-export function postDelete(ids: string) {
-  return requestClient.delete(orgApi(`post/${ids}`));
+export function postDelete(ids: number[] | string) {
+  const list =
+    typeof ids === 'string'
+      ? ids
+          .split(',')
+          .map((part) => Number(part.trim()))
+          .filter((id) => Number.isFinite(id) && id > 0)
+      : ids;
+  return requestClient.delete(orgApi('post'), {
+    params: { ids: list },
+  });
 }
 
 export function postInfo(id: number) {

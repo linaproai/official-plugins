@@ -101,7 +101,7 @@ test.describe("TC002 用户消息列表页面", () => {
       });
     } finally {
       await adminApi
-        .delete(pluginApiPath(PLUGIN_ID, `notice/${noticeId}`))
+        .delete(pluginApiPath(PLUGIN_ID, `notice?ids[]=${noticeId}`))
         .catch(() => {});
       await recipient.cleanup();
       await adminApi.dispose();

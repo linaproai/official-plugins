@@ -67,12 +67,15 @@ export function operLogClean(params?: { beginTime?: string; endTime?: string }) 
 }
 
 export function operLogDelete(ids: number[]) {
-  return requestClient.delete(operLogApi(`operlog/${ids.join(',')}`));
+  return requestClient.delete(operLogApi('operlog'), {
+    params: { ids },
+  });
 }
 
 export function operLogExport(params?: OperLogExportParams) {
+  // Rely on requestClient default brackets serializer so ids[] binds to []int.
+  // Do not use 'repeat' (ids=1&ids=2): GoFrame keeps only the last value.
   return requestClient.download<Blob>(operLogApi('operlog/export'), {
     params,
-    paramsSerializer: 'repeat',
   });
 }

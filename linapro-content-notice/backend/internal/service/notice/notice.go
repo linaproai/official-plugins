@@ -45,7 +45,7 @@ type Service interface {
 	// Delete soft-deletes notices by IDs and cascades the deletion into the
 	// notify delivery records so inboxes stay consistent. Empty IDs return a
 	// business error; cascade failures are logged because the notice deletion is authoritative.
-	Delete(ctx context.Context, ids string) error
+	Delete(ctx context.Context, ids []int64) error
 }
 
 // Ensure serviceImpl implements Service.

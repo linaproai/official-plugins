@@ -228,8 +228,8 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 }
 
 // Delete soft-deletes notices by IDs and cascades to notify deliveries.
-func (s *serviceImpl) Delete(ctx context.Context, ids string) error {
-	idList := normalizeNoticeDeleteIDs(ids)
+func (s *serviceImpl) Delete(ctx context.Context, ids []int64) error {
+	idList := normalizePositiveInt64IDs(ids)
 	if len(idList) == 0 {
 		return bizerr.NewCode(CodeNoticeDeleteRequired)
 	}
@@ -243,23 +243,26 @@ func (s *serviceImpl) Delete(ctx context.Context, ids string) error {
 		return err
 	}
 
-	if cascadeErr := s.notifySvc.DeleteBySource(ctx, usermsgv1.SourceTypeNotice, idList); cascadeErr != nil {
-		logger.Errorf(ctx, "cascade delete notify deliveries failed for notice ids %s: %v", ids, cascadeErr)
+	sourceIDs := make([]string, 0, len(idList))
+	for _, id := range idList {
+		sourceIDs = append(sourceIDs, strconv.FormatInt(id, 10))
+	}
+	if cascadeErr := s.notifySvc.DeleteBySource(ctx, usermsgv1.SourceTypeNotice, sourceIDs); cascadeErr != nil {
+		logger.Errorf(ctx, "cascade delete notify deliveries failed for notice ids %v: %v", idList, cascadeErr)
 	}
 	return nil
 }
 
-// normalizeNoticeDeleteIDs trims comma-separated notice IDs and removes empty
-// entries before passing them to the DAO layer.
-func normalizeNoticeDeleteIDs(ids string) []string {
-	rawIDs := strings.Split(ids, ",")
-	result := make([]string, 0, len(rawIDs))
-	for _, id := range rawIDs {
-		normalizedID := strings.TrimSpace(id)
-		if normalizedID == "" {
-			continue
+// normalizePositiveInt64IDs drops non-positive identifiers from a batch ID list.
+func normalizePositiveInt64IDs(ids []int64) []int64 {
+	if len(ids) == 0 {
+		return nil
+	}
+	result := make([]int64, 0, len(ids))
+	for _, id := range ids {
+		if id > 0 {
+			result = append(result, id)
 		}
-		result = append(result, normalizedID)
 	}
 	return result
 }

@@ -70,7 +70,7 @@ test.describe("TC003 通知公告发布与消息分发", () => {
     } finally {
       if (noticeId > 0) {
         await adminApi
-          .delete(pluginApiPath(PLUGIN_ID, `notice/${noticeId}`))
+          .delete(pluginApiPath(PLUGIN_ID, `notice?ids[]=${noticeId}`))
           .catch(() => {});
       }
       await recipient.cleanup();
@@ -110,7 +110,7 @@ test.describe("TC003 通知公告发布与消息分发", () => {
     } finally {
       if (noticeId > 0) {
         await adminApi
-          .delete(pluginApiPath(PLUGIN_ID, `notice/${noticeId}`))
+          .delete(pluginApiPath(PLUGIN_ID, `notice?ids[]=${noticeId}`))
           .catch(() => {});
       }
       await recipient.cleanup();

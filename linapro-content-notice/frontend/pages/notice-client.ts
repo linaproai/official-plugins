@@ -45,8 +45,17 @@ export function noticeUpdate(id: number, data: Partial<Notice>) {
   return requestClient.put(noticeApi(`notice/${id}`), data);
 }
 
-export function noticeDelete(ids: string) {
-  return requestClient.delete(noticeApi(`notice/${ids}`));
+export function noticeDelete(ids: number[] | string) {
+  const list =
+    typeof ids === 'string'
+      ? ids
+          .split(',')
+          .map((part) => Number(part.trim()))
+          .filter((id) => Number.isFinite(id) && id > 0)
+      : ids;
+  return requestClient.delete(noticeApi('notice'), {
+    params: { ids: list },
+  });
 }
 
 export function noticeInfo(id: number) {

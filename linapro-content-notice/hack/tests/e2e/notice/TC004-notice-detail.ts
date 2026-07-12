@@ -73,7 +73,7 @@ test.describe("TC004 消息列表预览弹窗查看通知详情", () => {
     } finally {
       if (noticeId > 0) {
         await adminApi
-          .delete(pluginApiPath(PLUGIN_ID, `notice/${noticeId}`))
+          .delete(pluginApiPath(PLUGIN_ID, `notice?ids[]=${noticeId}`))
           .catch(() => {});
       }
       await recipient.cleanup();

@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gogf/gf/v2/text/gstr"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/xuri/excelize/v2"
 
@@ -130,16 +129,13 @@ func (s *serviceImpl) Update(ctx context.Context, in UpdateInput) error {
 }
 
 // Delete deletes one or more posts.
-func (s *serviceImpl) Delete(ctx context.Context, ids string) error {
-	idList := gstr.SplitAndTrim(ids, ",")
-	if len(idList) == 0 {
+func (s *serviceImpl) Delete(ctx context.Context, ids []int) error {
+	if len(ids) == 0 {
 		return bizerr.NewCode(CodePostDeleteRequired)
 	}
-
-	validIDs := make([]int, 0, len(idList))
-	for _, idStr := range idList {
-		id := gconv.Int(idStr)
-		if id == 0 {
+	validIDs := make([]int, 0, len(ids))
+	for _, id := range ids {
+		if id <= 0 {
 			continue
 		}
 		count, err := tenantspi.ApplyPluginTableFilter(ctx, s.pluginTableFilter(), dao.UserPost.Ctx(ctx), "").

@@ -154,7 +154,7 @@ test.describe("TC-3 用户消息自隔离边界", () => {
   test.afterAll(async () => {
     if (noticeID > 0) {
       await adminApi
-        .delete(pluginApiPath(pluginID, `notice/${noticeID}`))
+        .delete(pluginApiPath(pluginID, `notice?ids[]=${noticeID}`))
         .catch(() => {});
     }
     await limitedApi?.delete("user/message/clear").catch(() => {});

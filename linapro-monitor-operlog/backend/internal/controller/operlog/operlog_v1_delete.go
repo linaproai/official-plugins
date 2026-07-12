@@ -3,20 +3,12 @@ package operlog
 import (
 	"context"
 
-	"github.com/gogf/gf/v2/text/gstr"
-	"github.com/gogf/gf/v2/util/gconv"
-
 	v1 "lina-plugin-linapro-monitor-operlog/backend/api/operlog/v1"
 )
 
 // Delete deletes operation logs.
 func (c *ControllerV1) Delete(ctx context.Context, req *v1.DeleteReq) (res *v1.DeleteRes, err error) {
-	idStrs := gstr.SplitAndTrim(req.Ids, ",")
-	ids := make([]int, 0, len(idStrs))
-	for _, idStr := range idStrs {
-		ids = append(ids, gconv.Int(idStr))
-	}
-	deleted, err := c.operLogSvc.DeleteByIds(ctx, ids)
+	deleted, err := c.operLogSvc.DeleteByIds(ctx, req.Ids)
 	if err != nil {
 		return nil, err
 	}

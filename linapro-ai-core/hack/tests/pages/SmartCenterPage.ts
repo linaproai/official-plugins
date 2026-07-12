@@ -1648,7 +1648,8 @@ export class SmartCenterPage {
       activeColor,
       inactiveColor,
       activeIconColor,
-      contentBg,
+      tabsBg,
+      contentHolderBg,
       contentBorderWidth,
       inkBg,
       inkBox,
@@ -1667,6 +1668,8 @@ export class SmartCenterPage {
       activeButton.evaluate((node) => window.getComputedStyle(node).color),
       inactiveButton.evaluate((node) => window.getComputedStyle(node).color),
       activeIcon.evaluate((node) => window.getComputedStyle(node).color),
+      // Card surface lives on the tabs root; content-holder is intentionally transparent.
+      tabs.evaluate((node) => window.getComputedStyle(node).backgroundColor),
       contentHolder.evaluate(
         (node) => window.getComputedStyle(node).backgroundColor,
       ),
@@ -1689,7 +1692,8 @@ export class SmartCenterPage {
     expect(inactiveBg).toBe("rgba(0, 0, 0, 0)");
     expect(activeColor).not.toBe(inactiveColor);
     expect(activeIconColor).toBe(activeColor);
-    expect(contentBg).not.toBe("rgba(0, 0, 0, 0)");
+    expect(tabsBg).not.toBe("rgba(0, 0, 0, 0)");
+    expect(contentHolderBg).toBe("rgba(0, 0, 0, 0)");
     expect(contentBorderWidth).toBe(0);
     expect(inkBg).toBe(activeColor);
     expect(inkBox).not.toBeNull();
