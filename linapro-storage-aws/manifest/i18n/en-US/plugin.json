@@ -1,0 +1,37 @@
+{
+  "plugin": {
+    "linapro-storage-aws": {
+      "name": "Object Storage - AWS S3",
+      "description": "Provides an official AWS S3 backend for the host Storage domain capability.",
+      "settings": {
+        "description": "Enter your official AWS S3 access keys, region, and bucket below. Enable only one cloud storage plugin at a time. If the configuration is incomplete, object storage operations will fail—the system will not automatically switch to local disk. For MinIO, R2, or other S3-compatible services, use the S3 Storage plugin instead.",
+        "accessKeyIdLabel": "Access Key ID",
+        "accessKeyIdHelp": "AWS access key ID used by the S3 SDK.",
+        "accessKeyIdPlaceholder": "Enter AWS access key id",
+        "secretAccessKeyLabel": "Secret Access Key",
+        "secretAccessKeyHelp": "AWS secret access key. Leave empty to keep the previously saved value.",
+        "secretAccessKeyPlaceholder": "Enter AWS secret key",
+        "secretAccessKeyKeepPlaceholder": "Leave empty to keep the saved secret",
+        "regionLabel": "Region",
+        "regionHelp": "AWS region of the target bucket (for example us-east-1).",
+        "regionPlaceholder": "e.g. us-east-1",
+        "bucketLabel": "Bucket",
+        "bucketHelp": "Target AWS S3 bucket name.",
+        "bucketPlaceholder": "bucket-name",
+        "pathPrefixLabel": "Path prefix",
+        "pathPrefixHelp": "Optional key prefix applied under the host-scoped object key.",
+        "pathPrefixPlaceholder": "Optional prefix",
+        "loadFailed": "Failed to load settings",
+        "saveSuccess": "Settings saved",
+        "saveFailed": "Failed to save settings",
+        "testSuccess": "Connection test succeeded",
+        "testFailed": "Connection test failed",
+        "copyDetail": "Copy details",
+        "copied": "Error details copied",
+        "copyFailed": "Failed to copy",
+        "testConnection": "Test connection",
+        "save": "Save"
+      }
+    }
+  }
+}

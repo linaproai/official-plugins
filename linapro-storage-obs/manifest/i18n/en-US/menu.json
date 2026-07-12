@@ -1,0 +1,13 @@
+{
+  "menu": {
+    "plugin:linapro-storage-obs:settings": {
+      "title": "Huawei Cloud OBS"
+    },
+    "plugin:linapro-storage-obs:settings-update": {
+      "title": "Save Settings"
+    },
+    "plugin:linapro-storage-obs:settings-test": {
+      "title": "Test Connection"
+    }
+  }
+}

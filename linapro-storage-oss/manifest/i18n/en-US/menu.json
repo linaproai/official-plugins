@@ -1,0 +1,13 @@
+{
+  "menu": {
+    "plugin:linapro-storage-oss:settings": {
+      "title": "Alibaba Cloud OSS"
+    },
+    "plugin:linapro-storage-oss:settings-update": {
+      "title": "Save Settings"
+    },
+    "plugin:linapro-storage-oss:settings-test": {
+      "title": "Test Connection"
+    }
+  }
+}

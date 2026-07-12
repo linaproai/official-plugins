@@ -1,0 +1,42 @@
+{
+  "plugin": {
+    "linapro-storage-s3": {
+      "name": "对象存储-S3",
+      "description": "为宿主 Storage 领域能力提供 S3 协议对象存储后端（MinIO、R2、Ceph RGW 等）。",
+      "settings": {
+        "description": "在此填写 S3 接口服务的访问地址、密钥和存储桶（例如 MinIO、R2、Ceph 等）。同一时间请只启用一个云存储插件。配置不完整时，对象读写不会自动改用本地磁盘，相关操作会直接失败。若使用官方 AWS S3，请改用「AWS S3」插件。",
+        "accessKeyIdLabel": "Access Key ID",
+        "accessKeyIdHelp": "访问密钥 ID。",
+        "accessKeyIdPlaceholder": "请输入访问密钥 ID",
+        "secretAccessKeyLabel": "Secret Access Key",
+        "secretAccessKeyHelp": "访问密钥 Secret。留空表示不修改已保存的值。",
+        "secretAccessKeyPlaceholder": "请输入访问密钥 Secret",
+        "secretAccessKeyKeepPlaceholder": "留空则保留已保存密钥",
+        "endpointLabel": "Endpoint",
+        "endpointHelp": "必填的 S3 API 端点 URL（例如 http://minio:9000 或 https://…r2.cloudflarestorage.com）。",
+        "endpointPlaceholder": "https://s3.example.com",
+        "regionLabel": "地域 Region（可选）",
+        "regionHelp": "可选，仅用于 SigV4 签名。留空默认 us-east-1。多数自建/第三方端点不关心物理地域。",
+        "regionPlaceholder": "留空则使用 us-east-1",
+        "bucketLabel": "存储桶 Bucket",
+        "bucketHelp": "目标对象存储桶名称。",
+        "bucketPlaceholder": "bucket-name",
+        "pathPrefixLabel": "路径前缀",
+        "pathPrefixHelp": "可选，在宿主作用域 object key 之上再包一层前缀。",
+        "pathPrefixPlaceholder": "可选前缀",
+        "forcePathStyleLabel": "强制 path-style",
+        "forcePathStyleHelp": "使用 path-style 寻址（多数 MinIO / 自建 S3 端点需要开启）。",
+        "loadFailed": "加载设置失败",
+        "saveSuccess": "设置已保存",
+        "saveFailed": "保存设置失败",
+        "testSuccess": "连接测试成功",
+        "testFailed": "连接测试失败",
+        "copyDetail": "复制详情",
+        "copied": "错误详情已复制",
+        "copyFailed": "复制失败",
+        "testConnection": "测试连接",
+        "save": "保存"
+      }
+    }
+  }
+}

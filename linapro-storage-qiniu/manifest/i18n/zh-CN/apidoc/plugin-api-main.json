@@ -1,0 +1,7 @@
+{
+  "openapi": {
+    "tags": {
+      "Storage / Qiniu Kodo": "七牛云 Kodo"
+    }
+  }
+}

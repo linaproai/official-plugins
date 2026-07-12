@@ -1,0 +1,7 @@
+{
+  "openapi": {
+    "tags": {
+      "Storage / S3": "S3 存储"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "openapi": {
+    "tags": {
+      "Storage / Tencent COS": "腾讯云 COS"
+    }
+  }
+}

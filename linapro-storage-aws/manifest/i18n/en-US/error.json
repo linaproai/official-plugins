@@ -1,0 +1,25 @@
+{
+  "error": {
+    "plugin": {
+      "aws": {
+        "settings": {
+          "storage": {
+            "unavailable": "Settings storage service is unavailable"
+          },
+          "read": {
+            "failed": "Failed to read settings"
+          },
+          "save": {
+            "failed": "Failed to save settings"
+          },
+          "config": {
+            "invalid": "Storage provider configuration is incomplete or invalid"
+          },
+          "test": {
+            "failed": "Storage connectivity test failed"
+          }
+        }
+      }
+    }
+  }
+}

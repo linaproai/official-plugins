@@ -1,0 +1,13 @@
+{
+  "menu": {
+    "plugin:linapro-storage-cos:settings": {
+      "title": "腾讯云 COS"
+    },
+    "plugin:linapro-storage-cos:settings-update": {
+      "title": "保存设置"
+    },
+    "plugin:linapro-storage-cos:settings-test": {
+      "title": "测试连接"
+    }
+  }
+}

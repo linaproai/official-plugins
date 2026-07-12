@@ -1,0 +1,13 @@
+{
+  "menu": {
+    "plugin:linapro-storage-qiniu:settings": {
+      "title": "七牛云 Kodo"
+    },
+    "plugin:linapro-storage-qiniu:settings-update": {
+      "title": "保存设置"
+    },
+    "plugin:linapro-storage-qiniu:settings-test": {
+      "title": "测试连接"
+    }
+  }
+}
