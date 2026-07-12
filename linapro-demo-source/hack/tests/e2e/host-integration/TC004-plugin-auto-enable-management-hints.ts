@@ -141,10 +141,16 @@ test.describe("TC-4 plugin.autoEnable 管理提示", () => {
         const tagRect = tag.getBoundingClientRect();
         const nameRect = nameText?.getBoundingClientRect();
         const cellRect = cell?.getBoundingClientRect();
+        // Include horizontal bounds so overflow into the description column
+        // (which intercepts pointer events on hover) is treated as clipped.
+        const clipped =
+          !!cellRect &&
+          (tagRect.top < cellRect.top - 0.5 ||
+            tagRect.bottom > cellRect.bottom + 0.5 ||
+            tagRect.left < cellRect.left - 0.5 ||
+            tagRect.right > cellRect.right + 0.5);
         return {
-          clipped:
-            !!cellRect &&
-            (tagRect.top < cellRect.top || tagRect.bottom > cellRect.bottom),
+          clipped,
           sameLineAsName:
             nameRect === undefined
               ? false
