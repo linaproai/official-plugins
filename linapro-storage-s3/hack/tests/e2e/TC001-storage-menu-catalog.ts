@@ -23,9 +23,12 @@ import { waitForRouteReady } from "@host-tests/support/ui";
 
 const pluginID = "linapro-storage-s3";
 const storagePlugins = [
-  "linapro-storage-cos",
-  "linapro-storage-oss",
   "linapro-storage-aws",
+  "linapro-storage-azure",
+  "linapro-storage-cos",
+  "linapro-storage-obs",
+  "linapro-storage-oss",
+  "linapro-storage-qiniu",
   "linapro-storage-s3",
 ] as const;
 

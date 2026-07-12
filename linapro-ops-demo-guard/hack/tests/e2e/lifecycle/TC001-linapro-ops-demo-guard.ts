@@ -97,7 +97,13 @@ async function fetchPlugin(
   adminApi: APIRequestContext,
   targetPluginID: string,
 ): Promise<PluginListItem | null> {
-  const response = await adminApi.get("plugins");
+  const response = await adminApi.get("plugins", {
+    params: {
+      pageNum: 1,
+      pageSize: 100,
+      id: targetPluginID,
+    },
+  });
   const payload = await expectApiOK(response, "查询插件列表失败");
   const list = unwrapApiData(payload)?.list ?? [];
   return (
@@ -130,7 +136,13 @@ test.describe("TC-1 linapro-ops-demo-guard 全局只读保护", () => {
 
   test.beforeAll(async () => {
     adminApi = await createAdminApiContext();
-    const pluginResponse = await adminApi.get("plugins");
+    const pluginResponse = await adminApi.get("plugins", {
+      params: {
+        pageNum: 1,
+        pageSize: 100,
+        id: pluginID,
+      },
+    });
     expect(
       pluginResponse.ok(),
       `查询插件列表失败, status=${pluginResponse.status()}`,
