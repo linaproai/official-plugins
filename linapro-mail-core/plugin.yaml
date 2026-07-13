@@ -1,0 +1,165 @@
+# Plugin identifier, unique across the host and source plugin directories; use `kebab-case`.
+# 插件唯一标识，必须在宿主和源码插件目录中保持唯一，并使用 `kebab-case` 命名风格。
+id: linapro-mail-core
+
+# Plugin display name used in plugin management pages, developer docs, and presentation.
+# 插件显示名称，用于插件管理页面、开发文档和展示。
+name: Mail - Core
+
+# Plugin semantic version; examples in this repo use the `v` prefix.
+# 插件语义版本号，当前示例统一使用带 `v` 前缀的写法。
+version: v0.1.2
+
+# Plugin type enum. Allowed values: `source` is compiled with the host; `dynamic` is loaded as a runtime plugin artifact.
+# 插件类型枚举。可选值：`source` 表示随宿主源码编译交付；`dynamic` 表示作为运行时动态插件产物加载。
+type: source
+
+# Plugin distribution governance enum.
+# 插件分发治理枚举。
+distribution: managed
+
+# Multi-tenant scope enum.
+# 多租户作用域枚举。
+scope_nature: platform_only
+
+# Multi-tenant support flag.
+# 多租户支持标记。
+supports_multi_tenant: false
+
+# Default install mode enum.
+# 默认安装模式枚举。
+default_install_mode: global
+
+# Plugin description summarizing the capability boundary.
+# 插件说明，概述能力边界。
+description: Manages mail server connections and accounts, and provides the shared mail capability used by SMTP, IMAP, and POP3 plugins. Platform email notifications also go through this plugin.
+
+# Plugin author or owning team.
+# 插件作者或归属团队。
+author: linapro
+
+# Plugin homepage or documentation URL.
+# 插件主页或文档地址。
+homepage: https://example.com/lina/plugins/linapro-mail-core
+
+# Plugin license identifier.
+# 插件许可证标识。
+license: Apache-2.0
+
+# Plugin internationalization config.
+# 插件国际化配置。
+i18n:
+  enabled: true
+  default: en-US
+  locales:
+    - locale: en-US
+      nativeName: English
+    - locale: zh-CN
+      nativeName: 简体中文
+
+# Plugin menu declaration list; the host syncs menus, button permissions, and route entries from it.
+# 插件菜单声明列表，宿主按该列表同步菜单、按钮权限和路由入口。
+menus:
+  # Mail connection/account management shell under host System Settings.
+  # 挂在宿主「系统设置」下的邮件连接/账号管理壳页。
+  - key: plugin:linapro-mail-core:settings
+    parent_key: setting
+    name: Mail
+    path: linapro-mail-core-settings
+    component: system/plugin/dynamic-page
+    perms: linapro-mail-core:settings:view
+    icon: lucide:mail
+    type: M
+    sort: 20
+    remark: Single platform mail account settings
+  - key: plugin:linapro-mail-core:settings-update
+    parent_key: plugin:linapro-mail-core:settings
+    name: Save Settings
+    perms: linapro-mail-core:settings:update
+    type: B
+    sort: 1
+  - key: plugin:linapro-mail-core:settings-test
+    parent_key: plugin:linapro-mail-core:settings
+    name: Test Connection
+    perms: linapro-mail-core:settings:view
+    type: B
+    sort: 2
+  - key: plugin:linapro-mail-core:settings-send-test
+    parent_key: plugin:linapro-mail-core:settings
+    name: Test Send
+    perms: linapro-mail-core:settings:view
+    type: B
+    sort: 3
+  - key: plugin:linapro-mail-core:settings-receive-test
+    parent_key: plugin:linapro-mail-core:settings
+    name: Test Receive
+    perms: linapro-mail-core:settings:view
+    type: B
+    sort: 4
+  # Keep CRUD permissions for API access used by integrations and tests.
+  - key: plugin:linapro-mail-core:connection-list
+    parent_key: plugin:linapro-mail-core:settings
+    name: Connection List
+    perms: linapro-mail-core:connection:list
+    type: B
+    sort: 10
+  - key: plugin:linapro-mail-core:connection-query
+    parent_key: plugin:linapro-mail-core:settings
+    name: Connection Query
+    perms: linapro-mail-core:connection:query
+    type: B
+    sort: 11
+  - key: plugin:linapro-mail-core:connection-add
+    parent_key: plugin:linapro-mail-core:settings
+    name: Connection Create
+    perms: linapro-mail-core:connection:add
+    type: B
+    sort: 12
+  - key: plugin:linapro-mail-core:connection-edit
+    parent_key: plugin:linapro-mail-core:settings
+    name: Connection Update
+    perms: linapro-mail-core:connection:edit
+    type: B
+    sort: 13
+  - key: plugin:linapro-mail-core:connection-remove
+    parent_key: plugin:linapro-mail-core:settings
+    name: Connection Delete
+    perms: linapro-mail-core:connection:remove
+    type: B
+    sort: 14
+  - key: plugin:linapro-mail-core:connection-probe
+    parent_key: plugin:linapro-mail-core:settings
+    name: Connection Probe
+    perms: linapro-mail-core:connection:probe
+    type: B
+    sort: 15
+  - key: plugin:linapro-mail-core:account-list
+    parent_key: plugin:linapro-mail-core:settings
+    name: Account List
+    perms: linapro-mail-core:account:list
+    type: B
+    sort: 20
+  - key: plugin:linapro-mail-core:account-query
+    parent_key: plugin:linapro-mail-core:settings
+    name: Account Query
+    perms: linapro-mail-core:account:query
+    type: B
+    sort: 21
+  - key: plugin:linapro-mail-core:account-add
+    parent_key: plugin:linapro-mail-core:settings
+    name: Account Create
+    perms: linapro-mail-core:account:add
+    type: B
+    sort: 22
+  - key: plugin:linapro-mail-core:account-edit
+    parent_key: plugin:linapro-mail-core:settings
+    name: Account Update
+    perms: linapro-mail-core:account:edit
+    type: B
+    sort: 23
+  - key: plugin:linapro-mail-core:account-remove
+    parent_key: plugin:linapro-mail-core:settings
+    name: Account Delete
+    perms: linapro-mail-core:account:remove
+    type: B
+    sort: 24

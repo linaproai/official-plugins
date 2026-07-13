@@ -77,7 +77,7 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 			middlewares.RequestBodyLimit(),
 			middlewares.Ctx(),
 		)
-		group.Bind(loginController.Login)
+		group.Bind(loginController)
 	})
 
 	routes.Group(routes.APIPrefix(), func(group pluginhost.RouteGroup) {
@@ -95,7 +95,7 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 					middlewares.Tenancy(),
 					middlewares.Permission(),
 				)
-				group.Bind(settingsController.GetSettings, settingsController.SaveSettings)
+				group.Bind(settingsController)
 			})
 		})
 	})

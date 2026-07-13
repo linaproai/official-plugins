@@ -6,7 +6,7 @@
 
 - 通过 `storagecap.Provide("linapro-storage-azure", factory)` 注册
 - 宿主 `ResolveProvider` 选择唯一可服务的 storage provider 插件；0 个回退 local；多个冲突拒绝
-- 在管理后台 **存储管理 → Azure Blob** 配置
+- 在管理后台 **系统设置 → Azure Blob** 配置
 - 必填：账户名、账户密钥、容器；可选 endpoint（默认 `https://{account}.blob.core.windows.net/`）与路径前缀
 - 本插件为唯一 active 但配置不完整时 fail-closed，不会静默回退本地磁盘
 
@@ -20,5 +20,5 @@
 ## 安装
 
 1. 安装并启用本插件（确保未同时启用其他 storage provider 插件）
-2. 打开 **存储管理 → Azure Blob**
+2. 打开 **系统设置 → Azure Blob**
 3. 保存账户、容器与密钥，并执行 **测试连接**

@@ -1,0 +1,8 @@
+{
+  "plugin": {
+    "linapro-mail-imap": {
+      "name": "Mail - IMAP",
+      "description": "Retrieves email from IMAP mailboxes. Install and enable linapro-mail-core first."
+    }
+  }
+}

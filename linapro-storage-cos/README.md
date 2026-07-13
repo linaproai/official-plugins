@@ -6,7 +6,7 @@ Managed source plugin that provides a **Tencent COS** backend for the host `Stor
 
 - Registers via `storagecap.Provide("linapro-storage-cos", factory)`
 - Host `ResolveProvider` selects the unique enabled storage provider plugin; zero → local; multiple → conflict
-- Configure credentials under **Storage Management** in the admin workbench
+- Configure credentials under **System Settings** in the admin workbench
 - Incomplete config fails closed (does not fall back to local disk while this plugin is the unique active provider)
 
 ## Out of scope
@@ -18,5 +18,5 @@ Managed source plugin that provides a **Tencent COS** backend for the host `Stor
 ## Install
 
 1. Install and enable this plugin (ensure no other storage provider plugin is enabled)
-2. Open **Storage Management → Tencent COS**
+2. Open **System Settings → Tencent COS**
 3. Save region, bucket, and credentials; run **Test connection**

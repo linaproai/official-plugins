@@ -1,0 +1,52 @@
+{
+  "menu": {
+    "plugin:linapro-mail-core:settings": {
+      "title": "邮件管理"
+    },
+    "plugin:linapro-mail-core:settings-update": {
+      "title": "保存设置"
+    },
+    "plugin:linapro-mail-core:settings-test": {
+      "title": "测试连接"
+    },
+    "plugin:linapro-mail-core:settings-send-test": {
+      "title": "测试发送"
+    },
+    "plugin:linapro-mail-core:settings-receive-test": {
+      "title": "测试接收"
+    },
+    "plugin:linapro-mail-core:connection-list": {
+      "title": "连接列表"
+    },
+    "plugin:linapro-mail-core:connection-query": {
+      "title": "连接查询"
+    },
+    "plugin:linapro-mail-core:connection-add": {
+      "title": "连接新增"
+    },
+    "plugin:linapro-mail-core:connection-edit": {
+      "title": "连接修改"
+    },
+    "plugin:linapro-mail-core:connection-remove": {
+      "title": "连接删除"
+    },
+    "plugin:linapro-mail-core:connection-probe": {
+      "title": "连接探测"
+    },
+    "plugin:linapro-mail-core:account-list": {
+      "title": "账号列表"
+    },
+    "plugin:linapro-mail-core:account-query": {
+      "title": "账号查询"
+    },
+    "plugin:linapro-mail-core:account-add": {
+      "title": "账号新增"
+    },
+    "plugin:linapro-mail-core:account-edit": {
+      "title": "账号修改"
+    },
+    "plugin:linapro-mail-core:account-remove": {
+      "title": "账号删除"
+    }
+  }
+}

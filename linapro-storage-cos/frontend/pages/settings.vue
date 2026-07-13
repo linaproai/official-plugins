@@ -8,7 +8,7 @@ export const pluginPageMeta = {
 <script setup lang="ts">
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
 
-import { onMounted, reactive, ref } from 'vue';
+import { h, onMounted, reactive, ref } from 'vue';
 
 import {
   Alert,
@@ -17,6 +17,7 @@ import {
   Form,
   Input,
   InputPassword,
+  Modal,
   Switch,
   message,
 } from 'ant-design-vue';
@@ -31,7 +32,6 @@ const wrapperCol = { style: { maxWidth: '720px' } };
 const loading = ref(false);
 const saving = ref(false);
 const testing = ref(false);
-const testErrorDetail = ref<string | null>(null);
 const secretConfigured = ref(false);
 
 function requiredRule(label: string): Rule[] {
@@ -54,6 +54,33 @@ function settingsApi() {
 
 function t(key: string) {
   return $t(`plugin.${pluginID}.settings.${key}`);
+}
+
+
+/** Show failure detail in a modal so operators can read the cause (aligned with mail settings). */
+function showErrorModal(title: string, detail: string) {
+  const text = (detail || '').trim() || title;
+  Modal.error({
+    title,
+    width: 560,
+    centered: true,
+    content: h(
+      'pre',
+      {
+        'data-testid': 'storage-error-modal-detail',
+        style: {
+          margin: 0,
+          maxHeight: '320px',
+          overflow: 'auto',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+          fontSize: '12px',
+          lineHeight: 1.5,
+        },
+      },
+      text,
+    ),
+  });
 }
 
 async function loadSettings() {
@@ -111,7 +138,6 @@ async function saveSettings() {
 
 async function testConnection() {
   testing.value = true;
-  testErrorDetail.value = null;
   try {
     const data = await requestClient.post<{ ok: boolean; message: string }>(
       pluginApiPath(pluginID, 'settings/test-connection'),
@@ -128,34 +154,18 @@ async function testConnection() {
     if (data?.ok) {
       message.success(t('testSuccess'));
     } else {
-      const detail = (data?.message || '').trim();
-      testErrorDetail.value = detail || t('testFailed');
-      message.error(t('testFailed'));
+      const detail = (data?.message || '').trim() || t('testFailed');
+      showErrorModal(t('testFailed'), detail);
     }
-  } catch {
-    testErrorDetail.value = t('testFailed');
-    message.error(t('testFailed'));
+  } catch (error: any) {
+    const detail =
+      error?.response?.data?.message || error?.message || t('testFailed');
+    showErrorModal(t('testFailed'), String(detail));
   } finally {
     testing.value = false;
   }
 }
 
-async function copyTestErrorDetail() {
-  const text = testErrorDetail.value;
-  if (!text) {
-    return;
-  }
-  try {
-    await navigator.clipboard.writeText(text);
-    message.success(t('copied'));
-  } catch {
-    message.error(t('copyFailed'));
-  }
-}
-
-function clearTestErrorDetail() {
-  testErrorDetail.value = null;
-}
 
 onMounted(loadSettings);
 </script>
@@ -165,39 +175,13 @@ onMounted(loadSettings);
     <Card :loading="loading">
       <div class="flex flex-col gap-4">
         <Alert show-icon type="info" :message="t('description')" />
-        <Alert
-          v-if="testErrorDetail"
-          data-testid="storage-test-result-alert"
-          class="storage-test-result-alert [&_.ant-alert-message]:mb-1 [&_.ant-alert-message]:text-sm [&_.ant-alert-message]:font-normal"
-          show-icon
-          closable
-          type="error"
-          @close="clearTestErrorDetail"
-        >
-          <template #message>
-            <span
-              class="text-sm font-normal leading-normal"
-              data-testid="storage-test-error-title"
-            >{{ t('testFailed') }}</span>
-          </template>
-          <template #description>
-            <pre
-              class="m-0 max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs leading-relaxed"
-              data-testid="storage-test-error-detail"
-            >{{ testErrorDetail }}</pre>
-          </template>
-          <template #action>
-            <Button size="small" @click="copyTestErrorDetail">
-              {{ t('copyDetail') }}
-            </Button>
-          </template>
-        </Alert>
         <Form
           ref="formRef"
           :colon="false"
           :label-col="labelCol"
           :model="formState"
           :wrapper-col="wrapperCol"
+          class="storage-settings-form"
           layout="horizontal"
         >
           <Form.Item
@@ -300,3 +284,13 @@ onMounted(loadSettings);
     </Card>
   </div>
 </template>
+
+<style scoped>
+/*
+ * Align raw ant-design Form labels with host useVbenForm conventions:
+ * medium (semi-bold) weight and no trailing colon (handled via :colon="false").
+ */
+.storage-settings-form :deep(.ant-form-item-label > label) {
+  font-weight: 500;
+}
+</style>

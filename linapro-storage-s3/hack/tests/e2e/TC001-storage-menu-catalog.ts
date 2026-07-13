@@ -1,9 +1,8 @@
 /**
- * TC001 宿主「存储管理」目录与云存储插件挂载
+ * TC001 宿主「系统设置」目录与云存储插件挂载
  *
- * - 未安装云存储配置插件时导航隐藏「存储管理」
- * - 安装 linapro-storage-s3 后出现目录与 S3 存储 子菜单
- * - 目录排序：存储管理 → 扩展中心 → 开发中心
+ * - 导航中不出现独立「存储管理」一级目录
+ * - 安装 linapro-storage-s3 后在「系统设置」下出现 存储管理-S3 子菜单
  */
 import type { APIRequestContext } from "@playwright/test";
 
@@ -60,9 +59,7 @@ function findByName(list: MenuNode[], name: string | RegExp): MenuNode | null {
 }
 
 /**
- * Admin menu list (`/menu`) keeps the host-stable empty `storage` directory in
- * the database. Navigation hide-empty-directory only applies to the user route
- * projection (`/menus/all`), which is what the sidebar uses.
+ * Navigation route projection (`/menus/all`) is what the sidebar uses.
  */
 async function fetchNavMenuTree(api: APIRequestContext): Promise<MenuNode[]> {
   const response = await api.get("menus/all");
@@ -78,7 +75,7 @@ async function fetchNavMenuTree(api: APIRequestContext): Promise<MenuNode[]> {
   return [];
 }
 
-/** Full menu management tree (includes empty host catalogs). */
+/** Full menu management tree. */
 async function fetchAdminMenuTree(api: APIRequestContext): Promise<MenuNode[]> {
   const response = await api.get("menu");
   expect(response.ok()).toBeTruthy();
@@ -102,74 +99,72 @@ async function uninstallStoragePlugins(api: APIRequestContext) {
   }
 }
 
-test.describe("TC001 linapro-storage-s3 存储管理目录", () => {
-  test("TC001a: 未安装云存储插件时隐藏存储管理", async () => {
+test.describe("TC001 linapro-storage-s3 系统设置挂载", () => {
+  test("TC001a: 导航不展示独立存储管理目录", async () => {
     const api = await createAdminApiContext();
     try {
       await syncPlugins(api);
       await uninstallStoragePlugins(api);
-      // Navigation projection must hide empty host catalogs; admin /menu keeps them.
       const tree = await fetchNavMenuTree(api);
-      const storage = findByName(tree, /存储管理|Storage/i);
+      // Only the removed top-level catalog; do not match "存储管理-S3".
+      const storage = tree.find((item) =>
+        /^(存储管理|Storage Management|Storage)$/i.test(nodeTitle(item)),
+      );
       expect(
-        storage,
-        "无云存储配置子菜单时不应展示存储管理目录",
+        storage ?? null,
+        "不得展示独立的存储管理一级目录",
       ).toBeNull();
     } finally {
       await api.dispose();
     }
   });
 
-  test("TC001b: 安装 S3 插件后出现存储管理与子菜单", async () => {
+  test("TC001b: 安装 S3 插件后挂载到系统设置", async () => {
     const api = await createAdminApiContext();
     try {
       await syncPlugins(api);
       await prepareSourcePluginsBaseline([pluginID]);
-      // Admin list retains path=storage seed semantics for host catalog.
       const adminTree = await fetchAdminMenuTree(api);
-      const storage = findByName(adminTree, /存储管理|Storage/i);
-      expect(storage, "安装云存储插件后应展示存储管理").not.toBeNull();
-      expect(storage?.path).toBe("storage");
-      const child = findByName(
-        storage?.children ?? [],
-        /S3 存储|S3存储|S3 Storage|^S3$/i,
-      );
-      expect(child, "存储管理下应有 S3 存储 配置菜单").not.toBeNull();
+      expect(
+        adminTree.find((item) =>
+          /^(存储管理|Storage Management|Storage)$/i.test(nodeTitle(item)),
+        ) ?? null,
+        "管理菜单树中不应再有存储管理一级目录",
+      ).toBeNull();
 
-      // Sidebar order uses the route projection after empty-dir filtering.
+      const setting = findByName(adminTree, /系统设置|Settings/i);
+      expect(setting, "应存在系统设置目录").not.toBeNull();
+      expect(setting?.path).toBe("setting");
+      const child = findByName(
+        setting?.children ?? [],
+        /存储管理-S3|Storage Management - S3/i,
+      );
+      expect(child, "系统设置下应有 存储管理-S3 配置菜单").not.toBeNull();
+
       const navTree = await fetchNavMenuTree(api);
-      const titles = navTree.map((node) => nodeTitle(node));
-      const storageIdx = titles.findIndex((name) =>
-        /存储管理|Storage/i.test(String(name ?? "")),
+      const navSetting = findByName(navTree, /系统设置|Settings/i);
+      expect(navSetting, "导航中应展示系统设置").not.toBeNull();
+      const navChild = findByName(
+        navSetting?.children ?? [],
+        /存储管理-S3|Storage Management - S3/i,
       );
-      const extensionIdx = titles.findIndex((name) =>
-        /扩展中心|Extensions/i.test(String(name ?? "")),
-      );
-      const developerIdx = titles.findIndex((name) =>
-        /开发中心|Dev Tools/i.test(String(name ?? "")),
-      );
-      expect(storageIdx).toBeGreaterThanOrEqual(0);
-      if (extensionIdx >= 0) {
-        expect(storageIdx).toBeLessThan(extensionIdx);
-      }
-      if (developerIdx >= 0) {
-        expect(storageIdx).toBeLessThan(developerIdx);
-        if (extensionIdx >= 0) {
-          expect(extensionIdx).toBeLessThan(developerIdx);
-        }
-      }
+      expect(navChild, "导航系统设置下应有 存储管理-S3").not.toBeNull();
     } finally {
       await api.dispose();
     }
   });
 
-  test("TC001c: 侧边栏可见存储管理", async ({ adminPage }) => {
+  test("TC001c: 侧边栏在系统设置下可见 存储管理-S3", async ({ adminPage }) => {
     await prepareSourcePluginsBaseline([pluginID]);
     const layout = new MainLayout(adminPage);
     await adminPage.goto(workspacePath("/dashboard/workspace"));
     await waitForRouteReady(adminPage);
     await expect(
-      layout.sidebarMenuItem(/存储管理|Storage/i),
+      layout.sidebar.getByText(/^(存储管理|Storage Management|Storage)$/i),
+    ).toHaveCount(0);
+    await layout.expandSidebarGroup(/系统设置|Settings/i);
+    await expect(
+      layout.sidebarMenuItem(/存储管理-S3|Storage Management - S3/i),
     ).toBeVisible();
   });
 });

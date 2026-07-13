@@ -61,9 +61,9 @@ i18n:
 # 插件菜单声明列表。
 menus:
   - key: plugin:linapro-storage-aws:settings
-    # Parent is the host stable Storage catalog (menu_key=storage).
-    # 父级为宿主稳定「存储管理」目录。
-    parent_key: storage
+    # Parent is the host stable System Settings catalog (menu_key=setting).
+    # 父级为宿主稳定「系统设置」目录。
+    parent_key: setting
     name: AWS S3
     path: linapro-storage-aws-settings
     component: system/plugin/dynamic-page

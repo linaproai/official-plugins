@@ -1,7 +1,7 @@
 {
   "menu": {
     "plugin:linapro-storage-s3:settings": {
-      "title": "S3 存储"
+      "title": "存储管理-S3"
     },
     "plugin:linapro-storage-s3:settings-update": {
       "title": "保存设置"

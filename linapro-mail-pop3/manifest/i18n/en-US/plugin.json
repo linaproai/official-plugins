@@ -1,0 +1,8 @@
+{
+  "plugin": {
+    "linapro-mail-pop3": {
+      "name": "Mail - POP3",
+      "description": "Retrieves email from POP3 mailboxes. Install and enable linapro-mail-core first."
+    }
+  }
+}

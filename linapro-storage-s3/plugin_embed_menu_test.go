@@ -12,8 +12,8 @@ func TestEmbeddedMenuJSONLocalizesSettingsTitle(t *testing.T) {
 		path  string
 		title string
 	}{
-		{path: "manifest/i18n/en-US/menu.json", title: "S3 Storage"},
-		{path: "manifest/i18n/zh-CN/menu.json", title: "S3 存储"},
+		{path: "manifest/i18n/en-US/menu.json", title: "Storage Management - S3"},
+		{path: "manifest/i18n/zh-CN/menu.json", title: "存储管理-S3"},
 	}
 	for _, tc := range cases {
 		tc := tc

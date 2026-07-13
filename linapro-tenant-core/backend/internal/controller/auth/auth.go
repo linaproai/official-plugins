@@ -21,13 +21,18 @@ type ControllerV1 struct {
 }
 
 // NewV1 creates and returns a new auth controller instance.
-func NewV1(authSvc token.Service, membershipSvc membership.Service, providerSvc *provider.Provider) authapi.IAuthV1 {
+// The concrete *ControllerV1 is returned so route registration can bind
+// middleware-group scoped views without interface method extraction.
+func NewV1(authSvc token.Service, membershipSvc membership.Service, providerSvc *provider.Provider) *ControllerV1 {
 	return &ControllerV1{
 		authSvc:       authSvc,
 		membershipSvc: membershipSvc,
 		provider:      providerSvc,
 	}
 }
+
+// Ensure ControllerV1 implements the generated tenant-auth API contract.
+var _ authapi.IAuthV1 = (*ControllerV1)(nil)
 
 // toAPILoginTenant converts a service tenant option into an API DTO.
 func toAPILoginTenant(item *membership.TenantInfo) *v1.LoginTenantItem {

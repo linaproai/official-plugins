@@ -6,7 +6,7 @@ Managed source plugin that provides an **official AWS S3** backend for the host 
 
 - Registers via `storagecap.Provide("linapro-storage-aws", factory)`
 - Host `ResolveProvider` selects the unique enabled storage provider plugin; zero → local; multiple → conflict
-- Admin settings under **Storage → AWS S3** (region required; SDK resolves regional endpoints)
+- Admin settings under **System Settings → AWS S3** (region required; SDK resolves regional endpoints)
 - Fail-closed when this plugin is the only active provider but configuration is incomplete
 
 ## Non-goals
@@ -19,5 +19,5 @@ Managed source plugin that provides an **official AWS S3** backend for the host 
 ## Install
 
 1. Install and enable this plugin (ensure no other storage provider plugin is enabled)
-2. Open **Storage → AWS S3**
+2. Open **System Settings → AWS S3**
 3. Save region, bucket, and credentials, then **Test connection**

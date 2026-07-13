@@ -1,0 +1,52 @@
+{
+  "menu": {
+    "plugin:linapro-mail-core:settings": {
+      "title": "Mail"
+    },
+    "plugin:linapro-mail-core:settings-update": {
+      "title": "Save Settings"
+    },
+    "plugin:linapro-mail-core:settings-test": {
+      "title": "Test Connection"
+    },
+    "plugin:linapro-mail-core:settings-send-test": {
+      "title": "Test Send"
+    },
+    "plugin:linapro-mail-core:settings-receive-test": {
+      "title": "Test Receive"
+    },
+    "plugin:linapro-mail-core:connection-list": {
+      "title": "Connection List"
+    },
+    "plugin:linapro-mail-core:connection-query": {
+      "title": "Connection Query"
+    },
+    "plugin:linapro-mail-core:connection-add": {
+      "title": "Connection Create"
+    },
+    "plugin:linapro-mail-core:connection-edit": {
+      "title": "Connection Update"
+    },
+    "plugin:linapro-mail-core:connection-remove": {
+      "title": "Connection Delete"
+    },
+    "plugin:linapro-mail-core:connection-probe": {
+      "title": "Connection Probe"
+    },
+    "plugin:linapro-mail-core:account-list": {
+      "title": "Account List"
+    },
+    "plugin:linapro-mail-core:account-query": {
+      "title": "Account Query"
+    },
+    "plugin:linapro-mail-core:account-add": {
+      "title": "Account Create"
+    },
+    "plugin:linapro-mail-core:account-edit": {
+      "title": "Account Update"
+    },
+    "plugin:linapro-mail-core:account-remove": {
+      "title": "Account Delete"
+    }
+  }
+}

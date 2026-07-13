@@ -4,7 +4,7 @@
       "name": "对象存储-AWS S3",
       "description": "为宿主 Storage 领域能力提供官方 AWS S3 后端。",
       "settings": {
-        "description": "在此填写官方 AWS S3 的访问密钥、地域和存储桶。同一时间请只启用一个云存储插件。配置不完整时，对象读写不会自动改用本地磁盘，相关操作会直接失败。若使用 MinIO、R2 等 S3 接口服务，请改用「S3 存储」插件。",
+        "description": "在此填写官方 AWS S3 的访问密钥、地域和存储桶。同一时间请只启用一个云存储插件。配置不完整时，对象读写不会自动改用本地磁盘，相关操作会直接失败。若使用 MinIO、R2 等 S3 接口服务，请改用「存储管理-S3」插件。",
         "accessKeyIdLabel": "Access Key ID",
         "accessKeyIdHelp": "AWS 访问密钥 ID。",
         "accessKeyIdPlaceholder": "请输入 AWS Access Key ID",

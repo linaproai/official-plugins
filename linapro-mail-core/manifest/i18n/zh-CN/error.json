@@ -1,0 +1,73 @@
+{
+  "error": {
+    "mail": {
+      "account": {
+        "required": "必须指定邮件账号",
+        "inbound": {
+          "not": {
+            "configured": "邮件账号未配置入站连接"
+          }
+        },
+        "outbound": {
+          "not": {
+            "configured": "邮件账号未配置出站连接"
+          }
+        },
+        "name": {
+          "required": "邮件账号名称不能为空"
+        },
+        "not": {
+          "found": "邮件账号不存在"
+        },
+        "binding": {
+          "invalid": "邮件账号连接绑定无效"
+        }
+      },
+      "connection": {
+        "not": {
+          "found": "邮件连接不存在"
+        },
+        "name": {
+          "required": "邮件连接名称不能为空"
+        },
+        "kind": {
+          "invalid": "邮件连接类型无效"
+        },
+        "host": {
+          "required": "邮件服务器主机不能为空"
+        },
+        "port": {
+          "invalid": "邮件服务器端口无效"
+        }
+      },
+      "transport": {
+        "unavailable": "邮件传输协议 {kind} 不可用(是否未安装对应能力的插件)",
+        "conflict": "邮件传输协议 {kind} 冲突：{providerIds}"
+      },
+      "inbound": {
+        "unavailable": "邮件入站能力不可用(是否未安装对应能力的插件)"
+      },
+      "ids": {
+        "required": "必须提供 ID 列表"
+      },
+      "settings": {
+        "username": {
+          "required": "邮件账号不能为空"
+        },
+        "password": {
+          "required": "{field} 密码不能为空"
+        },
+        "recipient": {
+          "required": "测试发送收件人不能为空"
+        },
+        "body": {
+          "required": "测试发送正文不能为空"
+        },
+        "inbound": {
+          "required": "测试接收前请先选择收信协议（IMAP 或 POP3）"
+        }
+      }
+    }
+  }
+}
+

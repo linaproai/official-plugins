@@ -1,7 +1,7 @@
 {
   "menu": {
     "plugin:linapro-storage-s3:settings": {
-      "title": "S3 Storage"
+      "title": "Storage Management - S3"
     },
     "plugin:linapro-storage-s3:settings-update": {
       "title": "Save Settings"

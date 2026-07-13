@@ -1,0 +1,51 @@
+# Plugin identifier.
+id: linapro-mail-smtp
+
+# Plugin display name.
+name: Mail - SMTP
+
+# Plugin semantic version.
+version: v0.1.0
+
+# Plugin type.
+type: source
+
+# Distribution governance.
+distribution: managed
+
+# Multi-tenant scope.
+scope_nature: platform_only
+
+# Multi-tenant support.
+supports_multi_tenant: false
+
+# Default install mode.
+default_install_mode: global
+
+# Description.
+description: Sends email through a standard SMTP server. Install and enable linapro-mail-core first.
+
+# Author.
+author: linapro
+
+# Homepage.
+homepage: https://example.com/lina/plugins/linapro-mail-smtp
+
+# License.
+license: Apache-2.0
+
+# Internationalization.
+i18n:
+  enabled: true
+  default: en-US
+  locales:
+    - locale: en-US
+      nativeName: English
+    - locale: zh-CN
+      nativeName: 简体中文
+
+# Hard dependency on mail-core owner.
+dependencies:
+  plugins:
+    - id: linapro-mail-core
+      version: ">=0.1.0"

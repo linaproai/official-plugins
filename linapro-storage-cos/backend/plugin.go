@@ -62,11 +62,7 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 					middlewares.Tenancy(),
 					middlewares.Permission(),
 				)
-				group.Bind(
-					settingsController.GetSettings,
-					settingsController.SaveSettings,
-					settingsController.TestConnection,
-				)
+				group.Bind(settingsController)
 			})
 		})
 	})
