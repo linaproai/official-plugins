@@ -1,0 +1,36 @@
+{
+  "config": {
+    "plugin": {
+      "linapro-storage-s3": {
+        "access_key_id": {
+          "name": "S3 Storage - Access Key ID",
+          "remark": "Cloud storage access key identifier used for authenticated requests."
+        },
+        "bucket": {
+          "name": "S3 Storage - Bucket",
+          "remark": "Target object storage bucket name."
+        },
+        "endpoint": {
+          "name": "S3 Storage - Endpoint",
+          "remark": "Custom service endpoint URL when not using the provider default."
+        },
+        "force_path_style": {
+          "name": "S3 Storage - Force Path Style",
+          "remark": "Whether to force path-style addressing. Allowed values: empty/false or 1/true."
+        },
+        "path_prefix": {
+          "name": "S3 Storage - Path Prefix",
+          "remark": "Optional object key prefix applied to all uploaded files."
+        },
+        "region": {
+          "name": "S3 Storage - Region",
+          "remark": "Cloud storage region code for the target bucket or container."
+        },
+        "secret_access_key": {
+          "name": "S3 Storage - Secret Access Key",
+          "remark": "Cloud storage secret key. Leave blank or masked to keep the existing value."
+        }
+      }
+    }
+  }
+}

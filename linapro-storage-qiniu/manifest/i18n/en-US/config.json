@@ -1,0 +1,32 @@
+{
+  "config": {
+    "plugin": {
+      "linapro-storage-qiniu": {
+        "access_key_id": {
+          "name": "Qiniu Kodo - Access Key ID",
+          "remark": "Cloud storage access key identifier used for authenticated requests."
+        },
+        "bucket": {
+          "name": "Qiniu Kodo - Bucket",
+          "remark": "Target object storage bucket name."
+        },
+        "endpoint": {
+          "name": "Qiniu Kodo - Endpoint",
+          "remark": "Custom service endpoint URL when not using the provider default."
+        },
+        "path_prefix": {
+          "name": "Qiniu Kodo - Path Prefix",
+          "remark": "Optional object key prefix applied to all uploaded files."
+        },
+        "region": {
+          "name": "Qiniu Kodo - Region",
+          "remark": "Cloud storage region code for the target bucket or container."
+        },
+        "secret_access_key": {
+          "name": "Qiniu Kodo - Secret Access Key",
+          "remark": "Cloud storage secret key. Leave blank or masked to keep the existing value."
+        }
+      }
+    }
+  }
+}

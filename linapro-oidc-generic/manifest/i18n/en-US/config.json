@@ -1,0 +1,44 @@
+{
+  "config": {
+    "plugin": {
+      "linapro-oidc-generic": {
+        "allow_auto_provision": {
+          "name": "Generic OIDC - Allow Auto Provision",
+          "remark": "Whether unknown directory users may be auto-provisioned. Allowed values: true, false."
+        },
+        "client_id": {
+          "name": "Generic OIDC - Client ID",
+          "remark": "OAuth/OIDC client identifier issued by the identity provider."
+        },
+        "client_secret": {
+          "name": "Generic OIDC - Client Secret",
+          "remark": "OAuth/OIDC client secret. Leave blank or masked to keep the existing value."
+        },
+        "connection_key": {
+          "name": "Generic OIDC - Connection Key",
+          "remark": "Stable connection identifier used by the host external-login seam."
+        },
+        "default_backend_redirect": {
+          "name": "Generic OIDC - Default Backend Redirect",
+          "remark": "Default post-login backend redirect target when backend redirect is enabled."
+        },
+        "display_name": {
+          "name": "Generic OIDC - Display Name",
+          "remark": "Login entry label shown to end users."
+        },
+        "issuer": {
+          "name": "Generic OIDC - Issuer",
+          "remark": "OIDC issuer URL used for discovery and token validation."
+        },
+        "redirect_url": {
+          "name": "Generic OIDC - Redirect URL",
+          "remark": "OAuth/OIDC callback URL registered with the identity provider."
+        },
+        "scopes": {
+          "name": "Generic OIDC - Scopes",
+          "remark": "Space-separated OAuth/OIDC scopes requested during authorization."
+        }
+      }
+    }
+  }
+}

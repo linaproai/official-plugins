@@ -1,0 +1,44 @@
+{
+  "config": {
+    "plugin": {
+      "linapro-oidc-generic": {
+        "allow_auto_provision": {
+          "name": "通用 OIDC - 允许自动开户",
+          "remark": "是否允许未知目录用户自动开户。可选 true/false。"
+        },
+        "client_id": {
+          "name": "通用 OIDC - Client ID",
+          "remark": "身份提供方颁发的 OAuth/OIDC 客户端 ID。"
+        },
+        "client_secret": {
+          "name": "通用 OIDC - Client Secret",
+          "remark": "OAuth/OIDC 客户端密钥。留空或保持掩码可保留原值。"
+        },
+        "connection_key": {
+          "name": "通用 OIDC - 连接标识",
+          "remark": "宿主外部登录缝使用的稳定连接标识。"
+        },
+        "default_backend_redirect": {
+          "name": "通用 OIDC - 默认后端回跳",
+          "remark": "启用后端回跳时的默认回跳目标。"
+        },
+        "display_name": {
+          "name": "通用 OIDC - 显示名称",
+          "remark": "展示给终端用户的登录入口名称。"
+        },
+        "issuer": {
+          "name": "通用 OIDC - Issuer",
+          "remark": "用于发现与令牌校验的 OIDC Issuer URL。"
+        },
+        "redirect_url": {
+          "name": "通用 OIDC - 回调地址",
+          "remark": "在身份提供方注册的 OAuth/OIDC 回调 URL。"
+        },
+        "scopes": {
+          "name": "通用 OIDC - Scopes",
+          "remark": "授权时请求的 OAuth/OIDC scope，以空格分隔。"
+        }
+      }
+    }
+  }
+}

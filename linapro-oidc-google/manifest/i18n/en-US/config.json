@@ -1,0 +1,40 @@
+{
+  "config": {
+    "plugin": {
+      "linapro-oidc-google": {
+        "allow_auto_provision": {
+          "name": "Google OIDC - Allow Auto Provision",
+          "remark": "Whether unknown directory users may be auto-provisioned. Allowed values: true, false."
+        },
+        "backend_redirects": {
+          "name": "Google OIDC - Backend Redirects",
+          "remark": "Allowed backend redirect targets, typically one entry per line or a delimited list."
+        },
+        "client_id": {
+          "name": "Google OIDC - Client ID",
+          "remark": "OAuth/OIDC client identifier issued by the identity provider."
+        },
+        "client_secret": {
+          "name": "Google OIDC - Client Secret",
+          "remark": "OAuth/OIDC client secret. Leave blank or masked to keep the existing value."
+        },
+        "default_backend_redirect": {
+          "name": "Google OIDC - Default Backend Redirect",
+          "remark": "Default post-login backend redirect target when backend redirect is enabled."
+        },
+        "enable_backend_redirect": {
+          "name": "Google OIDC - Enable Backend Redirect",
+          "remark": "Whether backend redirect allow-list enforcement is enabled. Allowed values: true, false."
+        },
+        "enable_one_tap": {
+          "name": "Google OIDC - Enable One Tap",
+          "remark": "Whether Google One Tap is enabled on the login page. Allowed values: true, false."
+        },
+        "redirect_url": {
+          "name": "Google OIDC - Redirect URL",
+          "remark": "OAuth/OIDC callback URL registered with the identity provider."
+        }
+      }
+    }
+  }
+}

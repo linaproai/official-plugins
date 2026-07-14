@@ -1,0 +1,32 @@
+{
+  "config": {
+    "plugin": {
+      "linapro-storage-oss": {
+        "access_key_id": {
+          "name": "阿里云 OSS - Access Key ID",
+          "remark": "对象存储访问密钥 ID，用于鉴权请求。"
+        },
+        "bucket": {
+          "name": "阿里云 OSS - 存储桶",
+          "remark": "目标对象存储桶名称。"
+        },
+        "endpoint": {
+          "name": "阿里云 OSS - Endpoint",
+          "remark": "自定义服务接入点；未配置时使用云厂商默认地址。"
+        },
+        "path_prefix": {
+          "name": "阿里云 OSS - 路径前缀",
+          "remark": "上传对象统一附加的可选 key 前缀。"
+        },
+        "region": {
+          "name": "阿里云 OSS - 区域",
+          "remark": "目标存储桶或容器所在区域编码。"
+        },
+        "secret_access_key": {
+          "name": "阿里云 OSS - Secret Access Key",
+          "remark": "对象存储访问密钥。留空或保持掩码可保留原值。"
+        }
+      }
+    }
+  }
+}

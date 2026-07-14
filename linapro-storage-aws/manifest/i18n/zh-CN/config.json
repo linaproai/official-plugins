@@ -1,0 +1,28 @@
+{
+  "config": {
+    "plugin": {
+      "linapro-storage-aws": {
+        "access_key_id": {
+          "name": "AWS S3 存储 - Access Key ID",
+          "remark": "对象存储访问密钥 ID，用于鉴权请求。"
+        },
+        "bucket": {
+          "name": "AWS S3 存储 - 存储桶",
+          "remark": "目标对象存储桶名称。"
+        },
+        "path_prefix": {
+          "name": "AWS S3 存储 - 路径前缀",
+          "remark": "上传对象统一附加的可选 key 前缀。"
+        },
+        "region": {
+          "name": "AWS S3 存储 - 区域",
+          "remark": "目标存储桶或容器所在区域编码。"
+        },
+        "secret_access_key": {
+          "name": "AWS S3 存储 - Secret Access Key",
+          "remark": "对象存储访问密钥。留空或保持掩码可保留原值。"
+        }
+      }
+    }
+  }
+}

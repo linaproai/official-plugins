@@ -1,0 +1,32 @@
+{
+  "config": {
+    "plugin": {
+      "linapro-storage-cos": {
+        "access_key_id": {
+          "name": "Tencent COS - Access Key ID",
+          "remark": "Cloud storage access key identifier used for authenticated requests."
+        },
+        "bucket": {
+          "name": "Tencent COS - Bucket",
+          "remark": "Target object storage bucket name."
+        },
+        "endpoint": {
+          "name": "Tencent COS - Endpoint",
+          "remark": "Custom service endpoint URL when not using the provider default."
+        },
+        "path_prefix": {
+          "name": "Tencent COS - Path Prefix",
+          "remark": "Optional object key prefix applied to all uploaded files."
+        },
+        "region": {
+          "name": "Tencent COS - Region",
+          "remark": "Cloud storage region code for the target bucket or container."
+        },
+        "secret_access_key": {
+          "name": "Tencent COS - Secret Access Key",
+          "remark": "Cloud storage secret key. Leave blank or masked to keep the existing value."
+        }
+      }
+    }
+  }
+}

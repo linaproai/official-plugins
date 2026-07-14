@@ -1,0 +1,32 @@
+{
+  "config": {
+    "plugin": {
+      "linapro-storage-oss": {
+        "access_key_id": {
+          "name": "Aliyun OSS - Access Key ID",
+          "remark": "Cloud storage access key identifier used for authenticated requests."
+        },
+        "bucket": {
+          "name": "Aliyun OSS - Bucket",
+          "remark": "Target object storage bucket name."
+        },
+        "endpoint": {
+          "name": "Aliyun OSS - Endpoint",
+          "remark": "Custom service endpoint URL when not using the provider default."
+        },
+        "path_prefix": {
+          "name": "Aliyun OSS - Path Prefix",
+          "remark": "Optional object key prefix applied to all uploaded files."
+        },
+        "region": {
+          "name": "Aliyun OSS - Region",
+          "remark": "Cloud storage region code for the target bucket or container."
+        },
+        "secret_access_key": {
+          "name": "Aliyun OSS - Secret Access Key",
+          "remark": "Cloud storage secret key. Leave blank or masked to keep the existing value."
+        }
+      }
+    }
+  }
+}

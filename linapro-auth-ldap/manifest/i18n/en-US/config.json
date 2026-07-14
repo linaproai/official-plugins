@@ -1,0 +1,64 @@
+{
+  "config": {
+    "plugin": {
+      "linapro-auth-ldap": {
+        "allow_auto_provision": {
+          "name": "LDAP Login - Allow Auto Provision",
+          "remark": "Whether unknown directory users may be auto-provisioned. Allowed values: true, false."
+        },
+        "base_dn": {
+          "name": "LDAP Login - Base DN",
+          "remark": "Base distinguished name used when searching for users."
+        },
+        "bind_dn": {
+          "name": "LDAP Login - Bind DN",
+          "remark": "Service account distinguished name used to bind to the directory."
+        },
+        "bind_password": {
+          "name": "LDAP Login - Bind Password",
+          "remark": "Service account password. Leave blank or masked to keep the existing value."
+        },
+        "connection_key": {
+          "name": "LDAP Login - Connection Key",
+          "remark": "Stable connection identifier used by the host external-login seam."
+        },
+        "display_name": {
+          "name": "LDAP Login - Display Name",
+          "remark": "Login entry label shown to end users."
+        },
+        "display_name_attr": {
+          "name": "LDAP Login - Display Name Attribute",
+          "remark": "Directory attribute used for the user display name."
+        },
+        "email_attr": {
+          "name": "LDAP Login - Email Attribute",
+          "remark": "Directory attribute used for the user email address."
+        },
+        "host": {
+          "name": "LDAP Login - Host",
+          "remark": "Directory server hostname or IP address."
+        },
+        "port": {
+          "name": "LDAP Login - Port",
+          "remark": "Directory server TCP port."
+        },
+        "subject_attr": {
+          "name": "LDAP Login - Subject Attribute",
+          "remark": "Directory attribute used as the external subject identifier."
+        },
+        "tls_mode": {
+          "name": "LDAP Login - TLS Mode",
+          "remark": "LDAP TLS mode for directory connections."
+        },
+        "user_dn_template": {
+          "name": "LDAP Login - User DN Template",
+          "remark": "Optional DN template used to construct the user DN directly."
+        },
+        "user_filter": {
+          "name": "LDAP Login - User Filter",
+          "remark": "LDAP filter template used to locate a user entry."
+        }
+      }
+    }
+  }
+}

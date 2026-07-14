@@ -1,0 +1,28 @@
+{
+  "config": {
+    "plugin": {
+      "linapro-storage-aws": {
+        "access_key_id": {
+          "name": "AWS S3 Storage - Access Key ID",
+          "remark": "Cloud storage access key identifier used for authenticated requests."
+        },
+        "bucket": {
+          "name": "AWS S3 Storage - Bucket",
+          "remark": "Target object storage bucket name."
+        },
+        "path_prefix": {
+          "name": "AWS S3 Storage - Path Prefix",
+          "remark": "Optional object key prefix applied to all uploaded files."
+        },
+        "region": {
+          "name": "AWS S3 Storage - Region",
+          "remark": "Cloud storage region code for the target bucket or container."
+        },
+        "secret_access_key": {
+          "name": "AWS S3 Storage - Secret Access Key",
+          "remark": "Cloud storage secret key. Leave blank or masked to keep the existing value."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "config": {
+    "plugin": {
+      "linapro-oidc-google": {
+        "allow_auto_provision": {
+          "name": "Google OIDC - 允许自动开户",
+          "remark": "是否允许未知目录用户自动开户。可选 true/false。"
+        },
+        "backend_redirects": {
+          "name": "Google OIDC - 后端回跳列表",
+          "remark": "允许的后端回跳目标列表。"
+        },
+        "client_id": {
+          "name": "Google OIDC - Client ID",
+          "remark": "身份提供方颁发的 OAuth/OIDC 客户端 ID。"
+        },
+        "client_secret": {
+          "name": "Google OIDC - Client Secret",
+          "remark": "OAuth/OIDC 客户端密钥。留空或保持掩码可保留原值。"
+        },
+        "default_backend_redirect": {
+          "name": "Google OIDC - 默认后端回跳",
+          "remark": "启用后端回跳时的默认回跳目标。"
+        },
+        "enable_backend_redirect": {
+          "name": "Google OIDC - 启用后端回跳",
+          "remark": "是否启用后端回跳白名单。可选 true/false。"
+        },
+        "enable_one_tap": {
+          "name": "Google OIDC - 启用 One Tap",
+          "remark": "是否在登录页启用 Google One Tap。可选 true/false。"
+        },
+        "redirect_url": {
+          "name": "Google OIDC - 回调地址",
+          "remark": "在身份提供方注册的 OAuth/OIDC 回调 URL。"
+        }
+      }
+    }
+  }
+}
