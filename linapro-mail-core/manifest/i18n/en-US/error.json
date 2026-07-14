@@ -1,0 +1,73 @@
+{
+  "error": {
+    "mail": {
+      "account": {
+        "required": "Mail account is required",
+        "inbound": {
+          "not": {
+            "configured": "Mail account inbound connection is not configured"
+          }
+        },
+        "outbound": {
+          "not": {
+            "configured": "Mail account outbound connection is not configured"
+          }
+        },
+        "name": {
+          "required": "Mail account name is required"
+        },
+        "not": {
+          "found": "Mail account not found"
+        },
+        "binding": {
+          "invalid": "Mail account connection binding is invalid"
+        }
+      },
+      "connection": {
+        "not": {
+          "found": "Mail connection not found"
+        },
+        "name": {
+          "required": "Mail connection name is required"
+        },
+        "kind": {
+          "invalid": "Mail connection kind is invalid"
+        },
+        "host": {
+          "required": "Mail connection host is required"
+        },
+        "port": {
+          "invalid": "Mail connection port is invalid"
+        }
+      },
+      "transport": {
+        "unavailable": "Mail transport is unavailable for kind {kind} (is the corresponding capability plugin not installed?)",
+        "conflict": "Mail transport conflict for kind {kind}: {providerIds}"
+      },
+      "inbound": {
+        "unavailable": "Mail inbound transport is unavailable (is the corresponding capability plugin not installed?)"
+      },
+      "ids": {
+        "required": "IDs are required"
+      },
+      "settings": {
+        "username": {
+          "required": "Mail account username is required"
+        },
+        "password": {
+          "required": "Mail password is required for {field}"
+        },
+        "recipient": {
+          "required": "Mail test recipient is required"
+        },
+        "body": {
+          "required": "Mail test body is required"
+        },
+        "inbound": {
+          "required": "Inbound protocol is required for receive test"
+        }
+      }
+    }
+  }
+}
+

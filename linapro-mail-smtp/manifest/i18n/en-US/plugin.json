@@ -1,0 +1,8 @@
+{
+  "plugin": {
+    "linapro-mail-smtp": {
+      "name": "Mail - SMTP",
+      "description": "Sends email through a standard SMTP server. Install and enable linapro-mail-core first."
+    }
+  }
+}

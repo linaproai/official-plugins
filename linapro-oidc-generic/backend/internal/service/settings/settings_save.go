@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/util/gconv"
 
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/logger"
@@ -37,38 +38,25 @@ func (s *serviceImpl) Save(ctx context.Context, in SaveInput) (*Projection, erro
 		return nil, err
 	}
 	nextSecret := resolveNextSecret(current.ClientSecret, in.ClientSecret)
-	if err := s.setValue(ctx, ConfigKeyConnectionKey, ConnectionKeyDefault); err != nil {
-		return nil, err
-	}
-	if err := s.setValue(ctx, ConfigKeyDisplayName, strings.TrimSpace(in.DisplayName)); err != nil {
-		return nil, err
-	}
-	if err := s.setValue(ctx, ConfigKeyIssuer, issuer); err != nil {
-		return nil, err
-	}
-	if err := s.setValue(ctx, ConfigKeyClientID, strings.TrimSpace(in.ClientID)); err != nil {
-		return nil, err
-	}
-	if err := s.setValue(ctx, ConfigKeyRedirectURL, strings.TrimSpace(in.RedirectURL)); err != nil {
-		return nil, err
-	}
-	if err := s.setValue(ctx, ConfigKeyScopes, strings.TrimSpace(in.Scopes)); err != nil {
-		return nil, err
-	}
-	if err := s.setValue(ctx, ConfigKeyDefaultBackendRedirect, strings.TrimSpace(in.DefaultBackendRedirect)); err != nil {
-		return nil, err
-	}
 	autoProvisionFlag := ""
 	if in.AllowAutoProvision {
 		autoProvisionFlag = enabledFlagValue
 	}
-	if err := s.setValue(ctx, ConfigKeyAllowAutoProvision, autoProvisionFlag); err != nil {
-		return nil, err
+	items := []hostconfigcap.SetSysConfigValueItem{
+		{Key: ConfigKeyConnectionKey, Value: ConnectionKeyDefault},
+		{Key: ConfigKeyDisplayName, Value: strings.TrimSpace(in.DisplayName)},
+		{Key: ConfigKeyIssuer, Value: issuer},
+		{Key: ConfigKeyClientID, Value: strings.TrimSpace(in.ClientID)},
+		{Key: ConfigKeyRedirectURL, Value: strings.TrimSpace(in.RedirectURL)},
+		{Key: ConfigKeyScopes, Value: strings.TrimSpace(in.Scopes)},
+		{Key: ConfigKeyDefaultBackendRedirect, Value: strings.TrimSpace(in.DefaultBackendRedirect)},
+		{Key: ConfigKeyAllowAutoProvision, Value: autoProvisionFlag},
 	}
 	if nextSecret != current.ClientSecret {
-		if err := s.setValue(ctx, ConfigKeyClientSecret, nextSecret); err != nil {
-			return nil, err
-		}
+		items = append(items, hostconfigcap.SetSysConfigValueItem{Key: ConfigKeyClientSecret, Value: nextSecret})
+	}
+	if err := s.setValues(ctx, items); err != nil {
+		return nil, err
 	}
 	logger.Infof(ctx, "linapro-oidc-generic settings saved issuerSet=%t clientIdSet=%t secretSet=%t autoProvision=%t",
 		issuer != "",
@@ -104,8 +92,10 @@ func validateIssuer(issuer string) error {
 	return bizerr.WrapCode(gerror.New("settings: issuer must use https"), CodeIssuerInvalid)
 }
 
-func (s *serviceImpl) setValue(ctx context.Context, key hostconfigcap.SysConfigKey, value string) error {
-	if err := s.sysConfigSvc.SetValue(ctx, key, value); err != nil {
+func (s *serviceImpl) setValues(ctx context.Context, items []hostconfigcap.SetSysConfigValueItem) error {
+	if err := s.sysConfigSvc.BatchSetValue(ctx, items, &hostconfigcap.SetSysConfigValueOptions{
+		SystemManageable: gconv.PtrBool(false),
+	}); err != nil {
 		if bizerr.Is(err, capmodel.CodeCapabilityUnavailable) {
 			return bizerr.WrapCode(err, CodeStorageUnavailable)
 		}

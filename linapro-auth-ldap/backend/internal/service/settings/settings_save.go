@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/util/gconv"
 
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/logger"
@@ -40,33 +41,26 @@ func (s *serviceImpl) Save(ctx context.Context, in SaveInput) (*Projection, erro
 			port = "389"
 		}
 	}
-	writes := []struct {
-		key hostconfigcap.SysConfigKey
-		val string
-	}{
-		{ConfigKeyConnectionKey, ConnectionKeyDefault},
-		{ConfigKeyDisplayName, strings.TrimSpace(in.DisplayName)},
-		{ConfigKeyHost, host},
-		{ConfigKeyPort, port},
-		{ConfigKeyTLSMode, tlsMode},
-		{ConfigKeyBindDN, strings.TrimSpace(in.BindDN)},
-		{ConfigKeyBaseDN, strings.TrimSpace(in.BaseDN)},
-		{ConfigKeyUserFilter, strings.TrimSpace(in.UserFilter)},
-		{ConfigKeyUserDNTemplate, strings.TrimSpace(in.UserDNTemplate)},
-		{ConfigKeySubjectAttr, strings.TrimSpace(in.SubjectAttr)},
-		{ConfigKeyEmailAttr, strings.TrimSpace(in.EmailAttr)},
-		{ConfigKeyDisplayNameAttr, strings.TrimSpace(in.DisplayNameAttr)},
-		{ConfigKeyAllowAutoProvision, boolFlag(in.AllowAutoProvision)},
-	}
-	for _, item := range writes {
-		if err := s.set(ctx, item.key, item.val); err != nil {
-			return nil, err
-		}
+	items := []hostconfigcap.SetSysConfigValueItem{
+		{Key: ConfigKeyConnectionKey, Value: ConnectionKeyDefault},
+		{Key: ConfigKeyDisplayName, Value: strings.TrimSpace(in.DisplayName)},
+		{Key: ConfigKeyHost, Value: host},
+		{Key: ConfigKeyPort, Value: port},
+		{Key: ConfigKeyTLSMode, Value: tlsMode},
+		{Key: ConfigKeyBindDN, Value: strings.TrimSpace(in.BindDN)},
+		{Key: ConfigKeyBaseDN, Value: strings.TrimSpace(in.BaseDN)},
+		{Key: ConfigKeyUserFilter, Value: strings.TrimSpace(in.UserFilter)},
+		{Key: ConfigKeyUserDNTemplate, Value: strings.TrimSpace(in.UserDNTemplate)},
+		{Key: ConfigKeySubjectAttr, Value: strings.TrimSpace(in.SubjectAttr)},
+		{Key: ConfigKeyEmailAttr, Value: strings.TrimSpace(in.EmailAttr)},
+		{Key: ConfigKeyDisplayNameAttr, Value: strings.TrimSpace(in.DisplayNameAttr)},
+		{Key: ConfigKeyAllowAutoProvision, Value: boolFlag(in.AllowAutoProvision)},
 	}
 	if nextSecret != current.BindPassword {
-		if err := s.set(ctx, ConfigKeyBindPassword, nextSecret); err != nil {
-			return nil, err
-		}
+		items = append(items, hostconfigcap.SetSysConfigValueItem{Key: ConfigKeyBindPassword, Value: nextSecret})
+	}
+	if err := s.setValues(ctx, items); err != nil {
+		return nil, err
 	}
 	logger.Infof(ctx, "linapro-auth-ldap settings saved hostSet=%t tls=%s autoProvision=%t",
 		host != "", tlsMode, in.AllowAutoProvision)
@@ -92,8 +86,10 @@ func ValidateTLSMode(host, tlsMode string) error {
 	return nil
 }
 
-func (s *serviceImpl) set(ctx context.Context, key hostconfigcap.SysConfigKey, value string) error {
-	if err := s.sysConfigSvc.SetValue(ctx, key, value); err != nil {
+func (s *serviceImpl) setValues(ctx context.Context, items []hostconfigcap.SetSysConfigValueItem) error {
+	if err := s.sysConfigSvc.BatchSetValue(ctx, items, &hostconfigcap.SetSysConfigValueOptions{
+		SystemManageable: gconv.PtrBool(false),
+	}); err != nil {
 		if bizerr.Is(err, capmodel.CodeCapabilityUnavailable) {
 			return bizerr.WrapCode(err, CodeStorageUnavailable)
 		}

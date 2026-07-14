@@ -1,7 +1,8 @@
 /**
  * TC003 linapro-storage-s3 连接测试失败错误展示
  *
- * 失败时顶部 Toast 仅短文案，长 SDK 详情在页内 Alert 中展示并可复制。
+ * 失败时以 Modal.error 弹窗展示完整 SDK 详情（与邮件管理页一致），
+ * 不再使用页面顶部 Alert，也不再把长错误塞进 Toast。
  */
 import { expect, test } from "@host-tests/fixtures/auth";
 import { prepareSourcePluginsBaseline } from "@host-tests/fixtures/plugin";
@@ -21,7 +22,7 @@ test.describe("TC003 linapro-storage-s3 连接测试失败错误展示", () => {
     await prepareSourcePluginsBaseline([pluginID]);
   });
 
-  test("TC003a: 失败时 Toast 为短文案且页内 Alert 展示完整详情", async ({
+  test("TC003a: 失败时以弹窗展示完整详情，页面顶部无 Alert", async ({
     adminPage,
   }) => {
     await adminPage.route(
@@ -45,8 +46,8 @@ test.describe("TC003 linapro-storage-s3 连接测试失败错误展示", () => {
     const layout = new MainLayout(adminPage);
     await adminPage.goto(workspacePath("/dashboard/workspace"));
     await waitForRouteReady(adminPage);
-    await layout.expandSidebarGroup(/存储管理|Storage/i);
-    await layout.sidebarMenuItem(/S3 存储|S3存储|S3 Storage|^S3$/i).click();
+    await layout.expandSidebarGroup(/系统设置|Settings/i);
+    await layout.sidebarMenuItem(/存储管理-S3|Storage Management - S3/i).click();
     await waitForRouteReady(adminPage);
 
     const form = adminPage.locator("form.ant-form-horizontal").first();
@@ -56,38 +57,32 @@ test.describe("TC003 linapro-storage-s3 连接测试失败错误展示", () => {
       .getByRole("button", { name: /测试连接|Test connection/i })
       .click();
 
-    const toast = adminPage.locator(".ant-message-notice:visible").filter({
-      hasText: /连接测试失败|Connection test failed/i,
-    });
-    await expect(toast.first()).toBeVisible({ timeout: 10000 });
-    await expect(toast.first()).not.toContainText("AccessDenied");
-    await expect(toast.first()).not.toContainText("RequestId=");
+    // Modal.error title uses the short i18n string.
+    await expect(
+      adminPage.getByText("连接测试失败", { exact: true }).first(),
+    ).toBeVisible({ timeout: 10000 });
 
-    const alert = adminPage.getByTestId("storage-test-result-alert");
-    await expect(alert).toBeVisible();
-    await expect(alert).toContainText(/连接测试失败|Connection test failed/i);
-
-    const title = adminPage.getByTestId("storage-test-error-title");
-    await expect(title).toBeVisible();
-    await expect(title).toHaveText(/连接测试失败|Connection test failed/i);
-    // Title should use normal body font size (not Alert's larger heading size).
-    const titleFontSize = await title.evaluate(
-      (el) => Number.parseFloat(getComputedStyle(el).fontSize),
-    );
-    const labelFontSize = await form
-      .locator(".ant-form-item-label label")
-      .first()
-      .evaluate((el) => Number.parseFloat(getComputedStyle(el).fontSize));
-    expect(titleFontSize).toBeLessThanOrEqual(labelFontSize + 0.5);
-
-    const detail = adminPage.getByTestId("storage-test-error-detail");
+    const detail = adminPage.getByTestId("storage-error-modal-detail");
     await expect(detail).toBeVisible();
     await expect(detail).toContainText("AccessDenied");
-    await expect(detail).toContainText("RequestId=req-e2e-test-connection-error-display");
+    await expect(detail).toContainText(
+      "RequestId=req-e2e-test-connection-error-display",
+    );
     await expect(detail).toContainText(longErrorDetail.slice(-40));
 
-    await expect(
-      alert.getByRole("button", { name: /复制详情|Copy details/i }),
-    ).toBeVisible();
+    // Must not render the old page-top error Alert.
+    await expect(adminPage.getByTestId("storage-test-result-alert")).toHaveCount(
+      0,
+    );
+    await expect(adminPage.getByTestId("storage-test-error-detail")).toHaveCount(
+      0,
+    );
+
+    // Toast (if any) must not carry the long SDK body.
+    const toast = adminPage.locator(".ant-message-notice:visible");
+    if ((await toast.count()) > 0) {
+      await expect(toast.first()).not.toContainText("AccessDenied");
+      await expect(toast.first()).not.toContainText("RequestId=");
+    }
   });
 });

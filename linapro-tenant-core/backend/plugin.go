@@ -149,10 +149,10 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 				middlewares.RequestBodyLimit(),
 				middlewares.Ctx(),
 			)
+			// SelectTenant is public; LoginTenants/SwitchTenant require auth.
+			// Split method registration across middleware groups (same pattern as host).
 			group.Group("/", func(group pluginhost.RouteGroup) {
-				group.Bind(
-					authCtrl.SelectTenant,
-				)
+				group.Bind(authCtrl.SelectTenant)
 			})
 			group.Group("/", func(group pluginhost.RouteGroup) {
 				group.Middleware(

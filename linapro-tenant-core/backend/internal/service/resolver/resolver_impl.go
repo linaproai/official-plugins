@@ -25,16 +25,18 @@ func (s *serviceImpl) Register(resolver Resolver) {
 
 // Resolve runs the configured resolver chain.
 func (s *serviceImpl) Resolve(ctx context.Context, r *ghttp.Request, config Config) (*Result, error) {
-	bizCtx := s.bizCtxSvc.Current(ctx)
-	identity := Identity{
-		UserID:          int64(bizCtx.UserID),
-		TenantID:        int64(bizCtx.TenantID),
-		ActingUserID:    int64(bizCtx.ActingUserID),
-		ActingAsTenant:  bizCtx.ActingAsTenant,
-		IsImpersonation: bizCtx.IsImpersonation,
-		IsPlatform:      int64(bizCtx.TenantID) == shared.PlatformTenantID,
-	}
-	chain := config.Chain
+	var (
+		bizCtx   = s.bizCtxSvc.Current(ctx)
+		identity = Identity{
+			UserID:          int64(bizCtx.UserID),
+			TenantID:        int64(bizCtx.TenantID),
+			ActingUserID:    int64(bizCtx.ActingUserID),
+			ActingAsTenant:  bizCtx.ActingAsTenant,
+			IsImpersonation: bizCtx.IsImpersonation,
+			IsPlatform:      int64(bizCtx.TenantID) == shared.PlatformTenantID,
+		}
+		chain = config.Chain
+	)
 	if len(chain) == 0 {
 		chain = shared.DefaultResolverChain()
 	}

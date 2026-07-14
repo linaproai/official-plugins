@@ -1,0 +1,28 @@
+{
+  "config": {
+    "plugin": {
+      "linapro-storage-azure": {
+        "account_key": {
+          "name": "Azure Blob - 账户密钥",
+          "remark": "Azure 存储账户密钥。留空或保持掩码可保留原值。"
+        },
+        "account_name": {
+          "name": "Azure Blob - 账户名",
+          "remark": "Azure 存储账户名称。"
+        },
+        "container": {
+          "name": "Azure Blob - 容器",
+          "remark": "Azure Blob 容器名称。"
+        },
+        "endpoint": {
+          "name": "Azure Blob - Endpoint",
+          "remark": "自定义服务接入点；未配置时使用云厂商默认地址。"
+        },
+        "path_prefix": {
+          "name": "Azure Blob - 路径前缀",
+          "remark": "上传对象统一附加的可选 key 前缀。"
+        }
+      }
+    }
+  }
+}

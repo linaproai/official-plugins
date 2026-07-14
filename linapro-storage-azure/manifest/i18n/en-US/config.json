@@ -1,0 +1,28 @@
+{
+  "config": {
+    "plugin": {
+      "linapro-storage-azure": {
+        "account_key": {
+          "name": "Azure Blob - Account Key",
+          "remark": "Azure storage account key. Leave blank or masked to keep the existing value."
+        },
+        "account_name": {
+          "name": "Azure Blob - Account Name",
+          "remark": "Azure storage account name."
+        },
+        "container": {
+          "name": "Azure Blob - Container",
+          "remark": "Azure blob container name."
+        },
+        "endpoint": {
+          "name": "Azure Blob - Endpoint",
+          "remark": "Custom service endpoint URL when not using the provider default."
+        },
+        "path_prefix": {
+          "name": "Azure Blob - Path Prefix",
+          "remark": "Optional object key prefix applied to all uploaded files."
+        }
+      }
+    }
+  }
+}

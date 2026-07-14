@@ -1,0 +1,24 @@
+id: linapro-mail-imap
+name: Mail - IMAP
+version: v0.1.0
+type: source
+distribution: managed
+scope_nature: platform_only
+supports_multi_tenant: false
+default_install_mode: global
+description: Retrieves email from IMAP mailboxes. Install and enable linapro-mail-core first.
+author: linapro
+homepage: https://example.com/lina/plugins/linapro-mail-imap
+license: Apache-2.0
+i18n:
+  enabled: true
+  default: en-US
+  locales:
+    - locale: en-US
+      nativeName: English
+    - locale: zh-CN
+      nativeName: 简体中文
+dependencies:
+  plugins:
+    - id: linapro-mail-core
+      version: ">=0.1.0"

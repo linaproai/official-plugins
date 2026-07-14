@@ -6,7 +6,7 @@ Managed source plugin that provides a **Qiniu Kodo** backend for the host `Stora
 
 - Registers via `storagecap.Provide("linapro-storage-qiniu", factory)`
 - Host `ResolveProvider` selects the unique enabled storage provider plugin; zero → local; multiple → conflict
-- Admin settings under **Storage → Qiniu Kodo**
+- Admin settings under **System Settings → Qiniu Kodo**
 - Required: AccessKey, SecretKey, bucket; optional region (`z0`/`z1`/`z2`/`cn-east-2`/`na0`/`as0`, auto-detect when empty); optional download domain and path prefix
 - When this plugin is the sole active provider but configuration is incomplete, operations fail closed (no silent local fallback)
 
@@ -19,5 +19,5 @@ Managed source plugin that provides a **Qiniu Kodo** backend for the host `Stora
 ## Install
 
 1. Install and enable this plugin (ensure no other storage provider plugin is enabled)
-2. Open **Storage → Qiniu Kodo**
+2. Open **System Settings → Qiniu Kodo**
 3. Save credentials and bucket, then run **Test connection**

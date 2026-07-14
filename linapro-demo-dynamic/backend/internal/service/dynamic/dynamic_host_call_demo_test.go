@@ -191,8 +191,13 @@ func (*fakeHostConfigSysConfigService) List(context.Context, hostconfigcap.ListS
 }
 
 // SetValue fails because demo host config tests are read-only.
-func (*fakeHostConfigSysConfigService) SetValue(context.Context, hostconfigcap.SysConfigKey, string) error {
+func (*fakeHostConfigSysConfigService) SetValue(context.Context, hostconfigcap.SysConfigKey, string, *hostconfigcap.SetSysConfigValueOptions) error {
 	return errors.New("unexpected sys_config write in host config demo test")
+}
+
+// BatchSetValue fails because demo host config tests are read-only.
+func (*fakeHostConfigSysConfigService) BatchSetValue(context.Context, []hostconfigcap.SetSysConfigValueItem, *hostconfigcap.SetSysConfigValueOptions) error {
+	return errors.New("unexpected sys_config batch write in host config demo test")
 }
 
 // Reset fails because demo host config tests are read-only.

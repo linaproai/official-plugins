@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/util/gconv"
 
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/logger"
@@ -21,39 +22,32 @@ func (s *serviceImpl) Save(ctx context.Context, in SaveInput) (*Projection, erro
 	if err != nil {
 		return nil, err
 	}
-	nextSecret := resolveNextSecret(current.SecretAccessKey, in.SecretAccessKey)
-	accessKeyID := strings.TrimSpace(in.AccessKeyID)
-	region := strings.TrimSpace(in.Region)
-	bucket := strings.TrimSpace(in.Bucket)
-	endpoint := strings.TrimSpace(in.Endpoint)
-	pathPrefix := NormalizePathPrefix(in.PathPrefix)
-
-	if err := s.setValue(ctx, ConfigKeyAccessKeyID, accessKeyID); err != nil {
-		return nil, err
-	}
-	if err := s.setValue(ctx, ConfigKeyRegion, region); err != nil {
-		return nil, err
-	}
-	if err := s.setValue(ctx, ConfigKeyBucket, bucket); err != nil {
-		return nil, err
-	}
-	if err := s.setValue(ctx, ConfigKeyEndpoint, endpoint); err != nil {
-		return nil, err
-	}
-	if err := s.setValue(ctx, ConfigKeyPathPrefix, pathPrefix); err != nil {
-		return nil, err
-	}
-	forcePathStyle := ""
+	var (
+		nextSecret     = resolveNextSecret(current.SecretAccessKey, in.SecretAccessKey)
+		accessKeyID    = strings.TrimSpace(in.AccessKeyID)
+		region         = strings.TrimSpace(in.Region)
+		bucket         = strings.TrimSpace(in.Bucket)
+		endpoint       = strings.TrimSpace(in.Endpoint)
+		pathPrefix     = NormalizePathPrefix(in.PathPrefix)
+		forcePathStyle = ""
+	)
 	if in.ForcePathStyle {
 		forcePathStyle = "1"
 	}
-	if err := s.setValue(ctx, ConfigKeyForcePathStyle, forcePathStyle); err != nil {
-		return nil, err
+
+	items := []hostconfigcap.SetSysConfigValueItem{
+		{Key: ConfigKeyAccessKeyID, Value: accessKeyID},
+		{Key: ConfigKeyRegion, Value: region},
+		{Key: ConfigKeyBucket, Value: bucket},
+		{Key: ConfigKeyEndpoint, Value: endpoint},
+		{Key: ConfigKeyPathPrefix, Value: pathPrefix},
+		{Key: ConfigKeyForcePathStyle, Value: forcePathStyle},
 	}
 	if nextSecret != current.SecretAccessKey {
-		if err := s.setValue(ctx, ConfigKeySecretAccessKey, nextSecret); err != nil {
-			return nil, err
-		}
+		items = append(items, hostconfigcap.SetSysConfigValueItem{Key: ConfigKeySecretAccessKey, Value: nextSecret})
+	}
+	if err := s.setValues(ctx, items); err != nil {
+		return nil, err
 	}
 	logger.Infof(ctx, "linapro-storage-s3 settings saved accessKeySet=%t regionSet=%t bucketSet=%t secretSet=%t",
 		accessKeyID != "", region != "", bucket != "", nextSecret != "")
@@ -68,8 +62,10 @@ func (s *serviceImpl) Save(ctx context.Context, in SaveInput) (*Projection, erro
 	}), nil
 }
 
-func (s *serviceImpl) setValue(ctx context.Context, key hostconfigcap.SysConfigKey, value string) error {
-	if err := s.sysConfigSvc.SetValue(ctx, key, value); err != nil {
+func (s *serviceImpl) setValues(ctx context.Context, items []hostconfigcap.SetSysConfigValueItem) error {
+	if err := s.sysConfigSvc.BatchSetValue(ctx, items, &hostconfigcap.SetSysConfigValueOptions{
+		SystemManageable: gconv.PtrBool(false),
+	}); err != nil {
 		if bizerr.Is(err, capmodel.CodeCapabilityUnavailable) {
 			return bizerr.WrapCode(err, CodeStorageUnavailable)
 		}

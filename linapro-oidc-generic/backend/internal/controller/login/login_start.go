@@ -13,9 +13,11 @@ import (
 
 // Start handles GET /portal/linapro-oidc-generic/login.
 func (c *ControllerV1) Start(request *ghttp.Request) {
-	ctx := request.Context()
-	stateKey := request.Get("state").String()
-	returnTo := oauthsvc.SanitizeReturnTo(request.Get("returnTo").String())
+	var (
+		ctx      = request.Context()
+		stateKey = request.Get("state").String()
+		returnTo = oauthsvc.SanitizeReturnTo(request.Get("returnTo").String())
+	)
 	authorize, err := c.oauthSvc.BuildAuthorizeURL(ctx, stateKey, returnTo)
 	if err != nil {
 		logger.Warningf(ctx, "linapro-oidc-generic authorize URL build failed: %v", err)

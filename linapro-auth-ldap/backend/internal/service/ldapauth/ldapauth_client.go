@@ -67,9 +67,11 @@ func (c *LDAPDirectoryClient) Authenticate(ctx context.Context, cfg settingssvc.
 }
 
 func (c *LDAPDirectoryClient) dial(cfg settingssvc.Snapshot, timeout time.Duration) (*ldap.Conn, error) {
-	host := strings.TrimSpace(cfg.Host)
-	port := strings.TrimSpace(cfg.Port)
-	mode := settingssvc.NormalizeTLSMode(cfg.TLSMode)
+	var (
+		host = strings.TrimSpace(cfg.Host)
+		port = strings.TrimSpace(cfg.Port)
+		mode = settingssvc.NormalizeTLSMode(cfg.TLSMode)
+	)
 	if port == "" {
 		if mode == settingssvc.TLSModeLDAPS {
 			port = "636"

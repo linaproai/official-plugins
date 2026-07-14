@@ -1,0 +1,628 @@
+{
+  "plugins": {
+    "linapro_mail_core": {
+      "api": {
+        "account": {
+          "v1": {
+            "AccountItem": {
+              "fields": {
+                "id": {
+                  "dc": "账号主键 ID"
+                },
+                "name": {
+                  "dc": "邮件账号显示名称"
+                },
+                "fromAddress": {
+                  "dc": "发送邮件时使用的默认 From 地址"
+                },
+                "outboundConnectionId": {
+                  "dc": "出站（SMTP）连接 ID；0 表示未绑定出站连接"
+                },
+                "inboundConnectionId": {
+                  "dc": "入站（IMAP/POP3）连接 ID；0 表示仅出站账号"
+                },
+                "isDefault": {
+                  "dc": "是否为平台默认邮件账号"
+                },
+                "status": {
+                  "dc": "账号状态：1=启用 0=禁用"
+                },
+                "remark": {
+                  "dc": "可选备注"
+                },
+                "createdAt": {
+                  "dc": "创建时间，Unix 毫秒时间戳"
+                },
+                "updatedAt": {
+                  "dc": "最近更新时间，Unix 毫秒时间戳"
+                }
+              }
+            },
+            "ListReq": {
+              "meta": {
+                "tags": "邮件账号",
+                "summary": "查询邮件账号列表"
+              },
+              "fields": {
+                "pageNum": {
+                  "dc": "页码，从 1 开始；省略时默认 1"
+                },
+                "pageSize": {
+                  "dc": "每页条数；省略时默认 20"
+                },
+                "name": {
+                  "dc": "可选名称模糊筛选；空表示不按名称筛选"
+                },
+                "status": {
+                  "dc": "可选状态筛选：1=启用 0=禁用；省略返回全部状态"
+                }
+              }
+            },
+            "ListRes": {
+              "fields": {
+                "list": {
+                  "dc": "当前页账号列表项"
+                },
+                "total": {
+                  "dc": "分页前匹配的账号总数"
+                }
+              }
+            },
+            "GetReq": {
+              "meta": {
+                "tags": "邮件账号",
+                "summary": "查询邮件账号详情"
+              },
+              "fields": {
+                "id": {
+                  "dc": "账号主键 ID"
+                }
+              }
+            },
+            "CreateReq": {
+              "meta": {
+                "tags": "邮件账号",
+                "summary": "创建邮件账号"
+              },
+              "fields": {
+                "name": {
+                  "dc": "邮件账号显示名称"
+                },
+                "fromAddress": {
+                  "dc": "发送邮件时使用的默认 From 地址"
+                },
+                "outboundConnectionId": {
+                  "dc": "出站（SMTP）连接 ID；0 表示未绑定出站连接"
+                },
+                "inboundConnectionId": {
+                  "dc": "入站（IMAP/POP3）连接 ID；0 表示仅出站账号"
+                },
+                "isDefault": {
+                  "dc": "是否为平台默认邮件账号"
+                },
+                "status": {
+                  "dc": "账号状态：1=启用 0=禁用"
+                },
+                "remark": {
+                  "dc": "可选备注"
+                }
+              }
+            },
+            "CreateRes": {
+              "fields": {
+                "id": {
+                  "dc": "新建账号主键 ID"
+                }
+              }
+            },
+            "UpdateReq": {
+              "meta": {
+                "tags": "邮件账号",
+                "summary": "更新邮件账号"
+              },
+              "fields": {
+                "id": {
+                  "dc": "账号主键 ID"
+                },
+                "name": {
+                  "dc": "邮件账号显示名称"
+                },
+                "fromAddress": {
+                  "dc": "发送邮件时使用的默认 From 地址"
+                },
+                "outboundConnectionId": {
+                  "dc": "出站（SMTP）连接 ID；0 表示未绑定出站连接"
+                },
+                "inboundConnectionId": {
+                  "dc": "入站（IMAP/POP3）连接 ID；0 表示仅出站账号"
+                },
+                "isDefault": {
+                  "dc": "是否为平台默认邮件账号"
+                },
+                "status": {
+                  "dc": "账号状态：1=启用 0=禁用"
+                },
+                "remark": {
+                  "dc": "可选备注"
+                }
+              }
+            },
+            "DeleteReq": {
+              "meta": {
+                "tags": "邮件账号",
+                "summary": "删除邮件账号"
+              },
+              "fields": {
+                "ids": {
+                  "dc": "待删除的账号主键 ID 列表"
+                }
+              }
+            }
+          }
+        },
+        "connection": {
+          "v1": {
+            "ListReq": {
+              "meta": {
+                "tags": "邮件连接",
+                "summary": "查询邮件连接列表"
+              },
+              "fields": {
+                "pageNum": {
+                  "dc": "页码"
+                },
+                "pageSize": {
+                  "dc": "每页条数"
+                },
+                "name": {
+                  "dc": "名称模糊筛选"
+                },
+                "kind": {
+                  "dc": "传输类型筛选：smtp、imap、pop3"
+                },
+                "status": {
+                  "dc": "状态筛选：1=启用 0=禁用"
+                }
+              }
+            },
+            "GetReq": {
+              "meta": {
+                "tags": "邮件连接",
+                "summary": "查询邮件连接详情"
+              },
+              "fields": {
+                "id": {
+                  "dc": "连接 ID"
+                }
+              }
+            },
+            "CreateReq": {
+              "meta": {
+                "tags": "邮件连接",
+                "summary": "创建邮件连接"
+              },
+              "fields": {
+                "name": {
+                  "dc": "显示名称"
+                },
+                "kind": {
+                  "dc": "传输类型：smtp、imap、pop3"
+                },
+                "host": {
+                  "dc": "服务器主机"
+                },
+                "port": {
+                  "dc": "服务器端口"
+                },
+                "username": {
+                  "dc": "认证用户名"
+                },
+                "secretRef": {
+                  "dc": "密钥引用或密码材料引用"
+                },
+                "tlsMode": {
+                  "dc": "TLS 模式：disable、starttls、tls"
+                },
+                "authMode": {
+                  "dc": "认证模式：password"
+                },
+                "extraJson": {
+                  "dc": "扩展 JSON"
+                },
+                "status": {
+                  "dc": "状态：1=启用 0=禁用"
+                },
+                "remark": {
+                  "dc": "备注"
+                }
+              }
+            },
+            "UpdateReq": {
+              "meta": {
+                "tags": "邮件连接",
+                "summary": "更新邮件连接"
+              },
+              "fields": {
+                "id": {
+                  "dc": "连接 ID"
+                },
+                "name": {
+                  "dc": "显示名称"
+                },
+                "kind": {
+                  "dc": "传输类型"
+                },
+                "host": {
+                  "dc": "服务器主机"
+                },
+                "port": {
+                  "dc": "服务器端口"
+                },
+                "username": {
+                  "dc": "认证用户名"
+                },
+                "secretRef": {
+                  "dc": "密钥引用"
+                },
+                "tlsMode": {
+                  "dc": "TLS 模式"
+                },
+                "authMode": {
+                  "dc": "认证模式"
+                },
+                "extraJson": {
+                  "dc": "扩展 JSON"
+                },
+                "status": {
+                  "dc": "状态"
+                },
+                "remark": {
+                  "dc": "备注"
+                }
+              }
+            },
+            "DeleteReq": {
+              "meta": {
+                "tags": "邮件连接",
+                "summary": "删除邮件连接"
+              },
+              "fields": {
+                "ids": {
+                  "dc": "连接 ID 列表"
+                }
+              }
+            },
+            "ProbeReq": {
+              "meta": {
+                "tags": "邮件连接",
+                "summary": "探测邮件连接"
+              },
+              "fields": {
+                "id": {
+                  "dc": "连接 ID"
+                }
+              }
+            }
+          }
+        },
+        "settings": {
+          "v1": {
+            "SettingsItem": {
+              "fields": {
+                "name": {
+                  "dc": "内部账号标签；管理表单未提供时可由系统推导"
+                },
+                "fromAddress": {
+                  "dc": "出站邮件默认 From 地址"
+                },
+                "smtpHost": {
+                  "dc": "SMTP 服务器主机"
+                },
+                "smtpPort": {
+                  "dc": "SMTP 服务器端口"
+                },
+                "smtpUsername": {
+                  "dc": "SMTP 与入站共用的邮箱登录账号"
+                },
+                "smtpPasswordConfigured": {
+                  "dc": "是否已存储 SMTP 密码"
+                },
+                "smtpTlsMode": {
+                  "dc": "SMTP TLS 模式：disable、starttls、tls"
+                },
+                "inboundKind": {
+                  "dc": "入站协议：none、imap、pop3"
+                },
+                "inboundHost": {
+                  "dc": "入站服务器主机"
+                },
+                "inboundPort": {
+                  "dc": "入站服务器端口"
+                },
+                "inboundUsername": {
+                  "dc": "入站用户名"
+                },
+                "inboundPasswordConfigured": {
+                  "dc": "是否已存储入站密码"
+                },
+                "inboundTlsMode": {
+                  "dc": "入站 TLS 模式：disable、starttls、tls"
+                },
+                "configured": {
+                  "dc": "是否已配置平台邮件账号"
+                }
+              }
+            },
+            "GetSettingsReq": {
+              "schema": {
+                "dc": "返回管理页使用的脱敏平台邮件账号设置。"
+              },
+              "meta": {
+                "tags": "邮件设置",
+                "summary": "查询平台邮件设置",
+                "dc": "返回管理页使用的脱敏平台邮件账号设置。"
+              }
+            },
+            "GetSettingsRes": {
+              "fields": {
+                "settings": {
+                  "dc": "脱敏后的平台邮件设置"
+                }
+              }
+            },
+            "SaveSettingsReq": {
+              "schema": {
+                "dc": "创建或更新唯一的平台邮件账号及其 SMTP 与可选 IMAP/POP3 入站配置。密码为空时保留原值；fromAddress 为空时默认使用 smtpUsername。"
+              },
+              "meta": {
+                "tags": "邮件设置",
+                "summary": "保存平台邮件设置",
+                "dc": "创建或更新唯一的平台邮件账号及其 SMTP 与可选 IMAP/POP3 入站配置。密码为空时保留原值；fromAddress 为空时默认使用 smtpUsername。"
+              },
+              "fields": {
+                "name": {
+                  "dc": "可选内部账号标签；省略时由 fromAddress 或 smtpUsername 推导"
+                },
+                "fromAddress": {
+                  "dc": "默认 From 地址；为空时默认使用 smtpUsername"
+                },
+                "smtpHost": {
+                  "dc": "SMTP 服务器主机"
+                },
+                "smtpPort": {
+                  "dc": "SMTP 服务器端口"
+                },
+                "smtpUsername": {
+                  "dc": "SMTP 与入站共用的邮箱登录账号"
+                },
+                "smtpPassword": {
+                  "dc": "SMTP 密码；为空时保留原值"
+                },
+                "smtpTlsMode": {
+                  "dc": "SMTP TLS 模式：disable、starttls、tls"
+                },
+                "inboundKind": {
+                  "dc": "入站协议：none、imap、pop3"
+                },
+                "inboundHost": {
+                  "dc": "入站服务器主机"
+                },
+                "inboundPort": {
+                  "dc": "入站服务器端口"
+                },
+                "inboundUsername": {
+                  "dc": "入站用户名；为空时默认使用 smtpUsername"
+                },
+                "inboundPassword": {
+                  "dc": "入站密码；为空时保留原值"
+                },
+                "inboundTlsMode": {
+                  "dc": "入站 TLS 模式：disable、starttls、tls"
+                }
+              }
+            },
+            "SaveSettingsRes": {
+              "fields": {
+                "settings": {
+                  "dc": "保存后的脱敏设置投影"
+                }
+              }
+            },
+            "TestSettingsReq": {
+              "schema": {
+                "dc": "使用表单值探测 SMTP 与可选 IMAP/POP3，不落库。密码为空时复用已存储密钥。"
+              },
+              "meta": {
+                "tags": "邮件设置",
+                "summary": "测试平台邮件连通性",
+                "dc": "使用表单值探测 SMTP 与可选 IMAP/POP3，不落库。密码为空时复用已存储密钥。"
+              },
+              "fields": {
+                "name": {
+                  "dc": "可选内部账号标签"
+                },
+                "fromAddress": {
+                  "dc": "默认 From 地址；为空时默认使用 smtpUsername"
+                },
+                "smtpHost": {
+                  "dc": "SMTP 服务器主机"
+                },
+                "smtpPort": {
+                  "dc": "SMTP 服务器端口"
+                },
+                "smtpUsername": {
+                  "dc": "SMTP 与入站共用的邮箱登录账号"
+                },
+                "smtpPassword": {
+                  "dc": "SMTP 密码；为空时复用已存储值"
+                },
+                "smtpTlsMode": {
+                  "dc": "SMTP TLS 模式"
+                },
+                "inboundKind": {
+                  "dc": "入站协议：none、imap、pop3"
+                },
+                "inboundHost": {
+                  "dc": "入站服务器主机"
+                },
+                "inboundPort": {
+                  "dc": "入站服务器端口"
+                },
+                "inboundUsername": {
+                  "dc": "入站用户名；为空时默认使用 smtpUsername"
+                },
+                "inboundPassword": {
+                  "dc": "入站密码；为空时复用已存储值"
+                },
+                "inboundTlsMode": {
+                  "dc": "入站 TLS 模式"
+                }
+              }
+            },
+            "TestSettingsRes": {
+              "fields": {
+                "ok": {
+                  "dc": "是否所有必需探测均成功"
+                },
+                "message": {
+                  "dc": "可读的探测结果"
+                }
+              }
+            },
+            "SendTestMailReq": {
+              "schema": {
+                "dc": "使用管理表单当前填写的 SMTP 设置发送一封诊断邮件（不一定是最近一次保存的默认账号）。密码为空时复用已存储密钥；fromAddress 为空时默认使用 smtpUsername。"
+              },
+              "meta": {
+                "tags": "邮件设置",
+                "summary": "发送平台测试邮件",
+                "dc": "使用管理表单当前填写的 SMTP 设置发送一封诊断邮件（不一定是最近一次保存的默认账号）。密码为空时复用已存储密钥；fromAddress 为空时默认使用 smtpUsername。"
+              },
+              "fields": {
+                "name": {
+                  "dc": "可选内部账号标签"
+                },
+                "fromAddress": {
+                  "dc": "默认 From 地址；为空时默认使用 smtpUsername"
+                },
+                "smtpHost": {
+                  "dc": "SMTP 服务器主机"
+                },
+                "smtpPort": {
+                  "dc": "SMTP 服务器端口"
+                },
+                "smtpUsername": {
+                  "dc": "SMTP 与入站共用的邮箱登录账号"
+                },
+                "smtpPassword": {
+                  "dc": "SMTP 密码；为空时复用已存储值"
+                },
+                "smtpTlsMode": {
+                  "dc": "SMTP TLS 模式：disable、starttls、tls"
+                },
+                "inboundKind": {
+                  "dc": "发送测试时忽略的入站协议；为复用表单而接受"
+                },
+                "inboundHost": {
+                  "dc": "发送测试时忽略的入站主机"
+                },
+                "inboundPort": {
+                  "dc": "发送测试时忽略的入站端口"
+                },
+                "inboundUsername": {
+                  "dc": "发送测试时忽略的入站用户名"
+                },
+                "inboundPassword": {
+                  "dc": "发送测试时忽略的入站密码"
+                },
+                "inboundTlsMode": {
+                  "dc": "发送测试时忽略的入站 TLS 模式"
+                },
+                "to": {
+                  "dc": "诊断邮件收件人地址"
+                },
+                "subject": {
+                  "dc": "可选主题；为空时使用服务端默认值"
+                },
+                "body": {
+                  "dc": "诊断邮件的纯文本正文"
+                }
+              }
+            },
+            "SendTestMailRes": {
+              "fields": {
+                "ok": {
+                  "dc": "诊断邮件是否被 SMTP 传输接受"
+                },
+                "message": {
+                  "dc": "可读的发送结果或失败详情"
+                }
+              }
+            },
+            "ReceiveTestMailReq": {
+              "schema": {
+                "dc": "使用管理表单当前填写的入站设置探测 IMAP 或 POP3 收信能力（不一定是最近一次保存的默认账号）。密码为空时复用已存储密钥。要求 inboundKind 为 imap 或 pop3。"
+              },
+              "meta": {
+                "tags": "邮件设置",
+                "summary": "测试平台邮件收信",
+                "dc": "使用管理表单当前填写的入站设置探测 IMAP 或 POP3 收信能力（不一定是最近一次保存的默认账号）。密码为空时复用已存储密钥。要求 inboundKind 为 imap 或 pop3。"
+              },
+              "fields": {
+                "name": {
+                  "dc": "可选内部账号标签"
+                },
+                "fromAddress": {
+                  "dc": "收信测试时忽略的 From 地址；为复用表单而接受"
+                },
+                "smtpHost": {
+                  "dc": "收信测试时忽略的 SMTP 主机；为复用表单而接受"
+                },
+                "smtpPort": {
+                  "dc": "收信测试时忽略的 SMTP 端口"
+                },
+                "smtpUsername": {
+                  "dc": "SMTP 与入站共用的邮箱登录账号"
+                },
+                "smtpPassword": {
+                  "dc": "SMTP 密码；为空时复用已存储值；入站密码为空时也可作为入站回退"
+                },
+                "smtpTlsMode": {
+                  "dc": "收信测试时忽略的 SMTP TLS 模式"
+                },
+                "inboundKind": {
+                  "dc": "入站协议：imap 或 pop3（none 会被拒绝）"
+                },
+                "inboundHost": {
+                  "dc": "入站服务器主机"
+                },
+                "inboundPort": {
+                  "dc": "入站服务器端口"
+                },
+                "inboundUsername": {
+                  "dc": "入站用户名；为空时默认使用 smtpUsername"
+                },
+                "inboundPassword": {
+                  "dc": "入站密码；为空时复用已存储值或 SMTP 密码"
+                },
+                "inboundTlsMode": {
+                  "dc": "入站 TLS 模式：disable、starttls、tls"
+                }
+              }
+            },
+            "ReceiveTestMailRes": {
+              "fields": {
+                "ok": {
+                  "dc": "入站收信探测是否成功"
+                },
+                "message": {
+                  "dc": "可读的收信探测结果或失败详情"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

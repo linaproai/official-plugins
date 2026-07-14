@@ -61,10 +61,10 @@ i18n:
 # 插件菜单声明列表。
 menus:
   - key: plugin:linapro-storage-s3:settings
-    # Parent is the host stable Storage catalog (menu_key=storage).
-    # 父级为宿主稳定「存储管理」目录。
-    parent_key: storage
-    name: S3 Storage
+    # Parent is the host stable System Settings catalog (menu_key=setting).
+    # 父级为宿主稳定「系统设置」目录。
+    parent_key: setting
+    name: Storage Management - S3
     path: linapro-storage-s3-settings
     component: system/plugin/dynamic-page
     perms: linapro-storage-s3:settings:view

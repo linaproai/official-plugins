@@ -1,0 +1,8 @@
+{
+  "plugin": {
+    "linapro-mail-smtp": {
+      "name": "邮件管理-SMTP",
+      "description": "通过标准 SMTP 服务器发送邮件。需要先安装并启用 linapro-mail-core 插件。"
+    }
+  }
+}

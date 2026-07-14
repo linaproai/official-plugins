@@ -1,0 +1,32 @@
+{
+  "config": {
+    "plugin": {
+      "linapro-storage-obs": {
+        "access_key_id": {
+          "name": "Huawei OBS - Access Key ID",
+          "remark": "Cloud storage access key identifier used for authenticated requests."
+        },
+        "bucket": {
+          "name": "Huawei OBS - Bucket",
+          "remark": "Target object storage bucket name."
+        },
+        "endpoint": {
+          "name": "Huawei OBS - Endpoint",
+          "remark": "Custom service endpoint URL when not using the provider default."
+        },
+        "path_prefix": {
+          "name": "Huawei OBS - Path Prefix",
+          "remark": "Optional object key prefix applied to all uploaded files."
+        },
+        "region": {
+          "name": "Huawei OBS - Region",
+          "remark": "Cloud storage region code for the target bucket or container."
+        },
+        "secret_access_key": {
+          "name": "Huawei OBS - Secret Access Key",
+          "remark": "Cloud storage secret key. Leave blank or masked to keep the existing value."
+        }
+      }
+    }
+  }
+}

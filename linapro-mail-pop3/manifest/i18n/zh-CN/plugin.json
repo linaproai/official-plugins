@@ -1,0 +1,8 @@
+{
+  "plugin": {
+    "linapro-mail-pop3": {
+      "name": "邮件管理-POP3",
+      "description": "从 POP3 邮箱收取邮件。需要先安装并启用 linapro-mail-core 插件。"
+    }
+  }
+}

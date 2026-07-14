@@ -1,0 +1,36 @@
+{
+  "config": {
+    "plugin": {
+      "linapro-oidc-discord": {
+        "allow_auto_provision": {
+          "name": "Discord OIDC - Allow Auto Provision",
+          "remark": "Whether unknown directory users may be auto-provisioned. Allowed values: true, false."
+        },
+        "backend_redirects": {
+          "name": "Discord OIDC - Backend Redirects",
+          "remark": "Allowed backend redirect targets, typically one entry per line or a delimited list."
+        },
+        "client_id": {
+          "name": "Discord OIDC - Client ID",
+          "remark": "OAuth/OIDC client identifier issued by the identity provider."
+        },
+        "client_secret": {
+          "name": "Discord OIDC - Client Secret",
+          "remark": "OAuth/OIDC client secret. Leave blank or masked to keep the existing value."
+        },
+        "default_backend_redirect": {
+          "name": "Discord OIDC - Default Backend Redirect",
+          "remark": "Default post-login backend redirect target when backend redirect is enabled."
+        },
+        "enable_backend_redirect": {
+          "name": "Discord OIDC - Enable Backend Redirect",
+          "remark": "Whether backend redirect allow-list enforcement is enabled. Allowed values: true, false."
+        },
+        "redirect_url": {
+          "name": "Discord OIDC - Redirect URL",
+          "remark": "OAuth/OIDC callback URL registered with the identity provider."
+        }
+      }
+    }
+  }
+}

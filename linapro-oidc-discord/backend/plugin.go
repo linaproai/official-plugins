@@ -92,15 +92,17 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 	// The shared config resolver feeds both the login orchestration and the
 	// production HTTP identity verifier so they read identical request-time
 	// settings (client credentials, endpoints, derived callback URL).
-	configResolver := oauthsvc.NewConfigResolver(pluginSettingsSvc, oauthsvc.DefaultConfig())
-	loginSvc := oauthsvc.New(
-		authSvc.ExternalLogin(),
-		configResolver,
-		oauthsvc.NewHTTPIdentityVerifier(configResolver),
-		oauthsvc.NewHMACStateCodec(),
+	var (
+		configResolver = oauthsvc.NewConfigResolver(pluginSettingsSvc, oauthsvc.DefaultConfig())
+		loginSvc       = oauthsvc.New(
+			authSvc.ExternalLogin(),
+			configResolver,
+			oauthsvc.NewHTTPIdentityVerifier(configResolver),
+			oauthsvc.NewHMACStateCodec(),
+		)
+		loginController    = loginctrl.NewV1(loginSvc, pluginSettingsSvc)
+		settingsController = settingsctrl.NewV1(pluginSettingsSvc)
 	)
-	loginController := loginctrl.NewV1(loginSvc, pluginSettingsSvc)
-	settingsController := settingsctrl.NewV1(pluginSettingsSvc)
 	routes.Group(portalGroupPath, func(group pluginhost.RouteGroup) {
 		group.Middleware(
 			middlewares.NeverDoneCtx(),
@@ -126,10 +128,7 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 					middlewares.Tenancy(),
 					middlewares.Permission(),
 				)
-				group.Bind(
-					settingsController.GetSettings,
-					settingsController.SaveSettings,
-				)
+				group.Bind(settingsController)
 			})
 		})
 	})
