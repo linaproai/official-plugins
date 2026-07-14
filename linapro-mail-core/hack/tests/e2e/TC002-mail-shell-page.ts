@@ -130,6 +130,16 @@ test.describe('TC-2 mail-core management settings page', () => {
     await expect(adminPage.getByText('用户名')).toHaveCount(0);
     await expect(adminPage.getByText('SMTP（发信）').first()).toBeVisible();
     await expect(adminPage.getByText('收信（可选）').first()).toBeVisible();
+    // Form field titles use medium/semi-bold weight (aligned with storage/auth settings).
+    const sampleLabel = pageRoot
+      .locator('.mail-settings-form .ant-form-item-label > label')
+      .filter({ hasText: /账号/ })
+      .first();
+    await expect(sampleLabel).toBeVisible();
+    const labelFontWeight = await sampleLabel.evaluate(
+      (el) => Number.parseInt(getComputedStyle(el).fontWeight, 10) || 0,
+    );
+    expect(labelFontWeight).toBeGreaterThanOrEqual(500);
     // Prefer testids for Ant Design buttons (role name matching can be flaky).
     // Ant Design inserts spacing between CJK chars on primary buttons (保 存 设 置).
     await expect(adminPage.getByTestId('mail-settings-test')).toContainText(

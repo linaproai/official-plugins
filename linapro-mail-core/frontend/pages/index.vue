@@ -405,6 +405,7 @@ onMounted(loadSettings);
           :label-col="labelCol"
           :model="formState"
           :wrapper-col="wrapperCol"
+          class="mail-settings-form"
           layout="horizontal"
         >
           <Form.Item
@@ -614,6 +615,7 @@ onMounted(loadSettings);
           :colon="false"
           :label-col="{ style: { width: '96px' } }"
           :model="testMailState"
+          class="mail-settings-form"
           layout="horizontal"
           style="margin-top: 0"
         >
@@ -660,3 +662,13 @@ onMounted(loadSettings);
     </Modal>
   </div>
 </template>
+
+<style scoped>
+/*
+ * Align raw ant-design Form labels with host useVbenForm conventions:
+ * medium (semi-bold) weight and no trailing colon (handled via :colon="false").
+ */
+.mail-settings-form :deep(.ant-form-item-label > label) {
+  font-weight: 500;
+}
+</style>
