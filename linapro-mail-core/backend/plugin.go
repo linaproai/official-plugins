@@ -80,9 +80,11 @@ func enablementFromInput(input pluginhost.SourcePluginGlobalLifecycleInput) spi.
 
 // registerRoutes binds Connection/Account management APIs.
 func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) error {
-	routes := registrar.Routes()
-	middlewares := routes.Middlewares()
-	services := registrar.Services()
+	var (
+		routes      = registrar.Routes()
+		middlewares = routes.Middlewares()
+		services    = registrar.Services()
+	)
 	if services == nil || services.Plugins() == nil || services.Plugins().State() == nil {
 		return gerror.New("linapro-mail-core routes require host plugin state capability")
 	}
@@ -95,9 +97,11 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 	if err := mailsvc.ProvideNotifyEmailDelivery(mailService); err != nil {
 		logger.Warningf(ctx, "linapro-mail-core notify email bridge registration skipped: %v", err)
 	}
-	connectionController := connectionctrl.NewV1(mailService)
-	accountController := accountctrl.NewV1(mailService)
-	settingsController := settingsctrl.NewV1(mailService, services.I18n())
+	var (
+		connectionController = connectionctrl.NewV1(mailService)
+		accountController    = accountctrl.NewV1(mailService)
+		settingsController   = settingsctrl.NewV1(mailService, services.I18n())
+	)
 
 	routes.Group(routes.APIPrefix(), func(group pluginhost.RouteGroup) {
 		group.Group("/api/v1", func(group pluginhost.RouteGroup) {

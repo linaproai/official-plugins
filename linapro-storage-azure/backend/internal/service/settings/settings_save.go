@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/util/gconv"
 
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/logger"
@@ -22,28 +23,25 @@ func (s *serviceImpl) Save(ctx context.Context, in SaveInput) (*Projection, erro
 	if err != nil {
 		return nil, err
 	}
-	nextSecret := resolveNextSecret(current.AccountKey, in.AccountKey)
-	accountName := strings.TrimSpace(in.AccountName)
-	container := strings.TrimSpace(in.Container)
-	endpoint := strings.TrimSpace(in.Endpoint)
-	pathPrefix := NormalizePathPrefix(in.PathPrefix)
+	var (
+		nextSecret  = resolveNextSecret(current.AccountKey, in.AccountKey)
+		accountName = strings.TrimSpace(in.AccountName)
+		container   = strings.TrimSpace(in.Container)
+		endpoint    = strings.TrimSpace(in.Endpoint)
+		pathPrefix  = NormalizePathPrefix(in.PathPrefix)
+	)
 
-	if err := s.setValue(ctx, ConfigKeyAccountName, accountName); err != nil {
-		return nil, err
-	}
-	if err := s.setValue(ctx, ConfigKeyContainer, container); err != nil {
-		return nil, err
-	}
-	if err := s.setValue(ctx, ConfigKeyEndpoint, endpoint); err != nil {
-		return nil, err
-	}
-	if err := s.setValue(ctx, ConfigKeyPathPrefix, pathPrefix); err != nil {
-		return nil, err
+	items := []hostconfigcap.SetSysConfigValueItem{
+		{Key: ConfigKeyAccountName, Value: accountName},
+		{Key: ConfigKeyContainer, Value: container},
+		{Key: ConfigKeyEndpoint, Value: endpoint},
+		{Key: ConfigKeyPathPrefix, Value: pathPrefix},
 	}
 	if nextSecret != current.AccountKey {
-		if err := s.setValue(ctx, ConfigKeyAccountKey, nextSecret); err != nil {
-			return nil, err
-		}
+		items = append(items, hostconfigcap.SetSysConfigValueItem{Key: ConfigKeyAccountKey, Value: nextSecret})
+	}
+	if err := s.setValues(ctx, items); err != nil {
+		return nil, err
 	}
 	logger.Infof(ctx, "linapro-storage-azure settings saved accountSet=%t containerSet=%t secretSet=%t",
 		accountName != "", container != "", nextSecret != "")
@@ -56,8 +54,10 @@ func (s *serviceImpl) Save(ctx context.Context, in SaveInput) (*Projection, erro
 	}), nil
 }
 
-func (s *serviceImpl) setValue(ctx context.Context, key hostconfigcap.SysConfigKey, value string) error {
-	if err := s.sysConfigSvc.SetValue(ctx, key, value); err != nil {
+func (s *serviceImpl) setValues(ctx context.Context, items []hostconfigcap.SetSysConfigValueItem) error {
+	if err := s.sysConfigSvc.BatchSetValue(ctx, items, &hostconfigcap.SetSysConfigValueOptions{
+		SystemManageable: gconv.PtrBool(false),
+	}); err != nil {
 		if bizerr.Is(err, capmodel.CodeCapabilityUnavailable) {
 			return bizerr.WrapCode(err, CodeStorageUnavailable)
 		}

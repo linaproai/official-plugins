@@ -276,16 +276,6 @@ type hostCallDemoAIPayload struct {
 	Reason           string `json:"reason"`
 }
 
-// boolPointer allocates one boolean pointer for optional JSON response fields.
-func boolPointer(value bool) *bool {
-	return &value
-}
-
-// stringPointer allocates one string pointer for optional JSON response fields.
-func stringPointer(value string) *string {
-	return &value
-}
-
 // buildRecordMap marshals one typed record into a generic map used by the
 // structured-data client.
 func buildRecordMap(record any) (map[string]any, error) {

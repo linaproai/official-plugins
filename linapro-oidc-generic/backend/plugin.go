@@ -71,15 +71,17 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		return gerror.New("linapro-oidc-generic routes require host sys_config capability")
 	}
 	logger.Infof(ctx, "linapro-oidc-generic registering portal routes group=%s", portalGroupPath)
-	pluginSettingsSvc := settingssvc.New(hostConfigSvc.SysConfig())
-	configResolver := oauthsvc.NewConfigResolver(pluginSettingsSvc, oauthsvc.DefaultConfig())
-	loginSvc := oauthsvc.New(
-		authSvc.ExternalLogin(),
-		configResolver,
-		oauthsvc.NewHMACStateCodec(),
+	var (
+		pluginSettingsSvc = settingssvc.New(hostConfigSvc.SysConfig())
+		configResolver    = oauthsvc.NewConfigResolver(pluginSettingsSvc, oauthsvc.DefaultConfig())
+		loginSvc          = oauthsvc.New(
+			authSvc.ExternalLogin(),
+			configResolver,
+			oauthsvc.NewHMACStateCodec(),
+		)
+		loginController    = loginctrl.NewV1(loginSvc, pluginSettingsSvc)
+		settingsController = settingsctrl.NewV1(pluginSettingsSvc)
 	)
-	loginController := loginctrl.NewV1(loginSvc, pluginSettingsSvc)
-	settingsController := settingsctrl.NewV1(pluginSettingsSvc)
 	routes.Group(portalGroupPath, func(group pluginhost.RouteGroup) {
 		group.Middleware(
 			middlewares.NeverDoneCtx(),

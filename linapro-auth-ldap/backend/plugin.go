@@ -52,9 +52,11 @@ func init() {
 }
 
 func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) error {
-	routes := registrar.Routes()
-	middlewares := routes.Middlewares()
-	services := registrar.Services()
+	var (
+		routes      = registrar.Routes()
+		middlewares = routes.Middlewares()
+		services    = registrar.Services()
+	)
 	if services == nil || services.Auth() == nil || services.Auth().ExternalLogin() == nil {
 		return gerror.New("linapro-auth-ldap requires host external-login")
 	}
@@ -63,10 +65,12 @@ func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) err
 		return gerror.New("linapro-auth-ldap requires host sys_config")
 	}
 	logger.Infof(ctx, "linapro-auth-ldap registering routes group=%s", portalGroupPath)
-	pluginSettings := settingssvc.New(hostConfigSvc.SysConfig())
-	loginSvc := ldapauthsvc.New(services.Auth().ExternalLogin(), pluginSettings, nil)
-	loginController := loginctrl.NewV1(loginSvc)
-	settingsController := settingsctrl.NewV1(pluginSettings)
+	var (
+		pluginSettings     = settingssvc.New(hostConfigSvc.SysConfig())
+		loginSvc           = ldapauthsvc.New(services.Auth().ExternalLogin(), pluginSettings, nil)
+		loginController    = loginctrl.NewV1(loginSvc)
+		settingsController = settingsctrl.NewV1(pluginSettings)
+	)
 
 	// Public portal login (JSON bind).
 	routes.Group(portalGroupPath, func(group pluginhost.RouteGroup) {

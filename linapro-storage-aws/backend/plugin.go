@@ -36,9 +36,11 @@ func init() {
 }
 
 func registerRoutes(ctx context.Context, registrar pluginhost.HTTPRegistrar) error {
-	routes := registrar.Routes()
-	middlewares := routes.Middlewares()
-	services := registrar.Services()
+	var (
+		routes      = registrar.Routes()
+		middlewares = routes.Middlewares()
+		services    = registrar.Services()
+	)
 	if services == nil || services.HostConfig() == nil || services.HostConfig().SysConfig() == nil {
 		return gerror.New("linapro-storage-aws routes require host sys_config capability")
 	}

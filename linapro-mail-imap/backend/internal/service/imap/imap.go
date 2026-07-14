@@ -113,9 +113,11 @@ func (t *Transport) Probe(ctx context.Context, endpoint mailcap.ConnectionEndpoi
 }
 
 func dialIMAP(ctx context.Context, endpoint mailcap.ConnectionEndpoint) (net.Conn, error) {
-	addr := net.JoinHostPort(endpoint.Host, fmt.Sprintf("%d", endpoint.Port))
-	dialer := &net.Dialer{Timeout: 10 * time.Second}
-	tlsMode := strings.TrimSpace(strings.ToLower(endpoint.TLSMode))
+	var (
+		addr    = net.JoinHostPort(endpoint.Host, fmt.Sprintf("%d", endpoint.Port))
+		dialer  = &net.Dialer{Timeout: 10 * time.Second}
+		tlsMode = strings.TrimSpace(strings.ToLower(endpoint.TLSMode))
+	)
 	if tlsMode == "tls" {
 		tlsDialer := &tls.Dialer{
 			NetDialer: dialer,

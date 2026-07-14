@@ -34,9 +34,11 @@ func newCloudBackend(snapshot *settingssvc.Snapshot) (objectBackend, error) {
 	if snapshot == nil {
 		return nil, bizerr.NewCode(settingssvc.CodeConfigInvalid)
 	}
-	accountName := strings.TrimSpace(snapshot.AccountName)
-	accountKey := strings.TrimSpace(snapshot.AccountKey)
-	container := strings.TrimSpace(snapshot.Container)
+	var (
+		accountName = strings.TrimSpace(snapshot.AccountName)
+		accountKey  = strings.TrimSpace(snapshot.AccountKey)
+		container   = strings.TrimSpace(snapshot.Container)
+	)
 	if accountName == "" || accountKey == "" || container == "" {
 		return nil, bizerr.NewCode(settingssvc.CodeConfigInvalid)
 	}

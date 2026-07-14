@@ -41,8 +41,15 @@ func (f *fakeSysConfig) List(context.Context, hostconfigcap.ListSysConfigInput) 
 	return &capmodel.PageResult[*hostconfigcap.SysConfigInfo]{}, nil
 }
 
-func (f *fakeSysConfig) SetValue(_ context.Context, key hostconfigcap.SysConfigKey, value string) error {
+func (f *fakeSysConfig) SetValue(_ context.Context, key hostconfigcap.SysConfigKey, value string, _ *hostconfigcap.SetSysConfigValueOptions) error {
 	f.values[key] = value
+	return nil
+}
+
+func (f *fakeSysConfig) BatchSetValue(_ context.Context, items []hostconfigcap.SetSysConfigValueItem, _ *hostconfigcap.SetSysConfigValueOptions) error {
+	for _, item := range items {
+		f.values[item.Key] = item.Value
+	}
 	return nil
 }
 

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/gogf/gf/v2/net/ghttp"
+	"github.com/gogf/gf/v2/util/gconv"
 
 	"lina-core/pkg/apitime"
 	"lina-core/pkg/bizerr"
@@ -205,8 +206,8 @@ func (s *serviceImpl) CreateRecord(ctx context.Context, in *CreateRecordInput) (
 		TenantId:       tenantID,
 		Title:          strings.TrimSpace(in.Title),
 		Content:        strings.TrimSpace(in.Content),
-		AttachmentName: stringPointer(attachmentName),
-		AttachmentPath: stringPointer(attachmentPath),
+		AttachmentName: gconv.PtrString(attachmentName),
+		AttachmentPath: gconv.PtrString(attachmentPath),
 	}).InsertAndGetId()
 	if err != nil {
 		return nil, bizerr.WrapCode(err, CodeDemoRecordCreateFailed)
@@ -231,14 +232,14 @@ func (s *serviceImpl) UpdateRecord(ctx context.Context, in *UpdateRecordInput) (
 	updateData := do.Record{
 		Title:          strings.TrimSpace(in.Title),
 		Content:        strings.TrimSpace(in.Content),
-		AttachmentName: stringPointer(record.AttachmentName),
-		AttachmentPath: stringPointer(record.AttachmentPath),
+		AttachmentName: gconv.PtrString(record.AttachmentName),
+		AttachmentPath: gconv.PtrString(record.AttachmentPath),
 	}
 	oldAttachmentPath := strings.TrimSpace(record.AttachmentPath)
 
 	if in.RemoveAttachment {
-		updateData.AttachmentName = stringPointer("")
-		updateData.AttachmentPath = stringPointer("")
+		updateData.AttachmentName = gconv.PtrString("")
+		updateData.AttachmentPath = gconv.PtrString("")
 	}
 
 	newAttachmentPath := ""
@@ -248,8 +249,8 @@ func (s *serviceImpl) UpdateRecord(ctx context.Context, in *UpdateRecordInput) (
 		if err != nil {
 			return nil, err
 		}
-		updateData.AttachmentName = stringPointer(newAttachmentName)
-		updateData.AttachmentPath = stringPointer(newAttachmentPath)
+		updateData.AttachmentName = gconv.PtrString(newAttachmentName)
+		updateData.AttachmentPath = gconv.PtrString(newAttachmentPath)
 		defer func() {
 			if err != nil && newAttachmentPath != "" {
 				s.cleanupDemoAttachmentAfterMutationFailure(ctx, newAttachmentPath)
@@ -420,11 +421,6 @@ func buildRecordListItemOutput(item *demoRecordEntity) *RecordListItemOutput {
 		CreatedAt:      apitime.Milli(item.CreatedAt),
 		UpdatedAt:      apitime.Milli(item.UpdatedAt),
 	}
-}
-
-// stringPointer allocates one string pointer for optional DB mutation fields.
-func stringPointer(value string) *string {
-	return &value
 }
 
 // listAllAttachmentPaths returns all persisted attachment paths and tenant

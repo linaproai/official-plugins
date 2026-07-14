@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/util/gconv"
 
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/logger"
@@ -40,43 +41,32 @@ func (s *serviceImpl) Save(ctx context.Context, in SaveInput) (*Projection, erro
 		return nil, err
 	}
 	nextSecret := resolveNextSecret(current.ClientSecret, in.ClientSecret)
-	if err := s.setValue(ctx, ConfigKeyClientID, strings.TrimSpace(in.ClientID)); err != nil {
-		return nil, err
-	}
-	if err := s.setValue(ctx, ConfigKeyRedirectURL, strings.TrimSpace(in.RedirectURL)); err != nil {
-		return nil, err
-	}
 	enableFlag := ""
 	if in.EnableBackendRedirect {
 		enableFlag = enabledFlagValue
-	}
-	if err := s.setValue(ctx, ConfigKeyEnableBackendRedirect, enableFlag); err != nil {
-		return nil, err
-	}
-	if err := s.setValue(ctx, ConfigKeyDefaultBackendRedirect, strings.TrimSpace(in.DefaultBackendRedirect)); err != nil {
-		return nil, err
-	}
-	if err := s.setValue(ctx, ConfigKeyBackendRedirects, rules); err != nil {
-		return nil, err
 	}
 	autoProvisionFlag := ""
 	if in.AllowAutoProvision {
 		autoProvisionFlag = enabledFlagValue
 	}
-	if err := s.setValue(ctx, ConfigKeyAllowAutoProvision, autoProvisionFlag); err != nil {
-		return nil, err
-	}
 	oneTapFlag := ""
 	if in.EnableOneTap {
 		oneTapFlag = enabledFlagValue
 	}
-	if err := s.setValue(ctx, ConfigKeyEnableOneTap, oneTapFlag); err != nil {
-		return nil, err
+	items := []hostconfigcap.SetSysConfigValueItem{
+		{Key: ConfigKeyClientID, Value: strings.TrimSpace(in.ClientID)},
+		{Key: ConfigKeyRedirectURL, Value: strings.TrimSpace(in.RedirectURL)},
+		{Key: ConfigKeyEnableBackendRedirect, Value: enableFlag},
+		{Key: ConfigKeyDefaultBackendRedirect, Value: strings.TrimSpace(in.DefaultBackendRedirect)},
+		{Key: ConfigKeyBackendRedirects, Value: rules},
+		{Key: ConfigKeyAllowAutoProvision, Value: autoProvisionFlag},
+		{Key: ConfigKeyEnableOneTap, Value: oneTapFlag},
 	}
 	if nextSecret != current.ClientSecret {
-		if err := s.setValue(ctx, ConfigKeyClientSecret, nextSecret); err != nil {
-			return nil, err
-		}
+		items = append(items, hostconfigcap.SetSysConfigValueItem{Key: ConfigKeyClientSecret, Value: nextSecret})
+	}
+	if err := s.setValues(ctx, items); err != nil {
+		return nil, err
 	}
 	logger.Infof(ctx, "linapro-oidc-google settings saved clientIdSet=%t redirectUrlSet=%t secretSet=%t ssoEnabled=%t ruleSet=%t",
 		strings.TrimSpace(in.ClientID) != "",
@@ -111,10 +101,12 @@ func validateBackendRedirects(rules string) error {
 	return nil
 }
 
-// setValue writes one plugin-scoped sys_config value and wraps host errors
-// into the plugin's stable business error surface.
-func (s *serviceImpl) setValue(ctx context.Context, key hostconfigcap.SysConfigKey, value string) error {
-	if err := s.sysConfigSvc.SetValue(ctx, key, value); err != nil {
+// setValues writes plugin-scoped sys_config values in one batch and wraps host
+// errors into the plugin's stable business error surface.
+func (s *serviceImpl) setValues(ctx context.Context, items []hostconfigcap.SetSysConfigValueItem) error {
+	if err := s.sysConfigSvc.BatchSetValue(ctx, items, &hostconfigcap.SetSysConfigValueOptions{
+		SystemManageable: gconv.PtrBool(false),
+	}); err != nil {
 		if bizerr.Is(err, capmodel.CodeCapabilityUnavailable) {
 			return bizerr.WrapCode(err, CodeStorageUnavailable)
 		}

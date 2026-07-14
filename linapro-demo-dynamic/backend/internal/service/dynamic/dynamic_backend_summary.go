@@ -3,6 +3,8 @@
 
 package dynamicservice
 
+import "github.com/gogf/gf/v2/util/gconv"
+
 // backendSummaryMessage is the static intro text returned by the sample
 // backend summary endpoint.
 const backendSummaryMessage = "This backend example is executed through the linapro-demo-dynamic Wasm bridge runtime."
@@ -22,8 +24,8 @@ func (s *serviceImpl) BuildBackendSummaryPayload(input *BackendSummaryInput) *ba
 	payload.Permission = input.Permission
 	payload.Authenticated = input.Authenticated
 	if input.HasIdentity {
-		payload.Username = stringPointer(input.Username)
-		payload.IsSuperAdmin = boolPointer(input.IsSuperAdmin)
+		payload.Username = gconv.PtrString(input.Username)
+		payload.IsSuperAdmin = gconv.PtrBool(input.IsSuperAdmin)
 	}
 	return payload
 }

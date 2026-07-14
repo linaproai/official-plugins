@@ -38,9 +38,11 @@ func newCloudBackend(snapshot *settingssvc.Snapshot) (objectBackend, error) {
 	if snapshot == nil {
 		return nil, bizerr.NewCode(settingssvc.CodeConfigInvalid)
 	}
-	accessKey := strings.TrimSpace(snapshot.AccessKeyID)
-	secretKey := strings.TrimSpace(snapshot.SecretAccessKey)
-	bucketName := strings.TrimSpace(snapshot.Bucket)
+	var (
+		accessKey  = strings.TrimSpace(snapshot.AccessKeyID)
+		secretKey  = strings.TrimSpace(snapshot.SecretAccessKey)
+		bucketName = strings.TrimSpace(snapshot.Bucket)
+	)
 	if accessKey == "" || secretKey == "" || bucketName == "" {
 		return nil, bizerr.NewCode(settingssvc.CodeConfigInvalid)
 	}

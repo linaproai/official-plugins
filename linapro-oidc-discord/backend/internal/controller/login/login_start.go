@@ -20,9 +20,11 @@ import (
 // Discord. On configuration errors it redirects back to the SPA login page
 // with an error hint instead of stranding the browser on the plugin route.
 func (c *ControllerV1) Start(request *ghttp.Request) {
-	ctx := request.Context()
-	stateKey := request.Get("state").String()
-	returnTo := oauthsvc.SanitizeReturnTo(request.Get("returnTo").String())
+	var (
+		ctx      = request.Context()
+		stateKey = request.Get("state").String()
+		returnTo = oauthsvc.SanitizeReturnTo(request.Get("returnTo").String())
+	)
 	authorize, err := c.oauthSvc.BuildAuthorizeURL(ctx, stateKey, returnTo)
 	if err != nil {
 		logger.Warningf(ctx, "linapro-oidc-discord authorize URL build failed: %v", err)

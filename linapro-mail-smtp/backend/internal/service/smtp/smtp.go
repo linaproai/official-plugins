@@ -43,9 +43,11 @@ func (t *Transport) Send(ctx context.Context, endpoint mailcap.ConnectionEndpoin
 	if from == "" {
 		from = endpoint.Username
 	}
-	body := buildMessage(from, message)
-	auth := smtp.PlainAuth("", endpoint.Username, endpoint.Secret, endpoint.Host)
-	recipients := append([]string{}, message.To...)
+	var (
+		body       = buildMessage(from, message)
+		auth       = smtp.PlainAuth("", endpoint.Username, endpoint.Secret, endpoint.Host)
+		recipients = append([]string{}, message.To...)
+	)
 	recipients = append(recipients, message.Cc...)
 	recipients = append(recipients, message.Bcc...)
 
