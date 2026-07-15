@@ -180,13 +180,13 @@ async function handleSwitchStatus(
   if (row.status === 'deleted' || isStatusChanging(row)) {
     return;
   }
-  const previous = row.status;
   const nextStatus: TenantStatus = checked ? 'active' : 'suspended';
-  if (previous === nextStatus) {
+  if (row.status === nextStatus) {
     return;
   }
+  // Keep the controlled Switch on the current value while the request is in
+  // flight; only refresh/commit the target state after the API succeeds.
   setStatusChanging(row.id, true);
-  row.status = nextStatus;
   try {
     await platformTenantChangeStatus(row.id, nextStatus);
     message.success($t('pages.multiTenant.messages.statusUpdated'));
@@ -197,7 +197,6 @@ async function handleSwitchStatus(
       ),
     });
   } catch {
-    row.status = previous;
     await gridApi.query();
   } finally {
     setStatusChanging(row.id, false);
