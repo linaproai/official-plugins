@@ -179,6 +179,148 @@ func (b *s3Backend) HeadBucket(ctx context.Context) error {
 	return mapS3Err(err)
 }
 
+func (b *s3Backend) PresignPut(ctx context.Context, key string, contentType string, ttl time.Duration) (string, map[string]string, time.Time, error) {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	if ttl > time.Hour {
+		ttl = time.Hour
+	}
+	presigner := s3.NewPresignClient(b.client)
+	input := &s3.PutObjectInput{
+		Bucket: aws.String(b.bucket),
+		Key:    aws.String(key),
+	}
+	headers := map[string]string{}
+	if strings.TrimSpace(contentType) != "" {
+		input.ContentType = aws.String(contentType)
+		headers["Content-Type"] = contentType
+	}
+	out, err := presigner.PresignPutObject(ctx, input, s3.WithPresignExpires(ttl))
+	if err != nil {
+		return "", nil, time.Time{}, mapS3Err(err)
+	}
+	expiresAt := time.Now().UTC().Add(ttl)
+	return out.URL, headers, expiresAt, nil
+}
+
+func (b *s3Backend) PresignGet(ctx context.Context, key string, ttl time.Duration) (string, time.Time, error) {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	if ttl > time.Hour {
+		ttl = time.Hour
+	}
+	presigner := s3.NewPresignClient(b.client)
+	out, err := presigner.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(b.bucket),
+		Key:    aws.String(key),
+	}, s3.WithPresignExpires(ttl))
+	if err != nil {
+		return "", time.Time{}, mapS3Err(err)
+	}
+	return out.URL, time.Now().UTC().Add(ttl), nil
+}
+
+func (b *s3Backend) CreateMultipart(ctx context.Context, key string, contentType string) (string, error) {
+	input := &s3.CreateMultipartUploadInput{
+		Bucket: aws.String(b.bucket),
+		Key:    aws.String(key),
+	}
+	if strings.TrimSpace(contentType) != "" {
+		input.ContentType = aws.String(contentType)
+	}
+	out, err := b.client.CreateMultipartUpload(ctx, input)
+	if err != nil {
+		return "", mapS3Err(err)
+	}
+	if out == nil || out.UploadId == nil {
+		return "", fmt.Errorf("s3 create multipart returned empty upload id")
+	}
+	return *out.UploadId, nil
+}
+
+func (b *s3Backend) UploadPart(ctx context.Context, key string, uploadID string, partNumber int32, body io.Reader, size int64) (string, error) {
+	input := &s3.UploadPartInput{
+		Bucket:     aws.String(b.bucket),
+		Key:        aws.String(key),
+		UploadId:   aws.String(uploadID),
+		PartNumber: aws.Int32(partNumber),
+		Body:       body,
+	}
+	if size >= 0 {
+		input.ContentLength = aws.Int64(size)
+	}
+	out, err := b.client.UploadPart(ctx, input)
+	if err != nil {
+		return "", mapS3Err(err)
+	}
+	if out == nil || out.ETag == nil {
+		return "", nil
+	}
+	return strings.Trim(*out.ETag, `"`), nil
+}
+
+func (b *s3Backend) CompleteMultipart(ctx context.Context, key string, uploadID string, parts []completedPart) (*objectMeta, error) {
+	completed := make([]types.CompletedPart, 0, len(parts))
+	for _, part := range parts {
+		etag := part.ETag
+		if etag != "" && !strings.HasPrefix(etag, `"`) {
+			etag = `"` + etag + `"`
+		}
+		completed = append(completed, types.CompletedPart{
+			ETag:       aws.String(etag),
+			PartNumber: aws.Int32(part.PartNumber),
+		})
+	}
+	out, err := b.client.CompleteMultipartUpload(ctx, &s3.CompleteMultipartUploadInput{
+		Bucket:   aws.String(b.bucket),
+		Key:      aws.String(key),
+		UploadId: aws.String(uploadID),
+		MultipartUpload: &types.CompletedMultipartUpload{
+			Parts: completed,
+		},
+	})
+	if err != nil {
+		return nil, mapS3Err(err)
+	}
+	now := time.Now().UTC()
+	meta := &objectMeta{Key: key, UpdatedAt: &now}
+	if out != nil && out.ETag != nil {
+		meta.ETag = strings.Trim(*out.ETag, `"`)
+	}
+	return meta, nil
+}
+
+func (b *s3Backend) AbortMultipart(ctx context.Context, key string, uploadID string) error {
+	_, err := b.client.AbortMultipartUpload(ctx, &s3.AbortMultipartUploadInput{
+		Bucket:   aws.String(b.bucket),
+		Key:      aws.String(key),
+		UploadId: aws.String(uploadID),
+	})
+	return mapS3Err(err)
+}
+
+func (b *s3Backend) PresignUploadPart(ctx context.Context, key string, uploadID string, partNumber int32, ttl time.Duration) (string, map[string]string, time.Time, error) {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	if ttl > time.Hour {
+		ttl = time.Hour
+	}
+	presigner := s3.NewPresignClient(b.client)
+	out, err := presigner.PresignUploadPart(ctx, &s3.UploadPartInput{
+		Bucket:     aws.String(b.bucket),
+		Key:        aws.String(key),
+		UploadId:   aws.String(uploadID),
+		PartNumber: aws.Int32(partNumber),
+	}, s3.WithPresignExpires(ttl))
+	if err != nil {
+		return "", nil, time.Time{}, mapS3Err(err)
+	}
+	return out.URL, map[string]string{}, time.Now().UTC().Add(ttl), nil
+}
+
 func mapS3Err(err error) error {
 	if err == nil {
 		return nil

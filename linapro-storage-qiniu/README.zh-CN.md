@@ -5,6 +5,7 @@
 ## 行为
 
 - 通过 `storagecap.Provide("linapro-storage-qiniu", factory)` 注册
+- 通过 `storagecap.DirectAccessProvider` 支持客户端直连访问（put 使用 `form_post`，get 使用私有下载 URL）
 - 宿主 `ResolveProvider` 选择唯一可服务的 storage provider 插件；0 个回退 local；多个冲突拒绝
 - 在管理后台 **系统设置 → 七牛云 Kodo** 配置
 - 必填：AccessKey、SecretKey、Bucket；可选 region（`z0`/`z1`/`z2`/`cn-east-2`/`na0`/`as0`，留空自动探测）；可选下载域名与路径前缀
@@ -13,7 +14,7 @@
 ## 非目标
 
 - 宿主文件中心（`Files()` / `sys_file`）上云
-- 面向业务的公开 CDN 预签名产品化（对象 Get 使用私有下载语义）
+- 面向业务的公开 CDN 产品化（私有下载 URL 与表单上传 token 已支持）
 - 跨 provider 迁移
 
 ## 安装

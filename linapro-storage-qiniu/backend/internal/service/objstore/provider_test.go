@@ -70,3 +70,30 @@ func TestProviderBatchStatAndListCursor(t *testing.T) {
 		t.Fatalf("page %#v", page)
 	}
 }
+
+func TestProviderDirectAccessPutGet(t *testing.T) {
+	t.Parallel()
+	p := &provider{backend: newMemoryBackend(), pathPrefix: "root"}
+	ctx := context.Background()
+	if !p.SupportsDirectAccess(ctx, storagecap.DirectAccessOpPut) {
+		t.Fatal("expected put direct access support")
+	}
+	put, err := p.CreateDirectAccess(ctx, storagecap.ProviderDirectAccessInput{
+		Key: "a.txt", Operation: storagecap.DirectAccessOpPut, ContentType: "text/plain",
+	})
+	if err != nil {
+		t.Fatalf("CreateDirectAccess put: %v", err)
+	}
+	if put.Mode != storagecap.DirectAccessModeFormPost || put.Method != "POST" || put.URL == "" {
+		t.Fatalf("unexpected put access %#v", put)
+	}
+	get, err := p.CreateDirectAccess(ctx, storagecap.ProviderDirectAccessInput{
+		Key: "a.txt", Operation: storagecap.DirectAccessOpGet,
+	})
+	if err != nil {
+		t.Fatalf("CreateDirectAccess get: %v", err)
+	}
+	if get.Mode != storagecap.DirectAccessModePresignedURL || get.Method != "GET" || get.URL == "" {
+		t.Fatalf("unexpected get access %#v", get)
+	}
+}

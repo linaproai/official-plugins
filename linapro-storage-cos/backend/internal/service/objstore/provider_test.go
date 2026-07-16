@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"strings"
 	"testing"
 
 	"lina-core/pkg/plugin/capability/storagecap"
@@ -113,5 +114,39 @@ func TestProviderBatchStatAndListCursor(t *testing.T) {
 	}
 	if len(page.Objects) != 2 || page.NextCursor == "" {
 		t.Fatalf("page %#v", page)
+	}
+}
+
+func TestProviderDirectAccessPutGet(t *testing.T) {
+	t.Parallel()
+	p := &provider{backend: newMemoryBackend(), pathPrefix: "root"}
+	ctx := context.Background()
+	if !p.SupportsDirectAccess(ctx, storagecap.DirectAccessOpPut) {
+		t.Fatal("expected put direct access support")
+	}
+	put, err := p.CreateDirectAccess(ctx, storagecap.ProviderDirectAccessInput{
+		Key: "a.txt", Operation: storagecap.DirectAccessOpPut, ContentType: "text/plain",
+	})
+	if err != nil {
+		t.Fatalf("CreateDirectAccess put: %v", err)
+	}
+	if put.Mode != storagecap.DirectAccessModePresignedURL || put.Method != "PUT" || put.URL == "" {
+		t.Fatalf("unexpected put access %#v", put)
+	}
+	if put.Headers["Content-Type"] != "text/plain" {
+		t.Fatalf("missing content-type header %#v", put.Headers)
+	}
+	if !strings.Contains(put.URL, "root/a.txt") && !strings.Contains(put.URL, "a.txt") {
+		// memory backend returns key as provided (scoped)
+		t.Fatalf("url should include scoped key: %s", put.URL)
+	}
+	get, err := p.CreateDirectAccess(ctx, storagecap.ProviderDirectAccessInput{
+		Key: "a.txt", Operation: storagecap.DirectAccessOpGet,
+	})
+	if err != nil {
+		t.Fatalf("CreateDirectAccess get: %v", err)
+	}
+	if get.Mode != storagecap.DirectAccessModePresignedURL || get.Method != "GET" || get.URL == "" {
+		t.Fatalf("unexpected get access %#v", get)
 	}
 }

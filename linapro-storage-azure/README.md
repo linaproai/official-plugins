@@ -5,6 +5,7 @@ Managed source plugin that provides an **Azure Blob Storage** backend for the ho
 ## Behavior
 
 - Registers via `storagecap.Provide("linapro-storage-azure", factory)`
+- Supports client direct access via `storagecap.DirectAccessProvider` (SAS URLs for put/get)
 - Host `ResolveProvider` selects the unique enabled storage provider plugin; zero → local; multiple → conflict
 - Admin settings under **System Settings → Azure Blob**
 - Required: account name, account key, container; optional endpoint (default `https://{account}.blob.core.windows.net/`) and path prefix
@@ -13,9 +14,8 @@ Managed source plugin that provides an **Azure Blob Storage** backend for the ho
 ## Non-goals
 
 - Host file center (`Files()` / `sys_file`) cloud migration
-- Presigned URLs
+- Azure AD authentication for SAS issuance beyond shared key
 - Cross-provider migration
-- Azure AD / SAS token auth in phase 1 (shared key only)
 
 ## Install
 

@@ -7,6 +7,7 @@ Use this plugin for MinIO, Cloudflare R2, Ceph RGW, and other S3 API endpoints. 
 ## Behavior
 
 - Registers via `storagecap.Provide("linapro-storage-s3", factory)`
+- Supports client direct access via `storagecap.DirectAccessProvider` (`presigned_url` for put/get)
 - Host `ResolveProvider` selects the unique enabled storage provider plugin; zero → local; multiple → conflict
 - Admin settings under **System Settings → Storage Management - S3**
 - Required: access key, secret, **endpoint**, bucket; optional region (defaults to `us-east-1` for signing); path-style switch
@@ -15,7 +16,7 @@ Use this plugin for MinIO, Cloudflare R2, Ceph RGW, and other S3 API endpoints. 
 ## Non-goals
 
 - Host file center (`Files()` / `sys_file`) cloud offload
-- Presigned URLs
+- Client temporary credentials / STS
 - Cross-provider migration
 - AWS-only console UX — use `linapro-storage-aws`
 

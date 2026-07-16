@@ -178,3 +178,110 @@ func (b *cosBackend) HeadBucket(ctx context.Context) error {
 	_, err := b.client.Bucket.Head(ctx)
 	return err
 }
+
+func normalizePresignTTL(ttl time.Duration) time.Duration {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	if ttl > time.Hour {
+		ttl = time.Hour
+	}
+	return ttl
+}
+
+func (b *cosBackend) PresignPut(ctx context.Context, key string, contentType string, ttl time.Duration) (string, map[string]string, time.Time, error) {
+	ttl = normalizePresignTTL(ttl)
+	var opt *cos.PresignedURLOptions
+	headers := map[string]string{}
+	if strings.TrimSpace(contentType) != "" {
+		h := http.Header{}
+		h.Set("Content-Type", contentType)
+		opt = &cos.PresignedURLOptions{Header: &h}
+		headers["Content-Type"] = contentType
+	}
+	u, err := b.client.Object.GetPresignedURL2(ctx, http.MethodPut, key, ttl, opt)
+	if err != nil {
+		return "", nil, time.Time{}, err
+	}
+	return u.String(), headers, time.Now().UTC().Add(ttl), nil
+}
+
+func (b *cosBackend) PresignGet(ctx context.Context, key string, ttl time.Duration) (string, time.Time, error) {
+	ttl = normalizePresignTTL(ttl)
+	u, err := b.client.Object.GetPresignedURL2(ctx, http.MethodGet, key, ttl, nil)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	return u.String(), time.Now().UTC().Add(ttl), nil
+}
+
+func (b *cosBackend) CreateMultipart(ctx context.Context, key string, contentType string) (string, error) {
+	var opt *cos.InitiateMultipartUploadOptions
+	if strings.TrimSpace(contentType) != "" {
+		opt = &cos.InitiateMultipartUploadOptions{
+			ObjectPutHeaderOptions: &cos.ObjectPutHeaderOptions{ContentType: contentType},
+		}
+	}
+	res, _, err := b.client.Object.InitiateMultipartUpload(ctx, key, opt)
+	if err != nil {
+		return "", err
+	}
+	if res == nil || strings.TrimSpace(res.UploadID) == "" {
+		return "", fmt.Errorf("cos create multipart returned empty upload id")
+	}
+	return res.UploadID, nil
+}
+
+func (b *cosBackend) UploadPart(ctx context.Context, key string, uploadID string, partNumber int32, body io.Reader, size int64) (string, error) {
+	opt := &cos.ObjectUploadPartOptions{}
+	if size >= 0 {
+		opt.ContentLength = size
+	}
+	resp, err := b.client.Object.UploadPart(ctx, key, uploadID, int(partNumber), asStorageBodyWithoutClose(body), opt)
+	if err != nil {
+		return "", err
+	}
+	if resp == nil || resp.Header == nil {
+		return "", nil
+	}
+	return strings.Trim(resp.Header.Get("ETag"), `"`), nil
+}
+
+func (b *cosBackend) CompleteMultipart(ctx context.Context, key string, uploadID string, parts []completedPart) (*objectMeta, error) {
+	opt := &cos.CompleteMultipartUploadOptions{}
+	for _, part := range parts {
+		etag := part.ETag
+		if etag != "" && !strings.HasPrefix(etag, `"`) {
+			etag = `"` + etag + `"`
+		}
+		opt.Parts = append(opt.Parts, cos.Object{PartNumber: int(part.PartNumber), ETag: etag})
+	}
+	res, _, err := b.client.Object.CompleteMultipartUpload(ctx, key, uploadID, opt)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().UTC()
+	meta := &objectMeta{Key: key, UpdatedAt: &now}
+	if res != nil {
+		meta.ETag = strings.Trim(res.ETag, `"`)
+	}
+	return meta, nil
+}
+
+func (b *cosBackend) AbortMultipart(ctx context.Context, key string, uploadID string) error {
+	_, err := b.client.Object.AbortMultipartUpload(ctx, key, uploadID)
+	return err
+}
+
+func (b *cosBackend) PresignUploadPart(ctx context.Context, key string, uploadID string, partNumber int32, ttl time.Duration) (string, map[string]string, time.Time, error) {
+	ttl = normalizePresignTTL(ttl)
+	q := url.Values{}
+	q.Set("partNumber", fmt.Sprintf("%d", partNumber))
+	q.Set("uploadId", uploadID)
+	opt := &cos.PresignedURLOptions{Query: &q}
+	u, err := b.client.Object.GetPresignedURL2(ctx, http.MethodPut, key, ttl, opt)
+	if err != nil {
+		return "", nil, time.Time{}, err
+	}
+	return u.String(), map[string]string{}, time.Now().UTC().Add(ttl), nil
+}

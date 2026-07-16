@@ -5,6 +5,7 @@
 ## 行为
 
 - 通过 `storagecap.Provide("linapro-storage-azure", factory)` 注册
+- 通过 `storagecap.DirectAccessProvider` 支持客户端直连访问（put/get 使用 SAS URL）
 - 宿主 `ResolveProvider` 选择唯一可服务的 storage provider 插件；0 个回退 local；多个冲突拒绝
 - 在管理后台 **系统设置 → Azure Blob** 配置
 - 必填：账户名、账户密钥、容器；可选 endpoint（默认 `https://{account}.blob.core.windows.net/`）与路径前缀
@@ -13,9 +14,8 @@
 ## 非目标
 
 - 宿主文件中心（`Files()` / `sys_file`）上云
-- 预签名 URL
+- 除共享密钥外的 Azure AD 身份用于签发 SAS
 - 跨 provider 迁移
-- 第一期不支持 Azure AD / SAS 鉴权（仅 Shared Key）
 
 ## 安装
 

@@ -384,6 +384,64 @@ func (s *fakeStorageHostService) ProviderStatuses(context.Context) ([]*storageca
 	return nil, nil
 }
 
+// CreateDirectPut returns proxy mode for fake storage tests.
+func (s *fakeStorageHostService) CreateDirectPut(_ context.Context, in storagecap.DirectPutInput) (*storagecap.DirectPutOutput, error) {
+	return &storagecap.DirectPutOutput{
+		Access: &storagecap.DirectAccess{Mode: storagecap.DirectAccessModeProxy, Operation: storagecap.DirectAccessOpPut},
+		Path:   in.Path,
+	}, nil
+}
+
+// ConfirmDirectPut confirms via Stat for fake storage tests.
+func (s *fakeStorageHostService) ConfirmDirectPut(ctx context.Context, in storagecap.ConfirmDirectPutInput) (*storagecap.ConfirmDirectPutOutput, error) {
+	stat, err := s.Stat(ctx, storagecap.StatInput{Path: in.Path})
+	if err != nil {
+		return nil, err
+	}
+	if stat == nil || !stat.Found {
+		return nil, nil
+	}
+	return &storagecap.ConfirmDirectPutOutput{Object: stat.Object}, nil
+}
+
+// CreateDirectGet returns proxy mode for fake storage tests.
+func (s *fakeStorageHostService) CreateDirectGet(_ context.Context, in storagecap.DirectGetInput) (*storagecap.DirectGetOutput, error) {
+	return &storagecap.DirectGetOutput{
+		Access: &storagecap.DirectAccess{Mode: storagecap.DirectAccessModeProxy, Operation: storagecap.DirectAccessOpGet},
+		Path:   in.Path,
+	}, nil
+}
+
+// SupportsMultipart reports that the fake host storage has no multipart backend.
+func (s *fakeStorageHostService) SupportsMultipart(context.Context) (bool, error) {
+	return false, nil
+}
+
+// CreateMultipart is unsupported on the fake host storage.
+func (s *fakeStorageHostService) CreateMultipart(context.Context, storagecap.MultipartCreateInput) (*storagecap.MultipartCreateOutput, error) {
+	return nil, storagecap.NewMultipartUnsupportedError()
+}
+
+// UploadPart is unsupported on the fake host storage.
+func (s *fakeStorageHostService) UploadPart(context.Context, storagecap.MultipartPartInput) (*storagecap.MultipartPartOutput, error) {
+	return nil, storagecap.NewMultipartUnsupportedError()
+}
+
+// CompleteMultipart is unsupported on the fake host storage.
+func (s *fakeStorageHostService) CompleteMultipart(context.Context, storagecap.MultipartCompleteInput) (*storagecap.MultipartCompleteOutput, error) {
+	return nil, storagecap.NewMultipartUnsupportedError()
+}
+
+// AbortMultipart is unsupported on the fake host storage.
+func (s *fakeStorageHostService) AbortMultipart(context.Context, storagecap.MultipartAbortInput) error {
+	return storagecap.NewMultipartUnsupportedError()
+}
+
+// CreateMultipartPartAccess is unsupported on the fake host storage.
+func (s *fakeStorageHostService) CreateMultipartPartAccess(context.Context, storagecap.MultipartPartAccessInput) (*storagecap.MultipartPartAccessOutput, error) {
+	return nil, storagecap.NewMultipartUnsupportedError()
+}
+
 func (s *fakeStorageHostService) listObjects(prefix string, limit int) []*storagecap.Object {
 	if limit <= 0 {
 		limit = storagecap.DefaultListLimit

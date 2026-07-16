@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"time"
@@ -271,6 +272,65 @@ func (b *qiniuBackend) HeadBucket(ctx context.Context) error {
 		return nil
 	}
 	return nil
+}
+
+func normalizePresignTTL(ttl time.Duration) time.Duration {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	if ttl > time.Hour {
+		ttl = time.Hour
+	}
+	return ttl
+}
+
+// PresignPut issues a form-post upload token. Returned map is form fields (token, key), not HTTP headers.
+func (b *qiniuBackend) PresignPut(_ context.Context, key string, contentType string, ttl time.Duration) (string, map[string]string, time.Time, error) {
+	_ = contentType // form-post relies on Qiniu token scope; MIME is not bound into form fields.
+	ttl = normalizePresignTTL(ttl)
+	policy := storage.PutPolicy{
+		Scope:   b.bucket + ":" + key,
+		Expires: uint64(ttl.Seconds()),
+	}
+	token := policy.UploadToken(b.mac)
+	upHost, err := b.uploader.UpHost(b.mac.AccessKey, b.bucket)
+	if err != nil {
+		return "", nil, time.Time{}, err
+	}
+	fields := map[string]string{
+		"token": token,
+		"key":   key,
+	}
+	return upHost, fields, time.Now().UTC().Add(ttl), nil
+}
+
+func (b *qiniuBackend) PresignGet(_ context.Context, key string, ttl time.Duration) (string, time.Time, error) {
+	ttl = normalizePresignTTL(ttl)
+	domain, err := b.resolveDownloadDomain()
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	deadline := time.Now().Add(ttl).Unix()
+	signed := storage.MakePrivateURLv2(b.mac, domain, key, deadline)
+	return signed, time.Unix(deadline, 0).UTC(), nil
+}
+
+func (b *qiniuBackend) resolveDownloadDomain() (string, error) {
+	domain := strings.TrimSpace(b.downloadDomain)
+	if domain == "" {
+		infos, err := b.manager.ListBucketDomains(b.bucket)
+		if err != nil {
+			return "", err
+		}
+		if len(infos) == 0 || strings.TrimSpace(infos[0].Domain) == "" {
+			return "", fmt.Errorf("qiniu download domain is not configured")
+		}
+		domain = strings.TrimSpace(infos[0].Domain)
+	}
+	if !strings.HasPrefix(domain, "http://") && !strings.HasPrefix(domain, "https://") {
+		domain = "https://" + domain
+	}
+	return strings.TrimRight(domain, "/"), nil
 }
 
 func isQiniuNotFound(err error) bool {

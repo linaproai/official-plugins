@@ -3,6 +3,7 @@ package objstore
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"sort"
 	"strings"
@@ -14,7 +15,13 @@ import (
 
 // memoryBackend is used by unit tests.
 type memoryBackend struct {
-	objects map[string]*memoryObject
+	objects    map[string]*memoryObject
+	multiparts map[string]*memoryMultipart
+}
+
+type memoryMultipart struct {
+	key   string
+	parts map[int32][]byte
 }
 
 type memoryObject struct {
@@ -25,7 +32,10 @@ type memoryObject struct {
 }
 
 func newMemoryBackend() *memoryBackend {
-	return &memoryBackend{objects: map[string]*memoryObject{}}
+	return &memoryBackend{
+		objects:    map[string]*memoryObject{},
+		multiparts: map[string]*memoryMultipart{},
+	}
 }
 
 func (m *memoryBackend) Put(_ context.Context, key string, body io.Reader, _ int64, contentType string, overwrite bool) (*objectMeta, error) {
@@ -102,3 +112,74 @@ func (m *memoryBackend) Stat(_ context.Context, key string) (*objectMeta, bool, 
 }
 
 func (m *memoryBackend) HeadBucket(context.Context) error { return nil }
+
+func (m *memoryBackend) PresignPut(_ context.Context, key string, contentType string, ttl time.Duration) (string, map[string]string, time.Time, error) {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	headers := map[string]string{}
+	if strings.TrimSpace(contentType) != "" {
+		headers["Content-Type"] = contentType
+	}
+	return "https://memory.test/put/" + key, headers, time.Now().UTC().Add(ttl), nil
+}
+
+func (m *memoryBackend) PresignGet(_ context.Context, key string, ttl time.Duration) (string, time.Time, error) {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	return "https://memory.test/get/" + key, time.Now().UTC().Add(ttl), nil
+}
+
+func (m *memoryBackend) CreateMultipart(_ context.Context, key string, _ string) (string, error) {
+	if m.multiparts == nil {
+		m.multiparts = make(map[string]*memoryMultipart)
+	}
+	uploadID := fmt.Sprintf("upload-%d", len(m.multiparts)+1)
+	m.multiparts[uploadID] = &memoryMultipart{key: key, parts: make(map[int32][]byte)}
+	return uploadID, nil
+}
+
+func (m *memoryBackend) UploadPart(_ context.Context, _ string, uploadID string, partNumber int32, body io.Reader, _ int64) (string, error) {
+	mp := m.multiparts[uploadID]
+	if mp == nil {
+		return "", fmt.Errorf("multipart not found")
+	}
+	data, err := io.ReadAll(body)
+	if err != nil {
+		return "", err
+	}
+	mp.parts[partNumber] = data
+	return fmt.Sprintf("etag-%d", partNumber), nil
+}
+
+func (m *memoryBackend) CompleteMultipart(_ context.Context, key string, uploadID string, parts []completedPart) (*objectMeta, error) {
+	mp := m.multiparts[uploadID]
+	if mp == nil {
+		return nil, fmt.Errorf("multipart not found")
+	}
+	var body []byte
+	for _, part := range parts {
+		body = append(body, mp.parts[part.PartNumber]...)
+	}
+	now := time.Now().UTC()
+	if m.objects == nil {
+		m.objects = make(map[string]*memoryObject)
+	}
+	m.objects[key] = &memoryObject{body: body, etag: "mp-etag", updatedAt: now}
+	delete(m.multiparts, uploadID)
+	return &objectMeta{Key: key, Size: int64(len(body)), ETag: "mp-etag", UpdatedAt: &now}, nil
+}
+
+func (m *memoryBackend) AbortMultipart(_ context.Context, _ string, uploadID string) error {
+	delete(m.multiparts, uploadID)
+	return nil
+}
+
+func (m *memoryBackend) PresignUploadPart(_ context.Context, key string, uploadID string, partNumber int32, ttl time.Duration) (string, map[string]string, time.Time, error) {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	return fmt.Sprintf("https://memory.test/part/%s/%s/%d", key, uploadID, partNumber), map[string]string{}, time.Now().UTC().Add(ttl), nil
+}
+
