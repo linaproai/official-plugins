@@ -1,6 +1,7 @@
 package objstore
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -196,3 +197,64 @@ func isOSSNotFound(err error) bool {
 	}
 	return strings.Contains(err.Error(), "NoSuchKey") || strings.Contains(err.Error(), "404")
 }
+
+func (b *ossBackend) CreateMultipart(_ context.Context, key string, contentType string) (string, error) {
+	options := []oss.Option{}
+	if strings.TrimSpace(contentType) != "" {
+		options = append(options, oss.ContentType(contentType))
+	}
+	imur, err := b.bucket.InitiateMultipartUpload(key, options...)
+	if err != nil {
+		return "", err
+	}
+	return imur.UploadID, nil
+}
+
+func (b *ossBackend) UploadPart(_ context.Context, key string, uploadID string, partNumber int32, body io.Reader, size int64) (string, error) {
+	if size < 0 {
+		data, err := io.ReadAll(body)
+		if err != nil {
+			return "", err
+		}
+		body = bytes.NewReader(data)
+		size = int64(len(data))
+	}
+	imur := oss.InitiateMultipartUploadResult{Key: key, UploadID: uploadID, Bucket: b.bucket.BucketName}
+	part, err := b.bucket.UploadPart(imur, body, size, int(partNumber))
+	if err != nil {
+		return "", err
+	}
+	return strings.Trim(part.ETag, `"`), nil
+}
+
+func (b *ossBackend) CompleteMultipart(_ context.Context, key string, uploadID string, parts []completedPart) (*objectMeta, error) {
+	imur := oss.InitiateMultipartUploadResult{Key: key, UploadID: uploadID, Bucket: b.bucket.BucketName}
+	uploadParts := make([]oss.UploadPart, 0, len(parts))
+	for _, part := range parts {
+		uploadParts = append(uploadParts, oss.UploadPart{PartNumber: int(part.PartNumber), ETag: part.ETag})
+	}
+	_, err := b.bucket.CompleteMultipartUpload(imur, uploadParts)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().UTC()
+	return &objectMeta{Key: key, UpdatedAt: &now}, nil
+}
+
+func (b *ossBackend) AbortMultipart(_ context.Context, key string, uploadID string) error {
+	imur := oss.InitiateMultipartUploadResult{Key: key, UploadID: uploadID, Bucket: b.bucket.BucketName}
+	return b.bucket.AbortMultipartUpload(imur)
+}
+
+func (b *ossBackend) PresignUploadPart(_ context.Context, key string, uploadID string, partNumber int32, ttl time.Duration) (string, map[string]string, time.Time, error) {
+	ttl = normalizePresignTTL(ttl)
+	signed, err := b.bucket.SignURL(key, oss.HTTPPut, int64(ttl.Seconds()),
+		oss.AddParam("partNumber", strconv.Itoa(int(partNumber))),
+		oss.AddParam("uploadId", uploadID),
+	)
+	if err != nil {
+		return "", nil, time.Time{}, err
+	}
+	return signed, map[string]string{}, time.Now().UTC().Add(ttl), nil
+}
+

@@ -30,6 +30,22 @@ type objectBackend interface {
 	PresignPut(ctx context.Context, key string, contentType string, ttl time.Duration) (url string, headers map[string]string, expiresAt time.Time, err error)
 	// PresignGet returns a time-limited GET URL for client direct download.
 	PresignGet(ctx context.Context, key string, ttl time.Duration) (url string, expiresAt time.Time, err error)
+	// CreateMultipart starts one multipart upload.
+	CreateMultipart(ctx context.Context, key string, contentType string) (uploadID string, err error)
+	// UploadPart writes one multipart part.
+	UploadPart(ctx context.Context, key string, uploadID string, partNumber int32, body io.Reader, size int64) (etag string, err error)
+	// CompleteMultipart finishes one multipart upload.
+	CompleteMultipart(ctx context.Context, key string, uploadID string, parts []completedPart) (*objectMeta, error)
+	// AbortMultipart aborts one multipart upload.
+	AbortMultipart(ctx context.Context, key string, uploadID string) error
+	// PresignUploadPart issues a time-limited PUT URL for one multipart part.
+	PresignUploadPart(ctx context.Context, key string, uploadID string, partNumber int32, ttl time.Duration) (url string, headers map[string]string, expiresAt time.Time, err error)
+}
+
+// completedPart is one part entry for CompleteMultipart.
+type completedPart struct {
+	PartNumber int32
+	ETag       string
 }
 
 type objectMeta struct {

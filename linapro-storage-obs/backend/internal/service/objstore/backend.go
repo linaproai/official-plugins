@@ -6,6 +6,7 @@ package objstore
 
 import (
 	"context"
+	"fmt"
 	"errors"
 	"io"
 	"net/http"
@@ -257,3 +258,100 @@ func isOBSNotFound(err error) bool {
 	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "nosuchkey") || strings.Contains(msg, "404")
 }
+
+func (b *obsBackend) CreateMultipart(_ context.Context, key string, contentType string) (string, error) {
+	input := &obs.InitiateMultipartUploadInput{}
+	input.Bucket = b.bucket
+	input.Key = key
+	if strings.TrimSpace(contentType) != "" {
+		input.ContentType = contentType
+	}
+	out, err := b.client.InitiateMultipartUpload(input)
+	if err != nil {
+		return "", err
+	}
+	if out == nil || strings.TrimSpace(out.UploadId) == "" {
+		return "", fmt.Errorf("obs create multipart returned empty upload id")
+	}
+	return out.UploadId, nil
+}
+
+func (b *obsBackend) UploadPart(_ context.Context, key string, uploadID string, partNumber int32, body io.Reader, size int64) (string, error) {
+	input := &obs.UploadPartInput{
+		Bucket:     b.bucket,
+		Key:        key,
+		UploadId:   uploadID,
+		PartNumber: int(partNumber),
+		Body:       body,
+	}
+	if size >= 0 {
+		input.PartSize = size
+	}
+	out, err := b.client.UploadPart(input)
+	if err != nil {
+		return "", err
+	}
+	if out == nil {
+		return "", nil
+	}
+	return strings.Trim(out.ETag, `"`), nil
+}
+
+func (b *obsBackend) CompleteMultipart(_ context.Context, key string, uploadID string, parts []completedPart) (*objectMeta, error) {
+	obsParts := make([]obs.Part, 0, len(parts))
+	for _, part := range parts {
+		obsParts = append(obsParts, obs.Part{PartNumber: int(part.PartNumber), ETag: part.ETag})
+	}
+	input := &obs.CompleteMultipartUploadInput{
+		Bucket:   b.bucket,
+		Key:      key,
+		UploadId: uploadID,
+		Parts:    obsParts,
+	}
+	out, err := b.client.CompleteMultipartUpload(input)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().UTC()
+	meta := &objectMeta{Key: key, UpdatedAt: &now}
+	if out != nil {
+		meta.ETag = strings.Trim(out.ETag, `"`)
+	}
+	return meta, nil
+}
+
+func (b *obsBackend) AbortMultipart(_ context.Context, key string, uploadID string) error {
+	_, err := b.client.AbortMultipartUpload(&obs.AbortMultipartUploadInput{
+		Bucket:   b.bucket,
+		Key:      key,
+		UploadId: uploadID,
+	})
+	return err
+}
+
+func (b *obsBackend) PresignUploadPart(_ context.Context, key string, uploadID string, partNumber int32, ttl time.Duration) (string, map[string]string, time.Time, error) {
+	ttl = normalizePresignTTL(ttl)
+	out, err := b.client.CreateSignedUrl(&obs.CreateSignedUrlInput{
+		Method:  obs.HttpMethodPut,
+		Bucket:  b.bucket,
+		Key:     key,
+		Expires: int(ttl.Seconds()),
+		QueryParams: map[string]string{
+			"partNumber": fmt.Sprintf("%d", partNumber),
+			"uploadId":   uploadID,
+		},
+	})
+	if err != nil {
+		return "", nil, time.Time{}, err
+	}
+	headers := map[string]string{}
+	if out != nil && out.ActualSignedRequestHeaders != nil {
+		for k, vals := range out.ActualSignedRequestHeaders {
+			if len(vals) > 0 && strings.TrimSpace(vals[0]) != "" {
+				headers[k] = vals[0]
+			}
+		}
+	}
+	return out.SignedUrl, headers, time.Now().UTC().Add(ttl), nil
+}
+
