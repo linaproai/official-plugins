@@ -35,7 +35,8 @@
         "copied": "错误详情已复制",
         "copyFailed": "复制失败",
         "testConnection": "测试连接",
-        "save": "保存"
+        "save": "保存",
+        "corsNote": "浏览器直传/直下需要在对象存储桶配置 CORS：允许工作台 Origin，按需放行 PUT/GET/POST，并允许 Content-Type 以及各厂商所需的 Authorization/x-ms-* 等请求头。"
       }
     }
   }

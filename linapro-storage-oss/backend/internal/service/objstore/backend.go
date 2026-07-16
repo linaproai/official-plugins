@@ -152,6 +152,40 @@ func (b *ossBackend) HeadBucket(ctx context.Context) error {
 	return err
 }
 
+func normalizePresignTTL(ttl time.Duration) time.Duration {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	if ttl > time.Hour {
+		ttl = time.Hour
+	}
+	return ttl
+}
+
+func (b *ossBackend) PresignPut(_ context.Context, key string, contentType string, ttl time.Duration) (string, map[string]string, time.Time, error) {
+	ttl = normalizePresignTTL(ttl)
+	options := []oss.Option{}
+	headers := map[string]string{}
+	if strings.TrimSpace(contentType) != "" {
+		options = append(options, oss.ContentType(contentType))
+		headers["Content-Type"] = contentType
+	}
+	signed, err := b.bucket.SignURL(key, oss.HTTPPut, int64(ttl.Seconds()), options...)
+	if err != nil {
+		return "", nil, time.Time{}, err
+	}
+	return signed, headers, time.Now().UTC().Add(ttl), nil
+}
+
+func (b *ossBackend) PresignGet(_ context.Context, key string, ttl time.Duration) (string, time.Time, error) {
+	ttl = normalizePresignTTL(ttl)
+	signed, err := b.bucket.SignURL(key, oss.HTTPGet, int64(ttl.Seconds()))
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	return signed, time.Now().UTC().Add(ttl), nil
+}
+
 func isOSSNotFound(err error) bool {
 	if err == nil {
 		return false

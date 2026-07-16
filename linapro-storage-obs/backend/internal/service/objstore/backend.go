@@ -190,6 +190,58 @@ func (b *obsBackend) HeadBucket(ctx context.Context) error {
 	return err
 }
 
+func normalizePresignTTL(ttl time.Duration) time.Duration {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	if ttl > time.Hour {
+		ttl = time.Hour
+	}
+	return ttl
+}
+
+func (b *obsBackend) PresignPut(_ context.Context, key string, contentType string, ttl time.Duration) (string, map[string]string, time.Time, error) {
+	ttl = normalizePresignTTL(ttl)
+	input := &obs.CreateSignedUrlInput{
+		Method:  obs.HttpMethodPut,
+		Bucket:  b.bucket,
+		Key:     key,
+		Expires: int(ttl.Seconds()),
+	}
+	headers := map[string]string{}
+	if strings.TrimSpace(contentType) != "" {
+		input.Headers = map[string]string{"Content-Type": contentType}
+		headers["Content-Type"] = contentType
+	}
+	out, err := b.client.CreateSignedUrl(input)
+	if err != nil {
+		return "", nil, time.Time{}, err
+	}
+	// Prefer signed headers returned by the SDK when present.
+	if out != nil && out.ActualSignedRequestHeaders != nil {
+		for k, vals := range out.ActualSignedRequestHeaders {
+			if len(vals) > 0 && strings.TrimSpace(vals[0]) != "" {
+				headers[k] = vals[0]
+			}
+		}
+	}
+	return out.SignedUrl, headers, time.Now().UTC().Add(ttl), nil
+}
+
+func (b *obsBackend) PresignGet(_ context.Context, key string, ttl time.Duration) (string, time.Time, error) {
+	ttl = normalizePresignTTL(ttl)
+	out, err := b.client.CreateSignedUrl(&obs.CreateSignedUrlInput{
+		Method:  obs.HttpMethodGet,
+		Bucket:  b.bucket,
+		Key:     key,
+		Expires: int(ttl.Seconds()),
+	})
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	return out.SignedUrl, time.Now().UTC().Add(ttl), nil
+}
+
 func isOBSNotFound(err error) bool {
 	if err == nil {
 		return false

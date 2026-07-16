@@ -181,6 +181,49 @@ func (b *s3Backend) HeadBucket(ctx context.Context) error {
 	return mapS3Err(err)
 }
 
+func (b *s3Backend) PresignPut(ctx context.Context, key string, contentType string, ttl time.Duration) (string, map[string]string, time.Time, error) {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	if ttl > time.Hour {
+		ttl = time.Hour
+	}
+	presigner := s3.NewPresignClient(b.client)
+	input := &s3.PutObjectInput{
+		Bucket: aws.String(b.bucket),
+		Key:    aws.String(key),
+	}
+	headers := map[string]string{}
+	if strings.TrimSpace(contentType) != "" {
+		input.ContentType = aws.String(contentType)
+		headers["Content-Type"] = contentType
+	}
+	out, err := presigner.PresignPutObject(ctx, input, s3.WithPresignExpires(ttl))
+	if err != nil {
+		return "", nil, time.Time{}, mapS3Err(err)
+	}
+	expiresAt := time.Now().UTC().Add(ttl)
+	return out.URL, headers, expiresAt, nil
+}
+
+func (b *s3Backend) PresignGet(ctx context.Context, key string, ttl time.Duration) (string, time.Time, error) {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	if ttl > time.Hour {
+		ttl = time.Hour
+	}
+	presigner := s3.NewPresignClient(b.client)
+	out, err := presigner.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(b.bucket),
+		Key:    aws.String(key),
+	}, s3.WithPresignExpires(ttl))
+	if err != nil {
+		return "", time.Time{}, mapS3Err(err)
+	}
+	return out.URL, time.Now().UTC().Add(ttl), nil
+}
+
 func mapS3Err(err error) error {
 	if err == nil {
 		return nil

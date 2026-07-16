@@ -14,12 +14,22 @@ import (
 
 // objectBackend is the cloud-specific object API used by provider.
 type objectBackend interface {
+	// Put writes one object key and returns provider metadata.
 	Put(ctx context.Context, key string, body io.Reader, size int64, contentType string, overwrite bool) (*objectMeta, error)
+	// Get reads one object key. A missing object returns found=false.
 	Get(ctx context.Context, key string) (*objectMeta, io.ReadCloser, bool, error)
+	// Delete removes one object key. Deleting a missing object is a no-op.
 	Delete(ctx context.Context, key string) error
+	// List lists object keys under one bounded prefix with optional cursor.
 	List(ctx context.Context, prefix string, cursor string, limit int) ([]*objectMeta, string, error)
+	// Stat reads one object key metadata. A missing object returns found=false.
 	Stat(ctx context.Context, key string) (*objectMeta, bool, error)
+	// HeadBucket probes bucket connectivity without mutating objects.
 	HeadBucket(ctx context.Context) error
+	// PresignPut issues time-limited client upload access (presigned PUT URL or form-post fields).
+	PresignPut(ctx context.Context, key string, contentType string, ttl time.Duration) (url string, headers map[string]string, expiresAt time.Time, err error)
+	// PresignGet returns a time-limited GET URL for client direct download.
+	PresignGet(ctx context.Context, key string, ttl time.Duration) (url string, expiresAt time.Time, err error)
 }
 
 type objectMeta struct {
@@ -205,4 +215,52 @@ func (p *provider) BatchStat(ctx context.Context, in storagecap.ProviderBatchSta
 		out.Objects = append(out.Objects, p.toProviderObject(meta))
 	}
 	return out, nil
+}
+
+// SupportsDirectAccess reports that S3 protocol backends can issue presigned URLs.
+func (p *provider) SupportsDirectAccess(_ context.Context, op storagecap.DirectAccessOperation) bool {
+	switch storagecap.NormalizeDirectAccessOperation(op) {
+	case storagecap.DirectAccessOpPut, storagecap.DirectAccessOpGet:
+		return p != nil && p.backend != nil
+	default:
+		return false
+	}
+}
+
+// CreateDirectAccess issues presigned put/get URLs for the scoped object key.
+func (p *provider) CreateDirectAccess(ctx context.Context, in storagecap.ProviderDirectAccessInput) (*storagecap.DirectAccess, error) {
+	if p == nil || p.backend == nil {
+		return nil, bizerr.NewCode(storagecap.CodeStorageDirectAccessIssueFailed)
+	}
+	op := storagecap.NormalizeDirectAccessOperation(in.Operation)
+	key := p.scopedKey(in.Key)
+	switch op {
+	case storagecap.DirectAccessOpPut:
+		url, headers, expiresAt, err := p.backend.PresignPut(ctx, key, in.ContentType, in.TTL)
+		if err != nil {
+			return nil, bizerr.WrapCode(err, storagecap.CodeStorageDirectAccessIssueFailed)
+		}
+		return &storagecap.DirectAccess{
+			Mode:      storagecap.DirectAccessModePresignedURL,
+			Operation: storagecap.DirectAccessOpPut,
+			Method:    "PUT",
+			URL:       url,
+			Headers:   headers,
+			ExpiresAt: expiresAt,
+		}, nil
+	case storagecap.DirectAccessOpGet:
+		url, expiresAt, err := p.backend.PresignGet(ctx, key, in.TTL)
+		if err != nil {
+			return nil, bizerr.WrapCode(err, storagecap.CodeStorageDirectAccessIssueFailed)
+		}
+		return &storagecap.DirectAccess{
+			Mode:      storagecap.DirectAccessModePresignedURL,
+			Operation: storagecap.DirectAccessOpGet,
+			Method:    "GET",
+			URL:       url,
+			ExpiresAt: expiresAt,
+		}, nil
+	default:
+		return nil, bizerr.NewCode(storagecap.CodeStorageDirectAccessOperationInvalid)
+	}
 }

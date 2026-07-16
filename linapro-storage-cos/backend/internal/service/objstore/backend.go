@@ -178,3 +178,39 @@ func (b *cosBackend) HeadBucket(ctx context.Context) error {
 	_, err := b.client.Bucket.Head(ctx)
 	return err
 }
+
+func normalizePresignTTL(ttl time.Duration) time.Duration {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	if ttl > time.Hour {
+		ttl = time.Hour
+	}
+	return ttl
+}
+
+func (b *cosBackend) PresignPut(ctx context.Context, key string, contentType string, ttl time.Duration) (string, map[string]string, time.Time, error) {
+	ttl = normalizePresignTTL(ttl)
+	var opt *cos.PresignedURLOptions
+	headers := map[string]string{}
+	if strings.TrimSpace(contentType) != "" {
+		h := http.Header{}
+		h.Set("Content-Type", contentType)
+		opt = &cos.PresignedURLOptions{Header: &h}
+		headers["Content-Type"] = contentType
+	}
+	u, err := b.client.Object.GetPresignedURL2(ctx, http.MethodPut, key, ttl, opt)
+	if err != nil {
+		return "", nil, time.Time{}, err
+	}
+	return u.String(), headers, time.Now().UTC().Add(ttl), nil
+}
+
+func (b *cosBackend) PresignGet(ctx context.Context, key string, ttl time.Duration) (string, time.Time, error) {
+	ttl = normalizePresignTTL(ttl)
+	u, err := b.client.Object.GetPresignedURL2(ctx, http.MethodGet, key, ttl, nil)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	return u.String(), time.Now().UTC().Add(ttl), nil
+}

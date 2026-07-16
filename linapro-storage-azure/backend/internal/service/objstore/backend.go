@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/bloberror"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
 
 	"lina-core/pkg/bizerr"
 	"lina-core/pkg/plugin/capability/storagecap"
@@ -200,6 +201,46 @@ func (b *azureBackend) Stat(ctx context.Context, key string) (*objectMeta, bool,
 func (b *azureBackend) HeadBucket(ctx context.Context) error {
 	_, err := b.client.ServiceClient().NewContainerClient(b.container).GetProperties(ctx, nil)
 	return err
+}
+
+func normalizePresignTTL(ttl time.Duration) time.Duration {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	if ttl > time.Hour {
+		ttl = time.Hour
+	}
+	return ttl
+}
+
+func (b *azureBackend) PresignPut(_ context.Context, key string, contentType string, ttl time.Duration) (string, map[string]string, time.Time, error) {
+	ttl = normalizePresignTTL(ttl)
+	expiresAt := time.Now().UTC().Add(ttl)
+	blobClient := b.client.ServiceClient().NewContainerClient(b.container).NewBlobClient(key)
+	// Create+Write covers Put Blob for new and existing blobs.
+	url, err := blobClient.GetSASURL(sas.BlobPermissions{Create: true, Write: true}, expiresAt, nil)
+	if err != nil {
+		return "", nil, time.Time{}, err
+	}
+	headers := map[string]string{
+		// Required for raw Put Blob against a SAS URL.
+		"x-ms-blob-type": "BlockBlob",
+	}
+	if strings.TrimSpace(contentType) != "" {
+		headers["Content-Type"] = contentType
+	}
+	return url, headers, expiresAt, nil
+}
+
+func (b *azureBackend) PresignGet(_ context.Context, key string, ttl time.Duration) (string, time.Time, error) {
+	ttl = normalizePresignTTL(ttl)
+	expiresAt := time.Now().UTC().Add(ttl)
+	blobClient := b.client.ServiceClient().NewContainerClient(b.container).NewBlobClient(key)
+	url, err := blobClient.GetSASURL(sas.BlobPermissions{Read: true}, expiresAt, nil)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	return url, expiresAt, nil
 }
 
 func isAzureNotFound(err error) bool {

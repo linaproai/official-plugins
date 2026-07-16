@@ -102,3 +102,21 @@ func (m *memoryBackend) Stat(_ context.Context, key string) (*objectMeta, bool, 
 }
 
 func (m *memoryBackend) HeadBucket(context.Context) error { return nil }
+
+func (m *memoryBackend) PresignPut(_ context.Context, key string, contentType string, ttl time.Duration) (string, map[string]string, time.Time, error) {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	headers := map[string]string{}
+	if strings.TrimSpace(contentType) != "" {
+		headers["Content-Type"] = contentType
+	}
+	return "https://memory.test/put/" + key, headers, time.Now().UTC().Add(ttl), nil
+}
+
+func (m *memoryBackend) PresignGet(_ context.Context, key string, ttl time.Duration) (string, time.Time, error) {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	return "https://memory.test/get/" + key, time.Now().UTC().Add(ttl), nil
+}

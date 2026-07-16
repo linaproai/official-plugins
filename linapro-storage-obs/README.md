@@ -5,6 +5,7 @@ Managed source plugin that provides a **Huawei Cloud OBS** backend for the host 
 ## Behavior
 
 - Registers via `storagecap.Provide("linapro-storage-obs", factory)`
+- Supports client direct access via `storagecap.DirectAccessProvider` (`presigned_url` for put/get)
 - Host `ResolveProvider` selects the unique enabled storage provider plugin; zero → local; multiple → conflict
 - Admin settings under **System Settings → Huawei Cloud OBS**
 - Required: access key, secret, region, bucket; optional endpoint (default `https://obs.{region}.myhuaweicloud.com`) and path prefix
@@ -13,7 +14,7 @@ Managed source plugin that provides a **Huawei Cloud OBS** backend for the host 
 ## Non-goals
 
 - Host file center (`Files()` / `sys_file`) cloud migration
-- Presigned URLs
+- Client temporary credentials / STS
 - Cross-provider migration
 
 ## Install

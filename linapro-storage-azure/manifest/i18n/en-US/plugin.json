@@ -30,7 +30,8 @@
         "copied": "Error details copied",
         "copyFailed": "Failed to copy",
         "testConnection": "Test connection",
-        "save": "Save"
+        "save": "Save",
+        "corsNote": "Browser direct upload/download requires the bucket CORS policy to allow your workbench origin, methods PUT/GET/POST (as needed), and headers such as Content-Type and Authorization/x-ms-* when applicable."
       }
     }
   }

@@ -176,6 +176,7 @@ onMounted(loadSettings);
     <Card :loading="loading">
       <div class="flex flex-col gap-4">
         <Alert show-icon type="info" :message="t('description')" />
+        <Alert show-icon type="warning" :message="t('corsNote')" />
         <Form
           ref="formRef"
           :colon="false"
