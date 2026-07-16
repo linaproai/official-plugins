@@ -6,8 +6,8 @@ package objstore
 
 import (
 	"context"
-	"fmt"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -354,4 +354,3 @@ func (b *obsBackend) PresignUploadPart(_ context.Context, key string, uploadID s
 	}
 	return out.SignedUrl, headers, time.Now().UTC().Add(ttl), nil
 }
-

@@ -257,4 +257,3 @@ func (b *ossBackend) PresignUploadPart(_ context.Context, key string, uploadID s
 	}
 	return signed, map[string]string{}, time.Now().UTC().Add(ttl), nil
 }
-
