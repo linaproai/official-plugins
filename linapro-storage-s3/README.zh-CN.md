@@ -2,6 +2,8 @@
 
 托管源码插件，为宿主 `Storage()` 领域能力（`storagecap.Provider`）提供 **S3 协议** 对象存储后端。
 
+[English](README.md) | 简体中文
+
 适用于 MinIO、Cloudflare R2、Ceph RGW 等 S3 API 端点。**官方 AWS S3** 请使用 `linapro-storage-aws`。
 
 ## 行为

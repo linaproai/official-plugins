@@ -1,6 +1,10 @@
 # linapro-auth-ldap
 
-managed 源码插件：提供**企业 LDAP / Active Directory 目录账号的通用第三方登录能力**。依赖 `linapro-extlogin-core`；同一能力可用于登录入口与其他业务接入场景。
+managed 源码插件：提供**企业 LDAP / Active Directory 目录账号的通用第三方登录能力**。
+
+[English](README.md) | 简体中文
+
+依赖 `linapro-extlogin-core`；同一能力可用于登录入口与其他业务接入场景。
 
 **Provider：** `ldap:default` · **自动开户：** 默认关 · **TLS：** LDAPS/StartTLS（明文仅 localhost）
 

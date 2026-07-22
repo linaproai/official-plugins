@@ -1,6 +1,10 @@
 # linapro-demo-dynamic
 
-`linapro-demo-dynamic` is the dynamic WASM plugin sample for LinaPro. It demonstrates the smallest end-to-end path for a governed runtime plugin.
+`linapro-demo-dynamic` is the dynamic WASM plugin sample for LinaPro.
+
+English | [简体中文](README.zh-CN.md) 
+
+It demonstrates the smallest end-to-end path for a governed runtime plugin.
 
 ## What It Demonstrates
 

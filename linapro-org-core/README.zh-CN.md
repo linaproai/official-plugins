@@ -2,6 +2,8 @@
 
 `linapro-org-core` 是 LinaPro 官方提供的组织管理源码插件。
 
+[English](README.md) | 简体中文
+
 ## 能力范围
 
 该插件负责：

@@ -2,6 +2,8 @@
 
 托管源码插件，为宿主 `Storage()` 领域能力（`storagecap.Provider`）提供 **腾讯云 COS** 后端。
 
+[English](README.md) | 简体中文
+
 ## 行为
 
 - 通过 `storagecap.Provide("linapro-storage-cos", factory)` 注册

@@ -2,6 +2,8 @@
 
 `apps/lina-plugins/linapro-ai-core` is the official source plugin for `AI` providers, provider models, capability tiers, invocation logs, and the plugin-owned `AI` domain capability contract.
 
+English | [简体中文](README.zh-CN.md)
+
 The plugin is intentionally outside `apps/lina-core`: `lina-core` owns plugin kernel governance, descriptor registration, dependency checks, owner-aware dynamic routing, authorization snapshots, audit, and cache invalidation. `linapro-ai-core` owns the `AI` public contract, provider `SPI`, dynamic guest SDK, descriptor helper, implementation, and version policy.
 
 ## Plugin Metadata

@@ -2,6 +2,8 @@
 
 `linapro-demo-source` 是 `LinaPro` 的源码插件样例，用来展示一个在仓库内开发、由宿主发现、并通过插件管理页显式安装后挂载到默认工作台的完整插件闭环。
 
+[English](README.md) | 简体中文
+
 ## 目录结构
 
 ```text
@@ -34,13 +36,13 @@ linapro-demo-source/
 - 插件自有附件对象通过`pluginhost.Services.Storage()`写入，使用`demo-record-files/...`这类插件 logical path
 - 禁用插件时仅隐藏菜单和路由，不清理数据表数据和已存储文件
 - 卸载插件时宿主会弹窗，让用户选择是否同时清理插件自有数据表数据和存储文件
-- 生命周期回调会打印 `BeforeInstall`、`AfterInstall`、`BeforeUpgrade`、`Upgrade`、`AfterUpgrade`、`BeforeDisable`、`AfterDisable`、`BeforeUninstall`、`AfterUninstall`、租户生命周期回调和安装模式回调，便于开发者观察源码插件生命周期流程
+- 生命周期回调会记录 `BeforeInstall`、`AfterInstall`、`BeforeUpgrade`、`Upgrade`、`AfterUpgrade`、`BeforeDisable`、`AfterDisable`、`BeforeUninstall`、`AfterUninstall`、租户生命周期回调和安装模式回调的日志，便于开发者观察源码插件生命周期流程
 
 ## 清单范围
 
 `plugin.yaml` 负责保存插件元数据、菜单声明和按钮权限。页面与 `SQL` 资源仍然通过目录约定发现，而不是在元数据中重复维护。
 
-本示例声明`distribution: managed`，因此仍是通过插件管理显式安装、启用、升级、禁用和卸载的普通插件。只有已注册且属于项目组成部分的源码插件才应使用`distribution: builtin`，由宿主启动流程自动安装、启用和安全升级。
+本示例声明 `distribution: managed`，是通过插件管理显式安装、启用、升级、禁用和卸载的普通插件。只有已注册且属于项目组成部分的源码插件才使用 `distribution: builtin`，由宿主启动时自动安装、启用和安全升级。
 
 `plugin.yaml`不声明源码插件`HTTP`路由。工作台导航仍来自`menus`，后端路由由插件代码注册。
 

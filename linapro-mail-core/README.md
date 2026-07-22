@@ -1,6 +1,8 @@
 # Mail - Core
 
-`linapro-mail-core` is the foundation plugin for LinaPro email:
+`linapro-mail-core` is the foundation plugin for LinaPro email.
+
+English | [简体中文](README.zh-CN.md)
 
 - Connection and Account persistence
 - Public `mailcap` contracts

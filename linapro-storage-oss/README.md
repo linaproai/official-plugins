@@ -2,6 +2,8 @@
 
 Managed source plugin that provides a **Alibaba Cloud OSS** backend for the host `Storage()` domain capability (`storagecap.Provider`).
 
+English | [简体中文](README.zh-CN.md)
+
 ## Behavior
 
 - Registers via `storagecap.Provide("linapro-storage-oss", factory)`

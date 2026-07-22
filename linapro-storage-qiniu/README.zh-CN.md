@@ -2,6 +2,8 @@
 
 托管源码插件，为宿主 `Storage()` 领域能力（`storagecap.Provider`）提供 **七牛云 Kodo** 对象存储后端。
 
+[English](README.md) | 简体中文
+
 ## 行为
 
 - 通过 `storagecap.Provide("linapro-storage-qiniu", factory)` 注册

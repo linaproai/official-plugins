@@ -1,6 +1,10 @@
 # linapro-auth-ldap
 
-Managed source plugin that provides **general-purpose enterprise LDAP / Active Directory directory login**. Depends on `linapro-extlogin-core`. The same capability can power login entries and other product flows.
+Managed source plugin that provides **general-purpose enterprise LDAP / Active Directory directory login**.
+
+English | [简体中文](README.zh-CN.md) 
+
+Depends on `linapro-extlogin-core`. The same capability can power login entries and other product flows.
 
 **Provider:** `ldap:default` · **Auto-provision:** default off · **TLS:** LDAPS/StartTLS (plain only on localhost)
 

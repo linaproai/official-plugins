@@ -2,6 +2,8 @@
 
 Managed source plugin that provides an **S3 protocol** backend for the host `Storage()` domain capability (`storagecap.Provider`).
 
+English | [简体中文](README.zh-CN.md)
+
 Use this plugin for MinIO, Cloudflare R2, Ceph RGW, and other S3 API endpoints. For **official AWS S3**, install `linapro-storage-aws` instead.
 
 ## Behavior

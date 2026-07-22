@@ -2,7 +2,9 @@
 
 `linapro-ops-demo-guard` 是 LinaPro 官方提供的演示环境只读保护源码插件。
 
-只要该插件处于已安装且已启用状态，演示环境只读模式就会生效；如果希望宿主在启动时自动启用它，可再将`linapro-ops-demo-guard`加入`plugin.autoEnable`列表。
+[English](README.md) | 简体中文
+
+插件安装并启用后，演示环境自动进入只读模式。如需宿主启动时自动启用，将 `linapro-ops-demo-guard` 加入 `plugin.autoEnable` 列表即可。
 
 ## 能力范围
 
