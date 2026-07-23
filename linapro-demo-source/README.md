@@ -1,6 +1,10 @@
 # linapro-demo-source
 
-`linapro-demo-source` is the source-plugin sample for `LinaPro`. It demonstrates an in-repo plugin that is discovered by the host, installed explicitly from plugin management, and mounted into the default workspace.
+`linapro-demo-source` is the source-plugin sample for `LinaPro`.
+
+English | [简体中文](README.zh-CN.md) 
+
+It demonstrates an in-repo plugin that is discovered by the host, installed explicitly from plugin management, and mounted into the default workspace.
 
 ## Directory Layout
 

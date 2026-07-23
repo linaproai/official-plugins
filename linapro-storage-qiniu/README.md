@@ -2,6 +2,8 @@
 
 Managed source plugin that provides a **Qiniu Kodo** backend for the host `Storage()` domain capability (`storagecap.Provider`).
 
+English | [简体中文](README.zh-CN.md)
+
 ## Behavior
 
 - Registers via `storagecap.Provide("linapro-storage-qiniu", factory)`

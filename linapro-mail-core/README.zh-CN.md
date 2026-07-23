@@ -1,6 +1,8 @@
 # 邮件管理-基础框架
 
-`linapro-mail-core` 是 LinaPro 邮件能力的基础插件：
+`linapro-mail-core` 是 LinaPro 邮件能力的基础插件。
+
+[English](README.md) | 简体中文
 
 - Connection / Account 持久化
 - 公开 `mailcap` 契约

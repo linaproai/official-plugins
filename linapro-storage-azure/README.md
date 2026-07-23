@@ -2,6 +2,8 @@
 
 Managed source plugin that provides an **Azure Blob Storage** backend for the host `Storage()` domain capability (`storagecap.Provider`).
 
+English | [简体中文](README.zh-CN.md)
+
 ## Behavior
 
 - Registers via `storagecap.Provide("linapro-storage-azure", factory)`

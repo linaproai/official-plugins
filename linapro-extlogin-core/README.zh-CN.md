@@ -10,10 +10,10 @@
 
 - `plugin_linapro_extlogin_core_user_external_identity` 链接表（`(provider, subject)` 权威键，支持 subject_kind / app_context / 手机号等扩展快照）
 - 宿主 `extidspi.Provider` 引擎：Resolve / Provision / Bind / Unbind / List
-- plugin-owned 领域契约 `backend/cap/extidcap`：宽入口 `Service`，聚合 `Ticket` / `Login` / `Linkage` / `Providers` 子面，以及进程内 catalog / handoff 门面
+- 插件领域契约 `backend/cap/extidcap`：提供 `Service` 统一入口，包含 `Ticket`、`Login`、`Linkage`、`Providers` 四个子模块，以及进程内的 catalog 和 handoff 能力
 - 当前用户绑定 API：仅接受**已验证 ticket**（禁止客户端自报裸 subject）
 
-`linapro-oidc-google`、`linapro-oidc-discord`、`linapro-oidc-generic`、`linapro-auth-ldap` 及未来微信/QQ/抖音等协议插件**必须**在 `dependencies.plugins` 中声明依赖本插件。协议插件只做 IdP 验签，调用宿主 `extlogin` + 本插件 ticket/目录；本插件从不调用 `LoginByVerifiedIdentity`，也不声明任何 provider ID 归属。
+`linapro-oidc-google`、`linapro-oidc-discord`、`linapro-oidc-generic`、`linapro-auth-ldap` 及未来微信/QQ/抖音等协议插件**必须**在 `dependencies.plugins` 中声明依赖本插件。协议插件负责 IdP 验签，调用宿主 `extlogin` 和本插件的 ticket/目录能力；本插件不调用 `LoginByVerifiedIdentity`，也不声明任何 provider ID 归属。
 
 ## 分发与降级
 
@@ -28,7 +28,7 @@
 
 ## 宿主边界
 
-宿主保留 token 铸造、会话、租户、pre-token、登录 IP、认证 hook，以及**一次性 handoff**（协议插件回跳不得把 JWT 放进 URL）。本插件通过 `ProvideExternalIdentityProvider` 注册引擎工厂。
+宿主保留 token 签发、会话管理、租户解析、pre-token、登录 IP 策略、认证 hook 和**一次性 handoff**（协议插件回跳不得将 JWT 放入 URL）。本插件通过 `ProvideExternalIdentityProvider` 注册引擎工厂。
 
 ## 数据权限边界
 

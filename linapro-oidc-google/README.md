@@ -4,7 +4,7 @@
 
 English | [简体中文](README.zh-CN.md)
 
-## What This Sample Demonstrates
+## How It Works
 
 - Declares external-identity provider ownership at plugin init through `plugin.Providers().ProvideExternalIdentity("google")` so the host will only accept `LoginByVerifiedIdentity` calls that name a provider owned by this plugin.
 - Registers two browser-facing routes on a plugin-owned portal path group:

@@ -4,15 +4,15 @@
 
 [English](README.md) | 简体中文
 
-## 示例演示内容
+## 工作原理
 
-- 通过 `plugin.Providers().ProvideExternalIdentity("discord")` 在插件初始化阶段声明外部身份 provider 归属，宿主据此拒绝任何声明其他 provider 的 `LoginByVerifiedIdentity` 请求。
+- 插件启动时通过 `plugin.Providers().ProvideExternalIdentity("discord")` 注册 Discord 身份 provider，宿主会拒绝未注册 provider 的登录请求。
 - 在插件私有 portal 路径组下注册两个面向浏览器的公开路由：
   - `GET /portal/linapro-oidc-discord/login`：构造 Discord authorize URL，写入 anti-CSRF 状态 Cookie，并 302 跳转到 Discord。
   - `GET /portal/linapro-oidc-discord/callback`：校验 state、用授权码换取一个验证过的身份、调用 `Services.Auth().ExternalLogin().LoginByVerifiedIdentity(...)`，最后把宿主返回的 token 或 pre-token 通过 query 参数带回 SPA 登录页。
 - 在 `frontend/slots/auth.login.social/discord-login-entry.vue` 提供一个 Vue 插槽组件，前端 slot registry 会在插件安装并启用时自动以「其他登录方式」下的平台图标挂载。
 
-OAuth 的 code 兑换和 userinfo 获取是刻意保留的极简 stub 实现：默认的 verifier 直接根据传入的授权码生成一个稳定的身份 DTO，方便在没有真实 Discord 应用的情况下把整个流程串起来演练。真实部署必须将 `oauthsvc.NewStubIdentityVerifier()` 替换为基于 HTTP 的 Discord OIDC 实现。
+当前的 OAuth code 兑换和用户信息获取使用简化的 stub 实现——verifier 直接根据授权码生成身份 DTO，无需真实 Discord 应用即可端到端演练。生产部署需将 `oauthsvc.NewStubIdentityVerifier()` 替换为基于 HTTP 的 Discord OIDC 实现。
 
 ## 目录结构
 
@@ -38,18 +38,18 @@ linapro-oidc-discord/
 
 ## 与新版外部身份接缝的集成
 
-宿主负责租户候选与 Token 发放，并把`(provider, subject)`链接解析与开户策略委托给`linapro-extlogin-core`（本插件已在`plugin.yaml`中声明对它的依赖）。`linapro-extlogin-core`未安装或未启用时，外部登录 fail-closed。本插件只提交“已验证”的身份 DTO，并把宿主返回结果带回 SPA。
+宿主负责租户候选解析与 Token 发放，`(provider, subject)` 链接解析和开户策略委托给 `linapro-extlogin-core`（本插件已在 `plugin.yaml` 中声明对其依赖）。`linapro-extlogin-core` 未安装或未启用时，外部登录功能关闭。本插件只提交已验证的身份 DTO，并将宿主返回结果带回 SPA。
 
 | 步骤 | 参与方 | 动作 |
 | --- | --- | --- |
 | 1. 用户点击“使用 Discord 账号登录” | 浏览器 | 整页跳转到 `/portal/linapro-oidc-discord/login`。 |
 | 2. 插件构造 authorize URL | 插件 | `oauthsvc.BuildAuthorizeURL(ctx, ...)` 返回 Discord authorize URL 和新 state；插件写入 state Cookie 后 302 到 Discord。 |
 | 3. Discord 回调 | 浏览器 | Discord 重定向回 `/portal/linapro-oidc-discord/callback?code=...&state=...`。 |
-| 4. 插件校验身份 | 插件 | `oauthsvc.CompleteCallback(ctx, ...)` 校对 state、用 code 换 `{subject, email, displayName}`。 |
+| 4. 插件校验身份 | 插件 | `oauthsvc.CompleteCallback(ctx, ...)` 验证 state、用 code 换取 `{subject, email, displayName}`。 |
 | 5. 宿主发放会话 | 宿主 | `Services.Auth().ExternalLogin().LoginByVerifiedIdentity(ctx, extlogin.LoginInput{...})`。 |
-| 6. 回到 SPA | 插件 | 插件把 `accessToken`/`refreshToken` 或 `preToken` + 租户候选拼进 query，再重定向回 SPA 登录页。 |
+| 6. 回到 SPA | 插件 | 插件将 `accessToken`/`refreshToken` 或 `preToken` + 租户候选拼入 query，重定向回 SPA 登录页。 |
 
-宿主对未绑定本地用户的外部身份返回 `AUTH_EXTERNAL_USER_NOT_PROVISIONED`，插件通过回调 error 重定向把该情况透传给前端。
+宿主对未绑定本地用户的外部身份返回 `AUTH_EXTERNAL_USER_NOT_PROVISIONED`，插件通过回调错误重定向将该信息传递给前端。
 
 ## 配置
 

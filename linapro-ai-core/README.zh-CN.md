@@ -1,6 +1,8 @@
 # LinaPro AI Core 插件
 
-`apps/lina-plugins/linapro-ai-core`是`AI`供应商、供应商模型、能力档位、调用日志和 plugin-owned `AI`领域能力契约的一方源码插件。
+`apps/lina-plugins/linapro-ai-core` 是 `AI` 供应商、供应商模型、能力档位、调用日志和 plugin-owned `AI` 领域能力契约的一方源码插件。
+
+[English](README.md) | 简体中文
 
 该插件刻意保留在`apps/lina-core`之外：`lina-core`拥有插件内核治理、descriptor 注册、依赖检查、owner-aware 动态路由、授权快照、审计和缓存失效；`linapro-ai-core`拥有`AI`公开契约、provider `SPI`、动态 guest SDK、descriptor helper、实现和版本策略。
 
