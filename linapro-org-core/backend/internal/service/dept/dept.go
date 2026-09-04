@@ -50,7 +50,9 @@ type Service interface {
 	// Exclude returns tenant-visible department candidates excluding one subtree.
 	Exclude(ctx context.Context, in ExcludeInput) ([]*DeptEntity, error)
 	// Users returns selectable users for one tenant-visible department subtree
-	// using keyword and limit filters.
+	// using keyword and limit filters. When keyword is empty, the current
+	// department leader is included if visible, even when that user is not
+	// assigned to the department.
 	Users(ctx context.Context, deptID int, keyword string, limit int) ([]*DeptUser, error)
 	// DescendantDeptIDs returns the given tenant-visible department plus descendants.
 	DescendantDeptIDs(ctx context.Context, deptID int) ([]int, error)
@@ -141,7 +143,7 @@ type TreeNode struct {
 
 // DeptUser represents one selectable user row.
 type DeptUser struct {
-	Id       string `json:"id"`
+	Id       int    `json:"id"`
 	Username string `json:"username"`
 	Nickname string `json:"nickname"`
 }

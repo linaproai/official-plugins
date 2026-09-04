@@ -330,28 +330,28 @@ func (s *serviceImpl) Users(ctx context.Context, deptID int, keyword string, lim
 	if err != nil {
 		return nil, err
 	}
-	if len(userDeptRows) == 0 {
-		return make([]*DeptUser, 0), nil
-	}
 
-	seen := make(map[int]struct{}, len(userDeptRows))
-	userIDs := make([]int, 0, len(userDeptRows))
-	for _, row := range userDeptRows {
-		if row == nil {
-			continue
+	users := make([]*DeptUser, 0)
+	if len(userDeptRows) > 0 {
+		seen := make(map[int]struct{}, len(userDeptRows))
+		userIDs := make([]int, 0, len(userDeptRows))
+		for _, row := range userDeptRows {
+			if row == nil {
+				continue
+			}
+			if _, ok := seen[row.UserId]; ok {
+				continue
+			}
+			seen[row.UserId] = struct{}{}
+			userIDs = append(userIDs, row.UserId)
 		}
-		if _, ok := seen[row.UserId]; ok {
-			continue
+		projections, batchErr := s.batchGetUsers(ctx, userIDs)
+		if batchErr != nil {
+			return nil, batchErr
 		}
-		seen[row.UserId] = struct{}{}
-		userIDs = append(userIDs, row.UserId)
+		users = toDeptUsers(projections, limit)
 	}
-
-	projections, err := s.batchGetUsers(ctx, userIDs)
-	if err != nil {
-		return nil, err
-	}
-	return toDeptUsers(projections, limit), nil
+	return s.withCurrentLeader(ctx, deptID, users, limit)
 }
 
 // DescendantDeptIDs returns the given department plus all descendants.
@@ -486,11 +486,8 @@ func normalizeDeptUserLimit(limit int) int {
 func toDeptUsers(rows []*usercap.UserInfo, limit int) []*DeptUser {
 	result := make([]*DeptUser, 0, len(rows))
 	for _, row := range rows {
-		if row == nil {
-			continue
-		}
-		id := string(row.ID)
-		if id == "" {
+		id, ok := userInfoNumericID(row)
+		if !ok {
 			continue
 		}
 		result = append(result, &DeptUser{Id: id, Username: row.Username, Nickname: row.Nickname})
@@ -499,6 +496,63 @@ func toDeptUsers(rows []*usercap.UserInfo, limit int) []*DeptUser {
 		}
 	}
 	return result
+}
+
+// withCurrentLeader prepends the department leader when the user is visible
+// and not already present in the bounded selector list.
+func (s *serviceImpl) withCurrentLeader(ctx context.Context, deptID int, users []*DeptUser, limit int) ([]*DeptUser, error) {
+	if users == nil {
+		users = make([]*DeptUser, 0)
+	}
+	if s == nil || deptID <= 0 {
+		return users, nil
+	}
+	dept, err := s.GetByID(ctx, deptID)
+	if err != nil {
+		if messageErr, ok := bizerr.As(err); ok && messageErr.Matches(CodeDeptNotFound) {
+			return users, nil
+		}
+		return nil, err
+	}
+	if dept == nil || dept.Leader <= 0 {
+		return users, nil
+	}
+	for _, user := range users {
+		if user != nil && user.Id == dept.Leader {
+			return users, nil
+		}
+	}
+	projections, err := s.batchGetUsers(ctx, []int{dept.Leader})
+	if err != nil {
+		return nil, err
+	}
+	extra := toDeptUsers(projections, 1)
+	if len(extra) == 0 {
+		return users, nil
+	}
+	return mergeLeaderUser(users, extra[0], limit), nil
+}
+
+// mergeLeaderUser keeps the current leader visible in a bounded selector list.
+func mergeLeaderUser(users []*DeptUser, leader *DeptUser, limit int) []*DeptUser {
+	if leader == nil || leader.Id <= 0 {
+		if users == nil {
+			return make([]*DeptUser, 0)
+		}
+		return users
+	}
+	for _, user := range users {
+		if user != nil && user.Id == leader.Id {
+			return users
+		}
+	}
+	merged := make([]*DeptUser, 0, len(users)+1)
+	merged = append(merged, leader)
+	merged = append(merged, users...)
+	if limit > 0 && len(merged) > limit {
+		merged = merged[:limit]
+	}
+	return merged
 }
 
 // userInfoNumericID decodes the domain user ID for plugin-owned

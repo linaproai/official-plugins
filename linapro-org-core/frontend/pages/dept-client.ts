@@ -74,5 +74,10 @@ export async function deptUsers(id: number, params?: { keyword?: string; limit?:
     orgApi(`dept/${id}/users`),
     { params },
   );
-  return res.list;
+  return (res.list ?? [])
+    .map((user) => ({
+      ...user,
+      id: Number(user.id),
+    }))
+    .filter((user) => Number.isFinite(user.id) && user.id > 0);
 }

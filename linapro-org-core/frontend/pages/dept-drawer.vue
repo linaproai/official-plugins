@@ -175,7 +175,7 @@ async function loadLeaderUsers(targetDeptId: number, keyword?: string) {
   const ret = await deptUsers(targetDeptId, { keyword, limit: 10 });
   const options = ret.map((user) => ({
     label: `${user.username} | ${user.nickname}`,
-    value: user.id,
+    value: Number(user.id),
   }));
   formApi.updateSchema([
     {
@@ -217,15 +217,17 @@ const [BasicDrawer, drawerApi] = useVbenDrawer({
         if (record.leader === 0) {
           record.leader = undefined as any;
         }
+        // Load options before setValues so the current leader can match a label.
+        await initDeptUsers(id);
         await formApi.setValues(record);
+      } else {
+        await initDeptUsers(0);
       }
     } else {
       await formApi.setFieldValue('parentId', TOP_LEVEL_DEPT_ID);
+      await initDeptUsers(0);
     }
 
-    // For new dept (no id or id used as parentId): load all users (deptId=0)
-    // For edit dept: load users from this dept's subtree
-    await initDeptUsers(update && id ? id : 0);
     await initDeptSelect(id);
 
     // 加载字典：状态选项

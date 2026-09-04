@@ -5,6 +5,7 @@ import {
   closeDialogWithEscape,
   waitForConfirmOverlay,
   waitForDialogReady,
+  waitForDropdown,
   waitForRouteReady,
   waitForTableReady,
 } from '@host-tests/support/ui';
@@ -85,7 +86,10 @@ export class DeptPage {
   }
 
   /** Create a root dept by clicking "新增" toolbar button */
-  async createRootDept(name: string, opts?: { code?: string }) {
+  async createRootDept(
+    name: string,
+    opts?: { code?: string; leaderKeyword?: string },
+  ) {
     await this.clickToolbarAdd();
 
     await waitForDialogReady(this.drawer);
@@ -106,12 +110,58 @@ export class DeptPage {
       await codeInput.fill(opts.code);
     }
 
+    if (opts?.leaderKeyword) {
+      await this.selectLeader(opts.leaderKeyword);
+    }
+
     // Click confirm button
     await this.drawer
       .getByRole('button', { name: /确\s*认/ })
       .click();
 
     await this.waitForDrawerSubmitToSettle();
+  }
+
+  /** Choose a leader from the searchable select by username or nickname. */
+  async selectLeader(keyword: string) {
+    const leaderCombobox = this.drawer.getByRole('combobox', { name: '负责人' });
+    await leaderCombobox.waitFor({ state: 'visible', timeout: 5000 });
+    await leaderCombobox.click();
+    await leaderCombobox.fill(keyword);
+    const dropdown = await waitForDropdown(this.page);
+    const option = dropdown
+      .locator('.ant-select-item-option')
+      .filter({ hasText: new RegExp(keyword, 'i') })
+      .first();
+    await option.waitFor({ state: 'visible', timeout: 5000 });
+    await option.click();
+  }
+
+  /** Open the edit drawer for a department without submitting. */
+  async openEditDrawer(deptName: string) {
+    await this.fillSearchField('部门名称', deptName);
+    await this.clickSearch();
+
+    const row = this.page.locator('.vxe-body--row:visible', { hasText: deptName });
+    await row.first().waitFor({ state: 'visible', timeout: 10000 });
+    await row
+      .locator('button:visible')
+      .filter({ hasText: /编\s*辑/ })
+      .first()
+      .click();
+
+    await waitForDialogReady(this.drawer);
+  }
+
+  /** Return the currently selected leader label in the open drawer. */
+  async leaderSelectedLabel() {
+    const leaderCombobox = this.drawer.getByRole('combobox', { name: '负责人' });
+    await leaderCombobox.waitFor({ state: 'visible', timeout: 5000 });
+    const selectionItem = leaderCombobox.locator('..').locator('..').locator(
+      '.ant-select-selection-item',
+    );
+    await selectionItem.waitFor({ state: 'visible', timeout: 5000 });
+    return (await selectionItem.textContent()) ?? '';
   }
 
   /** Open the create drawer and assert the top-level department is selectable. */

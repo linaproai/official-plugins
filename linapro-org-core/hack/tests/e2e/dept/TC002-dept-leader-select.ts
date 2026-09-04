@@ -1,5 +1,6 @@
 import { expect, test } from "@host-tests/fixtures/auth";
 import { prepareSourcePluginsBaseline } from "@host-tests/fixtures/plugin";
+import { DeptPage } from "../../pages/DeptPage";
 import {
   closeDialogWithEscape,
   waitForDialogReady,
@@ -137,5 +138,38 @@ test.describe("TC002 部门负责人选择", () => {
     expect(firstOption?.toLowerCase()).toContain("admin");
 
     await closeDialogWithEscape(adminPage, drawer);
+  });
+
+  // https://github.com/linaproai/linapro/issues/100
+  test("TC002e: 编辑已设置负责人的部门时显示用户名和昵称而非用户ID", async ({
+    adminPage,
+  }) => {
+    const deptPage = new DeptPage(adminPage);
+    const suffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const deptName = `负责人显示_${suffix}`;
+    const deptCode = `ld_${suffix}`.slice(0, 24);
+
+    await deptPage.goto();
+    try {
+      await deptPage.createRootDept(deptName, {
+        code: deptCode,
+        leaderKeyword: "admin",
+      });
+      await expect(
+        adminPage.getByText(/创建成功|Created successfully/i).first(),
+      ).toBeVisible({ timeout: 5000 });
+
+      await deptPage.openEditDrawer(deptName);
+      const selected = await deptPage.leaderSelectedLabel();
+      expect(selected).toContain("admin");
+      expect(selected).toMatch(/\s*\|\s*/);
+      expect(selected.trim()).not.toMatch(/^\d+$/);
+    } finally {
+      const drawer = adminPage.locator('[role="dialog"]');
+      if (await drawer.isVisible().catch(() => false)) {
+        await closeDialogWithEscape(adminPage, drawer);
+      }
+      await deptPage.deleteDept(deptName);
+    }
   });
 });
